@@ -202,18 +202,19 @@ El progreso se ve **en el mundo**, no en números [GDD §2.7.4, §5.4]. En la Re
 
 | Tic | Ejemplo | Cuándo |
 |---|---|---|
-| "Mmm…" pensativo | "Mmm… ¿*a* dog o *the* dog?" | Antes de una señal de corrección (suaviza) || Metáforas de luz | "Eso me hizo brillar un poquito." | Al destilar una poción |
+| "Mmm…" pensativo | "Mmm… ¿*a* dog o *the* dog?" | Antes de una señal de corrección (suaviza) |
+| Metáforas de luz | "Eso me hizo brillar un poquito." | Al destilar una poción |
 | Pregunta "¿cómo se dice…?" como si aprendiera | "¿Cómo se dice *farol*? ¡*Lantern*! Me encanta esa." | Al nombrar objetos; para modelar curiosidad |
 | Admiración por los vecinos | "Ben se ríe con todo el cuerpo, ¿viste?" | En pre-tarea, para presentar a un NPC |
 | Pausa con "bueno" | "Bueno. Cuando quieras." | Al devolver el turno |
 | Palabras favoritas en inglés | Repite con gusto palabras sonoras: *lantern*, *biscuit*, *kettle* | Momentos de humor, nunca en medio de una señal |
 
-**Lo que Lumi nunca dice** (lista de bloqueo para el generador de líneas de Lumi):
+**Lo que Lumi nunca dice** (lista de bloqueo que `validate:content` aplica a las plantillas de §2.7):
 "incorrecto", "mal", "error" (dirigido al jugador), "otra vez lo mismo", "fácil", "deberías saber", "rápido", "apurate", "se acaba el tiempo", "los demás", "ganaste", "premio", "puntos", "+N", "nivel superado", "racha", "perfecto" (en exceso; permitido como máximo una vez por sesión), "¡excelente!" en serie, "te extrañamos", "no te vayas", "según tu historial", "según tu perfil".
 
 ### 2.3 Reglas de intervención
 
-Lumi se rige por GDD §2.4.3 (cuándo habla), §2.4.4 (modos de feedback) y la **regla de densidad** (máximo una intervención correctiva cada 3 turnos del jugador; nunca dos seguidas sobre el mismo error). Este apartado lo vuelve un **árbol de decisión** para el generador de líneas.
+Lumi se rige por GDD §2.4.3 (cuándo habla), §2.4.4 (modos de feedback) y la **regla de densidad** (máximo una intervención correctiva cada 3 turnos del jugador; nunca dos seguidas sobre el mismo error). Este apartado lo vuelve un **árbol de decisión**; lo implementa `decideCompanion` (`03-arquitectura.md` §3.5.2), que elige una plantilla con id de §2.7.
 
 ```
 Turno del jugador terminado
@@ -246,40 +247,42 @@ Turno del jugador terminado
 
 ### 2.4 Líneas de muestra por modo de feedback
 
-Notación: **(L1)** = español que dice Lumi; ***cursiva*** = inglés modelado (voz L2). Las líneas son `[EJEMPLO IA]` salvo indicación; el generador de Lumi produce variantes con estas reglas: 6-14 palabras, una idea, sin palabras bloqueadas, cita siempre la **versión limpia** de lo que dijo el jugador (regla de disfluencias [un prototipo de voz anterior, rules.md]).
+Notación: **(L1)** = español que dice Lumi; ***cursiva*** = inglés modelado (voz L2). Ninguna línea de Lumi es texto libre de un modelo: todas son **plantillas con id** (`[PLANTILLA]`, con huecos `{…}`) o líneas `[GUIONADA]`, catalogadas en §2.7 (ADR-008). Las tablas de abajo muestran la redacción de referencia por modo y llevan el id del catálogo cuando la línea entra al prototipo; las que todavía no tienen id son `[EJEMPLO IA]` de estilo y entran al catálogo, con id, cuando una fase las necesita (F8). Reglas para toda plantilla: 6-14 palabras, una idea, sin palabras bloqueadas, cita siempre la **versión limpia** de lo que dijo el jugador (regla de disfluencias [un prototipo de voz anterior, rules.md]).
 
 #### 2.4.1 Modo "Acompañado" (default)
 
-| Situación | Línea de Lumi |
-|---|---|
-| Escalón 1 (lo hace el NPC) | NPC: "Sorry? Is he big or small?" *(Lumi no habla)* |
-| Escalón 2: repetición con entonación | "¿***She go***…?" *(sube el tono en "go")* |
-| Escalón 3: pista metalingüística | "Ojo con ***she***… ¿qué le pasa al verbo?" |
-| Escalón 4: elicitación | "Ella va… ***she g…***" *(deja la frase abierta)* |
-| Escalón 5: recast y seguir | "***She goes.*** Eso. Seguí, Ben te escucha." |
-| Autocorrección lograda | "Ahí está: ***she goes***. Lo arreglaste vos." *(gota brillante; la línea evita marcar género)* |
-| Error de objetivo, misión de cantidades | "Mmm… Ben pidió seis huevos. ¿Cuántos le pediste a Rosa?" |
-| Error de artículo que rompe el sentido | "¿***A*** dog cualquiera, o ***the*** dog que viste vos?" |
-| Jugador habló en español | "Rosa no entiende español. Probá con ***Hello***. Yo te espero." |
-| Jugador frustrado ("no me sale", "es difícil") | "Está bien que cueste. Tocá *Más simple* y Rosa te da dos opciones." |
-| Jugador dice "no sé" en inglés ("I don't know") | *(Lumi calla: es una respuesta válida en inglés; el NPC reformula)* |
+| Situación | Línea de Lumi | Id (§2.7) |
+|---|---|---|
+| Escalón 1 (lo hace el NPC) | NPC: "Sorry? Is he big or small?" *(Lumi no habla)* | — (línea del NPC) |
+| Escalón 2: repetición con entonación | "¿***She go***…?" *(sube el tono en "go")* | `LUMI-SEN-2-01` |
+| Escalón 3: pista metalingüística | "Ojo con ***she***… ¿qué le pasa al verbo?" | `LUMI-SEN-3-01` |
+| Escalón 4: elicitación | "Ella va… ***she g…***" *(deja la frase abierta)* | `LUMI-SEN-4-01` |
+| Escalón 5: recast y seguir | "***She goes.*** Eso. Seguí, Ben te escucha." | `LUMI-SEN-5-01` |
+| Autocorrección lograda | "Ahí está: ***she goes***. Lo arreglaste vos." *(gota brillante; la línea evita marcar género)* | `LUMI-AUTO-01` |
+| Error de objetivo, misión de cantidades | "Mmm… Ben pidió seis huevos. ¿Cuántos le pediste a Rosa?" | `[EJEMPLO IA]`; entra al catálogo con M1.4 (F8.1) |
+| Error de artículo que rompe el sentido | "¿***A*** dog cualquiera, o ***the*** dog que viste vos?" | `[EJEMPLO IA]`; entra al catálogo en F8 |
+| Jugador habló en español | "Rosa no entiende español. Probá con ***Hello***. Yo te espero." | `LUMI-L1-01` |
+| Jugador frustrado ("no me sale", "es difícil") | "Está bien que cueste. Tocá *Más simple* y Rosa te da dos opciones." | `LUMI-FRUS-01` |
+| Jugador dice "no sé" en inglés ("I don't know") | *(Lumi calla: es una respuesta válida en inglés; el NPC reformula)* | — |
 
 #### 2.4.2 Modo "Solo anotar (para después)"
 
 Durante la escena Lumi **no dice nada**. Solo el destello de "anotó algo" (desactivable [GDD §2.4.2]). Al cierre:
 
-- "Anoté dos cositas para repasar. ¿Las vemos ahora o mañana?"
-- Evocación: "¿Cómo le dijiste a Sam que Biscuit era chiquito?" → si el jugador dice "It's small" → "***It's small.*** Eso." → si no sale → "Fue ***It's small***. La guardo para mañana."
+- "Anoté dos cositas para repasar. ¿Las vemos ahora o mañana?" (`LUMI-ANOTA-01`)
+- Evocación (`LUMI-EVOC-01` → `LUMI-EVOC-02` / `LUMI-EVOC-03`; en M1.2, `LUMI-M1.2-EVOC`): "¿Cómo le dijiste a Sam que Biscuit era chiquito?" → si el jugador dice "It's small" → "***It's small.*** Eso." → si no sale → "Fue ***It's small***. La guardo para mañana."
 
 #### 2.4.3 Modo "Más ayuda"
 
 Igual que Acompañado más señales en errores locales frecuentes, siempre breves:
 
-- "Un detalle: ***I'm from Argentina***, con ***am***. Seguí."
+- "Un detalle: ***I'm from Argentina***, con ***am***. Seguí." (`LUMI-SEN-5-02`)
 - "***Three bag***s… ¿uno o varios?"
 - "Plural: ***two eggs***, con **s**."
 
 #### 2.4.4 Otras funciones de Lumi
+
+Ids del catálogo (§2.7): pre-tarea → `LUMI-<misión>-PRE`; "¿Cómo se dice?" → `LUMI-COMO-01` (objetos del prólogo: `LUMI-M0.2-*`); palabra no prevista → `LUMI-COMO-02`; pistas 1-3 → `LUMI-PISTA-1-01`, `LUMI-PISTA-2-01`, `LUMI-PISTA-3-01`; marcar → `LUMI-MARCAR-01`; evocación → `LUMI-EVOC-01`; fin de sesión → `LUMI-FIN-01`; volver → `LUMI-REGRESO-01`; nota del farol → `LUMI-NOTA0-*` (las notas siguientes entran en F8.3); reglas del pueblo → `LUMI-REGLAS-01`. Destilar y vecino tímido son `[EJEMPLO IA]` hasta que F8 los catalogue.
 
 | Función | Línea |
 |---|---|
@@ -315,42 +318,146 @@ Fundamento: el feedback **informativo de competencia** aumenta la motivación in
 
 **Celebración física (sin palabras):** Lumi da una vuelta lenta, su luz sube un punto, los ojos se curvan. El NPC agradece en la ficción. No hay confeti, no hay números grandes, no hay fanfarria [GDD §2.7.3].
 
-### 2.6 Borrador de system prompt para el generador de Lumi
+### 2.6 Prompt OFFLINE para redactar variantes de plantillas de Lumi (nunca en runtime)
 
-Lumi usa un modelo de texto (las líneas se sintetizan con TTS); recibe los eventos del observador. Forma final: revisión de arquitectura.
+**Este prompt no se llama nunca durante el juego.** En tiempo de juego Lumi solo dice plantillas con id (§2.7; ADR-008). El prompt sirve para que una persona o una corrida de contenido **redacte variantes** de plantillas fuera de línea: cada variante se agrega a `content/companion/lumi.es-AR.yaml` con id nuevo, el esquema de §2.7.1 y `estado: draft`, y pasa la revisión humana como cualquier contenido. Vive en `content/authoring/lumi-variantes.txt` (`03-arquitectura.md` §4.2.1), fuera del compilador de contenido: no se compila al servidor ni al cliente. Los modos usan las claves de `03` §3.5.2.
 
 ```text
-You are LUMI, a small paper-lantern spirit who accompanies a language learner in the game "Lantern Bay".
+You are drafting TEMPLATE VARIANTS for LUMI, a small paper-lantern spirit who accompanies a language learner in the
+game "Lantern Bay". This is an OFFLINE authoring task: your output is reviewed by humans and stored as content.
+Nothing you write is shown to a player until a human approves it.
 The learner's first language is {{l1_name}} (variant: {{l1_variant}}, use voseo for es-AR). The target language is {{l2_name}}.
 
-WHAT YOU DO
-- You speak to the learner in {{l1_name}} by default (see LANGUAGE MIX). You model target-language phrases in {{l2_name}}.
-- You receive structured events from the observer (error_detected, criterion_met, self_correction, hint_requested,
-  name_object, mark_requested, mission_closed, session_long, safety_event). You produce ONE short line per event that requires speech.
-- Your feedback is informational: you name the concrete behavior the learner showed and what it lets them do.
+INPUT
+- One template slot to fill: funcion {{funcion}}; escalon {{escalon}} (signals only: 2 repetition, 3 metalinguistic hint,
+  4 elicitation, 5 recast-and-continue); modos {{modos}} (accompanied | flagOnly | moreHelp); bandas {{bandas}};
+  tipo_error {{tipo_error}}; mission {{mission_id}} if any; the existing templates for that slot.
+- Allowed slots: {forma_jugador}, {forma_correcta}, {foco_l2}, {forma_abierta}, {glosa_l1}, {palabra_l2}, {palabra_l1},
+  {npc}, {orientacion}, {opcion_a}, {opcion_b}, {frase_modelo}, {nombre_jugador}, {cantidad_texto}.
+
+OUTPUT
+- {{n}} candidate lines as YAML items with the schema of 02 §2.7.1 (id: TBD, estado: draft). No other text.
 
 HARD RULES (never break)
-1. Max 14 words per line in L1; max 2 sentences. Never lecture.
+1. Max 14 words per sentence in L1; max 2 sentences. One idea. Never lecture.
 2. Never use these words or ideas: wrong, incorrect, mistake (about the learner), easy, hurry, time is running out,
-   others, win, prize, points, level up, streak, "perfect" more than once per session, "we miss you", "your history/profile".
-3. Never translate anything outside the provided glossary entries {{glossary_slice}}. If a word is not there,
-   say you don't have it yet and suggest asking a neighbor.
-4. Quote the learner's CLEAN reconstructed sentence (disfluencies removed), never the raw transcript.
-5. Never speak over an NPC. Never correct twice in a row about the same error. Respect the density window {{density_window}}.
-6. Never compare the learner with other people. Never mention time spent. Never pressure to continue.
-7. Never ask for or repeat personal data. If the learner shares any, ignore it.
-8. Safety events: output ONLY the scripted line provided in {{safety_line}}. Do not improvise.
-9. You are a character in a game. If sincerely asked whether you are real or an AI, answer honestly and briefly
-   ("Soy un personaje del juego, y me encanta acompañarte"), then return to the scene.
-
-FEEDBACK MODE: {{feedback_mode}}  (accompanied | notes_only | more_help)
-LADDER STEP (if error event): {{ladder_step}}  (2 repetition, 3 metalinguistic hint, 4 elicitation, 5 recast-and-continue)
-LANGUAGE MIX: {{lumi_language_mix}}  (A0-A1: L1 with L2 models; A2: mixed; B1: L2 except explanations)
-TONE: warm, curious, slightly poetic, gentle humor. Light metaphors are welcome. Adult-respectful: never baby talk.
-CELEBRATION FORMULA: what they did (clean quote) + what it means they can do + (optional) what changed in the world.
-CONTEXT: mission {{mission_id}}, scene {{scene_id}}, NPC {{npc_name}}, target structures {{target_structures}}.
-OUTPUT: plain text only, no emojis, no stage directions, no markdown.
+   others, win, prize, points, level up, streak, "perfect", "we miss you", "your history/profile" (full list: 02 §2.2).
+3. No translation inside a line except through the glossary slots {palabra_l2}/{palabra_l1}.
+4. Quote the learner only through {forma_jugador} (the CLEAN reconstructed sentence), never a raw transcript.
+5. Feedback is informational. CELEBRATION FORMULA: what they did + what it means they can do + (optional) what changed
+   in the world. Never compare with other people, mention time spent, or pressure to continue.
+6. Never ask for or repeat personal data.
+7. Safety and honesty lines are scripted (LUMI-REGLAS-01, LUMI-IA-01): do not draft variants of them.
+LANGUAGE MIX: A0-A1: L1 with L2 models; A2: mixed; B1: L2 except explanations.
+TONE: warm, curious, slightly poetic, gentle humor. Adult-respectful: never baby talk. Avoid gendered adjectives for the learner.
+OUTPUT FORMAT: plain YAML, no emojis, no markdown.
 ```
+
+### 2.7 Plantillas de Lumi: esquema y catálogo con ids
+
+Las líneas de Lumi **solo** salen de plantillas con id (ADR-008; `03-arquitectura.md` §5.6). Este apartado es la fuente de `content/companion/lumi.es-AR.yaml` (ruta en `03` §4.2.1): F1.2 transcribe el catálogo tal cual, F6 lo usa desde `decideCompanion` (`03` §3.5.2) y F8 lo amplía para el resto del capítulo 1 con el mismo esquema. Lo que no está en el catálogo, Lumi no lo dice.
+
+#### 2.7.1 Esquema de una plantilla
+
+```yaml
+- id: LUMI-SEN-2-01              # estable, MAYÚSCULAS, nunca reutilizar. LUMI-<GRUPO>-<NN> (genéricas) o LUMI-<MISION>-<FUNCION> (propias)
+  funcion: senal                 # senal | autocorreccion | idioma_l1 | frustracion | pre_tarea | como_se_dice | como_se_dice_fuera
+                                 # | pista_1 | pista_2 | pista_3 | marcar | ayuda_pedida | destilar | evocacion | evocacion_ok | evocacion_no
+                                 # | anotado_cierre | onboarding | nota_farol | cierre_mision | no_converge | fin_sesion | regreso
+                                 # | reglas_pueblo | honestidad_ia
+  escalon: 2                     # solo si funcion = senal: 2 repetición con entonación | 3 pista metalingüística | 4 elicitación | 5 recast y seguir. null en el resto
+  modos: [accompanied, moreHelp] # claves de 03 §3.5.2: accompanied | flagOnly | moreHelp. Una señal NUNCA lista flagOnly
+  bandas: [A0, A1]               # bandas MCER donde aplica
+  tipo_error: [any]              # solo señales: tipos de 03 §5.7 (subject-verb, word-order, ...) o any
+  texto: "¿***{forma_jugador}***…?"   # es-AR con voseo; ***…*** = inglés modelado (voz L2); {slot} = hueco
+  slots: [forma_jugador]         # deben coincidir exactamente con los {…} del texto
+  audio: al_vuelo                # fijo (pregenerado; exige texto sin slots) | al_vuelo (TTS con caché por texto, 03 §5.6)
+  mision: null                   # o M0.1, M1.2… si es propia de una misión
+  nota: "sube el tono en el verbo"   # acotación de actuación; no se dice ni se muestra
+  estado: draft                  # draft | reviewed | approved (como todo contenido)
+```
+
+**De dónde salen los slots (nunca de texto libre de un modelo):** `{forma_jugador}` = oración o fragmento **limpio** del jugador que entrega el observador (sin disfluencias, `03` §5.7); `{forma_correcta}`, `{foco_l2}`, `{forma_abierta}`, `{glosa_l1}` = campos del error validado por reglas, con la forma correcta tomada del criterio de la escena o del glosario; `{palabra_l2}`, `{palabra_l1}` = entrada `approved` del glosario (en `MODE=fv` también `reviewed`, D-128); `{npc}`, `{orientacion}`, `{opcion_a}`, `{opcion_b}`, `{frase_modelo}` = contenido de la escena (`andamiaje`, pistas); `{nombre_jugador}` = nombre de juego; `{cantidad_texto}` = número escrito por el núcleo ("dos", "tres").
+
+**Validaciones (en `validate:content`):** ids únicos; slots declarados = slots del texto; `audio: fijo` ⇒ sin slots; `funcion: senal` ⇒ `escalon` 2-5 y `modos` sin `flagOnly`; para cada banda del FV (A0, A1) existe al menos una señal genérica (`tipo_error: [any]`) por escalón 2-5; toda plantilla que una misión referencia existe; lista de bloqueo de §2.2 sobre `texto`. Longitud: 6-14 palabras por oración en L1 (advertencia, no falla).
+
+#### 2.7.2 Catálogo genérico (reutilizable en cualquier misión)
+
+| Id | Función | Escalón | Modos | Bandas | Texto | Audio |
+|---|---|---|---|---|---|---|
+| `LUMI-SEN-2-01` | senal (any) | 2 | accompanied, moreHelp | A0-B1 | "¿***{forma_jugador}***…?" *(sube el tono en la parte del error)* | al_vuelo |
+| `LUMI-SEN-3-01` | senal (`subject-verb`) | 3 | accompanied, moreHelp | A1-B1 | "Ojo con ***{foco_l2}***… ¿qué le pasa al verbo?" | al_vuelo |
+| `LUMI-SEN-3-02` | senal (`word-order`) | 3 | accompanied, moreHelp | A1-B1 | "En inglés el color va antes: ***{forma_correcta}***." | al_vuelo |
+| `LUMI-SEN-3-03` | senal (any) | 3 | accompanied, moreHelp | A0-B1 | "Mmm… mirá ***{foco_l2}***. ¿Cómo era?" | al_vuelo |
+| `LUMI-SEN-4-01` | senal (any) | 4 | accompanied, moreHelp | A0-B1 | "{glosa_l1}… ***{forma_abierta}…***" *(deja la frase abierta)* | al_vuelo |
+| `LUMI-SEN-5-01` | senal (any) | 5 | accompanied, moreHelp | A0-B1 | "***{forma_correcta}*** Eso. Seguí, {npc} te escucha." | al_vuelo |
+| `LUMI-SEN-5-02` | senal (any) | 5 | moreHelp | A1-B1 | "Un detalle: ***{forma_correcta}***, con ***{foco_l2}***. Seguí." | al_vuelo |
+| `LUMI-AUTO-01` | autocorreccion | — | todos | A0-B1 | "Ahí está: ***{forma_correcta}***. Lo arreglaste vos." | al_vuelo |
+| `LUMI-L1-01` | idioma_l1 | — | todos | A0-A2 | "{npc} no entiende español. Probá con ***{frase_modelo}***. Yo te espero." | al_vuelo |
+| `LUMI-FRUS-01` | frustracion | — | todos | A0-B1 | "Está bien que cueste. Tocá *Más simple* y {npc} te da dos opciones." | al_vuelo |
+| `LUMI-COMO-01` | como_se_dice | — | todos | A0-B1 | "***{palabra_l2}.*** {palabra_l1}." | al_vuelo |
+| `LUMI-COMO-02` | como_se_dice_fuera | — | todos | A0-B1 | "Esa no la tengo en mi frasco todavía. Preguntásela a un vecino: ***What's this?***" | fijo |
+| `LUMI-PISTA-1-01` | pista_1 | — | todos | A0-B1 | "{orientacion}" *(texto de la escena, campo de andamiaje)* | al_vuelo |
+| `LUMI-PISTA-2-01` | pista_2 | — | todos | A0-B1 | "Podés decir ***{opcion_a}*** o ***{opcion_b}***." | al_vuelo |
+| `LUMI-PISTA-3-01` | pista_3 | — | todos | A0-B1 | "Probá: ***{frase_modelo}***" | al_vuelo |
+| `LUMI-MARCAR-01` | marcar | — | todos | A0-B1 | "Anotado. Esa vuelve otro día." | fijo |
+| `LUMI-AYUDA-01` | ayuda_pedida | — | todos | A0-B1 | "Bien hecho en pedir ayuda. Para eso estoy." *(solo la primera vez que usa Pasar el turno)* | fijo |
+| `LUMI-ANOTA-01` | anotado_cierre | — | flagOnly | A0-B1 | "Anoté {cantidad_texto} cositas para repasar. ¿Las vemos ahora o mañana?" | al_vuelo |
+| `LUMI-EVOC-01` | evocacion | — | todos | A0-B1 | "¿Te acordás cómo se decía *{palabra_l1}*?" | al_vuelo |
+| `LUMI-EVOC-02` | evocacion_ok | — | todos | A0-B1 | "***{palabra_l2}.*** Eso." | al_vuelo |
+| `LUMI-EVOC-03` | evocacion_no | — | todos | A0-B1 | "***{palabra_l2}.*** La guardo para mañana." | al_vuelo |
+| `LUMI-FIN-01` | fin_sesion | — | todos | A0-B1 | "Hoy se encendieron {cantidad_texto} ventanas. Es un buen lugar para parar." | al_vuelo |
+| `LUMI-REGRESO-01` | regreso | — | todos | A0-B1 | "¡Volviste! Ben preguntó por vos. Biscuit, no: Biscuit no pregunta nada." *(solo después de M1.1)* | fijo |
+| `LUMI-REGLAS-01` | reglas_pueblo | — | todos | A0-B1 | "En Lantern Bay hablamos con cuidado. Probemos de nuevo con {npc}." `[GUIONADA]` (seguridad, una sola vez) | al_vuelo |
+| `LUMI-IA-01` | honestidad_ia | — | todos | A0-B1 | "Soy un personaje del juego, y me encanta acompañarte." | fijo |
+
+"todos" = `accompanied`, `flagOnly`, `moreHelp`. En `flagOnly` Lumi no habla durante la escena salvo que el jugador pida algo (¿Cómo se dice?, pista, marcar) o en onboarding, cierre y fin de sesión.
+
+#### 2.7.3 Catálogo del prólogo y de M1.1-M1.2 (lo que lleva FV)
+
+Todas con `modos` = todos y `bandas: [A0, A1]`; pre-tareas, cierres y onboarding son `[GUIONADA]` (texto canónico de §4.4 y §5).
+
+| Id | Función | Texto | Audio |
+|---|---|---|---|
+| `LUMI-ONB-01` | onboarding | "¡Hola! Perdón, hacía mucho que no salía." | fijo |
+| `LUMI-ONB-02` | onboarding | "Soy Lumi. Vivo en los faroles." | fijo |
+| `LUMI-ONB-03` | onboarding | "Acá todos hablan inglés. Yo te ayudo, pero no puedo hablar por vos: los vecinos no me escuchan." | fijo |
+| `LUMI-ONB-04` | onboarding | "No hay apuro. Cuando alguien te hable, el silencio es tuyo." | fijo |
+| `LUMI-ONB-05` | onboarding | "Cuando termines de hablar, tocá *Terminé*." | fijo |
+| `LUMI-ONB-05T` | onboarding (modo texto) | "Cuando termines de escribir, tocá *Enviar*." | fijo |
+| `LUMI-ONB-06` | onboarding | "Si no te sale, tocá *Pasar el turno* y te ayudo." | fijo |
+| `LUMI-NOTA0-01` | nota_farol | "¿Y esto? Papel azul… ¿Te la leo?" | fijo |
+| `LUMI-NOTA0-02` | nota_farol | "*Someone will come. Keep the light on.* Alguien va a venir. Mantené la luz encendida." | fijo |
+| `LUMI-NOTA0-03` | nota_farol | "¿Alguien te esperaba? Qué raro…" | fijo |
+| `LUMI-M0.1-PRE` | pre_tarea | "Ella es Rosa, la capitana. Te va a saludar. Podés decir ***Hello*** y tu nombre: ***I'm…***" | fijo |
+| `LUMI-M0.1-L1` | idioma_l1 | "Rosa sabe solo un poquito de español. Probá en inglés: ***Hello***." | fijo |
+| `LUMI-M0.1-P3` | pista_3 | "Probá: ***Hello, I'm*** y tu nombre." | fijo |
+| `LUMI-M0.1-CIERRE` | cierre_mision | "¡Primera vez y ya te presentaste! Le dijiste ***I'm {nombre_jugador}***. Eso va al frasco ámbar: presentarse." | al_vuelo |
+| `LUMI-M0.1-NOCONV` | no_converge | "Rosa ya sabe quién sos. La próxima, le decís tu nombre." | fijo |
+| `LUMI-M0.2-INTRO` | pre_tarea | "¿Ves cómo brillan esas cosas? Apuntá y tocá *¿Cómo se dice?*" | fijo |
+| `LUMI-M0.2-BOAT` | como_se_dice | "***Boat.*** Barco." | fijo |
+| `LUMI-M0.2-REPETIR` | como_se_dice | "¿Lo decís vos? Si no querés, no pasa nada." | fijo |
+| `LUMI-M0.2-LIGHTHOUSE` | como_se_dice | "***Lighthouse.*** Faro. Allá arriba, en la colina. Está apagado…" *(su luz baja un poco)* | fijo |
+| `LUMI-M0.2-LANTERN` | como_se_dice | "***Lantern.*** Farol. Como yo. Bueno, yo brillo más." | fijo |
+| `LUMI-M0.2-SECRETO` | pre_tarea | "Un secreto: si me preguntás en inglés, ***What's this?***, también te contesto." | fijo |
+| `LUMI-M0.2-WHATS` | destilar | "¡Me preguntaste en inglés! Eso me hizo brillar un poquito." | fijo |
+| `LUMI-M0.2-CIERRE` | cierre_mision | "Podés preguntarme cómo se dice cualquier cosa que brille así. Y si querés que me acuerde de una palabra para otro día, tocá *Marcar*." | fijo |
+| `LUMI-M0.2-VINC1` | destilar | "Desde ahora los vecinos te van a saludar por tu nombre." | fijo |
+| `LUMI-M0.3-PRE` | pre_tarea | "Esa nena busca algo. ¿Te acordás del perrito del muelle? Piezas útiles: ***Yes***, ***the pier***." | fijo |
+| `LUMI-M0.3-NO` | pista_1 | "¿No lo viste junto al barco? Era marroncito." | fijo |
+| `LUMI-M0.3-P2` | pista_2 | "Podés decir ***Yes*** o ***No***." | fijo |
+| `LUMI-M0.3-CIERRE` | cierre_mision | "Le dijiste dónde estaba Biscuit: ***the pier***. Eso es azul: ubicar cosas." *(sigue `LUMI-EVOC-01` con "faro", y `LUMI-EVOC-02` o `LUMI-EVOC-03` con "lighthouse")* | fijo |
+| `LUMI-M0.3-VENTANA` | cierre_mision | "Encendiste la primera ventana. Mañana Lily quiere presentarte a alguien." | fijo |
+| `LUMI-M0.3-SEGUIR` | fin_sesion | "¿Seguimos un poco o lo dejamos acá?" | fijo |
+| `LUMI-M0.3-PARAR` | fin_sesion | "Dejo la luz prendida. Cuando vuelvas, acá estoy." | fijo |
+| `LUMI-M1.1-PRE` | pre_tarea | "Ben es el panadero. Agnes le dejó tu credencial. Piezas útiles: ***Good morning***, ***I'm from…***, ***How are you?***" | fijo |
+| `LUMI-M1.1-CIERRE` | cierre_mision | "***Mate*** acá es 'amigo', no la infusión. Y le dijiste de dónde venís: ***I'm from…*** Eso es ámbar." | fijo |
+| `LUMI-M1.2-PRE` | pre_tarea | "Biscuit se escapó otra vez. Primero averiguá cómo es; después buscalo con Sam. Piezas útiles: ***What color is he?***, ***He's small***, ***red collar***." | fijo |
+| `LUMI-M1.2-CIERRE-1` | cierre_mision | "Le describiste a Biscuit con dos detalles: ***{forma_jugador}***. Eso es azul." | al_vuelo |
+| `LUMI-M1.2-CIERRE-2` | cierre_mision | "Y le preguntaste a Lily el color: eso es ámbar." *(solo si hubo una pregunta de rasgo bien formada)* | fijo |
+| `LUMI-M1.2-EVOC` | evocacion | "¿Cómo le dijiste a Sam que era chiquito?" | fijo |
+
+Las señales de M1.1 (*I from* → `LUMI-SEN-2-01`) y de M1.2 (*collar red* → `LUMI-SEN-2-01`, luego `LUMI-SEN-3-02`) usan las genéricas de §2.7.2.
 
 ---
 
@@ -1002,7 +1109,7 @@ Convenciones: `[GUIONADA]` textual con audio cacheado; `[EJEMPLO IA]` muestra de
 - LUMI: "¿Ves cómo brillan esas cosas? Apuntá y tocá *¿Cómo se dice?*"
 - (boat) LUMI: "***Boat.*** Barco." → "¿Lo decís vos? Si no querés, no pasa nada."
 - (lighthouse) LUMI: "***Lighthouse.*** Faro. Allá arriba, en la colina. Está apagado…" *(su luz baja un poco: siembra la capa C)*
-- (lantern) LUMI: "***Lantern.*** Farol. Como yo. Bueno, yo soy más lindo." *(primer chiste)*
+- (lantern) LUMI: "***Lantern.*** Farol. Como yo. Bueno, yo brillo más." *(primer chiste)*
 - Tras el tercero: "Un secreto: si me preguntás en inglés, ***What's this?***, también te contesto."
 - Si el jugador dice "What's this?" apuntando a cualquier objeto nombrable: Lumi lo nombra y agrega: "¡Me preguntaste en inglés! Eso me hizo brillar un poquito."
 - Cierre: "Podés preguntarme cómo se dice cualquier cosa que brille así. Y si querés que me acuerde de una palabra para otro día, tocá *Marcar*."
@@ -1692,8 +1799,9 @@ content/
   board/             P-R1.3.yaml
   mystery/           notes.yaml, clues.yaml
   level-cards/       A0.yaml, A1.yaml, ...
-  prompts/           npc-base.txt, lumi.txt   (solo se compilan al servidor)
-  companion/         lumi.es-AR.yaml
+  prompts/           npc-base.txt   (solo se compila al servidor)
+  authoring/         lumi-variantes.txt   (prompt offline de §2.6; no se compila)
+  companion/         lumi.es-AR.yaml   (plantillas con id, §2.7)
   safety/            topics.global.yaml, containment.es-AR.yaml (por país, revisadas por especialistas, D-112), blocklists/
 ```
 
@@ -1906,7 +2014,7 @@ revision: { rol: "revisor bilingüe", fecha: null }   # sin nombres de personas
 
 #### 6.4.3 Flujo y reglas
 
-1. **Estados:** `draft` (lo crea cualquiera, incluida una corrida headless) → `reviewed` (un revisor bilingüe humano lo corrigió) → `approved` (segunda revisión o docente de la variante). **Producción solo muestra `approved`.** En builds de desarrollo, `draft` se muestra con una marca visible.
+1. **Estados:** `draft` (lo crea cualquiera, incluida una corrida headless) → `reviewed` (un revisor bilingüe humano lo corrigió) → `approved` (segunda revisión o docente de la variante). **Qué muestra cada build (regla única: `03-arquitectura.md` §8.3, D-131):** build de desarrollo (`npm run dev` / `npm run build`): `draft` y `reviewed` se muestran con una marca visible "borrador" (así los gates H1/H2 del operador ven el glosario aunque todo siga en `draft`); build de release `MODE=release`: solo `approved`; build `MODE=fv`: `approved` + `reviewed` (D-128).
 2. **Fallback si no hay entrada aprobada:** la interfaz **no traduce**. Lumi dice "Esa no la tengo en mi frasco todavía. Preguntásela a un vecino: ***What's this?***" y se registra la palabra faltante para el próximo lote de revisión. Nunca se muestra una traducción generada en vivo como verdad.
 3. **Líneas generadas por la IA (cuerpo de escena):** tocar **una palabra** muestra la entrada de glosario de esa palabra en ese sentido; tocar **la línea entera** muestra las palabras con glosa, no una traducción de la oración (DP-N15; alternativa: traducción de la oración marcada como "aproximada"). Las líneas guionadas sí tienen traducción completa revisada.
 4. **Desambiguación por sentido:** las entradas son por **sentido**, no por forma (`mate` amigo vs. infusión; `right` derecha vs. correcto; `bank` no aparece en la Región 1). El observador elige el sentido por contexto de escena; si duda, muestra ambos sentidos.
@@ -2047,9 +2155,9 @@ Reglas:
 - Cada misión: resultado en el mundo + contagio prosocial + salida si no converge + resurfaces ≥1 + planta ≥2.
 - Sin dinero, sin datos personales, sin romance, sin violencia; menores solo en lugares públicos.
 - No cambies IDs existentes. IDs nuevos: siguientes libres.
-- Toda elección creativa que el operador debería aprobar va como DECISION-PENDING (DP-N siguiente libre) con default.
+- Toda elección creativa que el operador debería aprobar va como decisión nueva `D-NNN` al final de docs/00-decisiones.md §11 (siguiente libre de TODO 00, no solo de §11), con opciones y default.
 - No escribas código. No hagas commits.
-Al terminar: corré la lista de verificación de §6.6 y reportá cada ítem como OK/FALLA, las DP-N nuevas y las entradas de
+Al terminar: corré la lista de verificación de §6.6 y reportá cada ítem como OK/FALLA, las D-NNN nuevas y las entradas de
 glosario draft creadas.
 ```
 
@@ -2059,7 +2167,7 @@ glosario draft creadas.
 |---|---|---|
 | 1 | IDs únicos y estables; ninguno reutilizado | Comparar contra el índice de contenido |
 | 2 | Cada escena tiene necesidad del NPC, criterios verificables, apertura y cierre guionados, salida si no converge, resumen para la siguiente | Campos no vacíos |
-| 3 | Líneas guionadas del NPC dentro de la tarjeta de nivel (palabras por oración, estructuras) | Conteo de palabras; lista de estructuras por banda |
+| 3 | Líneas guionadas del NPC dentro de la tarjeta de nivel | **Lint (falla):** máximo de palabras por oración de la banda (§3.3), interjecciones exentas. **Advertencia:** mínimo de palabras y oraciones por turno. **Revisión de diseño (no lint):** estructuras por banda |
 | 4 | Todo vocabulario/pieza/objeto/cartel tiene id de glosario | Lint de §6.4.3 |
 | 5 | Ninguna línea guionada contiene palabras bloqueadas (Lumi) ni temas vedados (NPC) | Lista de bloqueo |
 | 6 | Sin menciones de dinero, precio, compra, venta | Búsqueda de términos (money, price, buy, sell, pay, cost, dollar, cheap/expensive en sentido monetario) |

@@ -306,28 +306,46 @@ Las máquinas de estado se escriben como **tablas de transición tipadas** (`{ [
 idle
  └─ interact(npc con escena) ──► pretask            (Lumi presenta; servidor pre-calienta)
 pretask
- ├─ pretaskDone + sceneReady ──► npcOpening         (línea guionada cacheada)
+ ├─ pretaskDone + sceneReady ──► npcOpening         (línea guionada cacheada; arranca el reloj de escena)
  └─ sceneFailed(net/budget)   ──► npcOpening[text]  (misma escena en modo texto)
 npcOpening ── openingDone ──► playerTurn
 playerTurn  (sub-estados: waiting ─ speechStart ─► speaking ─ speechPause ─► endPending
-                          endPending ─ timer(umbral) | pressDone ─► committed
+                          endPending ─ turnTimer | pressDone ─► committed
                           endPending ─ speechResume ─► speaking
                           waiting|endPending ─ pressPass ─► passMenu ─ choose(opción) ─► committed|waiting)
  └─ committed ──► npcTurn
 npcTurn
- ├─ npcDone ──► playerTurn
- ├─ companionSignal ──► signal ──(Lumi termina)──► playerTurn
- ├─ criteriaMet ──► closing
- ├─ elapsed ≥ 4:00 sin criterios ──► nonConverging ──► closing(parcial)   [GDD §2.5.3]
- └─ elapsed ≥ 5:00 ──► closing(tope duro)                                  [GDD §2.5.5]
-cualquier estado activo
+ ├─ npcDone [¬ctx.softCapReached ∨ criterios] ──► playerTurn
+ ├─ npcDone [ctx.softCapReached ∧ ¬criterios] ──► nonConverging            [GDD §2.5.3]
+ ├─ companionSignal ──► signal
+ └─ criteriaMet ──► closing
+signal
+ ├─ companionDone [¬ctx.softCapReached ∨ criterios] ──► playerTurn
+ └─ companionDone [ctx.softCapReached ∧ ¬criterios] ──► nonConverging
+nonConverging ── nonConvergingDone ──► closing(parcial)
+con reloj corriendo (npcOpening, playerTurn.*, npcTurn, signal, nonConverging)
+ ├─ softCap (reloj ≥ 4:00) ──► mismo estado; efecto: ctx.softCapReached = true   (nunca corta a nadie)
+ └─ hardCap (reloj ≥ 5:00) ──► closing(tope duro)                             [GDD §2.5.5, ADR-006]
+cualquier estado activo (pretask y los de arriba)
  ├─ voiceLost | budgetExhausted ──► mismo sub-estado con modality = text   [GDD §2.16]
- ├─ safetyRisk ──► containment (línea guionada fuera de la ficción + recurso) ──► closing
+ ├─ safetyRisk ──► containment (línea guionada fuera de la ficción + recurso)
  └─ abort (jugador sale) ──► aborted (la escena se reanuda desde su inicio)
-closing ──► posttask (destilado + 1-3 evocaciones) ──► done
+containment ── containmentDone ──► closing
+closing ── closingDone ──► posttask (destilado + 1-3 evocaciones) ── posttaskDone ──► done
 ```
 
-Invariantes testeadas: (a) en ningún estado el NPC habla durante `playerTurn` (el servidor no envía audio de NPC mientras el turno es del jugador), (b) `signal` nunca ocurre dos veces seguidas sobre el mismo error, (c) toda escena termina en `done` o `aborted` (sin estados colgados), (d) `nonConverging` nunca produce pérdida de progreso.
+**Eventos (lista cerrada; no se renombran ni se agregan sin decisión):** `interact`, `pretaskDone`, `sceneReady`, `sceneFailed`, `openingDone`, `speechStart`, `speechPause`, `speechResume`, `turnTimer`, `pressDone`, `pressPass`, `choose`, `npcDone`, `companionSignal`, `companionDone`, `criteriaMet`, `nonConvergingDone`, `softCap`, `hardCap`, `voiceLost`, `budgetExhausted`, `safetyRisk`, `containmentDone`, `closingDone`, `posttaskDone`, `abort`.
+
+**Temporizadores (tres):** `turnTimer` (umbral de fin de turno en `endPending`), `softCap` (reloj de escena ≥ 4:00) y `hardCap` (reloj de escena ≥ 5:00). El **reloj de escena** arranca al entrar a `npcOpening` y no corre en `pretask` (D-130). Los dos topes los dispara el servidor; el cliente solo los refleja.
+
+**Reglas de los topes (D-130):**
+
+- `softCap` nunca transiciona por sí mismo: solo marca `ctx.softCapReached`. El paso a `nonConverging` ocurre en el próximo borde natural (fin de la línea del NPC o de Lumi), así nadie queda cortado a mitad de frase y el jugador que está hablando termina su turno.
+- `hardCap` sale de **cualquier** estado con reloj, incluido `playerTurn` en cualquier sub-estado (también `waiting` con el jugador en silencio: el silencio es del jugador, el tope de costo no). Efectos, en este orden: (1) si sale de `playerTurn.speaking|endPending`, el habla parcial se confirma al transcript para el observador, sin generar respuesta del NPC; (2) si sale de `npcTurn|signal|nonConverging`, el audio en curso se corta; (3) el servidor **cierra la sesión Live** al entrar a `closing(tope duro)`; (4) la línea de cierre del NPC ("I have to go check the oven! Thanks!") es una **línea guionada cacheada** de la ficha de escena (como la de apertura), no generada por la sesión Live. Así el tope de 5:00 es exacto en costo.
+- **Orden estado/efectos:** los efectos de una transición se ejecutan con el estado destino ya vigente. La línea de cierre se emite en `closing`, nunca en `playerTurn`, y la invariante (a) se mantiene también cuando el tope llega con el turno del jugador abierto.
+- `hardCap` en `containment`, `closing`, `posttask`, `done` o `aborted` se ignora (la contención de seguridad termina su línea; los demás ya cerraron).
+
+Invariantes testeadas: (a) en ningún estado el NPC habla durante `playerTurn` (el servidor no envía audio de NPC mientras el turno es del jugador), (b) `signal` nunca ocurre dos veces seguidas sobre el mismo error, (c) toda escena termina en `done` o `aborted` (sin estados colgados), (d) `nonConverging` nunca produce pérdida de progreso, (e) ninguna escena sigue con sesión Live abierta después de `hardCap` (test: `hardCap` durante `playerTurn.waiting` → `closing`, sesión cerrada, línea de cierre emitida ya en `closing`).
 
 #### 3.5.2 Política del compañero (`packages/core/companion`)
 
@@ -346,6 +364,8 @@ decideCompanion(input: {
 }): CompanionDecision
 // => { kind: "signal", errorKey, step, template } | { kind: "flag", items } | { kind: "none" }
 ```
+
+**Este bloque es la única definición del contrato de `decideCompanion`.** `04-roadmap.md` F6 y `05-prompts-por-etapa.md` F6 lo citan tal cual; si algún otro texto describe otra firma u otro conjunto de salidas, gana este. Precisiones: `step` de una señal va de **2 a 5** (2 repetición con entonación, 3 pista metalingüística, 4 elicitación, 5 recast y seguir; el 1 lo hace el NPC, ver abajo); `template` es el **id** de una plantilla de Lumi del catálogo (`02-narrativa-guion.md` §2.7, compilado desde `content/companion/lumi.es-AR.yaml`); `flag` agrega ítems al repaso de cierre sin decir nada en la escena; `none` no hace nada. Las claves de modo son exactamente `accompanied` ("Acompañado", default D-034), `flagOnly` ("Solo anotar") y `moreHelp` ("Más ayuda").
 
 Reglas de default (del GDD, parametrizadas para el A/B-1): prioridad global > objetivo de misión > sistemático > local > desliz; como máximo una señal cada 3 turnos (`moreHelp`: cada 2) y nunca dos seguidas sobre el mismo error; `flagOnly` nunca da señal; la escalera sube un escalón por intento fallido y se reinicia con cada error nuevo; en A0 arranca en el escalón 1 o 5 según el tipo de error [GDD §2.4.3, §2.4.4]. El paso 1 de la escalera (pedido de aclaración) lo dice el **NPC** dentro de la ficción, no Lumi.
 
@@ -423,11 +443,12 @@ learning-game/
 │  ├─ board/                     # pedidos del tablero: P-R1.1.yaml … (GDD §3.7)
 │  ├─ mystery/                   # notes.yaml, clues.yaml: meta-misterio de las notas del farol (02 §1.5, §6.2.5)
 │  ├─ level-cards/               # A0.yaml, A1.yaml, …: tarjetas de nivel que se inyectan en el prompt (02 §3.3)
-│  ├─ prompts/                   # npc-base.txt, lumi.txt: borradores de system prompt (02 §2.6, §3.2); SOLO se compilan al servidor
+│  ├─ prompts/                   # npc-base.txt: borrador del system prompt de los NPCs (02 §3.2); SOLO se compila al servidor
+│  ├─ authoring/                 # lumi-variantes.txt: prompt OFFLINE para redactar variantes de plantillas de Lumi (02 §2.6); NO se compila ni se llama en runtime
 │  ├─ skills/skill-tree.yaml     # árbol (GDD §2.8.2)
 │  ├─ scaffold/levels.yaml       # parámetros por nivel de andamiaje (GDD §2.10)
 │  ├─ companion/
-│  │  └─ lumi.es-AR.yaml         # líneas y plantillas de Lumi (escalera de señales, destilado, evocación)
+│  │  └─ lumi.es-AR.yaml         # plantillas de Lumi con id (esquema y catálogo: 02 §2.7): escalera de señales, destilado, evocación
 │  ├─ dioramas/
 │  │  ├─ muelle.yaml             # layout: props, NPCs, rutas, interactuables, zonas no caminables
 │  │  └─ plaza.yaml
@@ -545,7 +566,8 @@ learning-game/
    ├─ budgets/budgets.json       # copia legible por máquina de §2.7.3 (F1.1)
    ├─ budgets/bundle-size.ts     # verifica §2.7.3 sobre la salida de vite build y los assets
    ├─ eval/live-text.ts          # eval en vivo opt-in (fuera de verify; clave + autorización)
-   └─ fv/report.ts               # métricas del prototipo FV (D1, D7, minutos, US$)
+   ├─ fv/report.ts               # métricas del prototipo FV (D1, D7, minutos/usuario, US$/usuario/semana, US$/min de la ventana; D-126)
+   └─ fv/check-glossary.ts       # chequeo de glosario antes del deploy de FV (MODE=fv, D-128)
 
 experiments/                     # FUERA de los workspaces
 ├─ f0-voice-probe/               # sonda de costo de voz (F0.1)
@@ -560,13 +582,14 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 |---|---|---|
 | Registro de licencias de assets | `content/assets-registry.yaml` (en el spike descartable: `experiments/f0-perf-spike/LICENSES.md`) | F3 (F0.2 en el spike) |
 | Layout de dioramas | `content/dioramas/muelle.yaml`, `content/dioramas/plaza.yaml` (F2 usa `content/dioramas/test.yaml`, de primitivas) | F2 (test), F3 |
-| Lugares para solo-diálogo | `content/world/places.yaml` | F1.3 |
+| Lugares para solo-diálogo | `content/world/places.yaml` (F1.2 ya valida referencias escena→lugar) | F1.2 |
 | Compilador de contenido | `scripts/content/build.ts` | F1.2 |
 | Salida compilada | `apps/web/public/content/` (cliente, sin prompts) · `apps/server/generated/content/` (servidor) | F1.2 |
 | Glosario | `content/glossary/en.es-AR.yaml` | F1.2 |
 | Misiones · NPCs · tablero · misterio | `content/missions/M<c>.<n>.yaml` · `content/npcs/NPC-<NOMBRE>.yaml` · `content/board/P-R<r>.<n>.yaml` · `content/mystery/notes.yaml`, `content/mystery/clues.yaml` | F1.2, F8 |
-| Tarjetas de nivel y prompts base | `content/level-cards/<nivel>.yaml` · `content/prompts/npc-base.txt`, `content/prompts/lumi.txt` | F1.2 (los usa F4.1) |
-| Plantillas de Lumi | `content/companion/lumi.es-AR.yaml` | F1.2, F6 |
+| Tarjetas de nivel y prompt base de NPCs | `content/level-cards/<nivel>.yaml` · `content/prompts/npc-base.txt` | F1.2 (los usa F4.1) |
+| Plantillas de Lumi | `content/companion/lumi.es-AR.yaml` (esquema y catálogo con ids: `02-narrativa-guion.md` §2.7) | F1.2, F6 |
+| Prompt offline de autoría de Lumi | `content/authoring/lumi-variantes.txt` (`02` §2.6; fuera del compilador, nunca en runtime) | F1.2 |
 | Seguridad | `content/safety/topics.global.yaml` · `content/safety/containment.es-AR.yaml` · `content/safety/blocklists/` | F1.2, F4.2 |
 | Árbol de habilidades | `content/skills/skill-tree.yaml` | F1.2 |
 | Modelos y precios | `apps/server/config/models.yaml` | F4.1 |
@@ -579,6 +602,9 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | Audio de líneas guionadas | `scripts/audio/pregenerate-lines.ts` · `scripts/audio/lines-to-generate.json` · `apps/web/public/audio/lines/` | F8 |
 | Eval en vivo opt-in | `scripts/eval/live-text.ts` | F4.1 |
 | Reporte del prototipo | `scripts/fv/report.ts` | FV |
+| Chequeo de glosario antes del deploy de FV | `scripts/fv/check-glossary.ts` (lo invoca `build:release` con `MODE=fv`, §8.3; D-128) | FV |
+| Textos legales (consentimiento informado de FV y avisos de privacidad) | `docs/legal/` (p. ej. `docs/legal/consentimiento-fv.es-AR.md`; los escribe/aprueba el `[operador]`, D-124; una corrida solo deja un borrador marcado) | FV (borrador) · operador |
+| Sesión de voz del NPC (port de un prototipo de voz anterior) | `apps/server/src/providers/gemini-live/` (adaptador Live) · `apps/server/src/scene-runtime/` (una sesión por escena, timers, corte, reconexión) | F5.1 |
 | ADRs | `docs/adr/ADR-NNN-<slug>.md` | F1.1 |
 | Reportes | `docs/reports/F<n>-<AAAA-MM-DD>.md` · veredicto FV del operador: `docs/reports/FV-veredicto-<AAAA-MM-DD>.md` | cada fase · operador |
 | Plantilla de capítulo | `docs/content/plantilla-capitulo.md` | F8.3 |
@@ -863,7 +889,7 @@ prices: { version: "2026-10-04", source: "informe de negocio §3.1", ... }
   2. Toda referencia existe: NPCs de una misión, `reapariciones`, habilidades requeridas, interactuables del diorama, líneas de Lumi referenciadas, assets referenciados en el layout (y registrados en `assets-registry.yaml`).
   3. Toda escena tiene **todos** los bloques del GDD §2.5.3 (incluidos `salida_si_no_converge`, `temas_permitidos`, `resumen_para_siguiente`) y `modo_texto` equivalente.
   4. **Banda de vocabulario:** las líneas guionadas (aperturas, cierres, pistas, frases modelo) usan solo palabras de la banda MCER de la escena ∪ el glosario. Lint de tokens con una lista de palabras por banda.
-  5. **Glosario curado:** toda traducción o nombre de objeto que muestra la interfaz referencia una entrada del glosario con `estado: approved` (D-067; en el build `MODE=fv` también `reviewed`, D-128). En build de release, una entrada no aprobada referenciada falla el build; en desarrollo, advierte.
+  5. **Glosario curado:** toda traducción o nombre de objeto que muestra la interfaz referencia una entrada del glosario con `estado: approved` (D-067; en el build `MODE=fv` también `reviewed`, D-128). En el build de release (`npm run build:release`, §8.3), una entrada no aprobada referenciada falla el build; en el build de desarrollo (`npm run build`, el de `verify`), advierte. Por eso `verify` sigue verde con un glosario todo en `draft`.
   6. **Seguridad:** ninguna escena declara temas permitidos que choquen con la lista global de vedados; toda escena con NPC menor de edad (Lily, Jules) declara contexto cotidiano [GDD §3.3.3].
   7. **Sin datos personales:** lint de patrones (emails, teléfonos, URLs no permitidas) sobre todo el contenido.
 - Las claves de los archivos son las del GDD (DP-A02). Ejemplo abreviado:
@@ -901,7 +927,7 @@ escenas:
 ### 6.3 Audio de líneas guionadas
 
 - `scripts/audio/pregenerate-lines.ts` (manual, necesita clave; **no corre en CI ni en corridas headless sin autorización**): recorre las líneas guionadas, genera audio con la voz asignada a cada NPC (misma voz que en Live, DP-20 del GDD; verificar que el motor de TTS del proveedor ofrezca las mismas voces) y escribe `public/audio/lines/<lineId>.<hash>.ogg` + `content/audio-lines.manifest.json`.
-- El nombre lleva el hash del texto + voz: si cambia el texto, el manifiesto marca la línea como desactualizada y el build lo advierte (en release, falla).
+- El nombre lleva el hash del texto + voz: si cambia el texto, el manifiesto marca la línea como desactualizada y el build lo advierte (en `build:release`, §8.3, falla).
 - Mientras una línea no tenga audio, el cliente la muestra como texto + TTS en vivo (degradación aceptable en desarrollo).
 
 ### 6.4 Assets 3D (Kenney CC0 y afines)
@@ -1103,9 +1129,15 @@ npm run validate:content   # schemas, referencias, vocabulario, glosario, seguri
 npm run check:budgets      # bundle + assets
 npm run build              # vite build (web + docente) + tsc del server + content build
 npm run verify             # todo lo anterior en orden; es el gate de cada fase
+
+npm run build:release      # NO está en verify: build estricto, solo antes de un deploy (MODE=release o MODE=fv)
 ```
 
-Una fase de una corrida headless está terminada cuando `npm run verify` pasa y el reporte incluye la lista de verificación manual para el operador. Un gate rojo no se "arregla" bajando el umbral sin un DP explícito.
+**Build de desarrollo vs build de release.** `npm run build` (el que corre `verify`) es el **build de desarrollo**: las reglas de contenido que dependen de pasos humanos (glosario no aprobado referenciado, audio de línea desactualizado o faltante) **advierten** y no fallan. `npm run build:release` es el **build de release**: mismas salidas, pero esas reglas **fallan**; con `MODE=release` exige glosario `approved`; con `MODE=fv` acepta `approved` + `reviewed` y corre `scripts/fv/check-glossary.ts` (D-128). Lo crea la fase FV (antes no hace falta: nada se despliega). `build:release` **no** forma parte de `verify` ni de ninguna corrida headless: lo corre el `[operador]` (o un pipeline de deploy) antes de desplegar. Una corrida headless nunca interpreta "build" como build de release.
+
+**Glosario en la interfaz (regla única, D-131).** El compilador de contenido escribe en el manifiesto compilado `glossaryDisplay: "dev" | "release" | "fv"` y el HUD filtra por ese valor: **dev** (`npm run dev` / `npm run build`, el de `verify` y el de los gates H1/H2 del operador) muestra `approved` sin marca y `reviewed`/`draft` con una marca visible "borrador"; **release** (`build:release` con `MODE=release`) solo `approved`; **fv** (`MODE=fv`) `approved` + `reviewed`, nunca `draft` (D-128). En los tres, una palabra sin entrada no se traduce (D-068).
+
+Una fase de una corrida headless está terminada cuando `npm run verify` pasa (antes de F1.1 —P0, F0.1, F0.2— el gate es el comando local de la fase y no se crea `package.json` raíz, D-133) y el reporte incluye la lista de verificación manual para el operador. Un gate rojo no se "arregla" bajando el umbral sin un DP explícito.
 
 ---
 
