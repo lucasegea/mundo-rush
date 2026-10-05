@@ -1,0 +1,6 @@
+_brain
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
