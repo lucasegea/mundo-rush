@@ -1,7 +1,8 @@
 # 03 — Arquitectura técnica objetivo
 
-**Proyecto:** learning-game (título provisorio *Mundo Rush*, D-031) · **Documento:** arquitectura v0.2 · **Fecha:** 2026-10-06 (v0.1: 2026-10-05) · **Autor:** revisión de arquitectura (arquitecto, el entorno de desarrollo); integración v0.2: planificación
+**Proyecto:** learning-game (título provisorio *Mundo Rush*, D-031) · **Documento:** arquitectura v0.3 · **Fecha:** 2026-10-06 (v0.1: 2026-10-05) · **Autor:** revisión de arquitectura (arquitecto, el entorno de desarrollo); integración v0.2: planificación
 **v0.2 (2026-10-06):** integra las decisiones del operador del 2026-10-06 (`00-decisiones.md` §1.1), `07-stack-objetivo.md` (revisión de arquitectura: stack objetivo y costuras R10-R15) y los estudios de la investigación de referencias `research/voz-costo-valor-2026-10-06.md` y `research/pronunciacion-2026-10-06.md`. Secciones nuevas: §2.9 (HD-2D en R3F), §5.11 (voz híbrida), §5.12 (servicio de pronunciación); reglas R10-R15 en §3.1; ADR-022 a ADR-025. Donde v0.1 decía low-poly toon, cámara de tercera persona o "pronunciación fuera de alcance", manda lo nuevo.
+**v0.3 (2026-10-06, integración planificación; la forma la revisa revisión de arquitectura):** (a) config exacta de ESLint de P0 (`docs/reports/P0-2026-10-06.md` §2.3) aplicada en §4.3-§4.3.2 (`import-x/no-restricted-paths` sobre rutas resueltas); (b) rutas canónicas nuevas de P0 §3 (raíz de composición, `state/actions.ts`, nombres `@lg/*`, persistencia del operador D-157, salida compilada fuera de git D-159, `VoiceTransport`, DSP puro); (c) **modo director** solo de desarrollo (§6.5, ADR-026; D-187, confirmado por el operador en el brief); (d) **capa de fundaciones y red visible** en el mapa (§2.9, §6.4.3, §6.4.8; D-169, D-194); (e) carpetas de contenido de `02` v0.2 (`fundaciones/`, `saberes/`, `red/`, `mystery/sobres.yaml`). Las enmiendas de "cómo" de P0 §1 rigen con el default de D-196.
 **Estado:** propuesta completa para el modo 1 (vertical slice y v1). Las decisiones marcadas `DP-…` esperan validación del operador; cada una trae un default que una corrida headless usa sin frenarse.
 **Idioma:** español. Identificadores de código, nombres de paquetes y mensajes de protocolo, en inglés (ver §3.4).
 
@@ -160,7 +161,7 @@ Lo que **no** tengo como restricción y por eso no invento: número esperado de 
 | Distancia de dibujo / niebla | corta | media | completa del diorama | — |
 
 Reglas que valen para todos los tiers:
-- **Las luces del pueblo (faroles, ventanas) son materiales emisivos + sprites de halo**, no luces puntuales. En render forward cada luz puntual encarece todos los materiales iluminados; "el pueblo se ilumina" con decenas de luces reales hundiría el tier bajo.
+- **Las luces del valle (Lumi, los caminitos de bichos de luz de la red, ventanas) son materiales emisivos + sprites de halo**, no luces puntuales. En render forward cada luz puntual encarece todos los materiales iluminados; decenas de bichos de luz como luces reales hundirían el tier bajo.
 - **Desaturación del progreso** [GDD §5.4]: un uniform por diorama en los materiales de tiles y volúmenes (un `mix` con luminancia en el shader), no un pase de postprocesado.
 - **Texturas:** atlas de tiles y hojas de sprites pixel art con filtrado `nearest` y sin mipmaps (D-154); atlas de paleta compartido para volúmenes (los packs de Kenney suelen usar un "colormap" común: se aprovecha) de ≤ 1024 px por diorama.
 - **Tiers como contrato (R12):** se leen de un solo objeto (`apps/web/src/services/quality/quality.ts`); el tipo incluye `xr`, reservado y nunca elegido hasta la épica E-XR.
@@ -197,7 +198,7 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 
 ### 2.8 Cel-shading: enfoque y costo (resuelve el "cómo" de DP-17)
 
-> **Desde v0.2 (D-139, HD-2D):** esta sección aplica solo a los **volúmenes** del escenario (casas, muelle, faroles) que lo necesiten; los personajes son sprites (§2.9) y no llevan contorno ni material toon. El postprocesado ya no está descartado en v1: es un efecto por tier (§2.7.1). Cualquier shader propio queda aislado en `world/materials` y `world/post` para portarlo a nodos (TSL) si algún día se activa WebGPU (D-144).
+> **Desde v0.2 (D-139, HD-2D):** esta sección aplica solo a los **volúmenes** del escenario (casas, galpones, alambrados, el tanque) que lo necesiten; los personajes son sprites (§2.9) y no llevan contorno ni material toon. El postprocesado ya no está descartado en v1: es un efecto por tier (§2.7.1). Cualquier shader propio queda aislado en `world/materials` y `world/post` para portarlo a nodos (TSL) si algún día se activa WebGPU (D-144).
 
 | Técnica | Costo en GPU integrada | Uso |
 |---|---|---|
@@ -207,7 +208,7 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 | Contorno por postprocesado (detección de bordes por normal/profundidad) | Un pase de pantalla completa + buffer de normales: caro en 1366×768 en integradas | **Descartado en v1** |
 | Agua estilo Townscaper | Plano con material toon + ondas por vértice baratas o textura animada | Default; sin reflejos ni refracción |
 
-**Material único del proyecto:** `ToonMaterial` propio (envoltorio de `MeshToonMaterial` con `onBeforeCompile` mínimo) que agrega: (a) uniform de desaturación por diorama, (b) tinte por instancia para recolorear piezas de distintos packs con la paleta común [GDD §5.7 "unificación visual"], (c) emisivo por instancia para ventanas y faroles. Un solo material base = menos programas de shader compilados = arranque más rápido.
+**Material único del proyecto:** `ToonMaterial` propio (envoltorio de `MeshToonMaterial` con `onBeforeCompile` mínimo) que agrega: (a) uniform de desaturación por diorama, (b) tinte por instancia para recolorear piezas de distintos packs con la paleta común [GDD §5.7 "unificación visual"], (c) emisivo por instancia para ventanas, Lumi y los bichos de luz de la red. Un solo material base = menos programas de shader compilados = arranque más rápido.
 
 **Falla posible:** el casco invertido se ve mal en mallas con normales partidas (aristas duras), con huecos en el contorno. Mitigación: el pipeline de assets suaviza normales solo para la copia del contorno, o se desactiva el contorno en esa pieza (marcado en el registro de assets).
 
@@ -220,12 +221,13 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 |---|---|---|
 | **Tiles** | Tilemap por capas en el layout (§6.4.3) → `buildTileChunk(tilemap, chunkX, chunkZ)` fusiona 16×16 tiles en una `BufferGeometry` con UV del atlas (1 draw call por chunk y por capa). **1 tile = 1 m = 32×32 px**; la grilla de caminabilidad usa celdas de 0,5 m (§2.4). Tiles vacíos no generan geometría | `apps/web/src/world/tiles/` |
 | **Texturas pixel** | revisión de arquitectura PNG con `magFilter = minFilter = NearestFilter`, `generateMipmaps = false`, espacio de color sRGB; sin resampleo en el pipeline (§6.4.1) | `apps/web/public/textures/tiles/` |
-| **Volúmenes** | glTF CC0 de pocas caras (casas, muelle, faroles) o cajas por código, con textura pixel o color de paleta; instanciados y fusionados como en §6.4.4 | `apps/web/src/world/props/` |
+| **Volúmenes** | glTF CC0 de pocas caras (casas, galpones, alambrados, el tanque) o cajas por código, con textura pixel o color de paleta; instanciados y fusionados como en §6.4.4 | `apps/web/src/world/props/` |
 | **Sprites (billboards)** | Plano con la hoja de sprites (4 direcciones × ≥ 3 cuadros + idle), que rota **solo en Y** hacia la cámara, anclado por los pies; ~32×48 px a la misma densidad que los tiles; sombra *blob* en todos los tiers; los sprites de un mismo pack se dibujan instanciados. La orientación y el cuadro se calculan con funciones puras testeables | `apps/web/src/world/sprites/` · `apps/web/public/sprites/<pack>/` |
 | **Cámara** | `CameraRig` por presets (R11, D-053): `topdownOrtho` (default; yaw 0°, pitch 55-60°, ~15 tiles de ancho visibles, sigue al jugador con suavizado y **snap a la grilla de píxel** para que el pixel art no tiemble), `isoOrtho` (yaw 45°), `dialogueFrame`; `perspective3D` y `xrTabletop` declarados para el futuro | `apps/web/src/world/camera/` |
-| **Luz** | 1 direccional + ambiente/hemisférica; 3 presets por hora del día (D-051); faroles y ventanas como emisivos + halos (§2.7.1) | `apps/web/src/world/lighting/` |
+| **Luz** | 1 direccional + ambiente/hemisférica; 3 presets por hora del día (D-051); bichos de luz y ventanas como emisivos + halos (§2.7.1) | `apps/web/src/world/lighting/` |
 | **Postprocesado por tier** | `@react-three/postprocessing`: `low` ninguno; `medium` bloom barato (umbral alto, media resolución); `high` bloom + DOF tilt-shift (foco en el jugador) + viñeta. Se apaga con "reducir movimiento" y durante la pérdida de contexto | `apps/web/src/world/post/` |
 | **Retratos** | Busto del pack si existe; si no, el sprite de frente escalado en el HUD con `image-rendering: pixelated` (D-030) | `apps/web/public/sprites/<pack>/` |
+| **Capa de fundaciones y red visible** (F3.3; D-169, D-194; `02` §1.7-§1.9, §4.1.3) | Lo que el jugador funda hablando **aparece en el mapa**: cada `SITIO-*` tiene un ancla en el layout del diorama (`sitios:`, §6.4.3) y una ficha de fundación (`content/fundaciones/`, `02` §6.2.6) con un visual por estado (`idea` → `en_marcha` → `fundado` → `crece`). Una función pura `foundationVisuals(fundaciones, diorama)` (en `packages/core/src/world/`) traduce el estado del store (`world.fundaciones`) a la lista de props y sprites a dibujar; `world/foundations/FoundationLayer.tsx` solo la pinta. Igual para la **red**: `networkPaths(red, casas)` da los caminitos de bichos de luz del atardecer (uno por vínculo, `02` §1.7) que dibuja `world/foundations/NetworkFireflies.tsx`; y la **saturación del Cruce** por progreso (−30 % al empezar, normal al cerrar la Región 1, `02` §1.9) es un parámetro de luz y material que sale de un selector. Nada se compra ni se acelera (D-169): el estado solo cambia por efectos de misión emitidos al cerrar escenas (§6.4.8) | `packages/core/src/world/` · `apps/web/src/world/foundations/` · `content/fundaciones/` |
 
 **Presupuesto:** un chunk de tiles por capa cuenta como 1 draw call; los sprites de un pack como 1 por pack (instancias); el conteo de §2.7.1 se estima desde el layout (§6.4.5). **Riesgos:** temblor del pixel art con la cámara ortográfica (snap a la grilla de píxel, medido en F0.2); DOF caro en integradas (solo `high`); en VR los billboards se ven peor y el arte de personajes probablemente se rehace (aceptado por el operador al elegir HD-2D; D-139).
 
@@ -240,7 +242,7 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 │ apps/web                                                              │
 │                                                                       │
 │  ui/ (React DOM + Tailwind)          world/ (R3F, declarativo)         │
-│  HUD, diálogo, Lumi (burbujas),      tiles, sprites, Lumi (farol),    │
+│  HUD, diálogo, Lumi (burbujas),      tiles, sprites, Lumi (bicho),    │
 │  cuaderno, ajustes, onboarding,      cámara, materiales, luces        │
 │  modo solo-diálogo                                                    │
 │        │  lee selectores                    │  lee selectores          │
@@ -297,23 +299,23 @@ Un solo store (`useGameStore`) compuesto por slices. Cada slice declara su estad
 |---|---|---|---|---|
 | `session` | fase de la app (`boot`, `onboarding`, `world`, `scene`, `notebook`, `dialogOnly`), cuenta (id opaco, rol, banda de edad, institución/clase si aplica), estado de conexión, brazos de experimentos asignados, presupuesto de voz restante (minutos), idioma de interfaz, par de idioma | servicios de auth/persistencia/voz; onboarding | todos | servidor (cuenta) |
 | `settings` | accesibilidad (tamaño de texto, fuente, subtítulos, karaoke, daltonismo, contraste, reducir movimiento, volúmenes por canal, voz de Lumi on/off), entrada (pulsar para hablar, umbral de fin de turno, solo botón, mapeo de teclas), modo de feedback (`accompanied`/`flagOnly`/`moreHelp`), velocidad de NPC preferida, nivel de ayuda fijado (o automático), tier gráfico (auto/manual), cámara (preset `topdownOrtho`/`isoOrtho`, R11) | `ui/settings`, onboarding | todos | servidor + copia local (preferencias por dispositivo como tier gráfico solo local) |
-| `world` | diorama actual y cargados, momento del día, clima guionado, nivel de luz por barrio, flags del mundo (eventos de misión: `dog_found`…), estado de NPCs (posición lógica, ruta, disponible, ícono de pedido), relación por NPC (0-5, nunca baja), interactuables cercanos, interactuable enfocado | núcleo de mundo vía acciones; `world/` despacha `interact(id)`, `moveTo(x,z)`; resultados de escenas | `world/`, `ui/` (prompt de interacción, objetivo actual, lista accesible) | servidor (flags, relaciones, luz) |
+| `world` | diorama actual y cargados, momento del día, clima guionado, nivel de luz por barrio, flags del mundo (eventos de misión: `goat_found`…), **fundaciones** (`SITIO-*` → `idea`/`en_marcha`/`fundado`/`crece`, D-169), **red** (presentaciones consumadas `intro:<NPC>` y vínculos, D-168), último punto elegido en modo inspección (`lastPick`, solo lo usa el modo director, §6.5.3), estado de NPCs (posición lógica, ruta, disponible, ícono de pedido), relación por NPC (0-5, nunca baja), interactuables cercanos, interactuable enfocado | núcleo de mundo vía acciones; `world/` despacha `interact(id)`, `moveTo(x,z)`; resultados de escenas | `world/`, `ui/` (prompt de interacción, objetivo actual, lista accesible) | servidor (flags, relaciones, luz) |
 | `player` | posición lógica (celda y coordenadas de simulación), destino/camino, orientación, avatar, nombre de juego, pronombres, canasta (objetos prestados de misión) | núcleo de movimiento; onboarding | `world/`, `ui/` | servidor (avatar, nombre, pronombres, canasta); posición solo para reanudar |
 | `dialogue` | escena activa (`sceneId`, `npcId`), estado de la máquina de escena (§3.5.1), sub-estado de turno, modalidad (`voice`/`text`), subtítulos (líneas finales y parcial), última línea del NPC (para `Repetir`), velocidad efectiva, menú de silencio abierto, chip de pista visible, opciones sugeridas (modo texto), progreso de criterios (para la línea de objetivo, sin revelar evaluación), motivo de fallback a texto | servicio `voice-client` (mensajes del servidor), `ui/dialogue` (botones: `Terminé`, `Pasar el turno`, `Repetir`, `Más despacio`, `Escribir`, `Marcar`) | `ui/dialogue`, `world/` (animaciones de habla, encuadre de cámara) | no (la escena se reanuda desde su inicio [GDD §2.16]) |
 | `companion` | estado de Lumi (`idle`, `listening`, `speaking`, `signal`, `noted`), señal activa (texto, escalón de la escalera, audio), burbuja visible, cola de líneas, brillo (derivado de evidencia total), ítems anotados en la escena actual | servicio `voice-client` (mensajes `companion.*` del servidor), núcleo (líneas de pre-tarea y destilado) | `ui/companion`, `world/actors/Lumi` | no (deriva de `progression` y `learner`) |
-| `progression` | log local de eventos de evidencia (ids del servidor), pociones por rama (derivadas, en tercios enteros), habilidades abiertas y pociones vertidas, can-do demostrados, estado por misión (`locked`, `available`, `done`, `canImprove`), capítulo | **solo** aplicando eventos confirmados por el servidor (`scene.end`) y la acción `pourPotions(skillId)` | `ui/notebook`, `world/` (luz de faroles), `companion` | servidor (fuente: eventos) |
+| `progression` | log local de eventos de evidencia (ids del servidor), pociones por rama (derivadas, en tercios enteros), habilidades abiertas y pociones vertidas, can-do demostrados, estado por misión (`locked`, `available`, `done`, `canImprove`), capítulo | **solo** aplicando eventos confirmados por el servidor (`scene.end`) y la acción `pourPotions(skillId)` | `ui/notebook`, `world/` (brillo de Lumi), `companion` | servidor (fuente: eventos) |
 | `learner` | banco de repaso (ítems Leitner), patrones de error (clave normalizada, tipo, conteo, sistemático), nivel de andamiaje (1-5) y ventana de señales de las últimas 3 escenas, ítems vencidos | eventos del servidor (`scene.end` trae actualizaciones), repaso de bolsillo | servicio de voz (para pedir escena con ítems vencidos), `ui/notebook` | servidor |
-| `ui` | paneles abiertos, modal activo, toasts, foco de navegación accesible | `ui/` | `ui/`, `world/` (pausar input de cámara si hay modal) | no |
+| `ui` | paneles abiertos, modal activo, toasts, foco de navegación accesible, modo de puntero (`pointerMode`: `play` por defecto o `inspect`, que solo activa el modo director, §6.5.3) | `ui/`; `dev/director` solo con `setPointerMode` | `ui/`, `world/` (pausar input de cámara si hay modal; en `inspect` el clic elige un punto con `pickTile` en vez de mover) | no |
 
 **Notas de diseño del store:**
 - **Pociones en tercios enteros.** La opción sugerida vale 1/3 de poción [GDD §2.7.3]; para evitar flotantes se guarda `thirds: number` y la UI muestra frascos. Regla de núcleo, testeada.
 - **Selectores con nombre** en `state/selectors/` (por ejemplo `selectCurrentObjective`, `selectNearbyInteractables`, `selectPotionsByBranch`). Las corridas no escriben selectores ad hoc dentro de componentes salvo triviales.
 - **No hay slice de economía ni de construcción.** Ver §3.6.
 
-### 3.4 Flujo típico (ejemplo completo: hablar con Lily)
+### 3.4 Flujo típico (ejemplo completo: hablar con Maya)
 
 ```
-1. world/ Npc onClick  ──► acción interact("NPC-LILY")
+1. world/ Npc onClick  ──► acción interact("NPC-MAYA")
 2. core.interaction.resolve(state) ──► si hay misión disponible: session.phase = "scene",
    dialogue.state = "pretask", companion.queue = líneas de pre-tarea (del contenido)
 3. ui/companion muestra la burbuja de Lumi; services/audio reproduce el audio cacheado de Lumi
@@ -325,7 +327,7 @@ Un solo store (`useGameStore`) compuesto por slices. Cada slice declara su estad
 ...
 n. servidor ──► scene.end {result, evidence[], learnerUpdates[]} ──► acción applySceneEnd
    ──► core.progression.apply / core.learner.apply ──► progression, learner, world.flags
-   ──► world/ enciende la ventana; ui/ muestra el destilado
+   ──► world/ muestra la fundación o el caminito de luz nuevo; ui/ muestra el destilado
 ```
 
 En ningún paso `ui/` toca `world/` ni al revés.
@@ -446,10 +448,12 @@ learning-game/
 ├─ package.json                  # workspaces: ["apps/*", "packages/*"]; scripts raíz (gates)
 ├─ package-lock.json
 ├─ tsconfig.base.json            # strict, paths
-├─ eslint.config.js              # incluye reglas de límites (§4.3)
+├─ eslint.config.js              # límites con rutas resueltas (import-x/no-restricted-paths) + costuras R10-R15 + modo director (§4.3.1)
 ├─ vitest.workspace.ts
 ├─ .env.example                  # SOLO nombres de variables, sin valores
-├─ .gitignore                    # .env*, assets-src/, node_modules/, coverage/, *.log
+├─ .gitignore                    # .env*, assets-src/, node_modules/, dist/, coverage/, *.log, .director/, apps/server/data/, apps/server/models/zipa/, apps/web/public/content/, apps/server/generated/ (D-159), experiments/f0-voice-probe/data/audio/
+├─ .mcp.json                     # (FD0) registra el servidor MCP del modo director para Claude Code (sin claves; D-188)
+├─ .director/                    # (FD0, gitignored) estado vivo, diario de sesiones de prueba, costo del copiloto; solo desarrollo (§6.5)
 ├─ README.md                     # cómo correr, gates, dónde está cada cosa
 │
 ├─ docs/
@@ -475,11 +479,16 @@ learning-game/
 │  ├─ glossary/
 │  │  └─ en.es-AR.yaml           # glosario curado (§6.2); luego en.pt-BR.yaml, etc.
 │  ├─ npcs/
-│  │  └─ NPC-BEN.yaml …          # ficha de NPC (GDD §2.5.4)
+│  │  └─ NPC-INES.yaml …         # ficha de NPC (GDD §2.5.4; elenco de `02` §3, D-166)
 │  ├─ missions/
 │  │  └─ M1.2.yaml …             # ficha de misión + escenas (GDD §2.3.3, §2.5.3)
 │  ├─ board/                     # pedidos del tablero: P-R1.1.yaml … (GDD §3.7)
-│  ├─ mystery/                   # notes.yaml, clues.yaml: meta-misterio de las notas del farol (02 §1.5, §6.2.5)
+│  ├─ mystery/                   # sobres.yaml, clues.yaml: meta-misterio de los sobres de semillas (02 §1.6, §6.2.5; D-172)
+│  ├─ fundaciones/               # SITIO-*.yaml: fichas de fundación con visual por estado (02 §6.2.6; D-169)
+│  ├─ saberes/                   # SAB-*.yaml con sus HV-*: saberes reales verificables (02 §1.5, §6.2.7; D-170, D-195)
+│  ├─ red/                       # presentaciones.yaml: quién presenta a quién (02 §6.2.8; D-168)
+│  ├─ retired-ids.yaml           # ids, nombres y términos retirados (lista única: 02 §0.5.1) (P0 T5)
+│  ├─ lint-allowlist.yaml        # líneas [GUIONADA] que violan el máximo de banda y no se reescriben (P0 T5)
 │  ├─ level-cards/               # A0.yaml, A1.yaml, …: tarjetas de nivel que se inyectan en el prompt (02 §3.3)
 │  ├─ prompts/                   # npc-base.txt: borrador del system prompt de los NPCs (02 §3.2); SOLO se compila al servidor
 │  ├─ authoring/                 # lumi-variantes.txt: prompt OFFLINE para redactar variantes de plantillas de Lumi (02 §2.6); NO se compila ni se llama en runtime
@@ -491,8 +500,8 @@ learning-game/
 │  │  ├─ confusions.es-en.yaml   # tabla de confusiones L1 es→en calibrada en F0.1 (§5.12)
 │  │  └─ habilitados.yaml        # tipos de error E1-E14 habilitados por la vara de F0.1 (D-151)
 │  ├─ dioramas/
-│  │  ├─ muelle.yaml             # layout: capas de tiles, volúmenes, NPCs, rutas, interactuables, zonas no caminables
-│  │  └─ plaza.yaml
+│  │  ├─ muelle.yaml             # Los Campos (id de diorama y de presupuesto `muelle`, D-180): capas de tiles, volúmenes, NPCs, rutas, interactuables, zonas no caminables, anclas `sitios`
+│  │  └─ plaza.yaml              # El Cruce (id `plaza`, D-180)
 │  ├─ world/
 │  │  └─ places.yaml             # lugares de la región para el modo solo-diálogo (id, nombre, barrio)
 │  ├─ safety/
@@ -533,7 +542,7 @@ learning-game/
 │  ├─ web/
 │  │  ├─ index.html              # juego
 │  │  ├─ docente.html            # panel docente (sin three)
-│  │  ├─ vite.config.ts
+│  │  ├─ vite.config.ts          # config del juego; NUNCA menciona ni importa el modo director (lint, fixture FD0 A2)
 │  │  ├─ public/
 │  │  │  ├─ models/<pack>/…glb   # SOLO volúmenes ya optimizados por el pipeline
 │  │  │  ├─ sprites/<pack>/      # hojas de sprites pixel art de personajes (D-153)
@@ -544,15 +553,18 @@ learning-game/
 │  │  │  ├─ decoders/            # decodificador meshopt autoalojado
 │  │  │  └─ content/             # GENERADO: JSON compilado desde /content
 │  │  └─ src/
-│  │     ├─ main.tsx · App.tsx   # monta shell DOM; carga diferida del canvas
+│  │     ├─ main.tsx · App.tsx   # raíz de composición: monta shell DOM; carga diferida del canvas (P0 T1)
+│  │     ├─ boot/                # arranque de servicios; dev.ts carga el modo director SOLO con DEV && VITE_LG_DIRECTOR=1 (§6.5.1)
+│  │     ├─ dev/director/        # (FD0-FD1, solo desarrollo, nunca en el build) snapshot, sesión, panel lateral (§6.5)
 │  │     ├─ state/
 │  │     │  ├─ store.ts          # composición de slices
 │  │     │  ├─ bridge.ts         # ÚNICA puerta del mundo 3D al store: selectores y acciones permitidos a world/
+│  │     │  ├─ actions.ts        # barril de acciones públicas: lo único que ui/ (y dev/director) despachan (R14, P0 T2)
 │  │     │  ├─ slices/           # sessionSlice.ts, settingsSlice.ts, worldSlice.ts, …
 │  │     │  └─ selectors/
 │  │     ├─ services/
-│  │     │  ├─ voice/            # voiceClient.ts sobre VoiceTransport (R13), framing, reconexión
-│  │     │  ├─ audio/            # ÚNICO AudioContext; worklets (captura, VAD, reproducción), director, time-stretch, clipStore (D-155)
+│  │     │  ├─ voice/            # transport.ts (interfaz VoiceTransport, R13) + ws.ts; voiceClient.ts, framing, reconexión (P0 T7)
+│  │     │  ├─ audio/            # ÚNICO AudioContext; dsp/ (VAD, OLA, resample: funciones puras, P0 T8) · worklets/ (cáscaras sin lógica); director de audio, clipStore (D-155)
 │  │     │  ├─ input/            # dispositivos → acciones semánticas (R10); remapeo
 │  │     │  ├─ platform/         # interfaz Platform + adaptador web (R15); desktop/mobile/xr en sus épicas
 │  │     │  ├─ persistence/      # sync con servidor + copia local (IndexedDB)
@@ -569,7 +581,8 @@ learning-game/
 │  │     │  ├─ camera/           # CameraRig.tsx con presets (R11)
 │  │     │  ├─ materials/        # material de tiles/volúmenes, ToonMaterial para volúmenes que lo necesiten
 │  │     │  ├─ post/             # postprocesado por tier (§2.9)
-│  │     │  ├─ lighting/         # tiempo del día, luz por barrio, halos
+│  │     │  ├─ lighting/         # tiempo del día, saturación del Cruce por progreso, halos
+│  │     │  ├─ foundations/      # FoundationLayer.tsx (SITIO-* por estado) · NetworkFireflies.tsx (red) (F3.3, §2.9)
 │  │     │  └─ dev/              # superposición de grilla y coordenadas (solo dev)
 │  │     ├─ ui/                  # React DOM + Tailwind
 │  │     │  ├─ hud/              # objetivo, indicador de voz, prompt de interacción
@@ -587,7 +600,9 @@ learning-game/
 │  └─ server/
 │     ├─ src/
 │     │  ├─ index.ts             # HTTP + WS en un proceso; sirve también el build estático
-│     │  ├─ config/              # carga de models.yaml, precios, límites; validado con zod
+│     │  ├─ config/              # carga de models.yaml, precios, límites; validado con zod; modo operador local (D-158)
+│     │  ├─ content/             # loader.ts: lee generated/content; relee al cambiar SOLO con LG_DEV_CONTENT_WATCH=1 (FD0, §6.5.2)
+│     │  ├─ store/               # interfaces EvidenceStore, SaveStore, LearnerStore + adaptador de archivo append-only (D-157); Postgres en F11.1
 │     │  ├─ gateway/             # WS del cliente, framing, autenticación del socket
 │     │  ├─ scene-runtime/       # orquesta UNA escena: sesión Live, máquina de escena, timers
 │     │  ├─ providers/           # adaptadores: gemini-live, cascade (stt-deepgram, gemini-text, tts-*), moderation-* (§5.10-§5.11)
@@ -603,7 +618,7 @@ learning-game/
 │     │  └─ retention/           # borrado programado (transcripciones a 30 días)
 │     ├─ config/models.yaml      # roles de modelo → proveedor/modelo/precio; voice.npc.adapter (sin claves)
 │     ├─ models/zipa/            # modelo ONNX de ZIPA (gitignored; lo baja el operador; registrado con licencia)
-│     ├─ data/cost-ledger.jsonl  # ledger de costo del uso del operador (gitignored) hasta que exista Postgres
+│     ├─ data/                   # (gitignored) cost-ledger.jsonl (F5.1a) · evidence.jsonl (F4.1) · saves/ · learner.jsonl (F7): adaptadores de archivo del modo operador hasta F11.1 (D-157)
 │     ├─ generated/content/      # GENERADO por scripts/content/build.ts: contenido + prompts (nunca va al cliente)
 │     └─ test/fakes/             # servidor Live falso, STT/modelo de texto/TTS falsos, respuestas de pronunciación falsas
 │
@@ -619,6 +634,16 @@ learning-game/
    ├─ fv/report.ts               # métricas del prototipo FV (D1, D7, minutos/usuario, US$/usuario/semana, US$/min de la ventana; D-126)
    └─ fv/check-glossary.ts       # chequeo de glosario antes del deploy de FV (MODE=fv, D-128)
 
+tooling/
+├─ eslint-fixtures/              # fixtures de lint fuera del árbol que lintea verify (si no se usa lintText) (P0 T4)
+└─ director/                     # (FD0-FD1) workspace privado, SOLO desarrollo, fuera de apps/ (§6.5, ADR-026)
+   ├─ vite.config.ts             # ÚNICO lugar donde se registra el plugin: mergeConfig(apps/web/vite.config.ts, { plugins: [directorPlugin()] }); lo usa `npm run dev:director`
+   ├─ src/vite-plugin.ts         # plugin de Vite apply:"serve": snapshot → .director/state.json, /__director/*, recarga de contenido
+   ├─ src/read.ts · src/cli.ts   # funciones de lectura compartidas + CLI (npm run director -- …)
+   ├─ src/mcp.ts                 # servidor MCP por stdio (cáscara sobre read.ts; D-188)
+   ├─ src/copilot/               # (FD1) CopilotRunner (Claude Agent SDK) + guardas + aplicar/commitear/deshacer
+   └─ config.yaml                # (FD1) modelo del copiloto, umbral de alerta de costo (sin claves; D-189)
+
 experiments/                     # FUERA de los workspaces
 ├─ f0-voice-probe/               # sonda de voz, gramática (EPR) y pronunciación (F0.1); data/audio/ gitignored
 └─ f0-hd2d-spike/                # spike de rendimiento HD-2D descartable (F0.2)
@@ -631,20 +656,33 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | Qué | Ruta canónica | Fase que la crea |
 |---|---|---|
 | Registro de licencias de assets | `content/assets-registry.yaml` (en el spike descartable: `experiments/f0-hd2d-spike/LICENSES.md`) | F3 (F0.2 en el spike) |
-| Layout de dioramas (con capas de tiles) | `content/dioramas/muelle.yaml`, `content/dioramas/plaza.yaml` (F2 usa `content/dioramas/test.yaml`, con atlas placeholder) | F2 (test), F3 |
+| Layout de dioramas (con capas de tiles y anclas `sitios`) | `content/dioramas/muelle.yaml` (Los Campos), `content/dioramas/plaza.yaml` (El Cruce): ids de diorama y de presupuesto sin renombrar (D-180); F2 usa `content/dioramas/test.yaml`, con atlas placeholder | F2 (test), F3.1 (muelle), F3.2 (plaza), F3.3 (sitios) |
 | Lugares para solo-diálogo | `content/world/places.yaml` (F1.2 ya valida referencias escena→lugar) | F1.2 |
 | Compilador de contenido | `scripts/content/build.ts` | F1.2 |
-| Salida compilada | `apps/web/public/content/` (cliente, sin prompts) · `apps/server/generated/content/` (servidor) | F1.2 |
+| Salida compilada | `apps/web/public/content/` (cliente, sin prompts) · `apps/server/generated/content/` (servidor); **ambas ignoradas por git y regeneradas por `build`/`validate:content`** (D-159); `content/audio-lines.manifest.json` sí se versiona | F1.2 |
 | Glosario | `content/glossary/en.es-AR.yaml` | F1.2 |
-| Misiones · NPCs · tablero · misterio | `content/missions/M<c>.<n>.yaml` · `content/npcs/NPC-<NOMBRE>.yaml` · `content/board/P-R<r>.<n>.yaml` · `content/mystery/notes.yaml`, `content/mystery/clues.yaml` | F1.2, F8 |
+| Misiones · NPCs · tablero · misterio | `content/missions/M<c>.<n>.yaml` · `content/npcs/NPC-<NOMBRE>.yaml` · `content/board/P-R<r>.<n>.yaml` · `content/mystery/sobres.yaml`, `content/mystery/clues.yaml` (sobres de semillas, D-172) | F1.2, F8 |
 | Tarjetas de nivel y prompt base de NPCs | `content/level-cards/<nivel>.yaml` · `content/prompts/npc-base.txt` | F1.2 (los usa F4.1) |
 | Plantillas de Lumi | `content/companion/lumi.es-AR.yaml` (esquema y catálogo con ids: `02-narrativa-guion.md` §2.7) | F1.2, F6 |
 | Prompt offline de autoría de Lumi | `content/authoring/lumi-variantes.txt` (`02` §2.6; fuera del compilador, nunca en runtime) | F1.2 |
 | Seguridad | `content/safety/topics.global.yaml` · `content/safety/containment.es-AR.yaml` · `content/safety/blocklists/` | F1.2, F4.2 |
 | Árbol de habilidades | `content/skills/skill-tree.yaml` | F1.2 |
 | Modelos y precios | `apps/server/config/models.yaml` | F4.1 |
-| Presupuestos | §2.7.3 + `scripts/budgets/budgets.json` (lo lee `check:budgets`) | F1.1 |
-| Puente mundo → store | `apps/web/src/state/bridge.ts` | F2 |
+| Presupuestos | §2.7.3 + `scripts/budgets/budgets.json` (lo lee `check:budgets`; incluye `check:dev-only`, §6.5.1) | F1.1b (FD0 agrega `check:dev-only`) |
+| Puente mundo → store | `apps/web/src/state/bridge.ts` (FD1 agrega `pickTile`) | F2 |
+| Acciones públicas para `ui/` y el modo director | `apps/web/src/state/actions.ts` (P0 T2) | F1.1a (vacío), F1.3 |
+| Raíz de composición | `apps/web/src/main.tsx`, `App.tsx`, `apps/web/src/boot/` (P0 T1; marcadores en F1.1a) | F1.1a, F1.3 |
+| Nombres de paquete | `@lg/core`, `@lg/protocol`, `@lg/content-schema` (P0 T3); alias de `apps/web`: `@ui/*`, `@world/*`, `@state/*`, `@services/*`, `@i18n/*`, `@teacher/*` | F1.1a |
+| Config de lint y sus fixtures | `eslint.config.js` (§4.3.1) · `tooling/eslint-fixtures/` o `lintText` con `filePath` virtual (§4.3.2) | F1.1a |
+| IDs retirados y allowlist de lint | `content/retired-ids.yaml` · `content/lint-allowlist.yaml` (P0 T5) | F1.2 |
+| Fundaciones · saberes · red (contenido v0.2) | `content/fundaciones/SITIO-*.yaml` · `content/saberes/SAB-*.yaml` (con sus `HV-*`) · `content/red/presentaciones.yaml` (`02` §6.1, §6.2.6-§6.2.8) | F1.2 (esquemas + prólogo/M1.1-M1.2), F8 |
+| Capa de fundaciones y red en el mapa | `packages/core/src/world/` (`foundationVisuals`, `networkPaths`) · `apps/web/src/world/foundations/` · anclas `sitios:` en `content/dioramas/*.yaml` (§6.4.8) | F3.3 |
+| Persistencia del operador (sin Postgres) | `apps/server/src/store/` (interfaces `EvidenceStore`, `SaveStore`, `LearnerStore`) · `apps/server/data/evidence.jsonl`, `apps/server/data/saves/`, `apps/server/data/learner.jsonl` (gitignored) (D-157) | F4.1 (evidencia), F7 (resto) |
+| Modo operador del servidor | `LG_OPERATOR_MODE=1`, ligado a `127.0.0.1`, cuenta seudónima `op-local` (D-158) | F4.1 |
+| Transporte de voz del cliente | `apps/web/src/services/voice/transport.ts` (`VoiceTransport`) + `ws.ts` (P0 T7) | F5.2 |
+| DSP de audio puro | `apps/web/src/services/audio/dsp/` · `services/audio/worklets/` (cáscaras) (P0 T8) | F5.2 |
+| Modo director (solo desarrollo) | cliente `apps/web/src/dev/director/` (lo carga `apps/web/src/boot/dev.ts`) · Node `tooling/director/` · snapshot y diario tipados en `packages/protocol/src/director.ts` · `.director/state.json`, `.director/journal/<sessionId>.jsonl` (gitignored) · `.mcp.json` · cargador de contenido del servidor `apps/server/src/content/loader.ts` (§6.5) | FD0 |
+| Copiloto del modo director | `tooling/director/src/copilot/` · panel `apps/web/src/dev/director/panel/` · `tooling/director/config.yaml` · costo `.director/cost.jsonl` (§6.5.3) | FD1 |
 | Capa DOM | `apps/web/src/ui/` (incluye `ui/hud/`, `ui/dialogue/`, `ui/companion/`, `ui/notebook/`, `ui/dialog-only/`, …) | F1.3 |
 | Capa 3D | `apps/web/src/world/` | F2 |
 | Optimizador de assets | `scripts/assets/optimize.ts` → `apps/web/public/models/<pack>/` (volúmenes) · `apps/web/public/textures/tiles/` (atlas) · `apps/web/public/sprites/<pack>/` (personajes) | F3 |
@@ -653,36 +691,220 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | Retratos para solo-diálogo | busto del pack o sprite de frente en `apps/web/public/sprites/<pack>/` (D-030); si faltan, SVG por código | F1.3 (SVG), F3 |
 | Voz híbrida (servidor) | `apps/server/src/providers/gemini-live/` · `apps/server/src/providers/cascade/` · selección en `apps/server/config/models.yaml` (`voice.npc.adapter`) (§5.11) | F5.1 |
 | Pronunciación | núcleo `packages/core/src/pronunciation/` · servidor `apps/server/src/pronunciation/` · UI `apps/web/src/ui/pronunciation/` · clips locales `apps/web/src/services/audio/clipStore.ts` · datos `content/pronunciation/` · modelo `apps/server/models/zipa/` (gitignored) (§5.12) | FP |
-| Ledger de costo del operador | `apps/server/data/cost-ledger.jsonl` (gitignored; Postgres `cost_ledger` llega con F11.1) | F5.1 |
+| Ledger de costo del operador | `apps/server/data/cost-ledger.jsonl` (gitignored; Postgres `cost_ledger` llega con F11.1) | F5.1a |
 | Audio de líneas guionadas | `scripts/audio/pregenerate-lines.ts` · `scripts/audio/lines-to-generate.json` · `apps/web/public/audio/lines/` | F8 |
 | Eval en vivo opt-in | `scripts/eval/live-text.ts` | F4.1 |
 | Reporte del prototipo | `scripts/fv/report.ts` | FV |
 | Chequeo de glosario antes del deploy de FV | `scripts/fv/check-glossary.ts` (lo invoca `build:release` con `MODE=fv`, §8.3; D-128) | FV |
 | Textos legales (consentimiento informado de FV y avisos de privacidad) | `docs/legal/` (p. ej. `docs/legal/consentimiento-fv.es-AR.md`; los escribe/aprueba el `[operador]`, D-124; una corrida solo deja un borrador marcado) | FV (borrador) · operador |
 | Sesión de voz del NPC (port de un prototipo de voz anterior) | `apps/server/src/providers/gemini-live/` (adaptador Live) · `apps/server/src/scene-runtime/` (una sesión por escena, timers, corte, reconexión) | F5.1 |
-| ADRs | `docs/adr/ADR-NNN-<slug>.md` | F1.1 |
+| ADRs | `docs/adr/ADR-NNN-<slug>.md` (ADR-001…026) | F1.1b |
 | Reportes | `docs/reports/F<n>-<AAAA-MM-DD>.md` · veredicto FV del operador: `docs/reports/FV-veredicto-<AAAA-MM-DD>.md` | cada fase · operador |
 | Plantilla de capítulo | `docs/content/plantilla-capitulo.md` | F8.3 |
 | Sondas | `experiments/f0-voice-probe/` (salidas de pronunciación en `out/`; audio en `data/audio/`, gitignored) · `experiments/f0-hd2d-spike/` | F0.1, F0.2 |
-| Variables de entorno | prefijo `LG_` (§4.4): `LG_GEMINI_API_KEY`, `LG_DEEPGRAM_API_KEY`, `LG_AZURE_SPEECH_KEY`, `LG_AZURE_SPEECH_REGION`, `LG_SPEECHACE_API_KEY`, `LG_SPEECHSUPER_APP_KEY`, `LG_SPEECHSUPER_SECRET_KEY` y opcionales (`LG_OPENAI_API_KEY`, `LG_ASSEMBLYAI_API_KEY`, `LG_ELEVENLABS_API_KEY`); solo nombres en `.env.example` (D-134, D-150) | F0.1, F1.1 |
+| Variables de entorno | prefijo `LG_` (§4.4): `LG_GEMINI_API_KEY`, `LG_DEEPGRAM_API_KEY`, `LG_AZURE_SPEECH_KEY`, `LG_AZURE_SPEECH_REGION`, `LG_SPEECHACE_API_KEY`, `LG_SPEECHSUPER_APP_KEY`, `LG_SPEECHSUPER_SECRET_KEY` y opcionales (`LG_OPENAI_API_KEY`, `LG_ASSEMBLYAI_API_KEY`, `LG_ELEVENLABS_API_KEY`); modo director: `VITE_LG_DIRECTOR` (bandera de desarrollo, no secreta), `LG_DEV_CONTENT_WATCH`, `LG_ANTHROPIC_API_KEY` (solo el proceso de `tooling/director`, FD1, D-189); modo operador: `LG_OPERATOR_MODE` (D-158); solo nombres en `.env.example` (D-134, D-150) | F0.1, F1.1b, FD0, FD1 |
 
-### 4.3 Límites de módulos (verificados por ESLint `no-restricted-imports` y por entorno)
+### 4.3 Límites de módulos (verificados por ESLint con rutas resueltas y por entorno)
+
+La herramienta es `import-x/no-restricted-paths` (plugin `eslint-plugin-import-x` + `eslint-import-resolver-typescript`), que compara la **ruta resuelta** del import; `no-restricted-imports` solo compara el texto y un `../../world/x` lo evade (P0 §2.1). Esas dos dependencias de desarrollo quedan justificadas por eso. Config exacta en §4.3.1; cómo se prueba en §4.3.2.
 
 | Desde | Puede importar | No puede importar |
 |---|---|---|
-| `packages/core` | solo `packages/protocol` (tipos) y TS estándar | `react`, `three`, `@react-three/*`, `zustand`, cualquier `apps/*`; globals de navegador o Node (lint con entorno neutro) |
-| `packages/content-schema` | `zod`, `yaml`, `packages/core` (tipos) | `apps/*` |
-| `packages/protocol` | `zod` | todo lo demás |
-| `apps/web/src/ui` | `state/` (selectores y acciones), `i18n/`, `primitives`, `packages/core` (tipos) | `world/`, `three`, `@react-three/*`, `services/` (los servicios se activan por estado, no por import) |
-| `apps/web/src/world` | `state/selectors/` y `state/bridge.ts` (acciones expuestas al mundo), `three`, `@react-three/*`, `packages/core` (tipos) | `ui/`, `services/`, `state/slices/`, `state/store.ts`, módulos de reglas de `packages/core` (solo tipos) |
-| `apps/web/src/services` | `state/`, `packages/*` | `ui/`, `world/` |
+| `packages/core` (`@lg/core`) | solo `packages/protocol` (tipos) y TS estándar; `tsconfig` con `"lib": ["ES2022"]` y `"types": []` | `react`, `three`, `@react-three/*`, `zustand`, `node:*`, cualquier `apps/*`; globals de navegador o Node; `Date.now()`, `new Date()` sin argumentos, `Math.random()` (se inyectan Clock y Rng) |
+| `packages/content-schema` (`@lg/content-schema`) | `zod`, `yaml`, `packages/core` (tipos) | `apps/*`, `react`, `three`, `zustand` |
+| `packages/protocol` (`@lg/protocol`) | `zod` | todo lo demás |
+| raíz de composición (`apps/web/src/main.tsx`, `App.tsx`, `boot/`) | todo `apps/web/src` (monta `ui/`, carga `world/GameCanvas` con `import()`, arranca `services/`; `boot/dev.ts` carga `dev/director` con `import()` solo con `DEV && VITE_LG_DIRECTOR=1`) | `apps/server`, `tooling/` |
+| `apps/web/src/ui` | `state/selectors/` y `state/actions.ts` (R14), `i18n/`, `ui/primitives`, `packages/core` (solo tipos) | `world/`, `three`, `@react-three/*`, `services/`, `state/slices/`, `state/store.ts`, `dev/` |
+| `apps/web/src/world` | `state/selectors/` y `state/bridge.ts` (acciones expuestas al mundo), `three`, `@react-three/*`, `packages/core` (solo tipos) | `ui/`, `services/`, `state/slices/`, `state/store.ts`, `dev/`, módulos de reglas de `packages/core` |
+| `apps/web/src/services` | `state/`, `packages/*` | `ui/`, `world/`, `dev/` |
+| `apps/web/src/state` | `packages/core`, `packages/protocol` | `ui/`, `world/`, `services/`, `dev/` |
+| `apps/web/src/teacher` | `packages/protocol`, `i18n/`, `ui/primitives` | `world/`, `services/`, `state/`, `three`, `dev/` |
+| `apps/web/src/dev` (modo director, solo desarrollo; ADR-026) | `state/selectors/`, `state/actions.ts`, `ui/primitives`, `packages/protocol` (tipos del snapshot), `import.meta.hot`, `fetch`/`EventSource` hacia `/__director/*` | `world/`, `services/`, `state/slices/`, `state/store.ts`, el resto de `ui/`, `three`, SDKs de modelos; y **nadie del juego lo importa** |
+| `apps/server` | `packages/*` | `apps/web`, `tooling/`; escritura a disco (`fs.write*`, `createWriteStream`, `appendFile`) fuera de `apps/server/src/store/` y `apps/server/src/cost/` (D-108; esos módulos rechazan buffers binarios, test) |
+| `tooling/director` (Node, solo desarrollo) | `packages/*`, `yaml`, `zod`, el compilador de contenido, `@modelcontextprotocol/sdk` (D-188), `@anthropic-ai/claude-agent-sdk` (FD1, D-189) | `apps/web/src/**` en runtime (la única importación de `apps/` permitida es `tooling/director/vite.config.ts` → `apps/web/vite.config.ts`, para hacer `mergeConfig`); y nada de `apps/**`, `packages/**` ni `scripts/**` importa `tooling/` (incluido `apps/web/vite.config.ts`, que cae en la zona porque el lint cubre `apps/**/*.{ts,tsx}`) |
 | fuera de `apps/web/src/services/platform/` | — | `@tauri-apps/*`, `@capacitor/*`, `navigator.xr` (R15) |
-| fuera de `apps/web/src/services/input/` | — | `addEventListener` de teclado, puntero o gamepad (R10) |
-| fuera de `apps/web/src/world/camera/` | — | crear cámaras de three/drei (R11) |
-| fuera de `apps/web/src/services/audio/` | — | `new AudioContext` (R13) |
-| `apps/web/src/state` | `packages/core`, `packages/protocol` | `ui/`, `world/`, `services/` |
-| `apps/web/src/teacher` | `packages/protocol`, `i18n/`, `ui/primitives` | `world/`, `three` |
-| `apps/server` | `packages/*` | `apps/web` |
+| fuera de `apps/web/src/services/input/` | — | `addEventListener` de teclado, puntero o gamepad y `navigator.getGamepads` (R10). Los handlers JSX (`onKeyDown` en un `<button>`, `onClick`/`onPointerDown` de R3F sobre mallas de `world/` para elegir un punto) **no** son listeners de dispositivo y siguen permitidos; los de R3F solo despachan acciones semánticas por `bridge.ts` (P0, ADR-025) |
+| fuera de `apps/web/src/world/camera/` | — | crear cámaras de three/drei, `OrbitControls`/`MapControls`/`CameraControls`, props `camera`/`orthographic` de `<Canvas>` (R11) |
+| fuera de `apps/web/src/services/audio/` | — | `new AudioContext`/`webkitAudioContext`/`OfflineAudioContext`/`Audio` (R13) |
+| `apps/web/src/{ui,world,state}` | — | `fetch`, `WebSocket`, `indexedDB`, `localStorage`, `sessionStorage` (R5: efectos solo en `services/`) |
+
+#### 4.3.1 Configuración exacta (`eslint.config.js`, flat config, ESLint 9)
+
+Es la de P0 §2.3 (revisión de arquitectura), con agregados de planificación para el modo director: zonas de `dev/` y `tooling/`, `tooling/**` dentro de los archivos lintados y `.director/**` ignorado. F1.1a crea la config completa (las zonas de `dev/` y `tooling/` no cuestan nada aunque esas carpetas no existan todavía, salvo el marcador `dev/director/index.ts` que F1.1a crea para poder probarlas). F1.1a verifica cada opción contra la versión instalada (§0.5); el soporte de `regex` dentro de `no-restricted-imports.patterns` depende de la versión y esta config no lo usa.
+
+```js
+// eslint.config.js — límites de módulos (§4.3), costuras R10-R15 (§3.1) y modo director (§6.5)
+import tseslint from "typescript-eslint";
+import importX from "eslint-plugin-import-x";
+
+const WEB = "apps/web/src";
+const p = (dir) => `./${WEB}/${dir}`;
+
+// ---------- piezas reutilizables ----------
+const DEVICE_EVENTS = "/^(key|pointer|mouse|touch|wheel|gamepad|click|dblclick|contextmenu)/";
+const r10 = [
+  { selector: `CallExpression[callee.property.name='addEventListener'][arguments.0.type='Literal'][arguments.0.value=${DEVICE_EVENTS}]`,
+    message: "R10: los listeners de dispositivo viven solo en services/input/." },
+  { selector: "CallExpression[callee.property.name='addEventListener'][arguments.0.type!='Literal']",
+    message: "R10: nombre de evento no literal fuera de services/input/." },
+];
+const r11 = [
+  { selector: "NewExpression[callee.name=/Camera$/]", message: "R11: cámaras solo en world/camera/." },
+  { selector: "NewExpression[callee.property.name=/Camera$/]", message: "R11: cámaras solo en world/camera/." },
+  { selector: "JSXOpeningElement[name.name=/^(perspective|orthographic)Camera$/]", message: "R11: cámaras solo en world/camera/." },
+  { selector: "JSXOpeningElement[name.name='Canvas'] > JSXAttribute[name.name=/^(camera|orthographic)$/]",
+    message: "R11: la cámara la fija CameraRig (makeDefault), no <Canvas>." },
+];
+const r13 = [
+  { selector: "NewExpression[callee.name=/^(AudioContext|webkitAudioContext|OfflineAudioContext|Audio)$/]",
+    message: "R13: un solo AudioContext, en services/audio/." },
+  { selector: "NewExpression[callee.property.name=/^(AudioContext|webkitAudioContext|OfflineAudioContext|Audio)$/]",
+    message: "R13: un solo AudioContext, en services/audio/." },
+];
+const r15Props = [
+  { object: "navigator", property: "xr", message: "R15: navigator.xr solo en services/platform/." },
+  { object: "navigator", property: "getGamepads", message: "R10: gamepad solo en services/input/." },
+];
+const cameraImports = [
+  { name: "three", importNames: ["PerspectiveCamera", "OrthographicCamera", "CubeCamera", "StereoCamera", "ArrayCamera"],
+    message: "R11: cámaras solo en world/camera/." },
+  { name: "@react-three/drei", importNames: ["PerspectiveCamera", "OrthographicCamera", "CubeCamera", "OrbitControls", "MapControls", "CameraControls"],
+    message: "R11: cámaras y controles solo en world/camera/." },
+];
+const platformImports = { group: ["@tauri-apps/*", "@capacitor/*"], message: "R15: solo en services/platform/." };
+
+export default tseslint.config(
+  { ignores: ["**/dist/**", "**/node_modules/**", "experiments/**", "tooling/eslint-fixtures/**",
+              "apps/web/public/**", "apps/server/generated/**", ".director/**"] },
+  ...tseslint.configs.strict,
+
+  // ---------- 1. Límites entre carpetas (rutas resueltas) ----------
+  {
+    files: ["apps/**/*.{ts,tsx}", "packages/**/*.ts", "scripts/**/*.ts", "tooling/**/*.ts"],
+    plugins: { "import-x": importX },
+    settings: { "import-x/resolver": { typescript: { project: ["tsconfig.base.json", "apps/*/tsconfig.json", "packages/*/tsconfig.json", "tooling/*/tsconfig.json"] } } },
+    rules: {
+      "import-x/no-restricted-paths": ["error", { zones: [
+        // R2/R3: ui y world nunca se importan entre sí
+        { target: p("ui"),    from: p("world"),    message: "R3: ui/ no importa world/; pasá por el store." },
+        { target: p("world"), from: p("ui"),       message: "R3: world/ no importa ui/; pasá por el store." },
+        // ui y world no importan services (se activan por estado)
+        { target: p("ui"),    from: p("services"), message: "§4.3: ui/ no importa services/." },
+        { target: p("world"), from: p("services"), message: "§4.3: world/ no importa services/." },
+        // R14 + puerta del mundo: ui lee selectores y acciones; world solo selectores y bridge
+        { target: p("ui"),    from: p("state"), except: ["./selectors", "./actions.ts"],
+          message: "R14: ui/ solo usa state/selectors/ y state/actions.ts." },
+        { target: p("world"), from: p("state"), except: ["./selectors", "./bridge.ts"],
+          message: "§4.3: world/ solo usa state/selectors/ y state/bridge.ts." },
+        // state es base: no conoce a nadie arriba
+        { target: p("state"), from: [p("ui"), p("world"), p("services")], message: "§4.3: state/ no importa capas superiores." },
+        // services no conoce vistas
+        { target: p("services"), from: [p("ui"), p("world")], message: "§4.3: services/ no importa ui/ ni world/." },
+        // panel docente
+        { target: p("teacher"), from: [p("world"), p("services"), p("state")], message: "§4.3: teacher/ habla solo con la API." },
+        { target: p("teacher"), from: p("ui"), except: ["./primitives"], message: "§4.3: teacher/ solo usa ui/primitives." },
+        // modo director (solo desarrollo, ADR-026): nadie del juego lo importa; él lee selectores y despacha acciones
+        { target: [p("ui"), p("world"), p("state"), p("services"), p("teacher")], from: p("dev"),
+          message: "ADR-026: el juego no importa dev/ (modo director)." },
+        { target: p("dev"), from: p("state"), except: ["./selectors", "./actions.ts"],
+          message: "ADR-026: dev/ solo usa state/selectors/ y state/actions.ts." },
+        { target: p("dev"), from: [p("world"), p("services")], message: "ADR-026: dev/ no importa world/ ni services/." },
+        { target: p("dev"), from: p("ui"), except: ["./primitives"], message: "ADR-026: dev/ solo usa ui/primitives." },
+        { target: ["./apps", "./packages", "./scripts"], from: "./tooling", message: "ADR-026: el producto no importa tooling/." },
+        // apps y paquetes
+        { target: "./apps/server", from: "./apps/web", message: "§4.3: server no importa web." },
+        { target: "./apps/web",    from: "./apps/server", message: "§4.3: web no importa server." },
+        { target: "./packages",    from: "./apps", message: "§4.3: los paquetes no importan apps/." },
+        { target: "./packages/protocol", from: ["./packages/core", "./packages/content-schema"], message: "§4.3: protocol solo depende de zod." },
+        { target: "./packages/core", from: "./packages/content-schema", message: "§4.3: core no depende de content-schema." },
+      ]}],
+    },
+  },
+
+  // ---------- 2. Núcleo puro (R4) ----------
+  {
+    files: ["packages/core/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [
+        { group: ["react", "react-*", "three", "three/*", "@react-three/*", "zustand", "zustand/*", "node:*"],
+          message: "R4: el núcleo es TS puro." } ] }],
+      "no-restricted-globals": ["error", "window", "document", "navigator", "localStorage", "sessionStorage",
+        "indexedDB", "fetch", "WebSocket", "AudioContext", "performance", "crypto", "process", "Buffer",
+        "require", "__dirname", "setTimeout", "setInterval", "queueMicrotask"],
+      "no-restricted-properties": ["error",
+        { object: "Date", property: "now", message: "R4: inyectá el Clock." },
+        { object: "Math", property: "random", message: "R4: inyectá el Rng." }],
+      "no-restricted-syntax": ["error",
+        { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: "R4: inyectá el Clock." }],
+    },
+  },
+  // protocol: solo zod
+  { files: ["packages/protocol/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", { patterns: [{ group: ["react", "react-*", "three", "three/*", "@react-three/*", "zustand", "yaml", "@lg/*"],
+      message: "§4.3: protocol solo importa zod." }] }] } },
+  // content-schema: zod, yaml, @lg/core
+  { files: ["packages/content-schema/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", { patterns: [{ group: ["react", "three", "@react-three/*", "zustand"], message: "§4.3" }] }] } },
+
+  // ---------- 3. ui/, world/, teacher/ y dev/: núcleo solo como tipos; sin three donde no corresponde ----------
+  {
+    files: [`${WEB}/ui/**/*.{ts,tsx}`],
+    rules: { "@typescript-eslint/no-restricted-imports": ["error", {
+      paths: [{ name: "@lg/core", allowTypeImports: true, message: "ui/ usa el núcleo solo como tipos; la lógica entra por acciones." }],
+      patterns: [{ group: ["three", "three/*", "@react-three/*"], message: "§4.3: ui/ no importa three." }, platformImports],
+    }]},
+  },
+  {
+    files: [`${WEB}/world/**/*.{ts,tsx}`],
+    rules: { "@typescript-eslint/no-restricted-imports": ["error", {
+      paths: [{ name: "@lg/core", allowTypeImports: true, message: "world/ usa el núcleo solo como tipos." }],
+      patterns: [platformImports],
+    }]},
+  },
+  { files: [`${WEB}/teacher/**/*.{ts,tsx}`],   // regla de typescript-eslint: el bloque 4 no la pisa
+    rules: { "@typescript-eslint/no-restricted-imports": ["error", { patterns: [{ group: ["three", "three/*", "@react-three/*"], message: "§4.3: teacher/ sin three." }] }] } },
+  { files: [`${WEB}/dev/**/*.{ts,tsx}`],
+    rules: { "@typescript-eslint/no-restricted-imports": ["error", { patterns: [{ group: ["three", "three/*", "@react-three/*", "@anthropic-ai/*", "@modelcontextprotocol/*"],
+      message: "ADR-026: dev/ sin three ni SDKs (el copiloto y el MCP viven en tooling/)." }] }] } },
+
+  // ---------- 4. Costuras R10, R11, R13, R15 en todo apps/web ----------
+  {
+    files: [`${WEB}/**/*.{ts,tsx}`],
+    ignores: [`${WEB}/services/input/**`, `${WEB}/world/camera/**`, `${WEB}/services/audio/**`, `${WEB}/services/platform/**`],
+    rules: {
+      "no-restricted-syntax": ["error", ...r10, ...r11, ...r13],
+      "no-restricted-properties": ["error", ...r15Props],
+      "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }],
+    },
+  },
+  // Dentro de cada carpeta-costura se relaja SOLO su propia regla (las demás siguen):
+  { files: [`${WEB}/services/input/**`],    rules: { "no-restricted-syntax": ["error", ...r11, ...r13],
+      "no-restricted-properties": ["error", r15Props[0]], "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }] } },
+  { files: [`${WEB}/world/camera/**`],      rules: { "no-restricted-syntax": ["error", ...r10, ...r13],
+      "no-restricted-properties": ["error", ...r15Props], "no-restricted-imports": ["error", { patterns: [platformImports] }] } },
+  { files: [`${WEB}/services/audio/**`],    rules: { "no-restricted-syntax": ["error", ...r10, ...r11],
+      "no-restricted-properties": ["error", ...r15Props], "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }] } },
+  { files: [`${WEB}/services/platform/**`], rules: { "no-restricted-syntax": ["error", ...r10, ...r11, ...r13],
+      "no-restricted-properties": ["error", r15Props[1]], "no-restricted-imports": ["error", { paths: cameraImports }] } },
+
+  // ---------- 5. Efectos solo en services/ (R5) ----------
+  { files: [`${WEB}/{ui,world,state}/**/*.{ts,tsx}`],
+    rules: { "no-restricted-globals": ["error", "fetch", "WebSocket", "indexedDB", "localStorage", "sessionStorage"] } },
+);
+```
+
+Notas (P0 §2.3, más las del modo director):
+1. En flat config, si dos bloques configuran la **misma regla** para el mismo archivo, gana el último (no se fusionan las opciones). Por eso las carpetas-costura repiten las otras restricciones en vez de "apagar" una. El bloque 3 usa la regla de typescript-eslint y el bloque 4 la núcleo: no se pisan. F1.1a agrega un test que confirma que `ui/` sigue sin poder importar `three` aunque el bloque 4 también configure `no-restricted-imports` para el mismo archivo.
+2. `no-restricted-globals` en `packages/core` + `tsconfig` sin `lib: DOM` ni `@types/node` dan la neutralidad de entorno.
+3. La raíz de composición (`main.tsx`, `App.tsx`, `boot/`) no tiene zona prohibida dentro de `apps/web/src`; las costuras (bloque 4) sí le aplican.
+4. `apps/server` además prohíbe escrituras a disco fuera de `src/store/` y `src/cost/` (regla sobre `fs`), que F4.1 agrega cuando existen esas carpetas; reemplaza el "grep de CI" de F5.1/FP (no hay CI; P0 §7).
+5. `dev/` usa `import.meta.hot`, `fetch` y `EventSource` hacia `/__director/*`: a propósito no está en el bloque 5 (es una herramienta de desarrollo con efectos propios, aislada por las zonas del bloque 1 y por la regla dev-only de §6.5.1).
+
+#### 4.3.2 Cómo se prueba (F1.1a; P0 §2.4)
+
+- Fixtures **fuera** del árbol que lintea `verify` (`tooling/eslint-fixtures/`, ignorado y excluido de `tsc`) o, mejor, texto en memoria: `new ESLint({ cwd }).lintText(code, { filePath: "apps/web/src/ui/__probe__.tsx" })`.
+- `no-restricted-paths` resuelve el destino: el import de la fixture tiene que apuntar a un **archivo que exista** (los `index.ts` marcadores de `ui/`, `world/`, `services/`, `state/`, `dev/director/`, más `state/bridge.ts`, `state/actions.ts`, `state/selectors/index.ts`). Un import a una ruta inexistente no resuelve y no dispara la regla: falso verde.
+- Cada fixture prohibida falla **por la regla esperada** (el test compara `ruleId` y el mensaje), no por cualquier error; cada fila tiene además un import permitido que pasa.
 
 Un `npm run lint` rojo por un límite es un **bloqueante**, no una advertencia.
 
@@ -695,10 +917,10 @@ Un `npm run lint` rojo por un límite es un **bloqueante**, no una advertencia.
 | Hooks | `useX` | `useNearbyInteractables` |
 | Slices | `<nombre>Slice.ts`, acciones verbo primero | `dialogueSlice.ts` → `pressDone()` |
 | Mensajes WS | `dominio.verbo` en minúscula | `scene.start`, `companion.signal` |
-| IDs de contenido | los del GDD, estables, nunca reutilizados | `M1.2`, `M1.2-E1`, `NPC-LILY`, `HAB-PEDIR-1` |
+| IDs de contenido | los del GDD, estables, nunca reutilizados | `M1.2`, `M1.2-E1`, `NPC-MAYA`, `HAB-PEDIR-1` |
 | Claves de los archivos de contenido | **las del GDD, en español snake_case** (DP-A02) | `criterios_exito`, `necesidad_npc` |
 | Variables de entorno | `LG_` + SCREAMING_SNAKE | `LG_GEMINI_API_KEY` |
-| Tokens CSS | `--lg-*` | `--lg-color-luz-farol` |
+| Tokens CSS | `--lg-*` | `--lg-color-luz-bicho` |
 | Archivos de assets | `<pack>/<pieza>.glb` en kebab-case, sin espacios | `kenney-city/house-small-a.glb` |
 | Ramas git | `feat/…`, `fix/…`, `content/…` | `content/m1-plaza-scenes` |
 | Unidades | metros, segundos, tercios de poción (enteros) | `thirds: 3` |
@@ -987,32 +1209,42 @@ clip del turno (memoria) + intención (frase esperada de la escena > transcripci
   3. Toda escena tiene **todos** los bloques del GDD §2.5.3 (incluidos `salida_si_no_converge`, `temas_permitidos`, `resumen_para_siguiente`) y `modo_texto` equivalente.
   4. **Banda de vocabulario:** las líneas guionadas (aperturas, cierres, pistas, frases modelo) usan solo palabras de la banda MCER de la escena ∪ el glosario. Lint de tokens con una lista de palabras por banda.
   5. **Glosario curado:** toda traducción o nombre de objeto que muestra la interfaz referencia una entrada del glosario con `estado: approved` (D-067; en el build `MODE=fv` también `reviewed`, D-128). En el build de release (`npm run build:release`, §8.3), una entrada no aprobada referenciada falla el build; en el build de desarrollo (`npm run build`, el de `verify`), advierte. Por eso `verify` sigue verde con un glosario todo en `draft`.
-  6. **Seguridad:** ninguna escena declara temas permitidos que choquen con la lista global de vedados; toda escena con NPC menor de edad (Lily, Jules) declara contexto cotidiano [GDD §3.3.3].
+  6. **Seguridad:** ninguna escena declara temas permitidos que choquen con la lista global de vedados; toda escena con un NPC de ficha `es_menor: true` (`02` §6.2.1; en la Región 1, Maya y Noor) declara contexto cotidiano y lugar público [GDD §2.17.1, §3.3.3]. La regla se dispara por el campo, nunca por una lista de nombres.
   7. **Sin datos personales:** lint de patrones (emails, teléfonos, URLs no permitidas) sobre todo el contenido.
 - Las claves de los archivos son las del GDD (DP-A02). Ejemplo abreviado:
 
 ```yaml
 # content/missions/M1.2.yaml
 id: M1.2
-titulo: "El perro de Lily"
+titulo: "La cabra de Maya"
 capitulo: 1
-mcer: "A0→A1"
-can_do: "Puedo describir un animal con color y tamaño"
-npcs: [NPC-LILY, NPC-SAM]
+mcer: "A1"
+can_do: "Puedo describir un animal con color, tamaño y un detalle"
+requiere: [M1.1, intro:NPC-OLLIE]
+npcs: [NPC-MAYA, NPC-OLLIE]
 lenguaje_objetivo:
   estructuras: [STR-DESC-COLOR, STR-DESC-SIZE, STR-CONFIRM-Q]
 criterios_exito:
   - id: C1
-    texto_modelo: "player states at least 2 attributes among color/size/collar"
+    texto_modelo: "player states at least 2 attributes among color/size/bell"
 pociones:
   - { rama: describir, estructura: STR-DESC-COLOR }
-reapariciones: [M1.6, M2.3]
-duracion_objetivo_min: 3
+saberes: [SAB-PUPILAS]
+efectos:                       # los aplica el núcleo al cerrar la escena (§6.4.8, D-169, D-194)
+  fundacion: { sitio: SITIO-PARADA, estado: fundado }
+  intro: NPC-CALEB             # Ollie te presenta a Caleb ("Tell him Ollie sent you!")
+  flag: clover_found
+reapariciones: [M1.6, M2.6]
+duracion_objetivo_min: 6
 escenas:
   - escena_id: M1.2-E1
-    npc: NPC-LILY
+    npc: NPC-MAYA
     # … todos los bloques de GDD §2.5.3
+  - escena_id: M1.2-E2
+    npc: NPC-OLLIE
 ```
+
+Los ids y nombres de la premisa v0.1 no se usan nunca en ejemplos ni fixtures: la lista está en `02` §0.5.1 y la vuelca `content/retired-ids.yaml`.
 
 ### 6.2 Glosario curado
 
@@ -1065,12 +1297,17 @@ props:                   # volúmenes
 interactuables:
   - { id: OBJ-FUENTE, asset: kenney-city/fountain, pos: [0,0,0], glosario: GL-FOUNTAIN }
 npcs:
-  - { id: NPC-BEN, spawn: [6, 0, -3], ruta: [[6,0,-3],[8,0,-3]] }
+  - { id: NPC-NELL, spawn: [6, 0, -3], ruta: [[6,0,-3],[8,0,-3]] }
+sitios:                  # anclas de fundación (02 §4.1.3; F3.3): dónde se dibuja cada SITIO-* según su estado
+  - { id: SITIO-TABLERO, pos: [0, 0, -1], ocupa: [[0,-1],[1,-1]] }
+  - { id: SITIO-HUERTA,  pos: [3, 0, 4],  ocupa: [[2,3],[6,3],[6,7],[2,7]], caminable_en: [idea, en_marcha] }
 no_caminable: [ { poligono: [[-20,-16],[20,-16],[20,-14],[-20,-14]] } ]
-camara: { punto_dialogo_por_npc: { NPC-BEN: { offset: [1.5, 1.6, 2.5] } } }
+camara: { punto_dialogo_por_npc: { NPC-NELL: { offset: [1.5, 1.6, 2.5] } } }
 ```
 
-El compilador genera: grilla de caminabilidad (celdas de 0,5 m), chunks de tiles de 16×16 por capa (`buildTileChunk`, §2.9), lista de instancias agrupadas por asset (para `Instances`), lista de props estáticos fusionables por material y la tabla de interactuables.
+(El ejemplo usa el id de diorama `plaza` = El Cruce, D-180. `02` §6.2.6 escribe `diorama: cruce` en una ficha de ejemplo: mientras revisión de arquitectura no renombre los ids, el contenido usa `plaza` y `muelle`, y la diferencia se reporta.)
+
+El compilador genera: grilla de caminabilidad (celdas de 0,5 m), chunks de tiles de 16×16 por capa (`buildTileChunk`, §2.9), lista de instancias agrupadas por asset (para `Instances`), lista de props estáticos fusionables por material, la tabla de interactuables y la tabla de **anclas de sitios** (`validate:content` falla si una ficha de `content/fundaciones/` no tiene ancla en su diorama, si un ancla no tiene ficha, o si un estado que ocupa celdas deja a un NPC o interactuable sin camino; F3.3).
 
 #### 6.4.4 Instancing y fusión
 
@@ -1088,9 +1325,47 @@ Las IA de código ubican assets escribiendo coordenadas en YAML. Para que el ope
 
 #### 6.4.7 Personajes y Lumi
 
-- Personajes (desde v0.2, D-139/D-078/D-153): **sprites pixel art** de un pack base por región con licencia permitida, hojas de 4 direcciones (caminar ≥ 3 cuadros + idle; hablar/saludar si el pack las trae); diversidad de los 13 vecinos por paleta (recolor por script) y accesorios, no por modelos distintos. El jugador también es sprite.
+- Personajes (desde v0.2, D-139/D-078/D-153): **sprites pixel art** de un pack base por región con licencia permitida, hojas de 4 direcciones (caminar ≥ 3 cuadros + idle; hablar/saludar si el pack las trae); diversidad de los 14 vecinos de `02` §3.1 (D-166) por paleta (recolor por script) y accesorios, no por modelos distintos; Clover (la cabra, D-174) es un sprite de animal del mismo pack o afín. El jugador también es sprite.
 - Animación fuera de pantalla o lejos: se congela el cuadro; en `low` los cuadros avanzan a 8-10 Hz.
-- Lumi: geometría por código (prisma de 6-8 caras + núcleo emisivo + ojos como planos emisivos con texturas de expresión) (DP-39 del GDD); es el objeto más trabajado pero también el más barato de producir.
+- Lumi: **bicho de luz que viaja en un frasco** (D-165, reemplaza al farolito): núcleo emisivo chico por código + halo + estela, y el frasco de vidrio como volumen simple que el jugador lleva; sale del frasco y flota cerca del jugador (lo que siga valiendo de DP-39 del GDD). Es el objeto más trabajado pero también el más barato de producir.
+
+#### 6.4.8 Mundo que reacciona al estado (fundaciones, red, saturación)
+
+Regla (D-169, D-194): **el mapa es una vista del estado del mundo**, nunca al revés. Los efectos de misión (campo `efectos` de la misión o escena en el contenido: `fundacion: {sitio, estado}`, `intro: NPC-X`, `flag: …`) los aplica el núcleo al cerrar una escena (lo emite el servidor como evento, R8) y quedan en `world.fundaciones` y `world.red`; `world/foundations/` dibuja con funciones puras (`foundationVisuals`, `networkPaths`) y la saturación del Cruce sale de un selector (`selectCrossingSaturation`). Los créditos de cada fundación ("La hicieron Nell, June… y vos", `02` §1.8) se muestran al inspeccionar, en el HUD (DOM), desde un selector. Hasta F7 ese estado vive en memoria; F7 lo persiste en `SaveStore` (D-157). En el modo director, el snapshot incluye `foundations` y `network` (§6.5.2).
+
+### 6.5 Modo director (solo desarrollo; FD0 y FD1; ADR-026)
+
+**Qué es.** Una herramienta de desarrollo para que el operador juegue y corrija el contenido en el mismo momento, con un copiloto al costado (D-187: confirmado por el operador en el brief, 2026-10-06). No es una feature del juego y **nunca** llega a un build de producción. No confundir con el "director" de audio de `services/audio/` ni con las notas `[DIRECTOR]` del prompt del NPC (§5.5.3).
+
+#### 6.5.1 Regla dev-only (contrato)
+
+1. **Doble llave en el cliente:** el código del modo director solo se carga con `import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1"`, por `import()` dinámico desde la raíz de composición (`apps/web/src/boot/dev.ts`). En `vite build`, `import.meta.env.DEV` es `false` literal: la rama se elimina y el chunk no se emite (tree-shaking).
+2. **Node aparte:** todo lo de Node vive en `tooling/director/` (workspace `private: true`, fuera de `apps/`): el plugin de Vite (`apply: "serve"`, nunca en `build`), la CLI, el servidor MCP y (FD1) el copiloto. `apps/**`, `packages/**` y `scripts/**` no lo importan (lint, §4.3.1).
+   **Cableado del plugin (único camino):** el plugin se registra **solo** en `tooling/director/vite.config.ts`, que hace `mergeConfig(baseConfig, { plugins: [directorPlugin()] })` sobre la config importada de `apps/web/vite.config.ts` (con `root` en `apps/web`). `npm run dev:director` = `VITE_LG_DIRECTOR=1 vite --config tooling/director/vite.config.ts` (variable puesta con `cross-env` o el equivalente que ya use el repo, sin dependencia nueva si ya existe). `apps/web/vite.config.ts` **nunca** nombra ni importa el modo director: `npm run dev` y `vite build` usan esa config y, por construcción, no cargan el plugin. Así el build de producción queda libre del director **estructuralmente**, no solo por `apply: "serve"`. Lo garantiza la zona de lint `apps → tooling` (que cubre `apps/web/vite.config.ts`) y su fixture (FD0 A2). `apps/server` no depende de ningún SDK del director.
+3. **Prueba de exclusión:** `check:budgets` incluye `check:dev-only`: después de `vite build` (también con `VITE_LG_DIRECTOR=1` en el entorno) recorre `apps/web/dist/**` y falla si encuentra un marcador (`__lg_director`, `/__director/`, `lg:director:`, `DirectorPanel`, `claude-agent-sdk`, `LG_ANTHROPIC`) o un chunk cuyo nombre empiece con `director`. Un test siembra un marcador en un `dist` de fixture y comprueba que el detector lo encuentra (sin falso verde).
+4. **Solo local:** el plugin se niega a activarse si el servidor de desarrollo de Vite escucha fuera de `127.0.0.1`/`localhost` (misma regla que D-158) y lo dice en la consola.
+5. **Nada sale de la máquina:** `.director/` está en `.gitignore`; el diario nunca guarda audio (D-108); la clave del copiloto nunca llega al navegador.
+
+#### 6.5.2 v0 (FD0): estado vivo, herramienta para Claude Code, recarga en caliente, diario
+
+- **Snapshot.** Tipo `DirectorSnapshot` (zod, `packages/protocol/src/director.ts`, versión `v: 1`): `{ v, sessionId, at, build: { contentHash, gitSha }, region, diorama, player: { tile: {x, y}, pos: {x, z}, facing }, nearby: [interactableId], scene: { missionId, sceneId, step, turnIndex } | null, path: [{ tile, at }], npcsTalked: [npcId], dialogue: [{ turnId, speaker, text, at }], worldFlags, foundations: { "SITIO-*": estado }, network: ["intro:NPC-*"], lastPick | null, contentErrors: [{ file, key, message }] }`. `step` es el estado de la máquina de escena (§3.5.1); `path` guarda solo cambios de celda (≤ 500, el más viejo sale); `dialogue`, las últimas 20 líneas finales. Lo arma **un** selector (`selectDirectorSnapshot`, en `apps/web/src/dev/director/`) que solo lee `state/selectors/`: ninguna capa del juego conoce al modo director. Los campos de fases que todavía no existen (escena, diálogo, fundaciones) salen `null` o vacíos: el selector no inventa nada; cuando un slice cambia de forma, el selector deja de compilar (`tsc` en `verify`) y la fase que lo cambió lo arregla.
+- **Transporte.** El cliente manda el snapshot por el canal de HMR de Vite (`import.meta.hot.send("lg:director:snapshot", …)`) con throttle (≤ 4 por segundo y solo si cambió). El plugin escribe `.director/state.json` de forma atómica (temporal + rename) y expone `GET /__director/state` y `GET /__director/journal?session=<id>&tail=<n>` en el servidor de desarrollo.
+- **Herramienta para Claude Code (el asistente al costado del navegador).** CLI `npm run director -- state | where | journal [--tail N] [--session ID] | sessions | content <id>` (sin dependencias nuevas; lee `.director/` y `content/`; `where` imprime una línea legible: diorama, celda, NPC cercano, misión y paso) y servidor MCP por stdio (`tooling/director/src/mcp.ts`; herramientas `director_state`, `director_journal`, `director_sessions`, `director_content_lookup`), registrado en `.mcp.json` (D-188). Los dos son cáscaras sobre `tooling/director/src/read.ts`.
+- **Recarga en caliente del contenido.** El plugin observa `content/**` y, ante un cambio, corre la compilación **incremental** del contenido (la de `scripts/content/build.ts`, expuesta como función), valida (zod, referencias, lints de `validate:content`) y: si pasa, escribe la salida compilada y emite `lg:content:updated` con los ids tocados; `services/content/` recarga ese JSON y despacha `contentReloaded(ids)`; si cambió un diorama, el mundo re-deriva grilla y chunks; si una escena abierta usa un id tocado, el cambio aplica **en la próxima escena**, nunca a mitad de escena. Si no pasa, no se escribe nada, el juego sigue con el último contenido bueno y el error (archivo + clave) aparece en el overlay de Vite y en `contentErrors`. El servidor relee `apps/server/generated/content/` solo con `LG_DEV_CONTENT_WATCH=1` (`apps/server/src/content/loader.ts`), también para la próxima escena. Sin reiniciar nada.
+- **Diario de sesiones de prueba.** `.director/journal/<sessionId>.jsonl`, solo agregar. Eventos `{ seq, at, type, … }` (esquema en `packages/protocol/src/director.ts`): `session.start` (sha de git, hash de contenido, tier), `move.cell`, `interact`, `scene.start`, `scene.end` (resultado, criterios cumplidos), `choice` (`pressDone`, `pressPass`, `choose` con la opción), `line` (texto final del turno, nunca audio), `content.reload` (ids, ok o error), `director.note` y `director.edit` (FD1), `session.end`. Retención: D-192.
+
+#### 6.5.3 v1 (FD1): panel lateral con copiloto
+
+- **Panel (DOM).** React + Tailwind en `apps/web/src/dev/director/panel/`, montado en su propia raíz (`#lg-director-root`) al costado del juego. Su estado (mensajes, pins, propuestas, conexión) vive en **un store Zustand propio de desarrollo** (`apps/web/src/dev/director/store.ts`), fuera del store del juego (los 9 slices de §3.3 no cambian). Lee el juego solo por `state/selectors/` y despacha solo `state/actions.ts`.
+- **Clic en el mapa para fijar un lugar (respeta R3).** El panel pone el juego en `ui.pointerMode = "inspect"` (acción pública `setPointerMode`). En `inspect`, el clic de R3F sobre el suelo o un objeto de `world/` despacha por `state/bridge.ts` la acción semántica `pickTile({ diorama, tile, targetId? })`, que guarda `world.lastPick` en lugar de mover al jugador; en `play` (default) el mismo clic sigue siendo `moveTo`. El panel lee `selectLastPick` y lo agrega como **pin** al pedido (diorama, celda, ids cercanos, `SITIO-*` si hay). El mundo nunca importa el panel y el panel nunca toca objetos 3D.
+- **Copiloto del lado del servidor.** `tooling/director/src/copilot/` usa el **Claude Agent SDK** (paquete `@anthropic-ai/claude-agent-sdk`, `query()` con herramientas y servidor MCP en proceso; **[supuesto: nombres y opciones se verifican contra la versión instalada, §0.5]**) dentro del proceso del servidor de desarrollo de Vite: `POST /__director/chat` con respuesta en streaming (SSE). La clave `LG_ANTHROPIC_API_KEY` la lee solo ese proceso; nunca lleva prefijo `VITE_`, nunca va al navegador, a un log ni al diario (tests). El modelo vive en `tooling/director/config.yaml`, nunca en código (como ADR-018). Todo detrás de la interfaz `CopilotRunner` (adaptador `agent-sdk` + adaptador falso con guion para tests).
+- **Herramientas del copiloto (lista cerrada).** Lectura del repo (`Read`, `Glob`, `Grep`) y herramientas propias: `director_state`, `director_journal`, `content_validate(candidato)`, `content_apply(candidato, resumen)`, `content_revert(sha)`. `Write`, `Edit`, `Bash`, `WebFetch` y las demás herramientas de escritura o shell del SDK están deshabilitadas y un `canUseTool` las rechaza igual (doble llave). El prompt del copiloto se escribe en inglés (D-025) y lleva el snapshot, los pins, las últimas líneas del diario y las reglas de `02` §0.2 (sin dinero, sin datos personales, saberes con ficha, sin cifras).
+- **Aplicar un cambio (orden fijo).** (1) **Ruta permitida** (D-190): solo `content/**/*.yaml` y `content/prompts/*.txt`; nunca `content/authoring/`, `content/assets-registry.yaml`, binarios, código ni `docs/`. (2) **Validación** del conjunto completo con el candidato superpuesto en memoria: zod + referencias + lints de seguridad y de banda (los de `validate:content`). (3) **Guardas de estado:** no sube `estado` de glosario a `reviewed`/`approved` ni de saberes a `verificado`/`revisado` (D-067, D-195), no reusa ids retirados (`content/retired-ids.yaml`) ni renombra ids existentes. (4) Si todo pasa: escribe, recompila (la recarga en caliente lo muestra) y **commitea** (D-191): primero `git add -- <rutas>` (necesario cuando el candidato **crea** un archivo nuevo, por ejemplo un NPC, un saber o una fundación: `git commit --only` con una ruta que git no conoce falla con *pathspec did not match*) y después `git commit --only -- <rutas>` con mensaje `director(content): <resumen>` y trailer `Director-Session: <id>`; si alguna ruta ya existente tenía cambios sin commitear del operador (se chequea **antes** de escribir y de `git add`), no aplica y lo dice. (5) Registra `director.edit` con el sha en el diario y muestra el diff en el panel. **Deshacer** = `git revert --no-edit <sha>`, solo si ese commit toca únicamente `content/` y los archivos no cambiaron después; si no, avisa y no fuerza nada. Nunca `push`, `reset --hard` ni reescritura de historia.
+- **Costo.** Cada pedido registra uso (tokens) en `.director/cost.jsonl`; alerta según D-189. Las corridas headless nunca llaman al copiloto real (D-027): los tests usan el adaptador falso y un repo git temporal.
+
+#### 6.5.4 Qué no hace
+
+No es un editor visual de niveles ni de assets (DP-A16 sigue); no edita código, docs ni decisiones de `00`; no marca glosario ni saberes como revisados; no existe en producción; no guarda audio; no reemplaza las corridas headless (un cambio de mecánica sigue pasando por `/develop`).
 
 ---
 
@@ -1156,6 +1431,7 @@ safety_events (scene_run, tipo, severidad, acción, visibilidad según política
 engagement_events · learning_events (§7.6)
 ```
 
+- **Mientras F11 esté postergada (D-135, D-157, D-158):** las mismas fuentes de verdad viven detrás de interfaces (`EvidenceStore`, `SaveStore`, `LearnerStore` en `apps/server/src/store/`) con un adaptador de archivo append-only en `apps/server/data/` (gitignored), en un servidor local ligado a `127.0.0.1` con `LG_OPERATOR_MODE=1` y la cuenta seudónima `op-local`. F4.1 crea `EvidenceStore`; F7 completa guardado (incluye `world.fundaciones` y `world.red`) y modelo del alumno; F11.1 agrega el adaptador Postgres sin tocar a los consumidores.
 - **Migraciones SQL escritas a mano**, numeradas, aplicadas por un script propio que verifica el resultado contra `information_schema` (no confiar en el "éxito" de una herramienta de migración sin verificar). Consultas con un cliente Postgres liviano; sin ORM en v1 (DP-A04 incluye el proveedor de Postgres).
 - **Guardado:** el cliente guarda al terminar cada escena y al cerrar la pestaña [GDD §2.2.2]: (1) `saves` con `schemaVersion` y migraciones en `packages/core/save`; (2) el progreso no se "guarda": lo emite el servidor como eventos. Copia local en IndexedDB para la parte que funciona sin red (3D, cuaderno) [GDD §2.20]; al reconectar, se fusiona (settings: último escrito gana con marca de tiempo; eventos: unión por id).
 - **Reportes docentes:** consultas sobre `progress_by_account` agregadas por clase y can-do; nunca exponen transcripciones de menores.
@@ -1229,9 +1505,12 @@ npm run typecheck          # tsc en todos los workspaces
 npm run lint               # incluye límites de módulos y reglas de logs
 npm test                   # vitest en todos los workspaces (sin red, sin claves)
 npm run validate:content   # schemas, referencias, vocabulario, glosario, seguridad, dioramas, registro
-npm run check:budgets      # bundle + assets
+npm run check:budgets      # bundle + assets + check:dev-only (el build de producción no contiene el modo director, §6.5.1)
 npm run build              # vite build (web + docente) + tsc del server + content build
-npm run verify             # todo lo anterior en orden; es el gate de cada fase
+npm run verify             # todo lo anterior en orden; es el gate de cada fase ("CI" en estos documentos = verify local; no hay servidor de CI, P0 R-op2)
+
+npm run dev                # desarrollo; con VITE_LG_DIRECTOR=1 activa el modo director (FD0/FD1, §6.5)
+npm run director -- …      # CLI del modo director (FD0)
 
 npm run build:release      # NO está en verify: build estricto, solo antes de un deploy (MODE=release o MODE=fv)
 ```
@@ -1263,9 +1542,12 @@ Orden por dependencias técnicas (el roadmap de producto decide calendario y con
 | T9 | Progresión y repaso | Eventos de evidencia, pociones, árbol, Leitner (con ítems de pronunciación), andamiaje adaptativo, cuaderno | T8, T8b |
 | T10 | Cuentas y datos | Postgres, migraciones, auth (adulto, clase, tutor), consentimientos, guardado, retención | T3 (puede empezar en paralelo desde T1) |
 | T11 | Institucional mínimo | Panel docente, clases, códigos, asignaciones, reportes por can-do, pools de voz | T9, T10 |
+| TD0 | Modo director v0 (solo dev) | Plugin de Vite, snapshot vivo, CLI + MCP, recarga en caliente de contenido (cliente y servidor), diario de sesiones, `check:dev-only` (§6.5.2) | T2, T3, T4 |
+| TD1 | Modo director v1 (solo dev) | Panel lateral, `pickTile`/`pointerMode`, copiloto con Claude Agent SDK detrás de `CopilotRunner`, validar → aplicar → commit → deshacer (§6.5.3) | TD0, T6 |
+| TF | Capa de fundaciones y red | Anclas `sitios`, `foundationVisuals`, `networkPaths`, saturación, créditos (§6.4.8) | T5 |
 | T12 | Vertical slice (DP-10 del GDD) | Prólogo + Cap. 1 completos con audio pre-generado; lista de verificación manual del operador | todo lo anterior |
 
-**Mapeo con las fases del roadmap:** T0-T3 = F1; T4 = F2; T5 = F3; T6 = F4; T7 = F5; T8 = F6; T8b = FP; T9 = F7; T10-T11 = F11 (postergada, D-135); T12 = F8-F10. T4-T5 corren en paralelo a T6-T8b (D-020).
+**Mapeo con las fases del roadmap:** T0-T1 = F1.1a/F1.1b (D-161); T2 = F1.2; T3 = F1.3; T4 = F2; TD0 = FD0; T5 = F3.1-F3.2; TF = F3.3; T6 = F4; TD1 = FD1; T7 = F5.1a, F5.1b, F5.2; T8 = F6; T8b = FP.1-FP.2; T9 = F7; T10-T11 = F11 (postergada, D-135); T12 = F8-F10. T4-T5 corren en paralelo a T6-T8b (D-020); TD0 va antes de las fases de contenido de misiones (F8) y TD1 después del HUD de diálogo (F4.2).
 
 **Mapeo con las fases de la propuesta de terceros:** "Setup" = T0-T3; "Movimiento y Cámara" = T4-T5; "Sistema de Diálogos DOM" = T6-T8; "Grid y Construcción" y "Loop económico" **no existen en el modo 1** (DP-15 del GDD) y se reemplazan por "Loop de habla y pociones" = T8-T9.
 
@@ -1299,7 +1581,7 @@ Orden por dependencias técnicas (el roadmap de producto decide calendario y con
 
 ## 11. ADRs (registro de decisiones de arquitectura)
 
-Estado: **Propuesto** = decisión de la revisión de arquitectura que el operador valida; vale como contrato para corridas headless hasta que el operador la cambie. Cada ADR vive en `docs/adr/ADR-NNN-<slug>.md` (F1.1 copia ADR-001…025); un ADR respaldado por una fila `decidida` de `00-decisiones.md` se copia como **Aceptado** (ADR-001/003 por D-086/D-136, ADR-002 por D-087, ADR-022 por D-139, ADR-023 por D-092); los ADR nuevos que propongan corridas futuras toman el siguiente número con el mismo formato.
+Estado: **Propuesto** = decisión de la revisión de arquitectura que el operador valida; vale como contrato para corridas headless hasta que el operador la cambie. Cada ADR vive en `docs/adr/ADR-NNN-<slug>.md` (F1.1b copia ADR-001…026); un ADR respaldado por una fila `decidida` de `00-decisiones.md` se copia como **Aceptado** (ADR-001/003 por D-086/D-136, ADR-002 por D-087, ADR-022 por D-139, ADR-023 por D-092); los ADR nuevos que propongan corridas futuras toman el siguiente número con el mismo formato.
 
 | ADR | Decisión | Alternativas descartadas | Qué se resigna | Estado |
 |---|---|---|---|---|
@@ -1328,6 +1610,9 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | ADR-023 | Voz **híbrida**: `RealtimeVoiceProvider` con adaptadores Live y cascada que emiten los mismos eventos, elegidos por configuración; observador siempre con audio; ledger por adaptador (§5.11) | Solo Live; solo cascada; WebRTC propio | Una sola vía de voz más simple | Aceptado (D-092, decidida; el adaptador del piloto lo decide D-149) |
 | ADR-024 | Servicio de **pronunciación** en el servidor: `ScriptedAssessor` (Azure PA) + `RealizationRecognizer` (ZIPA ONNX) con tabla de confusiones L1; núcleo puro de recurrencia y habilitación por tipo; LLM nunca juez; sin audio en el servidor (§5.12) | LLM multimodal como juez; ELSA/SpeechSuper como única fuente; reconocimiento en el navegador | Cobertura de todos los tipos de error desde el día 1 | Propuesto (D-150) |
 | ADR-025 | **Costuras del día 1 R10-R15** (input semántico, cámara por presets, tiers como contrato, audio y voz detrás de interfaces, UI como view-models, plataforma detrás de un adaptador), con lint y tests (§3.1) | Agregarlas cuando llegue cada destino | Algo de indirección temprana | Propuesto (D-145) |
+| ADR-026 | **Modo director solo de desarrollo** (§6.5): estado vivo por el canal de HMR de Vite a `.director/`, CLI + MCP para Claude Code, recarga en caliente del contenido, diario de sesiones; v1 con panel DOM con store propio, `pickTile` por `bridge.ts`, copiloto con Claude Agent SDK en un proceso de Node de desarrollo, cambios solo de contenido, validados y commiteados; doble llave `DEV && VITE_LG_DIRECTOR` + `check:dev-only` | Feature dentro del juego con bandera de runtime; editor visual de niveles; copiloto dentro de `apps/server`; llamar al modelo desde el navegador | Un poco de tooling propio que no se reusa en producción | Propuesto (D-187 decidida; forma: planificación, revisión de la revisión de arquitectura pendiente) |
+
+**Enmiendas de P0 (`docs/reports/P0-2026-10-06.md` §1).** Son de "cómo" y no cambian ninguna decisión. Con el default de D-196 rigen como contrato y F1.1b las copia a `docs/adr/` marcadas "enmendado (P0)": ADR-003 y ADR-025 (lint con rutas resueltas y zonas exactas, §4.3.1), ADR-004 (`EvidenceStore` con adaptador de archivo, D-157), ADR-005 (pedir transcripciones de entrada y salida, actividad manual, audio binario, no loguear contenido), ADR-006 (inyección por `clientContent` con test contra el falso), ADR-007 (sonda F0.1 en modo manual), ADR-008 (observador multimodal), ADR-009 (`retired-ids`, `lint-allowlist`, salida fuera de git, D-159), ADR-010 (dos caminos: PNG para tiles y sprites, glTF para volúmenes), ADR-012 (`xr` reservado; render a resolución interna baja como opción a medir en F0.2), ADR-013 (nombres `@lg/*`; `test.projects` si `vitest.workspace.ts` está deprecado), ADR-014 (modo operador local, D-158), ADR-015 (holdback en `scene-runtime`; en cascada se modera antes del TTS), ADR-016 ("CI" = `verify`; DSP puro fuera del worklet; lint probado con `lintText`), ADR-018 (validación de modelos al arranque salteada en tests y sin clave), ADR-022 (post en chunk diferido como implementación; la fila de presupuesto la decide D-160), ADR-023 (contrato completo de P0 §4.3: `turnId` en todo evento, `npcTextFinal`, `interrupted`, `sessionEnding`, uso como unión discriminada; métodos `startTurn`, `endTurn`, `sendAudio`, `injectContext`, `interrupt`, `close`), ADR-024 (ZIPA en `worker_threads`, runtime probado desde Node en F0.1, D-163).
 
 ---
 
@@ -1382,7 +1667,7 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | Etiqueta | Insumo |
 |---|---|
 | [Brief] | (documento interno) (decisiones del operador al 2026-10-04) |
-| [GDD] | `learning-game/docs/01-gdd.md` v0.1 (2026-10-05) |
+| [GDD] | `learning-game/docs/01-gdd.md` v0.3 (2026-10-06; v0.1: 2026-10-05) |
 | [Negocio] | (documento interno) (§3 unit economics de voz, §6 riesgos, §7 experimentos) |
 | [Investigación] | (documento interno) y `20-evidencia.md` (defaults de feedback, ritmo, XP, repaso) |
 | [Referencias] | (documento interno) (§4.4 implicaciones de stack) |
