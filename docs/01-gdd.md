@@ -1,6 +1,7 @@
 # 01 — Game Design Document (GDD) del juego objetivo
 
-**Proyecto:** learning-game · **Documento:** GDD v0.1 · **Fecha:** 2026-10-05 · **Autor:** equipo de Mundo Rush
+**Proyecto:** learning-game (título provisorio *Mundo Rush*, D-031) · **Documento:** GDD v0.2 · **Fecha:** 2026-10-06 (v0.1: 2026-10-05) · **Autor:** equipo de Mundo Rush
+**v0.2 (2026-10-06):** integra las respuestas del operador (`00-decisiones.md` §1.1): título *Mundo Rush*; por ahora el juego es para el operador (D-135); arte **HD-2D** (D-139, §5); **pronunciación núcleo** (D-044, §2.4.7, revierte DP-27); mapa recorrible desde el arranque (D-020). Las filas DP de §9 que el operador decidió apuntan a su `D-NNN`; manda `00-decisiones.md`.
 **Estado:** borrador de visión y especificación del modo 1. Pendiente de la revisión de arquitectura antes de que cualquier corrida headless construya a partir de él.
 **Idioma del documento:** español. Las líneas de diálogo de NPCs están en inglés porque es la lengua meta del primer par (español → inglés).
 
@@ -68,7 +69,7 @@ Una regla sin etiqueta es una **decisión de diseño** (gusto, producto, costo o
 
 ### 1.1 Título provisional y una línea
 
-- **Título de trabajo:** *Lantern Bay* (en español, *Bahía de los Faroles*). Ver **DP-01**.
+- **Título provisorio:** *Mundo Rush* (decidido por el operador, D-031). *Lantern Bay* (*Bahía de los Faroles*) queda como nombre del pueblo en la ficción. Antes de cualquier uso comercial se verifica la marca.
 - **Una línea:** un pueblo costero que se apagó porque sus vecinos dejaron de hablarse, y vos llegás como voluntario para encender la Noche de los Faroles ayudando a cada vecino en su idioma; cada favor se resuelve hablando, y un farolito flotante te acompaña sin apurarte.
 - **Una línea de producto:** el lugar donde practicar hablar una segunda lengua no da vergüenza, no cuesta pelearse con el mundo y se siente como jugar.
 
@@ -88,7 +89,7 @@ Los cuatro pilares ordenan todas las decisiones. Si dos chocan, gana el de núme
 - Se puede jugar sin micrófono (modo texto completo).
 - Nada de lo que es accesibilidad se desbloquea con progreso: velocidad, subtítulos, tamaño de letra, modo texto, pausas, están siempre disponibles.
 - Es pago, lo más barato posible pero sustentable; **el que paga financia al que no** (instituciones, grants) [Brief].
-- No exige saber jugar videojuegos: controles mínimos, cámara asistida, sin reflejos.
+- No exige saber jugar videojuegos: controles mínimos, cámara que acompaña sola desde arriba (sin órbita libre), sin reflejos.
 
 **P2. Jugar primero, aprender adentro.** El jugador está ayudando a un vecino, no "haciendo una lección". El idioma es la herramienta para lograr algo en el mundo, nunca un examen pegado al costado.
 - Cada misión se resuelve **hablando** (o escribiendo en modo texto). Si una misión se puede completar sin usar la lengua, está mal diseñada [Referencias §4.2.1].
@@ -114,6 +115,8 @@ Los cuatro pilares ordenan todas las decisiones. Si dos chocan, gana el de núme
 8. **El mundo 3D y la interfaz DOM no se hablan directamente.** El estado del juego es la única fuente de verdad (regla de arquitectura heredada de la propuesta de terceros; ver §1.9). La revisión de arquitectura define cómo.
 
 ### 1.5 Audiencia
+
+> **Por ahora (D-135, 2026-10-06):** el juego se construye **para el operador** (usuario único, adulto, hispanohablante que aprende inglés). Él decide jugando qué funciona; no hay usuarios externos, precio ni piloto en esta etapa. La audiencia de abajo es la del producto cuando se abra: sigue guiando el diseño (accesibilidad, PC modesta, datos de menores), pero ninguna fase espera validarla todavía. El primer piloto, cuando llegue, es con adultos (D-023).
 
 | Eje | Decisión | Fuente |
 |---|---|---|
@@ -172,11 +175,11 @@ El operador compartió un prompt que propone un MVP "RPG de mundo abierto + cons
 | Rapier (físicas) | **DP-14**, default: no en el modo 1 (la investigación de referencias §4.4: el movimiento es caminar e interactuar) |
 | Código 3D declarativo como componentes | Adoptado como restricción heredada (la revisión de arquitectura confirma) |
 | "El mundo 3D y la UI nunca se comunican directamente; el estado global es la única fuente de verdad" | **Adoptado como regla inviolable** (§1.4.8). Además habilita el plan B 2D/2.5D que pide la investigación de referencias: la lógica no depende del render |
-| Estilo low-poly, correr fluido en web | Adoptado (§5) |
+| Estilo low-poly, correr fluido en web | "Correr fluido en web" adoptado; el estilo lo reemplazó el operador por **HD-2D** (D-139, §5) |
 | Carpetas separando lógica, UI DOM y render 3D | Adoptado como requisito; la revisión de arquitectura define la forma |
-| Mundo abierto en tercera persona | **Reducido:** un pueblo chico tipo diorama, con zonas, no mundo abierto [Referencias §4.4.1] |
+| Mundo abierto en tercera persona | **Reducido:** un pueblo chico tipo diorama, con zonas, visto desde arriba en ángulo (D-053), no mundo abierto [Referencias §4.4.1] |
 | Construcción tycoon, desarrollo de negocios, economía | **Choca con el modo 1** (sin dinero, centrado en el habla). Se difiere como candidato del modo 2. **DP-15** |
-| Fases: Setup, Movimiento y Cámara, Grid y Construcción, Diálogos DOM, Loop económico | El roadmap usa las tres primeras y la de diálogos; "Grid y Construcción" y "Loop económico" pasan al modo 2. Las fases del modo 1 reemplazan el loop económico por "Loop de habla y pociones" |
+| Fases: Setup, Movimiento y Cámara, Grid y Construcción, Diálogos DOM, Loop económico | El roadmap usa Setup, Movimiento y Cámara (a la par del diálogo, D-020) y Diálogos; "Grid y Construcción" y "Loop económico" pasan al modo 2. Las fases del modo 1 reemplazan el loop económico por "Loop de habla y pociones" |
 
 ---
 
@@ -347,7 +350,7 @@ El jugador elige en Ajustes (y puede cambiar en cualquier momento, incluso dentr
 
 La escala sube un escalón por intento fallido y se reinicia en el siguiente error. En A0 se arranca en el escalón 1 o 5 (no se exige autocorrección de algo que nunca se vio); desde A1 se arranca en el escalón 1.
 
-**Pronunciación:** solo se señala cuando rompe el sentido (regla de un prototipo de voz anterior). No hay puntaje de pronunciación en la v1; el reconocimiento de voz tiene que probar su confiabilidad con acento rioplatense antes de que Lumi juzgue pronunciación [Referencias §4.2.3]. **DP-27.**
+**Pronunciación:** es núcleo desde la v1 (D-044, revierte DP-27) y tiene su propia especificación en §2.4.7. Dentro de la conversación libre, la regla de interrupción de un prototipo de voz anterior sigue: la pronunciación **nunca interrumpe**; si rompe el sentido, el NPC no entiende (escalón 1, pedido de aclaración dentro de la ficción) y nada más.
 
 #### 2.4.5 "Marcar para después"
 
@@ -358,6 +361,31 @@ La escala sube un escalón por intento fallido y se reinicia en el siguiente err
 #### 2.4.6 Lo que Lumi sabe del jugador
 
 Usa el perfil del alumno (§2.13) en silencio, como un prototipo de voz anterior: detecta recurrencias de errores conocidos, prioriza patrones con riesgo de fosilización, construye sobre lo ya visto. **Nunca menciona el perfil** ("según tu historial...").
+
+#### 2.4.7 Pronunciación (núcleo, D-044)
+
+El juego detecta **cómo** dijo el jugador lo que quiso decir, no solo qué quiso decir, sin presión y sin falsas alarmas. Fuente: `research/pronunciacion-2026-10-06.md` (la investigación de referencias); arquitectura: `03-arquitectura.md` §5.12.
+
+**Las tres piezas:**
+
+| Pieza | Qué ve el jugador | Cómo se detecta | Cuándo |
+|---|---|---|---|
+| **Momentos guionados** | El NPC o Lumi propone decir algo concreto: *repetir después de mí* (shadowing), *leer en voz alta* (carteles, cartas, el menú de la taberna), *frase clave* (la contraseña del faro) o *par mínimo con consecuencia* ("pedile al barquero el *ship*, no el *sheep*": el mundo responde a lo que **sonó**). Feedback **inmediato y amable**: la palabra coloreada, ≤ 1-2 sonidos marcados por vez, "así lo dijiste vos / así suena" (su clip y el modelo) y reintento sin límite. La consecuencia es narrativa ("¿cómo? no te escuché bien"), nunca un castigo | Evaluación guionada por fonema contra el texto esperado (Azure Pronunciation Assessment; D-150) | Momentos marcados en el contenido de la escena (bloque `pronunciacion`), sobre líneas que ya existen en el guion |
+| **Detección en segundo plano** | Nada durante la charla. Al cierre de la misión, si corresponde, "tu sonido de la semana": su propio clip, el modelo y un drill | Reconocedor de fonemas de decodificación libre + tabla de confusiones del español (D-150), solo con alta confianza | En la charla libre. **Nunca interrumpe.** Un error entra al repaso solo si es **recurrente**: ≥ 3 ocurrencias de alta confianza en ≥ 2 escenas |
+| **Drills de pares mínimos** | Primero **percepción** (escuchar y elegir entre *ship* / *sheep*), después producción | Percepción: sin detector (audio pre-generado). Producción: detector solo si el tipo está habilitado | En el repaso espaciado (§2.9) y a pedido desde el Frasco |
+
+**Reglas que no se negocian:**
+1. **Solo se muestra un tipo de error si pasó la vara de F0.1** (D-151): precisión ≥ 0,90 y falsas alarmas ≤ 3 % por palabra en guionado; ≥ 0,80 de precisión en el repaso desde charla libre. Los tipos que no pasan quedan en percepción y autocomparación, **sin juicio automático**. El diagnóstico explícito ("sonó /i/, va /ɪ/") solo si la herramienta acierta el sonido realizado ≥ 70 % de las veces; si no, Lumi dice "esa palabra no sonó del todo como *ship*, escuchá" y reproduce los dos clips.
+2. **Nunca interrumpe** la charla libre. La única consecuencia en vivo es que el NPC no entienda cuando el sentido se rompe (escalón 1 de §2.4.4).
+3. **Lenguaje tentativo y sin números:** Lumi dice "me pareció escuchar…", nunca "dijiste mal"; la confianza baja no se muestra; no hay puntajes, porcentajes ni rankings de pronunciación.
+4. **Lumi habla por plantillas** (como en todo el juego): un modelo de lenguaje nunca juzga fonemas ni inventa el feedback.
+5. **Cruce con gramática:** *she work* puede ser concordancia o una /s/ final omitida. Si el jugador produce /s/ final en otras palabras (*cats*, *bus*, *it's*), es gramática (va al observador gramatical); si la omite en todas, es pronunciación.
+6. **Privacidad:** el servidor nunca guarda audio; el clip de "así lo dijiste vos" se guarda solo en el dispositivo del jugador, como máximo 20, y se borra al usarse o a los 7 días (D-155); hay un botón para borrarlos.
+7. **Sin micrófono**, los momentos de pronunciación se saltean sin penalidad; los drills de percepción siguen disponibles.
+
+**Los 14 tipos de error que se miden (E1-E14, hispanohablante con foco rioplatense):** vocal tensa/laxa /ɪ/→/i/ (*ship*→*sheep*); /æ/, /ʌ/, /ɑ/→/a/ (*cat*/*cut*); falta de reducción a /ə/; /v/→/b/; /θ/→/t/, /s/, /f/; /ð/→/d/; epéntesis antes de s+consonante (*eschool*); /z/→/s/; /ʃ/→/s/ y /tʃ/↔/ʃ/; sheísmo /j/, /dʒ/→[ʃ]; /h/→[x] u omitida; consonante final o grupo reducido y *-ed* como /ɪd/; acento léxico mal ubicado; falta de aspiración y /r/ vibrante. **Peso alto** (los que más afectan la comprensión): E1, E2, E12, E13. Detalle y qué herramienta ve cada uno: `research/pronunciacion-2026-10-06.md` §4.
+
+**Evidencia y progreso (D-156):** en la v1 no hay nodo `HAB-*` de pronunciación. Lo que se logra (un sonido que pasa de "recurrente" a "resuelto", un drill superado) se registra en el modelo del alumno y se ve en una página **"Sonidos"** del Frasco, con frases "puedo…" y sin números. La pronunciación no da pociones por sí sola (las pociones siguen saliendo de la evidencia de cada escena), salvo el 1/3 por intento del prólogo A0 (M0.2).
 
 ### 2.5 Sistema de conversación con NPCs
 
@@ -621,7 +649,7 @@ Cada escena se escribe con estos bloques. La corrida que escriba escenas nuevas 
 | 0:20-1:00 | Bienvenida (DOM, sin 3D) | Elige idioma de interfaz (default español), banda de edad (si no viene de institución) | Si es menor sin código de clase ni tutor: flujo de tutor (§2.17). Si viene con código de clase: entra directo | Sin formularios largos |
 | 1:00-1:40 | Accesibilidad de entrada | Elige: tamaño de letra (3 opciones con vista previa), subtítulos sí/no (default sí), "¿Tenés micrófono?" con prueba de 3 s | Si no hay micrófono o lo rechaza: modo texto, sin culpa ("Podés jugar todo escribiendo; si un día querés hablar, está acá") | Todo cambiable después |
 | 1:40-2:10 | Nivel declarado y avatar | Elige 1 de 4 frases de nivel; arma el avatar (cuerpo, piel, pelo, ropa, 4-6 opciones cada uno) y elige nombre de juego (**lista curada**, ver D-074; gana el registro) | Fija andamiaje inicial | Nombre de juego: para menores, solo de una lista de sugerencias (evita nombres reales) |
-| 2:10-2:40 | Ferry llegando (escena 3D) | Mira | Cámara asistida muestra el pueblo apagado, un único farol tenue en el muelle. Lumi aparece desde el farol | Sin texto largo. Música entra suave |
+| 2:10-2:40 | Ferry llegando (escena del mapa HD-2D) | Mira | La cámara, desde arriba, muestra el pueblo apagado, un único farol tenue en el muelle. Lumi aparece desde el farol | Sin texto largo. Música entra suave |
 | 2:40-3:20 | Lumi se presenta (L1) | Escucha; aprende 2 botones: `Terminé` y `Pasar el turno` | Lumi: "¡Hola! Soy Lumi. Acá todos hablan inglés. No hay apuro: cuando alguien te hable, el silencio es tuyo. Cuando termines de hablar, tocá *Terminé*. Si no te sale, tocá *Pasar el turno* y te ayudo." | Enseña el contrato de no-presión antes de la primera interacción |
 | 3:20-4:40 | **M0.1 "Hola, Rosa"**: la capitana del ferry | Dice "Hello" y su nombre de juego ("I'm ...") | Rosa (muy lenta): "Hello! Welcome to Lantern Bay. I'm Rosa. And you?" El observador acepta cualquier saludo + nombre. Si se traba: Rosa ofrece "I'm... ?" con gesto. Lumi destila la primera poción ámbar | **Primera producción antes del minuto 5** |
 | 4:40-5:40 | Caminar por el muelle | Aprende a moverse (click en el suelo o WASD); la cámara se acomoda sola | Tutorial contextual en la capa DOM (2 líneas). Sendero iluminado hacia la plaza | Sin pruebas de destreza |
@@ -894,7 +922,7 @@ Columnas: ID · título · NPC(s) · banda · can-do · resultado en el mundo ·
 
 - **Lugar:** camino del muelle a la plaza.
 - **Mecánica:** el jugador apunta a un objeto resaltado y pide a Lumi el nombre (tecla `Q` o botón "¿Cómo se dice?"). Tres objetos guiados: *boat*, *lighthouse*, *lantern*. Lumi dice la palabra en L2 (audio cacheado), luego en L1, y la muestra escrita.
-- **Producción opcional:** "¿Lo decís vos?" — si el jugador lo dice, el reconocimiento compara contra la palabra (tolerante; solo verifica que haya intentado la palabra). 1/3 de poción celeste por intento, sin juicio de pronunciación (DP-27).
+- **Producción opcional:** "¿Lo decís vos?" — es el primer **momento de pronunciación guionado** (§2.4.7, *repetir después de mí*): si el jugador lo dice, se evalúa contra la palabra y Lumi da feedback amable solo sobre tipos de error habilitados por F0.1 (D-151); si ningún tipo está habilitado, solo verifica que haya intentado la palabra y ofrece "así lo dijiste vos / así suena". 1/3 de poción celeste por intento. (El texto de `02-narrativa-guion.md` no cambia: el momento se arma como dato sobre la línea existente, D-019.)
 - **Línea de Lumi al terminar:** "Podés preguntarme cómo se dice cualquier cosa que brille así. Y si querés que me acuerde de una palabra para otro día, tocá *Marcar*."
 
 #### M0.3 · Biscuit (A0)
@@ -1020,7 +1048,7 @@ Plantillas que el sistema instancia con ítems de repaso vencidos y NPCs disponi
 - **Construcción tipo tycoon (candidata, DP-15):** la propuesta de terceros trae "grid y construcción" y "loop económico" estilo RollerCoaster Tycoon. En el modo 2 tiene un lugar natural **sin dinero**: colocar edificios y decoración en una grilla describiéndolos o pidiéndolos a NPCs constructores, y que el mundo "funcione" (los NPCs usan los lugares, aparecen pedidos). Si alguna vez aparece una economía, tiene que ser una economía **del mundo** (recursos del pueblo, favores) y no una moneda del jugador que pague por participar. Decisión del operador pendiente.
 - **Docentes y UGC:** el docente crea escenarios y misiones para su clase (rama B y D de negocio [Negocio §4]). Requiere moderación de contenido generado.
 - **Riesgos:** generación 3D a partir de texto es cara y frágil; se limita a **componer piezas** del catálogo (no generar mallas). Moderación de mundos compartidos con menores.
-- **Arte:** reutiliza el mismo kit low-poly y paleta (§5) para que todo combine.
+- **Arte:** reutiliza el mismo kit HD-2D (tiles, volúmenes y sprites) y la paleta (§5) para que todo combine.
 
 ### 4.3 Modo 3: Mi día real (en suspenso)
 
@@ -1051,7 +1079,7 @@ Plantillas que el sistema instancia con ítems de repaso vencidos y NPCs disponi
 
 ### 5.1 Principios
 
-1. **Liviano antes que bonito, y bonito por estilo, no por detalle.** El juego vende habla y contexto, no fidelidad gráfica [Referencias §0, §4.4]. Las quejas de las referencias fueron cámara, controles, escalado de UI y rendimiento, nunca "falta de realismo".
+1. **Liviano antes que bonito, y bonito por estilo, no por detalle.** El juego vende habla y contexto, no fidelidad gráfica [Referencias §0, §4.4]. Las quejas de las referencias fueron cámara, controles, escalado de UI y rendimiento, nunca "falta de realismo". El estilo elegido por el operador es **HD-2D** (D-139): pixel art sobre un escenario 3D simple con luz real.
 2. **Esquemático y claro.** Para aprender, lo esquemático rindió más que lo realista [Hipótesis, E26]; además es más barato y legible.
 3. **Diorama, no mundo abierto.** Escenas chicas, con bordes amables (agua, colinas), que se cargan por barrio.
 4. **El mundo cuenta el progreso.** Luz, color y vida aumentan con el avance.
@@ -1060,18 +1088,21 @@ Plantillas que el sistema instancia con ítems de repaso vencidos y NPCs disponi
 
 | Referencia | Qué tomamos | Qué no |
 |---|---|---|
+| ***Octopath Traveler*** (referencia principal, D-139) y capturas de `docs/refs/estetica/` | **HD-2D**: personajes pixel art como sprites sobre escenarios 3D con texturas pixel art, cámara desde arriba en ángulo, luz cálida, profundidad de campo que hace ver el pueblo como una maqueta | Combate por turnos, menús densos, viñetas oscuras y grano fuerte (bajan la legibilidad del texto) |
 | **Townscaper** | Casas de colores apiladas, bordes suaves, paleta pastel saturada, sensación de juguete; agua plana y calma | La generación procedural de edificios (no hace falta) |
-| **A Short Hike** | Tono de pedidos de vecinos, calidez, pueblo chico que se recorre en minutos, sin presión; cámara que acompaña | El píxelado de baja resolución como postproceso (caro y menos legible para texto en mundo) |
+| **A Short Hike** | Tono de pedidos de vecinos, calidez, pueblo chico que se recorre en minutos, sin presión; cámara que acompaña | El píxelado como filtro de pantalla completa (acá el pixel art está en las texturas y los sprites, no en un postproceso) |
 | **Portfolio 3D de Bruno Simon** | La sensación lúdica de un mundo web que se puede tocar: objetos que reaccionan, sorpresa, todo en el navegador | Física pesada y conducción como eje (DP-14, DP-16): en el modo 1 el movimiento es caminar |
 | **Influent** | Todo objeto se puede "preguntar" | Controles de cámara libres y frágiles |
 | **Noun Town** | Mundo amable y colorido que se usa en instituciones | Rachas y metas diarias |
 
-### 5.3 Estilo
+### 5.3 Estilo (HD-2D, D-139)
 
-- **Low-poly con sombreado plano o cel-shading suave** (default DP-17): modelos de bajo conteo de polígonos, colores planos por material (sin texturas o con una textura de paleta compartida), iluminación con rampa de 2-3 bandas para personajes y props importantes; contornos (outline) solo en personajes y objetos interactivos, y desactivados en modo bajo.
+- **HD-2D** (referencia *Octopath Traveler*): el escenario es 3D y simple (tiles con textura pixel art y volúmenes de pocas caras: casas, muelle, faroles) con luz 3D real y sombras suaves; los **personajes son sprites pixel art** que siempre miran a la cámara; la profundidad de campo y el bloom (solo en calidad media y alta) hacen que el pueblo se vea como una maqueta iluminada. Detalle técnico: `03-arquitectura.md` §2.9.
+- **Densidad de píxel:** 1 tile = 1 m = 32×32 px; personajes de ~32×48 px a la misma densidad; filtrado sin suavizado (pixel art nítido). Parámetros finales los fija el operador mirando F0.2 (D-154).
 - **Objetos interactivos** se distinguen por un brillo suave del color de la rama (o un ícono en modo daltonismo), no por contornos parpadeantes.
-- **Personajes:** proporciones de juguete (cabeza grande, cuerpo simple), sin rasgos faciales complejos: ojos y boca simples (expresiones por textura o por formas), animaciones básicas (idle, caminar, hablar, saludar, señalar, reír, pensar). Diversidad por color de piel, pelo, ropa y accesorios.
-- **Lumi:** el objeto más trabajado del juego (§2.4.2).
+- **Personajes:** sprites de proporciones de juguete (cabeza grande, cuerpo simple), legibles a 32-48 px; caminata en 4 direcciones e idle; hablar y saludar si el pack los trae. Diversidad por paleta (piel, pelo, ropa) y accesorios, sobre un pack base por región con licencia registrada (D-153).
+- **Lumi:** el objeto más trabajado del juego (§2.4.2): un farolito 3D emisivo de primitivas que brilla sobre la escena pixel (D-082).
+- **Modo bajo:** sin postprocesado, sombras *blob*; el estilo se mantiene (el pixel art es barato).
 
 ### 5.4 Paleta
 
@@ -1094,8 +1125,7 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 
 ### 5.5 Cámara y controles
 
-- **Cámara asistida en tercera persona** (default DP-18): sigue al jugador desde atrás y arriba, inclinación fija entre 35° y 50°, órbita horizontal limitada a ±45° con el mouse o teclas `Q/E` (o flechas), 3 niveles de zoom. Se reacomoda sola al entrar a una conversación (encuadre de dos personajes, NPC a la izquierda/derecha, subtítulos sin tapar caras). La cámara libre torpe es la lección más cara de las referencias [Referencias §4.2.4, §4.4.2].
-- **Alternativa isométrica fija** para modo bajo y para quien se marea.
+- **Cámara desde arriba en ángulo** (D-053, por presets): `topdownOrtho` por defecto (ortográfica, inclinación 55-60°, ~15 tiles de ancho visibles, sigue al jugador con suavizado), `isoOrtho` (girada 45°) como opción, y un encuadre de diálogo al conversar (NPC y jugador a los costados, subtítulos sin tapar caras). **Sin órbita libre**; 3 niveles de zoom. La cámara libre torpe es la lección más cara de las referencias [Referencias §4.2.4, §4.4.2]. Con "reducir movimiento", corte en vez de paneo.
 - **Movimiento:** click en el suelo para caminar (pathfinding simple) o WASD/flechas. Sin saltar, sin correr obligatorio (correr opcional con `Shift`). Colisiones simples (no física) por defecto (DP-14).
 - **Interacción:** acercarse + `E` / click sobre el NPC u objeto. Íconos de farol sobre NPCs con pedidos.
 - **Vehículo lúdico (DP-16):** inspirado en el portfolio de Bruno Simon, la bicicleta del correo (`HAB-DESC-2`) podría ser un momento de juego físico liviano. Default: en la v1 es un traslado rápido animado entre barrios, sin física. Una versión "manejable" con física es candidata para después del vertical slice.
@@ -1113,17 +1143,15 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
   - Frasco de Lumi (cuaderno): pociones por rama, can-do demostrados, ítems para repasar, historial de misiones.
 - **Nada de números grandes de XP** en pantalla. El progreso se muestra como frascos, faroles y frases "puedo...".
 
-### 5.7 Estrategia de assets: Kenney (CC0) y afines
+### 5.7 Estrategia de assets: tiles y sprites pixel art, volúmenes CC0
 
-- **Regla:** las IA de código no modelan 3D. Se usan **packs gratuitos con licencia CC0** en formato glTF/GLB, se copian a `public/` del proyecto y se ubican por código (posiciones, rotaciones y escalas en datos de escena). [Directiva del operador]
-- **Fuentes candidatas (verificar licencia y contenido de cada pack al descargarlo):**
-  - **Kenney.nl** (CC0): kits de ciudad/suburbio, naturaleza, muebles, comida, embarcaciones, vacaciones/decoración, personajes simples, interfaz e íconos, y packs de **audio** (efectos de interfaz, impactos, ambiente). Los nombres exactos de los kits y si incluyen personajes con animaciones se verifican al descargar.
-  - **Quaternius** (CC0): personajes animados low-poly y props, como alternativa si los personajes de Kenney no traen las animaciones necesarias (DP-19).
-  - **Poly Pizza** y otros repositorios: solo piezas con CC0 explícito; registrar la fuente de cada archivo.
-- **Registro de assets obligatorio:** `content/assets-registry.yaml` (ruta canónica, `03-arquitectura.md` §4.2.1; campos en §6.4.2) con: archivo, pack, autor, licencia, URL de origen, fecha de descarga, modificaciones. Sin registro, el asset no entra.
-- **Unificación visual:** como los packs tienen estilos distintos, se unifican con (a) una paleta compartida aplicada por material (recolor por código), (b) la misma iluminación y rampa toon, (c) escalas normalizadas. Preferir un pack principal por categoría.
-- **Presupuesto (propuesta para validar con el benchmark de el análisis de negocio #5):** cada barrio < 50k triángulos visibles en modo medio; < 150 draw calls (usar instancias para repetidos); texturas compartidas ≤ 1 atlas de 1024 px por barrio; descarga inicial (muelle + plaza) < 15 MB comprimido; interactivo en < 15 s en la PC objetivo.
-- **Lumi y elementos de identidad** (faroles, logo): si ningún pack sirve, se componen con primitivas por código (un farol es geometría simple) o se encargan a un artista (DP-39).
+- **Regla:** las IA de código no modelan 3D ni dibujan sprites. Se usan **packs con licencia registrada**, se copian al proyecto y se ubican por código (posiciones y capas de tiles en datos de escena). [Directiva del operador]
+- **Personajes y tiles (D-153):** packs de sprites y tilesets **pixel art** con licencia que permita uso comercial y modificación (CC0 primero; CC-BY con atribución o licencia comercial paga de itch.io como segunda opción), con caminata en 4 direcciones y un **solo pack base por región** para que el estilo sea uniforme. **No** se usan licencias "no comercial" o "solo uso personal" (bloquearían el resto del plan aunque hoy el juego sea del operador), ni sprites generados por IA salvo decisión explícita del operador. **El operador elige y descarga el pack** (y lo compra si es pago).
+- **Volúmenes y props (glTF/GLB, CC0):** **Kenney.nl** (kits de ciudad, naturaleza, muebles, embarcaciones, decoración, y packs de **audio**), **Quaternius** y **Poly Pizza** solo con CC0 explícito; con textura pixel o color de paleta para que combinen con los tiles.
+- **Registro de assets obligatorio:** `content/assets-registry.yaml` (ruta canónica, `03-arquitectura.md` §4.2.1; campos en §6.4.2) con: archivo, pack, autor, licencia, URL de origen, fecha de descarga, sha256, modificaciones y si exige atribución. Sin registro, el asset no entra; el build falla.
+- **Unificación visual:** la misma densidad de píxel (32 px por tile), la misma paleta aplicada por recolor, la misma luz; preferir un pack principal por categoría.
+- **Presupuesto (propuesta para validar con F0.2):** cada barrio < 50k triángulos visibles en modo medio; < 150 draw calls (chunks de tiles fusionados, instancias para repetidos); texturas compartidas ≤ 1 atlas de 1024 px por barrio; descarga inicial (muelle + plaza) < 15 MB comprimido; interactivo en < 15 s en una PC modesta.
+- **Lumi y elementos de identidad** (faroles, logo): primitivas por código (un farol es geometría simple) o encargo a un artista (DP-39).
 
 ### 5.8 Audio, música y voz
 
@@ -1222,16 +1250,16 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 4. Multijugador, chat entre jugadores, perfiles públicos, amigos, tablas de líderes.
 5. Rachas, recompensas diarias, notificaciones push con recompensa.
 6. Charla libre sin marco con NPCs (DP-30).
-7. Puntaje de pronunciación (DP-27).
+7. Puntajes numéricos o rankings de pronunciación (la pronunciación es núcleo, §2.4.7, pero sin números; D-044).
 8. Celular nativo o web móvil como plataforma objetivo (DP-31) — solo no cerrarlo.
 9. Pares de idioma distintos de ES→EN (ES→PT y PT→EN después).
-10. Generación de modelos 3D por IA; modelado propio fuera de primitivas simples.
+10. Generación de modelos 3D o sprites por IA (D-153); modelado propio fuera de primitivas simples.
 11. Física completa / vehículo manejable (DP-14, DP-16).
 12. Contenido de terceros con derechos (canciones, videos).
 13. Integraciones LMS, exportaciones avanzadas, creación de misiones por docentes.
 14. Pedidos diarios del epílogo (post-arco) generados indefinidamente (DP-34).
-15. VR.
-16. Almacenamiento de audio crudo.
+15. VR (destino futuro con el mismo stack, épica E-XR; D-142).
+16. Almacenamiento de audio crudo en el servidor (solo hasta 20 clips en el dispositivo del jugador, D-155).
 
 ---
 
@@ -1241,7 +1269,7 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 
 | ID | Decisión | Opciones | Default recomendado | Por qué | Afecta |
 |---|---|---|---|---|---|
-| DP-01 | Título del juego | *Lantern Bay* / *Bahía de los Faroles* / otro | *Lantern Bay* como título de trabajo | Coherente con el mundo y el tema | Marca, arte |
+| DP-01 | Título del juego | *Lantern Bay* / *Bahía de los Faroles* / otro | **Decidido (2026-10-06, D-031): *Mundo Rush*** como título provisorio; *Lantern Bay* queda como nombre del pueblo | Coherente con el mundo y el tema | Marca, arte |
 | DP-02 | Nombre y forma del compañero | Lumi farolito / otro nombre / otra forma (luciérnaga, pájaro, nube) | **Lumi**, farolito de papel flotante | Une la metáfora de luz, el progreso visible y el festival | §2.4, arte |
 | DP-03 | Idioma en que habla Lumi | Siempre L1 / siempre L2 / transición | L1 en A0-A1; mezcla en A2; L2 salvo explicaciones en B1; ajustable por el jugador | Explicar en L1 baja la carga en principiantes; pasar a L2 aumenta exposición | §2.4, §2.10 |
 | DP-04 | Modo de feedback por defecto | Acompañado / Solo anotar / Más ayuda | **Acompañado** (señal inmediata liviana + repaso al cierre); "Solo anotar" como opción del jugador | [Probable, E31, E32]; [Probado, E34] | §2.4.4, A/B-1 |
@@ -1250,16 +1278,16 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 | DP-07 | Técnica de "más despacio" **(revisión de arquitectura)** | Instrucción al modelo / reproducción más lenta sin cambiar tono / TTS con parámetro | La que mantenga naturalidad con menor latencia; medir | Calidad percibida | §2.6.1 |
 | DP-08 | ¿Pociones como moneda de minutos de voz? (sugerencia de el análisis de negocio) | Sí / No | **No.** Presupuesto de voz separado y en lenguaje llano | Convertiría la XP en pago por participar [Probado en lab, E12] | §2.5.5, negocio |
 | DP-09 | ¿Pociones gastables? | Se gastan / se acumulan / se "vierten" sin perderse | **Se vierten** en nodos y quedan visibles; nunca se pierden | Mantiene la metáfora de moneda del brief sin castigo ni economía | §2.7.4 |
-| DP-10 | Alcance del primer build (vertical slice) | Solo prólogo / prólogo + Cap. 1 / prólogo + Cap. 1-2 | **Prólogo + Capítulo 1** (Muelle + Plaza, 6 NPCs: Rosa, Lily, Ben, Sam, Agnes, Jules; 11 misiones + pedidos del tablero) — **ver D-019 y D-056: 13 vecinos; gana el registro**, ES→EN, PC web, voz + texto, accesibilidad completa, modo bajo | Entra en semanas; prueba el loop completo [Negocio §5.1, §6.7] | Roadmap |
+| DP-10 | Alcance del primer build (vertical slice) | Solo prólogo / prólogo + Cap. 1 / prólogo + Cap. 1-2 | **Prólogo + Capítulo 1** (Muelle + Plaza, 6 NPCs: Rosa, Lily, Ben, Sam, Agnes, Jules; 11 misiones + pedidos del tablero) — **ver D-019 y D-056: 13 vecinos; gana el registro**, ES→EN, PC web, voz + texto, accesibilidad completa, modo bajo — **Decidido (2026-10-06, D-019):** con el guion tal como está, en modo juego (mapa HD-2D) + voz + texto + pronunciación. | Entra en semanas; prueba el loop completo [Negocio §5.1, §6.7] | Roadmap |
 | DP-11 | Ambientación | Pueblo costero ficticio angloparlante / ciudad real / otro | **Pueblo costero ficticio** | Evita representar lugares reales; diorama barato | §3 |
 | DP-12 | Política de edad al lanzar | Solo 18+ directo y menores vía institución/tutor / ATP directo con verificación / solo adultos | **Cuentas directas 18+; menores solo vía código de clase o invitación de tutor con consentimiento**; revisión legal antes del primer piloto con menores | ATP del brief + ECA Digital [Negocio §6.5] | §2.17 |
 | DP-13 | Retención de datos de voz y transcripciones | Guardar audio / no guardar; transcripciones N días | **No guardar audio; transcripciones 30 días**; solo quedan ítems extraídos | Minimización; voz como dato personal | §2.13 |
-| DP-14 | Física (Rapier) en el modo 1 **(revisión de arquitectura)** | Sí / No | **No**: controlador cinemático con colisiones simples | la investigación de referencias §4.4.3; peso y CPU | Stack |
-| DP-15 | Construcción/tycoon/economía de la propuesta de terceros | Adoptar en modo 1 / diferir a modo 2 / descartar | **Diferir como candidata del modo 2, sin dinero del jugador**; nunca en el modo 1 | Choca con "sin dinero" y con el foco en el habla | §1.9, §4.2 |
+| DP-14 | Física (Rapier) en el modo 1 **(revisión de arquitectura)** | Sí / No | **No**: controlador cinemático con colisiones simples — **Decidido (2026-10-06, D-087):** Rapier más adelante. | la investigación de referencias §4.4.3; peso y CPU | Stack |
+| DP-15 | Construcción/tycoon/economía de la propuesta de terceros | Adoptar en modo 1 / diferir a modo 2 / descartar | **Diferir como candidata del modo 2, sin dinero del jugador**; nunca en el modo 1 — **Decidido (2026-10-06, D-018).** | Choca con "sin dinero" y con el foco en el habla | §1.9, §4.2 |
 | DP-16 | Vehículo lúdico estilo Bruno Simon | Ninguno / traslado animado / bicicleta manejable con física | **Traslado animado en la v1**; manejable después del vertical slice si el rendimiento lo permite | Delight sin costo de física | §5.5 |
-| DP-17 | Estilo de render | Low-poly plano / cel-shading con contornos / mezcla | **Low-poly plano + rampa toon 2-3 bandas; contornos solo en personajes e interactivos; sin contornos en modo bajo** | Legible, barato | §5.3 |
-| DP-18 | Cámara | Tercera persona asistida / isométrica fija / libre | **Tercera persona asistida** (inclinación fija, órbita ±45°, 3 zooms) + isométrica fija como opción | Lección de la investigación de referencias §4.4.2 | §5.5 |
-| DP-19 | Fuente de personajes animados | Kenney / Quaternius / encargo | **El pack CC0 que traiga rig + animaciones básicas** (verificar Kenney primero, luego Quaternius) | Las IA no modelan ni animan | §5.7 |
+| DP-17 | Estilo de render | Low-poly plano / cel-shading con contornos / mezcla | **Decidido (2026-10-06, D-139): HD-2D** (sprites pixel art sobre escenario 3D, postprocesado por tier; D-077) | Legible, barato | §5.3 |
+| DP-18 | Cámara | Tercera persona asistida / isométrica fija / libre | **Cámara ortográfica desde arriba en ángulo por presets** (`topdownOrtho` default, `isoOrtho` opción; D-053, actualizado por D-139) | Lección de la investigación de referencias §4.4.2 | §5.5 |
+| DP-19 | Fuente de personajes animados | Kenney / Quaternius / encargo | **Sprites pixel art de un pack con licencia registrada** (D-078, D-153); glTF CC0 solo para volúmenes | Las IA no modelan ni animan | §5.7 |
 | DP-20 | Voces de NPCs | Voces del motor de tiempo real / TTS aparte / actores | **Voces del motor de tiempo real** con las mismas voces para líneas pre-generadas | Coherencia de timbre | §5.8 |
 | DP-21 | Líneas guionadas: TTS cacheado o voz humana | TTS / humanos | **TTS cacheado** en la v1; humanos para trailer o si hay presupuesto | Costo | §2.5.7 |
 | DP-22 | Presupuesto de voz del plan gratis y de pago | Minutos por semana | **Gratis: 10 min de voz por semana + texto ilimitado** (ejemplo de el análisis de negocio §3.4); pago e institucional: a definir tras el experimento de costo | Accesibilidad sustentable; "el que paga financia al que no" | Negocio, §2.5.5 |
@@ -1267,7 +1295,7 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 | DP-24 | Recordatorios | Ninguno / opt-in sin recompensa / push con recompensa | **Opt-in sin recompensa**, configurable por jugador o docente | Libre elección como métrica norte | §2.2.3 |
 | DP-25 | Nivelación inicial | Examen / autodeclaración + adaptación | **Autodeclaración (4 opciones) + adaptación en el prólogo** | Menos ansiedad | §2.12 |
 | DP-26 | Variante y acentos del inglés | General americano / británico / mezcla | **General claro en A0-A1; desde A2 aparecen 2 NPCs con otros acentos**; comprensión acepta todas las variantes | Exposición gradual | §5.8 |
-| DP-27 | Feedback de pronunciación | Puntaje / solo si rompe el sentido / ninguno | **Solo si rompe el sentido**, sin puntaje, hasta medir la confiabilidad del reconocimiento con acento rioplatense | la investigación de referencias §4.2.3 | §2.4.4 |
+| DP-27 | Feedback de pronunciación | Puntaje / solo si rompe el sentido / ninguno | **Decidido (2026-10-06, D-044): núcleo desde la v1** (§2.4.7): momentos guionados con feedback, detección en fondo sin interrumpir, drills; solo tipos que pasan la vara de F0.1 (D-151) | la investigación de referencias §4.2.3 | §2.4.4 |
 | DP-28 | Variante del español de interfaz y Lumi | Rioplatense (voseo) / neutro (tuteo) / ambos | **Rioplatense con voseo para Argentina**; variante neutra cuando se expanda | Mercado Argentina primero | UI, voz |
 | DP-29 | Acceso del docente a transcripciones de menores | Nunca / agregadas / crudas | **Solo reportes agregados por can-do; transcripciones crudas nunca por defecto**; eventos de seguridad según política de la institución | Privacidad de menores | §2.17, §2.18 |
 | DP-30 | Charla libre sin marco con NPCs | No / solo adultos / todos | **No en la v1** | Seguridad y costo | §2.17 |
@@ -1276,7 +1304,7 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 | DP-33 | Mostrar etiquetas MCER al jugador | Sí / no / según edad | **Menores: solo can-do; adultos y docentes: can-do + MCER** | Evitar presión en chicos | §2.11 |
 | DP-34 | Epílogo con pedidos diarios generados | Sí / no | **Sí, pero fuera de la v1** | Contenido infinito con repaso | §3.7 |
 | DP-35 | Proveedor de IA y residencia de datos para menores | Gemini / otro / mixto | **Revisión legal antes del piloto con menores**; mientras tanto el reuso de un prototipo de voz anterior (Gemini) vale para adultos | ECA Digital, LGPD, Ley 25.326 | §2.17 |
-| DP-36 | Vía principal de voz **(revisión de arquitectura + experimento #1)** | Tiempo real (Gemini Live) / cascada STT+LLM+TTS / mixta | **Decidir con la sonda de costo de el análisis de negocio (#1)**; mientras tanto, tiempo real para escenas y cascada para modo texto con audio | Costo cuadrático [Negocio §3.2] | §2.5.2 |
+| DP-36 | Vía principal de voz **(revisión de arquitectura + experimento #1)** | Tiempo real (Gemini Live) / cascada STT+LLM+TTS / mixta | **Decidir con la sonda de costo de el análisis de negocio (#1)**; mientras tanto, tiempo real para escenas y cascada para modo texto con audio — **Decidido (2026-10-06, D-092): híbrida** (Live ahora + cascada; F0.1 decide la del piloto, D-149). | Costo cuadrático [Negocio §3.2] | §2.5.2 |
 | DP-37 | Moderación de salida en voz en tiempo real **(revisión de arquitectura)** | Filtrar texto paralelo y cortar audio / retrasar audio / solo prompt | **Filtrar el texto paralelo y cortar el audio si dispara**, con medición de latencia | Menores | §2.17 |
 | DP-38 | Protocolo ante señales de riesgo de un menor | Definir con especialistas | **Línea guionada de contención + recurso local + evento según política**; revisión de especialistas antes del piloto | Seguridad | §2.17.1 |
 | DP-39 | Arte de identidad (Lumi, faroles, logo) | Por código con primitivas / encargo a artista | **Por código con primitivas en la v1**; encargo si hay presupuesto | Las IA no modelan | §5.7 |
@@ -1308,7 +1336,8 @@ Todas las fuentes externas fueron leídas y graduadas por los informes de origen
 - **[Investigación]** (documento interno) y `20-evidencia.md` (E1-E37; Bibauw et al. 2022; Hou & Min 2026; Wang et al. 2026; Li, Wang & Yang 2025; Teimouri et al. 2019; Botes et al. 2022; Lyster & Saito 2010; Xu & Zeng 2023; Li 2018; Deci, Koestner & Ryan 1999; Mekler et al. 2017; Ryan, Rigby & Przybylski 2006; Sailer & Homner 2020; Clark et al. 2016; Bryfonski & McKay 2019; Novak et al. 2019; kim-webb-2022; belardi-2021; schimke-2021/2023; beauchemin-2024; fazekas-2020).
 - **[Referencias]** (documento interno) (Terra Alia, Influent, Noun Town, Newcomer, Talk to Me Human; implicaciones para cámara, rendimiento y stack).
 - **[Prototipo de voz]** un prototipo de voz anterior (server.js: proxy WebSocket a Gemini Live; teacher-config/rules.md: regla de disfluencias, tono, memoria; teacher-config/prompts.json: modos conversación y corrección; teacher-config/knowledge/sla-research.md: clasificación de errores).
-- **Directiva del operador sobre estética y assets:** cel-shaded o low-poly (Townscaper, A Short Hike), portfolio de Bruno Simon, packs gratuitos (Kenney.nl, glTF/GLB) en `public/` ubicados por código.
+- **Directiva del operador sobre estética y assets:** cel-shaded o low-poly (Townscaper, A Short Hike), portfolio de Bruno Simon, packs gratuitos (Kenney.nl, glTF/GLB) en `public/` ubicados por código (2026-10-05); **reemplazada en el estilo por HD-2D** (D-139, 2026-10-06; referencias en `docs/refs/estetica/`).
+- **[Referencias pronunciación]** `docs/research/pronunciacion-2026-10-06.md` y **[Referencias voz]** `docs/research/voz-costo-valor-2026-10-06.md` (2026-10-06).
 - **Propuesta de terceros ("prompt para Claude Code")** compartida por el operador: stack y reglas de arquitectura (§1.9).
 
 ---

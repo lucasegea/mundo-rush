@@ -1,6 +1,7 @@
 # 03 — Arquitectura técnica objetivo
 
-**Proyecto:** learning-game · **Documento:** arquitectura v0.1 · **Fecha:** 2026-10-05 · **Autor:** revisión de arquitectura (arquitecto, el entorno de desarrollo)
+**Proyecto:** learning-game (título provisorio *Mundo Rush*, D-031) · **Documento:** arquitectura v0.2 · **Fecha:** 2026-10-06 (v0.1: 2026-10-05) · **Autor:** revisión de arquitectura (arquitecto, el entorno de desarrollo); integración v0.2: planificación
+**v0.2 (2026-10-06):** integra las decisiones del operador del 2026-10-06 (`00-decisiones.md` §1.1), `07-stack-objetivo.md` (revisión de arquitectura: stack objetivo y costuras R10-R15) y los estudios de la investigación de referencias `research/voz-costo-valor-2026-10-06.md` y `research/pronunciacion-2026-10-06.md`. Secciones nuevas: §2.9 (HD-2D en R3F), §5.11 (voz híbrida), §5.12 (servicio de pronunciación); reglas R10-R15 en §3.1; ADR-022 a ADR-025. Donde v0.1 decía low-poly toon, cámara de tercera persona o "pronunciación fuera de alcance", manda lo nuevo.
 **Estado:** propuesta completa para el modo 1 (vertical slice y v1). Las decisiones marcadas `DP-…` esperan validación del operador; cada una trae un default que una corrida headless usa sin frenarse.
 **Idioma:** español. Identificadores de código, nombres de paquetes y mensajes de protocolo, en inglés (ver §3.4).
 
@@ -48,7 +49,7 @@ Ninguna forma de este documento se justifica sin alguna de estas restricciones. 
 
 | # | Restricción | Fuente | Qué fuerza en la arquitectura |
 |---|---|---|---|
-| C1 | Corre en el navegador de una PC modesta de escuela, sin instalar nada; modo gráfico bajo obligatorio; interactivo en < 15 s en la PC objetivo | [GDD §1.3 P1, §2.14, §5.7], [Referencias §4.4.5], [Negocio §7 #5] | Presupuesto de rendimiento duro (§2.7), tiers de calidad, carga por barrio, 3D en chunk diferido, modo "solo diálogo" sin WebGL |
+| C1 | Corre en el navegador de una PC modesta (hoy la del operador, D-135; mañana la de una escuela), sin instalar nada; modo gráfico bajo obligatorio; interactivo en < 15 s en la PC objetivo | [GDD §1.3 P1, §2.14, §5.7], [Referencias §4.4.5], [Negocio §7 #5] | Presupuesto de rendimiento duro (§2.7), tiers de calidad, carga por barrio, 3D en chunk diferido, modo "solo diálogo" sin WebGL |
 | C2 | El producto vende habla, no gráficos; la CPU y la red del cliente se usan para el audio en tiempo real, que compite con el render | [Referencias §4.4], [Negocio §2.1] | El audio tiene prioridad: AudioWorklet fuera del hilo principal, bajar el ritmo de render durante conversaciones (§2.7.4) |
 | C3 | Costo de voz cuadrático con la duración de la sesión (el contexto se re-factura por turno); objetivo ≤ US$0,03/min activo, muerte si nada baja de US$0,05/min | [Negocio §3.2, §3.3, §7 #1] | Una sesión de voz por escena de 2-4 min (tope 5), contexto mínimo, no transmitir silencio, contabilidad de costo por minuto desde el día 1 |
 | C4 | Reuso de `un prototipo de voz anterior` (Gemini Live, tope de ~15 min del lado del servidor) | [Brief] | El gateway de voz nace del código de LT (§5.2) |
@@ -56,11 +57,14 @@ Ninguna forma de este documento se justifica sin alguna de estas restricciones. 
 | C6 | Paga principalmente la institución; "el que paga financia al que no"; versión gratis con voz acotada y texto ilimitado | [Brief], [GDD DP-22] | Modelo institución → clase → alumno, pools de minutos de voz, modo texto de primera clase |
 | C7 | El mundo 3D y la UI DOM nunca se hablan directamente; el estado es la única fuente de verdad | [GDD §1.4.8], propuesta de terceros | Store único (Zustand) + núcleo de reglas en TS puro + límites de módulos verificados por lint (§3, §4.3) |
 | C8 | Modo 1 sin dinero ni economía; tycoon/construcción solo como candidata del modo 2 | [GDD §1.4.1, DP-15] | No existe slice de economía; el modo 2 se agrega como módulo nuevo sin tocar el núcleo (§3.6) |
-| C9 | Las IA de código no modelan 3D: packs CC0 (Kenney y afines) en glTF/GLB, ubicados por código | Directiva del operador, [GDD §5.7] | Pipeline de assets con registro de licencias, layout de dioramas como datos (§6.4) |
+| C9 | Las IA de código no modelan 3D ni dibujan sprites: packs con licencia registrada (glTF CC0 para volúmenes y props; PNG pixel art para tiles y personajes, D-153), ubicados por código | Directiva del operador, [GDD §5.7], D-139 | Pipeline de assets con registro de licencias, layout de dioramas como datos (§6.4) |
 | C10 | Desarrollo headless en muchas corridas | Intención del operador | Contenido como datos validados por schema, núcleo determinístico testeable, gates automáticos sin navegador (§8, §9) |
 | C11 | Sin Playwright ni navegador automatizado; UI = vitest + tsc + lint; el operador mira en el navegador | Regla del operador | Pirámide de pruebas sin E2E de navegador; verificación de presupuestos por scripts (§8) |
 | C12 | Celular abierto, no es el arranque | [Brief], [GDD DP-31] | HUD responsive y táctil desde el día 1; nada en el núcleo depende de mouse o teclado |
 | C13 | Equipo de 1-2 personas, alcance en semanas | [Negocio §6.7] | Sesgo a menos piezas: sin microservicios, sin colas, un solo servidor, una sola base |
+| C14 | Arte **HD-2D** decidido por el operador: sprites pixel art sobre un escenario 3D, cámara ortográfica desde arriba en ángulo (referencia *Octopath Traveler*) | D-139 (2026-10-06) | Render HD-2D dentro de R3F (§2.9), cámara por presets, postprocesado como efecto de tier, pipeline de tiles y sprites (§6.4) |
+| C15 | Un stack que no obligue a mudarse: web hoy; app desktop, móvil y, eventualmente, VR después | D-086 / D-136 (2026-10-06), `07-stack-objetivo.md` | Costuras R10-R15 desde el día 1 (§3.1), sin construir los destinos todavía |
+| C16 | La pronunciación es núcleo desde la v1, sin falsas alarmas y sin interrumpir | D-044 (2026-10-06), [Referencias pronunciación] | Servicio de pronunciación del lado del servidor detrás de interfaces (§5.12); el clip del turno lo comparten observador y pronunciación; solo tipos de error que pasan la vara de F0.1 (D-151) |
 
 Lo que **no** tengo como restricción y por eso no invento: número esperado de usuarios concurrentes (asumo piloto de cientos, no miles; §7.9), presupuesto mensual de infraestructura, y resultado de la sonda de costo (#1) y del benchmark de hardware (#5). Las decisiones que dependen de esos números quedan como DP con default reversible.
 
@@ -100,7 +104,7 @@ Lo que **no** tengo como restricción y por eso no invento: número esperado de 
   - *three.js imperativo:* menos overhead, pero rompe "3D declarativo" y obliga a construir a mano el puente al store. El overhead de R3F es despreciable si se respeta la disciplina de arriba.
   - *Babylon.js / PlayCanvas:* motores completos, más pesados en bundle (Babylon) o con editor propietario (PlayCanvas); ninguno se integra con React DOM tan directo.
   - *Godot o Unity exportados a web:* builds de decenas de MB, arranque lento en PCs de 4 GB, UI propia que pierde la accesibilidad del DOM y las IA de código los manejan peor. Choca con C1 y C10.
-  - *2D (Pixi/Phaser):* más liviano, y [Negocio §0] lo recomienda para el prototipo. No lo elijo como render principal porque el operador pidió dirección estética 3D low-poly/cel-shaded y "nombrar objetos en contexto espacial" [Referencias §4.4] gana con 3D. **Pero** la arquitectura deja el 2D posible: el núcleo no depende del render (§3.1) y el modo "solo diálogo" (DOM con ilustración estática) existe desde el vertical slice como plan B real.
+  - *2D (Pixi/Phaser):* más liviano, y [Negocio §0] lo recomienda para el prototipo. No lo elijo como render principal porque el operador pidió dirección estética 3D low-poly/cel-shaded (superado por D-139: HD-2D dentro de R3F, §2.9) y "nombrar objetos en contexto espacial" [Referencias §4.4] gana con 3D. **Pero** la arquitectura deja el 2D posible: el núcleo no depende del render (§3.1) y el modo "solo diálogo" (DOM con ilustración estática) existe desde el vertical slice como plan B real.
 
 ### 2.4 Rapier: no en el modo 1 (resuelve DP-14)
 
@@ -147,18 +151,19 @@ Lo que **no** tengo como restricción y por eso no invento: número esperado de 
 | Resolución interna | 75-100% (dinámica) | 100% | 100% | n/a |
 | Triángulos visibles | ≤ 25k | ≤ 50k (GDD §5.7) | ≤ 100k | 0 |
 | Draw calls por frame | ≤ 60 | ≤ 120 | ≤ 150 (tope del GDD) | 0 |
-| Personajes animados visibles | ≤ 4 | ≤ 8 | ≤ 12 | 0 |
+| Personajes animados visibles (sprites billboard; con HD-2D son baratos, el límite es de lectura en pantalla) | ≤ 4 | ≤ 8 | ≤ 12 | 0 |
 | Sombras | ninguna (sombras blob como quad con textura) | blob | 1 luz direccional con shadow map 1024 solo en dinámicos | — |
 | Contornos (outline) | ninguno | personajes + interactivo enfocado | personajes + interactivos | — |
 | Luces dinámicas | 1 hemisférica + 1 direccional | + hasta 2 puntuales | + hasta 4 puntuales | — |
-| Postprocesado | ninguno | ninguno | ninguno en v1 | — |
+| Postprocesado (D-077, §2.9) | ninguno | bloom barato (umbral alto, media resolución) | bloom + profundidad de campo tipo tilt-shift + viñeta | — |
 | Memoria de texturas en GPU | ≤ 24 MB | ≤ 48 MB | ≤ 96 MB | — |
 | Distancia de dibujo / niebla | corta | media | completa del diorama | — |
 
 Reglas que valen para todos los tiers:
 - **Las luces del pueblo (faroles, ventanas) son materiales emisivos + sprites de halo**, no luces puntuales. En render forward cada luz puntual encarece todos los materiales iluminados; "el pueblo se ilumina" con decenas de luces reales hundiría el tier bajo.
-- **Desaturación del progreso** [GDD §5.4]: un uniform por diorama en el material toon (un `mix` con luminancia en el shader), no un pase de postprocesado.
-- **Texturas:** atlas de paleta compartido (los packs de Kenney suelen usar un "colormap" común: se aprovecha) de ≤ 1024 px por diorama; filtrado `nearest` en la rampa toon.
+- **Desaturación del progreso** [GDD §5.4]: un uniform por diorama en los materiales de tiles y volúmenes (un `mix` con luminancia en el shader), no un pase de postprocesado.
+- **Texturas:** atlas de tiles y hojas de sprites pixel art con filtrado `nearest` y sin mipmaps (D-154); atlas de paleta compartido para volúmenes (los packs de Kenney suelen usar un "colormap" común: se aprovecha) de ≤ 1024 px por diorama.
+- **Tiers como contrato (R12):** se leen de un solo objeto (`apps/web/src/services/quality/quality.ts`); el tipo incluye `xr`, reservado y nunca elegido hasta la épica E-XR.
 
 #### 2.7.2 Detección y adaptación
 
@@ -192,6 +197,8 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 
 ### 2.8 Cel-shading: enfoque y costo (resuelve el "cómo" de DP-17)
 
+> **Desde v0.2 (D-139, HD-2D):** esta sección aplica solo a los **volúmenes** del escenario (casas, muelle, faroles) que lo necesiten; los personajes son sprites (§2.9) y no llevan contorno ni material toon. El postprocesado ya no está descartado en v1: es un efecto por tier (§2.7.1). Cualquier shader propio queda aislado en `world/materials` y `world/post` para portarlo a nodos (TSL) si algún día se activa WebGPU (D-144).
+
 | Técnica | Costo en GPU integrada | Uso |
 |---|---|---|
 | `MeshToonMaterial` con `gradientMap` de 2-3 bandas (textura 3×1 o 4×1, filtrado `nearest`) | Prácticamente igual a Lambert | **Default** para personajes, Lumi y props importantes |
@@ -204,6 +211,24 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 
 **Falla posible:** el casco invertido se ve mal en mallas con normales partidas (aristas duras), con huecos en el contorno. Mitigación: el pipeline de assets suaviza normales solo para la copia del contorno, o se desactiva el contorno en esa pieza (marcado en el registro de assets).
 
+
+### 2.9 HD-2D en R3F (D-139, D-138, D-154; ADR-022)
+
+**Qué es:** personajes pixel art como sprites que siempre miran a la cámara, sobre un escenario 3D simple (tiles con textura pixel art, volúmenes de pocas caras) con luz 3D real, visto con una cámara ortográfica inclinada; profundidad de campo y bloom dan la "maqueta iluminada" (referencia *Octopath Traveler*; capturas en `docs/refs/estetica/`). Se construye **dentro del mismo stack** (R3F + drei), sin motor 2D aparte: datos, grilla, movimiento, cámara, input y store sobreviven a 3D completo y a VR (`07-stack-objetivo.md` §3).
+
+| Pieza | Cómo se hace | Ruta |
+|---|---|---|
+| **Tiles** | Tilemap por capas en el layout (§6.4.3) → `buildTileChunk(tilemap, chunkX, chunkZ)` fusiona 16×16 tiles en una `BufferGeometry` con UV del atlas (1 draw call por chunk y por capa). **1 tile = 1 m = 32×32 px**; la grilla de caminabilidad usa celdas de 0,5 m (§2.4). Tiles vacíos no generan geometría | `apps/web/src/world/tiles/` |
+| **Texturas pixel** | revisión de arquitectura PNG con `magFilter = minFilter = NearestFilter`, `generateMipmaps = false`, espacio de color sRGB; sin resampleo en el pipeline (§6.4.1) | `apps/web/public/textures/tiles/` |
+| **Volúmenes** | glTF CC0 de pocas caras (casas, muelle, faroles) o cajas por código, con textura pixel o color de paleta; instanciados y fusionados como en §6.4.4 | `apps/web/src/world/props/` |
+| **Sprites (billboards)** | Plano con la hoja de sprites (4 direcciones × ≥ 3 cuadros + idle), que rota **solo en Y** hacia la cámara, anclado por los pies; ~32×48 px a la misma densidad que los tiles; sombra *blob* en todos los tiers; los sprites de un mismo pack se dibujan instanciados. La orientación y el cuadro se calculan con funciones puras testeables | `apps/web/src/world/sprites/` · `apps/web/public/sprites/<pack>/` |
+| **Cámara** | `CameraRig` por presets (R11, D-053): `topdownOrtho` (default; yaw 0°, pitch 55-60°, ~15 tiles de ancho visibles, sigue al jugador con suavizado y **snap a la grilla de píxel** para que el pixel art no tiemble), `isoOrtho` (yaw 45°), `dialogueFrame`; `perspective3D` y `xrTabletop` declarados para el futuro | `apps/web/src/world/camera/` |
+| **Luz** | 1 direccional + ambiente/hemisférica; 3 presets por hora del día (D-051); faroles y ventanas como emisivos + halos (§2.7.1) | `apps/web/src/world/lighting/` |
+| **Postprocesado por tier** | `@react-three/postprocessing`: `low` ninguno; `medium` bloom barato (umbral alto, media resolución); `high` bloom + DOF tilt-shift (foco en el jugador) + viñeta. Se apaga con "reducir movimiento" y durante la pérdida de contexto | `apps/web/src/world/post/` |
+| **Retratos** | Busto del pack si existe; si no, el sprite de frente escalado en el HUD con `image-rendering: pixelated` (D-030) | `apps/web/public/sprites/<pack>/` |
+
+**Presupuesto:** un chunk de tiles por capa cuenta como 1 draw call; los sprites de un pack como 1 por pack (instancias); el conteo de §2.7.1 se estima desde el layout (§6.4.5). **Riesgos:** temblor del pixel art con la cámara ortográfica (snap a la grilla de píxel, medido en F0.2); DOF caro en integradas (solo `high`); en VR los billboards se ven peor y el arte de personajes probablemente se rehace (aceptado por el operador al elegir HD-2D; D-139).
+
 ---
 
 ## 3. Reglas de arquitectura, capas y estado (Zustand)
@@ -215,7 +240,7 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 │ apps/web                                                              │
 │                                                                       │
 │  ui/ (React DOM + Tailwind)          world/ (R3F, declarativo)         │
-│  HUD, diálogo, Lumi (burbujas),      dioramas, actores, Lumi 3D,      │
+│  HUD, diálogo, Lumi (burbujas),      tiles, sprites, Lumi (farol),    │
 │  cuaderno, ajustes, onboarding,      cámara, materiales, luces        │
 │  modo solo-diálogo                                                    │
 │        │  lee selectores                    │  lee selectores          │
@@ -249,6 +274,15 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 8. **R8 — El servidor es autoridad de la escena de voz y de la evidencia.** El cliente presenta; el servidor decide cuándo termina una escena, qué evidencia se registró y qué señal da Lumi (§5.6). El cliente nunca fabrica eventos de evidencia.
 9. **R9 — Contenido como datos.** Misiones, escenas, NPCs, glosario, árbol de habilidades, layouts de dioramas y líneas de Lumi son archivos validados por schema (§6); el código no contiene texto de juego hardcodeado salvo cadenas de interfaz en i18n.
 
+**Costuras del día 1 (R10-R15, D-145; origen: `07-stack-objetivo.md` §5.3; ADR-025).** Cuestan interfaces y un adaptador `web`, no features; son lo que permite llegar a desktop, móvil y VR sin mudarse (C15). Todas se verifican sin navegador (lint de importación y tests).
+
+10. **R10 — Input semántico.** `services/input/` traduce dispositivos (teclado, mouse, táctil, gamepad; después controladores XR) a **acciones**: `move(dir)`, `moveTo(cell)`, `interact()`, `talk.start/stop`, `menu.open`, `confirm`, `back`, `openNotebook`. El núcleo, el store y `world/` solo ven acciones. Lint: `addEventListener` de teclado, puntero o gamepad solo dentro de `services/input/` (los controles DOM nativos con foco siguen funcionando como siempre).
+11. **R11 — Cámara por presets.** `world/camera/CameraRig` es el único que crea o mueve cámaras; recibe un preset desde datos (`topdownOrtho`, `isoOrtho`, `dialogueFrame`; más adelante `perspective3D`, `xrTabletop`). En XR la cámara la controla la cabeza y el rig mueve la maqueta. Lint: cámaras de three/drei solo dentro de `world/camera/`.
+12. **R12 — Tiers de calidad como contrato.** Los tiers de §2.7.1 se leen de un solo objeto (`services/quality/quality.ts`); el tipo es `'low' | 'medium' | 'high' | 'dialog-only' | 'xr'` con `xr` reservado. Ningún componente decide calidad por su cuenta.
+13. **R13 — Audio y transporte de voz detrás de interfaces.** Un solo `AudioContext`, creado en `services/audio/`; captura y reproducción en AudioWorklet (§2.7.4); el transporte de voz del cliente es la interfaz `VoiceTransport` (WebSocket hoy; lugar para WebRTC); los permisos de micrófono pasan por el adaptador de plataforma (R15). Del lado del servidor, la voz del NPC es `RealtimeVoiceProvider` con adaptadores intercambiables (§5.11).
+14. **R14 — UI como vista del store.** Los componentes de `ui/` presentan view-models con nombre de `state/selectors/` (texto, orden y estados de cada pantalla) y despachan acciones; nada de lógica de estado dentro del JSX. La UI XR futura (uikit, D-143) consume los mismos view-models.
+15. **R15 — Plataforma detrás de un adaptador.** `services/platform/` con la interfaz `Platform` (permisos, almacenamiento local, actualizaciones, abrir enlaces, pantalla completa) y, hoy, solo la implementación `web`; `desktop`, `mobile` y `xr` llegan con sus épicas. Lint: `@tauri-apps/*`, `@capacitor/*` y `navigator.xr` solo dentro de `services/platform/`.
+
 ### 3.2 Por qué un núcleo puro además del store
 
 - Hace testeable sin navegador todo lo que importa (movimiento, progresión, repaso, adaptación, política del compañero, máquinas de estado): C10 y C11.
@@ -262,7 +296,7 @@ Un solo store (`useGameStore`) compuesto por slices. Cada slice declara su estad
 | Slice | Estado (campos principales) | Quién escribe (acciones) | Quién lee | Persistencia |
 |---|---|---|---|---|
 | `session` | fase de la app (`boot`, `onboarding`, `world`, `scene`, `notebook`, `dialogOnly`), cuenta (id opaco, rol, banda de edad, institución/clase si aplica), estado de conexión, brazos de experimentos asignados, presupuesto de voz restante (minutos), idioma de interfaz, par de idioma | servicios de auth/persistencia/voz; onboarding | todos | servidor (cuenta) |
-| `settings` | accesibilidad (tamaño de texto, fuente, subtítulos, karaoke, daltonismo, contraste, reducir movimiento, volúmenes por canal, voz de Lumi on/off), entrada (pulsar para hablar, umbral de fin de turno, solo botón, mapeo de teclas), modo de feedback (`accompanied`/`flagOnly`/`moreHelp`), velocidad de NPC preferida, nivel de ayuda fijado (o automático), tier gráfico (auto/manual), cámara (asistida/isométrica) | `ui/settings`, onboarding | todos | servidor + copia local (preferencias por dispositivo como tier gráfico solo local) |
+| `settings` | accesibilidad (tamaño de texto, fuente, subtítulos, karaoke, daltonismo, contraste, reducir movimiento, volúmenes por canal, voz de Lumi on/off), entrada (pulsar para hablar, umbral de fin de turno, solo botón, mapeo de teclas), modo de feedback (`accompanied`/`flagOnly`/`moreHelp`), velocidad de NPC preferida, nivel de ayuda fijado (o automático), tier gráfico (auto/manual), cámara (preset `topdownOrtho`/`isoOrtho`, R11) | `ui/settings`, onboarding | todos | servidor + copia local (preferencias por dispositivo como tier gráfico solo local) |
 | `world` | diorama actual y cargados, momento del día, clima guionado, nivel de luz por barrio, flags del mundo (eventos de misión: `dog_found`…), estado de NPCs (posición lógica, ruta, disponible, ícono de pedido), relación por NPC (0-5, nunca baja), interactuables cercanos, interactuable enfocado | núcleo de mundo vía acciones; `world/` despacha `interact(id)`, `moveTo(x,z)`; resultados de escenas | `world/`, `ui/` (prompt de interacción, objetivo actual, lista accesible) | servidor (flags, relaciones, luz) |
 | `player` | posición lógica (celda y coordenadas de simulación), destino/camino, orientación, avatar, nombre de juego, pronombres, canasta (objetos prestados de misión) | núcleo de movimiento; onboarding | `world/`, `ui/` | servidor (avatar, nombre, pronombres, canasta); posición solo para reanudar |
 | `dialogue` | escena activa (`sceneId`, `npcId`), estado de la máquina de escena (§3.5.1), sub-estado de turno, modalidad (`voice`/`text`), subtítulos (líneas finales y parcial), última línea del NPC (para `Repetir`), velocidad efectiva, menú de silencio abierto, chip de pista visible, opciones sugeridas (modo texto), progreso de criterios (para la línea de objetivo, sin revelar evaluación), motivo de fallback a texto | servicio `voice-client` (mensajes del servidor), `ui/dialogue` (botones: `Terminé`, `Pasar el turno`, `Repetir`, `Más despacio`, `Escribir`, `Marcar`) | `ui/dialogue`, `world/` (animaciones de habla, encuadre de cámara) | no (la escena se reanuda desde su inicio [GDD §2.16]) |
@@ -426,7 +460,11 @@ learning-game/
 │  ├─ 03-arquitectura.md         # este documento
 │  ├─ 04-roadmap.md              # fases, criterios, dependencias
 │  ├─ 05-prompts-por-etapa.md    # contrato común y prompts por fase
-│  ├─ adr/                       # un archivo por ADR: ADR-NNN-<slug>.md (F1.1 copia ADR-001…021)
+│  ├─ 06-grafo.yaml              # grafo de fases (derivado de 00/04/05)
+│  ├─ 07-stack-objetivo.md       # stack objetivo y costuras R10-R15 (revisión de arquitectura, insumo integrado acá)
+│  ├─ research/                  # estudios de la investigación de referencias (voz costo-valor, pronunciación)
+│  ├─ refs/                      # referencias visuales (estética HD-2D)
+│  ├─ adr/                       # un archivo por ADR: ADR-NNN-<slug>.md (F1.1 copia ADR-001…025)
 │  ├─ reports/                   # F<n>-<AAAA-MM-DD>.md (corridas) · FV-veredicto-<AAAA-MM-DD>.md (operador)
 │  ├─ content/plantilla-capitulo.md  # plantilla para capítulos 2-4 (F8.3)
 │  ├─ legal/                     # consentimiento y privacidad FV (borradores [operador], D-124)
@@ -448,9 +486,12 @@ learning-game/
 │  ├─ skills/skill-tree.yaml     # árbol (GDD §2.8.2)
 │  ├─ scaffold/levels.yaml       # parámetros por nivel de andamiaje (GDD §2.10)
 │  ├─ companion/
-│  │  └─ lumi.es-AR.yaml         # plantillas de Lumi con id (esquema y catálogo: 02 §2.7): escalera de señales, destilado, evocación
+│  │  └─ lumi.es-AR.yaml         # plantillas de Lumi con id (esquema y catálogo: 02 §2.7): escalera de señales, destilado, evocación, feedback de pronunciación
+│  ├─ pronunciation/
+│  │  ├─ confusions.es-en.yaml   # tabla de confusiones L1 es→en calibrada en F0.1 (§5.12)
+│  │  └─ habilitados.yaml        # tipos de error E1-E14 habilitados por la vara de F0.1 (D-151)
 │  ├─ dioramas/
-│  │  ├─ muelle.yaml             # layout: props, NPCs, rutas, interactuables, zonas no caminables
+│  │  ├─ muelle.yaml             # layout: capas de tiles, volúmenes, NPCs, rutas, interactuables, zonas no caminables
 │  │  └─ plaza.yaml
 │  ├─ world/
 │  │  └─ places.yaml             # lugares de la región para el modo solo-diálogo (id, nombre, barrio)
@@ -473,6 +514,7 @@ learning-game/
 │  │  │  ├─ progression/         # plegado de evidencia, árbol, vertido (§3.5.3)
 │  │  │  ├─ review/              # Leitner (§3.5.4)
 │  │  │  ├─ scaffold/            # andamiaje adaptativo (§3.5.5)
+│  │  │  ├─ pronunciation/       # tipos E1-E14, recurrencia, guardia de pares mínimos, cruce gramática/pronunciación (§5.12)
 │  │  │  ├─ movement/            # grilla, A*, colisión círculo-celda, paso fijo (§2.4)
 │  │  │  ├─ interaction/         # interactuables cercanos, resolución de interact()
 │  │  │  ├─ world/               # flags, luz por barrio, desbloqueo de misiones
@@ -493,13 +535,13 @@ learning-game/
 │  │  ├─ docente.html            # panel docente (sin three)
 │  │  ├─ vite.config.ts
 │  │  ├─ public/
-│  │  │  ├─ models/<pack>/…glb   # SOLO modelos ya optimizados por el pipeline
-│  │  │  ├─ textures/            # atlas de paleta, rampas toon, sprites de halo
+│  │  │  ├─ models/<pack>/…glb   # SOLO volúmenes ya optimizados por el pipeline
+│  │  │  ├─ sprites/<pack>/      # hojas de sprites pixel art de personajes (D-153)
+│  │  │  ├─ textures/            # tiles/ (atlas pixel art), atlas de paleta, sprites de halo
 │  │  │  ├─ audio/lines/         # líneas guionadas pre-generadas (Opus/OGG)
 │  │  │  ├─ audio/sfx/ …/music/  # CC0/CC-BY registrados
 │  │  │  ├─ fonts/               # autoalojadas
 │  │  │  ├─ decoders/            # decodificador meshopt autoalojado
-│  │  │  ├─ portraits/           # PNG de retratos por NPC exportados por el operador (D-030)
 │  │  │  └─ content/             # GENERADO: JSON compilado desde /content
 │  │  └─ src/
 │  │     ├─ main.tsx · App.tsx   # monta shell DOM; carga diferida del canvas
@@ -509,26 +551,31 @@ learning-game/
 │  │     │  ├─ slices/           # sessionSlice.ts, settingsSlice.ts, worldSlice.ts, …
 │  │     │  └─ selectors/
 │  │     ├─ services/
-│  │     │  ├─ voice/            # voiceClient.ts, framing, reconexión
-│  │     │  ├─ audio/            # worklets (captura, VAD, reproducción), director de audio, time-stretch
-│  │     │  ├─ input/            # teclado/mouse/táctil → acciones; remapeo
+│  │     │  ├─ voice/            # voiceClient.ts sobre VoiceTransport (R13), framing, reconexión
+│  │     │  ├─ audio/            # ÚNICO AudioContext; worklets (captura, VAD, reproducción), director, time-stretch, clipStore (D-155)
+│  │     │  ├─ input/            # dispositivos → acciones semánticas (R10); remapeo
+│  │     │  ├─ platform/         # interfaz Platform + adaptador web (R15); desktop/mobile/xr en sus épicas
 │  │     │  ├─ persistence/      # sync con servidor + copia local (IndexedDB)
 │  │     │  ├─ telemetry/        # eventos de aprendizaje y engagement (§7.6)
-│  │     │  ├─ quality/          # detección de tier, PerformanceMonitor bridge
+│  │     │  ├─ quality/          # quality.ts: tiers como contrato (R12), detección, PerformanceMonitor bridge
 │  │     │  └─ content/          # carga y cacheo del contenido compilado
 │  │     ├─ world/               # R3F
 │  │     │  ├─ GameCanvas.tsx    # raíz del canvas (chunk diferido)
 │  │     │  ├─ dioramas/         # Diorama.tsx genérico que lee el layout
-│  │     │  ├─ actors/           # Player.tsx, Npc.tsx, Lumi.tsx (primitivas, DP-39 del GDD)
-│  │     │  ├─ props/            # Prop, InstancedProps, Interactable
-│  │     │  ├─ camera/           # AssistedCamera, IsoCamera, DialogueFraming
-│  │     │  ├─ materials/        # ToonMaterial, rampas, outline
+│  │     │  ├─ actors/           # Player.tsx, Npc.tsx (sprites), Lumi.tsx (primitivas, DP-39 del GDD)
+│  │     │  ├─ tiles/            # buildTileChunk.ts, TileLayer.tsx (§2.9)
+│  │     │  ├─ sprites/          # Billboard.tsx, selección de cuadro por dirección (§2.9)
+│  │     │  ├─ props/            # Prop, InstancedProps, Interactable (volúmenes)
+│  │     │  ├─ camera/           # CameraRig.tsx con presets (R11)
+│  │     │  ├─ materials/        # material de tiles/volúmenes, ToonMaterial para volúmenes que lo necesiten
+│  │     │  ├─ post/             # postprocesado por tier (§2.9)
 │  │     │  ├─ lighting/         # tiempo del día, luz por barrio, halos
 │  │     │  └─ dev/              # superposición de grilla y coordenadas (solo dev)
 │  │     ├─ ui/                  # React DOM + Tailwind
 │  │     │  ├─ hud/              # objetivo, indicador de voz, prompt de interacción
 │  │     │  ├─ dialogue/         # subtítulos, barra de andamiaje, menú de silencio, modo texto
 │  │     │  ├─ companion/        # burbuja de Lumi, señal, destilado
+│  │     │  ├─ pronunciation/    # momentos guionados, drills de pares mínimos, "así lo dijiste vos / así suena"
 │  │     │  ├─ notebook/         # Frasco de Lumi
 │  │     │  ├─ settings/ · onboarding/ · menus/
 │  │     │  ├─ dialog-only/      # render alternativo sin WebGL
@@ -543,7 +590,8 @@ learning-game/
 │     │  ├─ config/              # carga de models.yaml, precios, límites; validado con zod
 │     │  ├─ gateway/             # WS del cliente, framing, autenticación del socket
 │     │  ├─ scene-runtime/       # orquesta UNA escena: sesión Live, máquina de escena, timers
-│     │  ├─ providers/           # adaptadores: gemini-live, gemini-text, tts-*, moderation-*
+│     │  ├─ providers/           # adaptadores: gemini-live, cascade (stt-deepgram, gemini-text, tts-*), moderation-* (§5.10-§5.11)
+│     │  ├─ pronunciation/       # ScriptedAssessor (azure, speechace) · RealizationRecognizer (zipa) (§5.12)
 │     │  ├─ observer/            # prompt, schema de salida, guardas de truncado
 │     │  ├─ moderation/          # filtro rápido, clasificador, retención de audio, contención
 │     │  ├─ budget/              # minutos de voz por cuenta/institución
@@ -553,9 +601,11 @@ learning-game/
 │     │  ├─ db/                  # migraciones SQL a mano + consultas
 │     │  ├─ telemetry/           # ingesta de eventos
 │     │  └─ retention/           # borrado programado (transcripciones a 30 días)
-│     ├─ config/models.yaml      # roles de modelo → proveedor/modelo/precio (sin claves)
+│     ├─ config/models.yaml      # roles de modelo → proveedor/modelo/precio; voice.npc.adapter (sin claves)
+│     ├─ models/zipa/            # modelo ONNX de ZIPA (gitignored; lo baja el operador; registrado con licencia)
+│     ├─ data/cost-ledger.jsonl  # ledger de costo del uso del operador (gitignored) hasta que exista Postgres
 │     ├─ generated/content/      # GENERADO por scripts/content/build.ts: contenido + prompts (nunca va al cliente)
-│     └─ test/fakes/             # servidor Live falso, modelo de texto falso, TTS falso
+│     └─ test/fakes/             # servidor Live falso, STT/modelo de texto/TTS falsos, respuestas de pronunciación falsas
 │
 └─ scripts/
    ├─ assets/optimize.ts         # gltf-transform: prune, dedup, weld, quantize, meshopt, texturas
@@ -570,8 +620,8 @@ learning-game/
    └─ fv/check-glossary.ts       # chequeo de glosario antes del deploy de FV (MODE=fv, D-128)
 
 experiments/                     # FUERA de los workspaces
-├─ f0-voice-probe/               # sonda de costo de voz (F0.1)
-└─ f0-perf-spike/                # spike de rendimiento descartable (F0.2)
+├─ f0-voice-probe/               # sonda de voz, gramática (EPR) y pronunciación (F0.1); data/audio/ gitignored
+└─ f0-hd2d-spike/                # spike de rendimiento HD-2D descartable (F0.2)
 ```
 
 #### 4.2.1 Rutas canónicas
@@ -580,8 +630,8 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 
 | Qué | Ruta canónica | Fase que la crea |
 |---|---|---|
-| Registro de licencias de assets | `content/assets-registry.yaml` (en el spike descartable: `experiments/f0-perf-spike/LICENSES.md`) | F3 (F0.2 en el spike) |
-| Layout de dioramas | `content/dioramas/muelle.yaml`, `content/dioramas/plaza.yaml` (F2 usa `content/dioramas/test.yaml`, de primitivas) | F2 (test), F3 |
+| Registro de licencias de assets | `content/assets-registry.yaml` (en el spike descartable: `experiments/f0-hd2d-spike/LICENSES.md`) | F3 (F0.2 en el spike) |
+| Layout de dioramas (con capas de tiles) | `content/dioramas/muelle.yaml`, `content/dioramas/plaza.yaml` (F2 usa `content/dioramas/test.yaml`, con atlas placeholder) | F2 (test), F3 |
 | Lugares para solo-diálogo | `content/world/places.yaml` (F1.2 ya valida referencias escena→lugar) | F1.2 |
 | Compilador de contenido | `scripts/content/build.ts` | F1.2 |
 | Salida compilada | `apps/web/public/content/` (cliente, sin prompts) · `apps/server/generated/content/` (servidor) | F1.2 |
@@ -597,8 +647,13 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | Puente mundo → store | `apps/web/src/state/bridge.ts` | F2 |
 | Capa DOM | `apps/web/src/ui/` (incluye `ui/hud/`, `ui/dialogue/`, `ui/companion/`, `ui/notebook/`, `ui/dialog-only/`, …) | F1.3 |
 | Capa 3D | `apps/web/src/world/` | F2 |
-| Optimizador de assets | `scripts/assets/optimize.ts` → `apps/web/public/models/<pack>/` | F3 |
-| Retratos para solo-diálogo | `apps/web/public/portraits/NPC-<NOMBRE>.png` (exportados por el operador con el botón de dev, D-030) | F3 |
+| Optimizador de assets | `scripts/assets/optimize.ts` → `apps/web/public/models/<pack>/` (volúmenes) · `apps/web/public/textures/tiles/` (atlas) · `apps/web/public/sprites/<pack>/` (personajes) | F3 |
+| Render HD-2D | `apps/web/src/world/tiles/` · `apps/web/src/world/sprites/` · `apps/web/src/world/camera/CameraRig.tsx` · `apps/web/src/world/post/` (§2.9) | F2, F3 |
+| Costuras R10-R15 | `apps/web/src/services/input/` (R10) · `apps/web/src/world/camera/` (R11) · `apps/web/src/services/quality/quality.ts` (R12) · `apps/web/src/services/audio/` + `VoiceTransport` (R13) · `apps/web/src/state/selectors/` (R14) · `apps/web/src/services/platform/` (R15) | F1.1 (lint), F1.3, F2, F5.2 |
+| Retratos para solo-diálogo | busto del pack o sprite de frente en `apps/web/public/sprites/<pack>/` (D-030); si faltan, SVG por código | F1.3 (SVG), F3 |
+| Voz híbrida (servidor) | `apps/server/src/providers/gemini-live/` · `apps/server/src/providers/cascade/` · selección en `apps/server/config/models.yaml` (`voice.npc.adapter`) (§5.11) | F5.1 |
+| Pronunciación | núcleo `packages/core/src/pronunciation/` · servidor `apps/server/src/pronunciation/` · UI `apps/web/src/ui/pronunciation/` · clips locales `apps/web/src/services/audio/clipStore.ts` · datos `content/pronunciation/` · modelo `apps/server/models/zipa/` (gitignored) (§5.12) | FP |
+| Ledger de costo del operador | `apps/server/data/cost-ledger.jsonl` (gitignored; Postgres `cost_ledger` llega con F11.1) | F5.1 |
 | Audio de líneas guionadas | `scripts/audio/pregenerate-lines.ts` · `scripts/audio/lines-to-generate.json` · `apps/web/public/audio/lines/` | F8 |
 | Eval en vivo opt-in | `scripts/eval/live-text.ts` | F4.1 |
 | Reporte del prototipo | `scripts/fv/report.ts` | FV |
@@ -608,8 +663,8 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | ADRs | `docs/adr/ADR-NNN-<slug>.md` | F1.1 |
 | Reportes | `docs/reports/F<n>-<AAAA-MM-DD>.md` · veredicto FV del operador: `docs/reports/FV-veredicto-<AAAA-MM-DD>.md` | cada fase · operador |
 | Plantilla de capítulo | `docs/content/plantilla-capitulo.md` | F8.3 |
-| Sondas | `experiments/f0-voice-probe/` · `experiments/f0-perf-spike/` | F0.1, F0.2 |
-| Variables de entorno | prefijo `LG_` (§4.4), p. ej. `LG_GEMINI_API_KEY`; solo nombres en `.env.example` | F0.1, F1.1 |
+| Sondas | `experiments/f0-voice-probe/` (salidas de pronunciación en `out/`; audio en `data/audio/`, gitignored) · `experiments/f0-hd2d-spike/` | F0.1, F0.2 |
+| Variables de entorno | prefijo `LG_` (§4.4): `LG_GEMINI_API_KEY`, `LG_DEEPGRAM_API_KEY`, `LG_AZURE_SPEECH_KEY`, `LG_AZURE_SPEECH_REGION`, `LG_SPEECHACE_API_KEY`, `LG_SPEECHSUPER_APP_KEY`, `LG_SPEECHSUPER_SECRET_KEY` y opcionales (`LG_OPENAI_API_KEY`, `LG_ASSEMBLYAI_API_KEY`, `LG_ELEVENLABS_API_KEY`); solo nombres en `.env.example` (D-134, D-150) | F0.1, F1.1 |
 
 ### 4.3 Límites de módulos (verificados por ESLint `no-restricted-imports` y por entorno)
 
@@ -621,6 +676,10 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | `apps/web/src/ui` | `state/` (selectores y acciones), `i18n/`, `primitives`, `packages/core` (tipos) | `world/`, `three`, `@react-three/*`, `services/` (los servicios se activan por estado, no por import) |
 | `apps/web/src/world` | `state/selectors/` y `state/bridge.ts` (acciones expuestas al mundo), `three`, `@react-three/*`, `packages/core` (tipos) | `ui/`, `services/`, `state/slices/`, `state/store.ts`, módulos de reglas de `packages/core` (solo tipos) |
 | `apps/web/src/services` | `state/`, `packages/*` | `ui/`, `world/` |
+| fuera de `apps/web/src/services/platform/` | — | `@tauri-apps/*`, `@capacitor/*`, `navigator.xr` (R15) |
+| fuera de `apps/web/src/services/input/` | — | `addEventListener` de teclado, puntero o gamepad (R10) |
+| fuera de `apps/web/src/world/camera/` | — | crear cámaras de three/drei (R11) |
+| fuera de `apps/web/src/services/audio/` | — | `new AudioContext` (R13) |
 | `apps/web/src/state` | `packages/core`, `packages/protocol` | `ui/`, `world/`, `services/` |
 | `apps/web/src/teacher` | `packages/protocol`, `i18n/`, `ui/primitives` | `world/`, `three` |
 | `apps/server` | `packages/*` | `apps/web` |
@@ -714,7 +773,7 @@ Un `npm run lint` rojo por un límite es un **bloqueante**, no una advertencia.
 
 ### 5.4 Escena = una sesión de voz (estrategia contra el tope de ~15 min y el costo cuadrático)
 
-1. **Una sesión Live por escena**, abierta durante la pre-tarea (Lumi habla 20-40 s: tiempo de sobra para el handshake) y cerrada al terminar la escena. Escena objetivo 2-4 min, `nonConverging` a los 4:00, tope duro 5:00 aplicado **en el servidor** [GDD §2.5.5]. Nunca se acerca a los ~15 min de tope ni al tramo cuadrático caro [Negocio §3.2].
+1. **Una sesión Live por escena**, abierta durante la pre-tarea (Lumi habla 20-40 s: tiempo de sobra para el handshake) y cerrada al terminar la escena. Escena objetivo 2-4 min; `softCap` a los 4:00 pasa a `nonConverging` en el próximo borde natural (`npcDone`/`companionDone`), sin cortar a nadie, y un jugador en silencio pasado 4:00 termina por `hardCap` a los 5:00 (D-130); tope duro 5:00 aplicado **en el servidor** [GDD §2.5.5]. Nunca se acerca a los ~15 min de tope ni al tramo cuadrático caro [Negocio §3.2].
 2. **Contexto mínimo inyectado por escena** (objetivo ≤ 1.500 tokens de system instruction), armado por `scene-runtime` desde el contenido compilado:
    - bloque de seguridad global (temas vedados, nunca pedir datos personales, nunca salir del marco; contención si aparece riesgo);
    - ficha del NPC (personalidad, forma de hablar, sabe/no sabe, relación actual);
@@ -793,7 +852,7 @@ A la fecha de este documento no tengo verificado un parámetro de velocidad de h
 ### 5.6 El compañero como segundo observador
 
 - **Lumi no está dentro de la sesión Live del NPC.** Son dos "modelos" distintos: el NPC (voz en tiempo real, en la ficción) y el observador (texto, fuera de la ficción). Esto evita que el NPC haga de profesor y mantiene el costo de la sesión de voz bajo (el observador no re-factura audio).
-- **Disparo:** al cerrarse cada turno del jugador, `scene-runtime` llama al observador con: transcripción del jugador (con disfluencias), última línea del NPC, criterios de éxito de la escena, estructuras objetivo de la misión, ítems de repaso que la escena buscaba, nivel MCER y patrones de error conocidos (clave + tipo, sin texto libre del perfil).
+- **Disparo:** al cerrarse cada turno del jugador, `scene-runtime` llama al observador con: **el clip de audio del turno, en memoria** (D-095; el mismo clip lo lee el servicio de pronunciación, §5.12), transcripción del jugador (con disfluencias), última línea del NPC, criterios de éxito de la escena, estructuras objetivo de la misión, ítems de repaso que la escena buscaba, nivel MCER y patrones de error conocidos (clave + tipo, sin texto libre del perfil).
 - **Concurrencia:** el observador corre mientras el NPC responde (1-2 s típicos de un modelo de texto rápido). La decisión de Lumi se aplica **después** de que el NPC termina su turno: Lumi nunca habla encima del NPC [GDD §2.4.1].
 - **Salida validada con schema** (§5.7). Si el observador falla, trunca o no responde a tiempo, la escena sigue sin señal (degradación silenciosa del feedback, nunca de la conversación) y el turno se re-evalúa al cierre de la escena.
 - **Voz de Lumi:** TTS en la L1 (rioplatense, DP-28 del GDD). Las líneas de Lumi son **plantillas de contenido** con huecos (`"Mmm... ¿{forma_erronea}...?"`), no texto libre del modelo: el observador entrega el hueco (la forma del jugador limpia de disfluencias, la forma correcta desde el glosario cuando existe) y la plantilla la arma el núcleo. Las plantillas fijas tienen audio pre-generado; las que llevan hueco se sintetizan al vuelo con caché por texto (DP-A07).
@@ -802,8 +861,9 @@ A la fecha de este documento no tengo verificado un parámetro de velocidad de h
 ### 5.7 Pipeline de detección de errores → modelo del alumno
 
 ```
-turno del jugador (transcripción)
-   → observer (texto, JSON forzado, guardas de truncado)
+turno del jugador (clip de audio en memoria + transcripción)
+   → observer (multimodal: audio + texto; JSON forzado, guardas de truncado)
+   → [en paralelo] servicio de pronunciación sobre el mismo clip (§5.12)
    → validación zod de ObserverResult (rechazo = turno sin evaluación, log de calidad)
    → reglas determinísticas:
        · normalización de clave de error (tipo + patrón, p. ej. "subject-verb:3sg-s")
@@ -839,7 +899,7 @@ type ObserverResult = {
 };
 ```
 
-**Riesgo central del pipeline (R2):** las transcripciones automáticas tienden a "normalizar" el habla hacia formas gramaticales (el jugador dice *she go*, la transcripción escribe *she goes*), lo que **esconde errores** al observador; y el acento rioplatense puede degradar la transcripción [Referencias §4.2.3]. Medición obligatoria antes de prometer correcciones: conjunto de grabaciones con errores sembrados conocidos (hechas por adultos voluntarios con consentimiento, nunca de menores) → tasa de preservación de errores en la transcripción. Si es baja, el observador recibe también el **audio** del turno del jugador (modelo multimodal), con su costo (DP-A15).
+**Riesgo central del pipeline (R2):** las transcripciones automáticas tienden a "normalizar" el habla hacia formas gramaticales (el jugador dice *she go*, la transcripción escribe *she goes*), lo que **esconde errores** al observador; y el acento rioplatense puede degradar la transcripción [Referencias §4.2.3]. La evidencia de la investigación de referencias (`research/voz-costo-valor-2026-10-06.md` §3.1) dice que es un problema real, así que **el observador recibe siempre el audio del turno** (D-095; ~US$0,0001-0,0003 por turno con un modelo multimodal barato). Medición obligatoria en F0.1 (bloque G): grabaciones del operador con errores sembrados → **tasa de preservación de errores (EPR)** y tasa de errores inventados por fuente. Regla (D-149): Lumi corrige gramática en vivo con confianza solo si alguna fuente logra EPR ≥ 80 % e inventados ≤ 5 %; si no, anota para el repaso con lenguaje tentativo (`observer.liveGrammarSignals=false`).
 
 ### 5.8 Modo texto y fallback
 
@@ -872,9 +932,46 @@ roles:
 prices: { version: "2026-10-04", source: "informe de negocio §3.1", ... }
 ```
 
-- Interfaces de adaptador en `providers/`: `RealtimeVoiceProvider`, `TextModelProvider`, `TtsProvider`, `ModerationProvider`. v1 implementa Gemini (Live y texto) y un TTS; la cascada con modelos abiertos o otro proveedor se agrega como adaptador sin tocar `scene-runtime`.
+- Interfaces de adaptador en `providers/`: `RealtimeVoiceProvider`, `SttProvider`, `TextModelProvider`, `TtsProvider`, `ModerationProvider`; en `pronunciation/`: `ScriptedAssessor`, `RealizationRecognizer` (§5.12). v1 implementa Gemini Live, la cascada (Deepgram Flux + Gemini Flash + TTS) como segundo `RealtimeVoiceProvider` (§5.11) y Azure + ZIPA para pronunciación; agregar otro proveedor es un adaptador, sin tocar `scene-runtime`.
+- Bloque de voz en `models.yaml`: `voice.npc.adapter: live | cascade` (default: el que recomiende F0.1 según D-149; sin F0.1, `live`), `voice.observer.source` (fuente de transcripción), `observer.liveGrammarSignals` (D-149), `cascade.stt`, `cascade.text`, `cascade.tts` y, para pronunciación, `pronunciation.scripted: azure | speechace` y `pronunciation.free: zipa | off`.
 - Los ids de modelo "preview" cambian y se retiran con frecuencia: el servidor valida al arrancar que los modelos configurados existen (llamada de listado del proveedor) y falla claro si no.
 - **Superficie del proveedor y menores (DP-A05, ligado a DP-35 del GDD):** a la fecha de mi conocimiento, los términos adicionales de la API de Gemini (vía AI Studio) restringían su uso en servicios dirigidos o de probable acceso a menores de 18, y el nivel gratuito permite usar los datos para mejorar productos. **Verificar los términos vigentes antes de cualquier piloto con menores.** Default: desarrollo y piloto de adultos sobre la API paga; antes del primer piloto con menores, migrar al canal empresarial del mismo proveedor (Vertex AI) u otro proveedor cuyos términos lo permitan, previa revisión legal. El adaptador hace que esto sea un cambio de configuración, no de arquitectura.
+
+
+### 5.11 Voz híbrida: Live y cascada intercambiables (D-092, D-148, D-149; ADR-023)
+
+**Por qué:** con turnos manuales (`Terminé`, ADR-007) el speech-to-speech pierde su ventaja principal (turnos naturales) y conserva su costo cuadrático: Gemini Live re-factura el contexto en cada turno y no tiene caché. Estimado de la investigación de referencias para una sesión de 20 min: Live ~US$0,34-0,58, cascada ~US$0,16-0,27; varios precios de Gemini se duplican el 2027-01-01 (`research/voz-costo-valor-2026-10-06.md` §5). El operador decidió "voz probablemente en tiempo real, pero por feature y por etapa, con datos": por eso las dos vías existen desde F5.1 y se eligen por configuración.
+
+| Adaptador | Cadena | Fortaleza | Debilidad |
+|---|---|---|---|
+| `gemini-live` (port de LT, ADR-005) | audio → Live → audio | Oye el audio: entiende mejor lo que el jugador *quiso* decir con errores o acento; voz expresiva | Costo cuadrático, sin caché; ids "preview" que cambian |
+| `cascade` | STT en streaming (Deepgram Flux) → modelo de texto (Gemini Flash) con el mismo prompt → TTS (Gemini Flash-Lite TTS; Aura-2 alternativa) con parámetro de velocidad | Costo lineal y ~2× menor; cada pieza se cambia sola; el modo lento usa el parámetro `speed` del TTS | El ASR "arregla" errores (no afecta al NPC, sí al observador: por eso el audio va al observador, D-095); latencia sumada (presupuesto en el estudio §3.3) |
+
+**Contrato:** ambos adaptadores implementan `RealtimeVoiceProvider` y emiten **los mismos eventos** hacia `scene-runtime` y la máquina de escena (§3.5.1): `npcAudioChunk`, `npcTranscript`, `playerTranscript`, `turnDone`, `usage`, `error`. Un test de contrato compartido corre contra los dos (F5.1). La moderación con holdback (§7.7) se aplica igual sobre la transcripción de salida de cualquiera de los dos. El ledger registra costo **por adaptador** (§5.9).
+
+**Mapa por feature (D-148):** NPC en vivo = el adaptador configurado (hoy Live; piloto, el ganador de F0.1); observador = modelo multimodal barato con audio + transcripción; correcciones de Lumi = plantillas + TTS es-AR cacheado; repaso de misión = una llamada de texto; pronunciación = §5.12; habla lenta = `speed` del TTS cuando existe + OLA en el cliente (§5.5.4); contenido = offline en Batch; drills = audio pre-generado + STT barato.
+
+### 5.12 Servicio de pronunciación (D-044, D-150, D-151, D-155; ADR-024)
+
+**Qué hace:** dice *cómo* sonó lo que dijo el jugador, por fonema, sin falsas alarmas. Vive en el servidor (`apps/server/src/pronunciation/`), recibe el **mismo clip del turno** que el observador (§5.7) y lo descarta al terminar (D-108). Nada corre en el navegador en la v1.
+
+```
+clip del turno (memoria) + intención (frase esperada de la escena > transcripción del ASR)
+  ├─ momento guionado → ScriptedAssessor (Azure Pronunciation Assessment: fonema, IPA,
+  │                      NBestPhonemeCount=5, miscue, prosodia; Speechace como alternativa)
+  └─ habla libre      → forma canónica (diccionario/G2P, varias pronunciaciones por palabra)
+                        → RealizationRecognizer (ZIPA-small ONNX INT8, decodificación libre, servidor)
+                        → comparación restringida a la tabla de confusiones L1 (content/pronunciation/confusions.es-en.yaml)
+                        → guardia de pares mínimos → contraste opcional con Azure si hay frase esperada
+  → salida común {palabra, fonemas:[{esperado, realizado?, confianza}], tipos:[E1..E14]}
+  → packages/core/pronunciation: filtro por content/pronunciation/habilitados.yaml (D-151),
+    regla de recurrencia (≥ 3 ocurrencias de alta confianza en ≥ 2 escenas), cruce gramática/pronunciación
+  → guionado: feedback inmediato por plantilla de Lumi · libre: ítem de repaso, NUNCA interrumpe
+```
+
+**Reglas:** (1) un LLM **nunca** juzga fonemas; si redacta algo, es desde la salida estructurada y fuera de la boca de Lumi, que solo usa plantillas con id (ADR-008); (2) un tipo de error se muestra solo si `habilitados.yaml` lo habilita para ese uso (`guionado`, `libre`, `diagnostico`), y esa tabla sale de F0.1 (sin F0.1, todo `false`: solo percepción y autocomparación); (3) la confianza baja no se muestra; (4) el único efecto en vivo en habla libre es narrativo cuando el sentido se rompe (el NPC no entiende: escalón 1 de la escalera, §3.5.2); (5) el servidor nunca guarda audio; el cliente puede guardar hasta 20 clips en IndexedDB para "así lo dijiste vos / así suena", borrados al usarse o a los 7 días (`services/audio/clipStore.ts`, D-155); (6) sin clave o sin modelo, el adaptador queda apagado y lo que depende de él no se muestra.
+
+**Costo:** ~US$0,02-0,05 por sesión de 20 min (techo US$0,08 si Azure contrasta todo el habla libre); US$0 para el operador mientras alcance el tier gratuito F0 de Azure (5 h/mes) (`research/pronunciacion-2026-10-06.md` §6.3). **Latencia objetivo:** p95 ≤ 1,5 s en momentos guionados (D-151).
 
 ---
 
@@ -930,7 +1027,7 @@ escenas:
 - El nombre lleva el hash del texto + voz: si cambia el texto, el manifiesto marca la línea como desactualizada y el build lo advierte (en `build:release`, §8.3, falla).
 - Mientras una línea no tenga audio, el cliente la muestra como texto + TTS en vivo (degradación aceptable en desarrollo).
 
-### 6.4 Assets 3D (Kenney CC0 y afines)
+### 6.4 Assets: volúmenes glTF (Kenney CC0 y afines), tiles y sprites pixel art (D-139, D-153)
 
 #### 6.4.1 Flujo
 
@@ -940,14 +1037,16 @@ descarga del pack (kenney.nl u otra fuente CC0)  →  assets-src/<pack>/ (gitign
    → scripts/assets/optimize.ts (gltf-transform):
         prune · dedup · weld · resample animaciones · quantize · meshopt
         · texturas: unificar a atlas de paleta / WebP o KTX2 según tier · tamaño máx 1024
-   → apps/web/public/models/<pack>/<pieza>.glb  (versionado en git)
+   → apps/web/public/models/<pack>/<pieza>.glb  (volúmenes; versionado en git)
+   → tiles: atlas PNG → apps/web/public/textures/tiles/ (empaquetado sin resampleo; filtrado nearest al cargar)
+   → personajes: hojas de sprites PNG → apps/web/public/sprites/<pack>/ (recolor por paleta por script, D-078)
    → scripts/assets/inspect-budgets.ts (triángulos, materiales, memoria de texturas, tamaño)
    → layout del diorama en content/dioramas/<barrio>.yaml lo referencia por id
 ```
 
 #### 6.4.2 Registro de licencias (obligatorio, `content/assets-registry.yaml`)
 
-`{assetId, archivo, pack, autor, licencia (CC0-1.0 | CC-BY-4.0 …), url_origen, fecha_descarga, sha256_original, modificaciones, atribucion_requerida, notas}`. El build falla si un archivo en `public/models`, `public/audio` o `public/textures` no tiene registro, o si un registro con `atribucion_requerida: true` no aparece en la pantalla de créditos generada. Los nombres exactos de los kits de Kenney y si los personajes traen rig y animaciones se verifican al descargar [GDD §5.7, DP-19].
+`{assetId, archivo, pack, autor, licencia (CC0-1.0 | CC-BY-4.0 | comercial-con-modificacion …), url_origen, fecha_descarga, sha256_original, modificaciones, atribucion_requerida, notas}`. El build falla si un archivo en `public/models`, `public/sprites`, `public/audio` o `public/textures` no tiene registro, si su licencia es "no comercial" o "solo uso personal" (D-153), o si un registro con `atribucion_requerida: true` no aparece en la pantalla de créditos generada. El modelo ONNX de ZIPA (CC BY 4.0) se registra igual aunque viva en el servidor. Los nombres exactos de los kits de Kenney y si los personajes traen rig y animaciones se verifican al descargar [GDD §5.7, DP-19].
 
 #### 6.4.3 Layout de dioramas como datos
 
@@ -956,7 +1055,11 @@ descarga del pack (kenney.nl u otra fuente CC0)  →  assets-src/<pack>/ (gitign
 id: plaza
 bounds: { minX: -20, maxX: 20, minZ: -16, maxZ: 16 }
 paleta: plaza            # tintes por instancia desde los tokens del GDD §5.4
-props:
+atlas_tiles: plaza-tiles # atlas en public/textures/tiles/ (32 px por tile, D-154)
+tiles:                   # capas de tiles; cada fila es una lista de ids del atlas (0 = vacío); 1 tile = 1 m
+  - { capa: suelo,   origen: [-20, -16], filas: ["12 12 12 13 …", "12 40 41 13 …"] }
+  - { capa: detalle, origen: [-20, -16], filas: ["0 0 77 0 …"] }
+props:                   # volúmenes
   - { asset: kenney-city/house-small-a, pos: [4, 0, -6], rotY: 90, scale: 1, tinte: casa-1, ventana_emisiva: W-PLAZA-01 }
   - { asset: kenney-nature/tree-round, instancias: [[-8,0,3],[-9,0,6],[-12,0,2]] }
 interactuables:
@@ -967,7 +1070,7 @@ no_caminable: [ { poligono: [[-20,-16],[20,-16],[20,-14],[-20,-14]] } ]
 camara: { punto_dialogo_por_npc: { NPC-BEN: { offset: [1.5, 1.6, 2.5] } } }
 ```
 
-El compilador genera: grilla de caminabilidad, lista de instancias agrupadas por asset (para `Instances`), lista de props estáticos fusionables por material y la tabla de interactuables.
+El compilador genera: grilla de caminabilidad (celdas de 0,5 m), chunks de tiles de 16×16 por capa (`buildTileChunk`, §2.9), lista de instancias agrupadas por asset (para `Instances`), lista de props estáticos fusionables por material y la tabla de interactuables.
 
 #### 6.4.4 Instancing y fusión
 
@@ -985,8 +1088,8 @@ Las IA de código ubican assets escribiendo coordenadas en YAML. Para que el ope
 
 #### 6.4.7 Personajes y Lumi
 
-- Personajes: el pack CC0 que traiga rig + animaciones básicas (idle, caminar, hablar, saludar, señalar, reír, pensar) [GDD §5.3, DP-19]. Diversidad por tinte de piel, pelo y ropa (tintes por material desde la paleta), no por modelos distintos, para compartir esqueleto y animaciones (menos memoria).
-- Animación fuera de pantalla o lejos: se pausa el mixer; en `low` se actualiza a 15-20 Hz.
+- Personajes (desde v0.2, D-139/D-078/D-153): **sprites pixel art** de un pack base por región con licencia permitida, hojas de 4 direcciones (caminar ≥ 3 cuadros + idle; hablar/saludar si el pack las trae); diversidad de los 13 vecinos por paleta (recolor por script) y accesorios, no por modelos distintos. El jugador también es sprite.
+- Animación fuera de pantalla o lejos: se congela el cuadro; en `low` los cuadros avanzan a 8-10 Hz.
 - Lumi: geometría por código (prisma de 6-8 caras + núcleo emisivo + ojos como planos emisivos con texturas de expresión) (DP-39 del GDD); es el objeto más trabajado pero también el más barato de producir.
 
 ---
@@ -1151,19 +1254,22 @@ Orden por dependencias técnicas (el roadmap de producto decide calendario y con
 | T1 | Núcleo base | `runtime` (Clock/Rng), `save` con versión, `experiments`, `movement` (grilla, A*, colisión) con tests | T0 |
 | T2 | Contenido mínimo | Schemas zod de todos los tipos, compilador, validaciones; contenido del prólogo (M0.1-M0.3) y diorama Muelle | T0 |
 | T3 | Shell DOM + store | Slices, selectores, onboarding sin 3D, ajustes de accesibilidad, i18n es-AR, `dialog-only` | T1, T2 |
-| T4 | Mundo 3D mínimo | Canvas diferido, `ToonMaterial`, Diorama desde layout, Player con click y WASD, cámara asistida, tiers y detección | T3 |
-| T5 | Pipeline de assets | `optimize.ts`, registro, `inspect-budgets`, primeros packs en Muelle y Plaza | T2, T4 |
+| T4 | Mapa HD-2D mínimo | Canvas diferido, `buildTileChunk`, billboards, `CameraRig` por presets, input semántico, Player con click y WASD, tiers con postprocesado y detección (§2.9) | T3 |
+| T5 | Pipeline de assets | `optimize.ts` (volúmenes, atlas de tiles, hojas de sprites), registro, `inspect-budgets`, primeros packs en Muelle y Plaza | T2, T4 |
 | T6 | Máquina de escena + modo texto | `core/scene`, `scene-runtime` con modelo de texto (fake en tests), moderación de texto, HUD de diálogo completo con barra de andamiaje y menú de silencio | T3, T2 |
-| T7 | Voz | Gateway WS portado de LT (sin `setup` del cliente), worklets de captura/VAD/reproducción con time-stretch, turnos manuales, fallback a texto, ledger de costo y presupuesto | T6 |
-| T8 | Observador + Lumi | Observer con schema, `decideCompanion`, señales, anotar, destilado, evocación, Lumi 3D y burbujas | T6 (texto) y T7 (voz) |
-| T9 | Progresión y repaso | Eventos de evidencia, pociones, árbol, Leitner, andamiaje adaptativo, cuaderno | T8 |
+| T7 | Voz | Gateway WS con dos adaptadores (Live portado de LT, sin `setup` del cliente; cascada) (§5.11), worklets de captura/VAD/reproducción con time-stretch, turnos manuales, fallback a texto, ledger de costo por adaptador y presupuesto | T6 |
+| T8 | Observador + Lumi | Observer multimodal con schema, `decideCompanion`, señales, anotar, destilado, evocación, Lumi en el mapa y burbujas | T6 (texto) y T7 (voz) |
+| T8b | Pronunciación | Servicio de pronunciación (§5.12), núcleo de recurrencia, momentos guionados, drills, clips locales | T8 |
+| T9 | Progresión y repaso | Eventos de evidencia, pociones, árbol, Leitner (con ítems de pronunciación), andamiaje adaptativo, cuaderno | T8, T8b |
 | T10 | Cuentas y datos | Postgres, migraciones, auth (adulto, clase, tutor), consentimientos, guardado, retención | T3 (puede empezar en paralelo desde T1) |
 | T11 | Institucional mínimo | Panel docente, clases, códigos, asignaciones, reportes por can-do, pools de voz | T9, T10 |
 | T12 | Vertical slice (DP-10 del GDD) | Prólogo + Cap. 1 completos con audio pre-generado; lista de verificación manual del operador | todo lo anterior |
 
+**Mapeo con las fases del roadmap:** T0-T3 = F1; T4 = F2; T5 = F3; T6 = F4; T7 = F5; T8 = F6; T8b = FP; T9 = F7; T10-T11 = F11 (postergada, D-135); T12 = F8-F10. T4-T5 corren en paralelo a T6-T8b (D-020).
+
 **Mapeo con las fases de la propuesta de terceros:** "Setup" = T0-T3; "Movimiento y Cámara" = T4-T5; "Sistema de Diálogos DOM" = T6-T8; "Grid y Construcción" y "Loop económico" **no existen en el modo 1** (DP-15 del GDD) y se reemplazan por "Loop de habla y pociones" = T8-T9.
 
-**Experimentos que deben correr antes de cerrar decisiones** (no bloquean T0-T6): sonda de costo #1 en el arnés de LT (decide DP-36 y calibra holdback y preservación de errores), benchmark de hardware #5 con la escena de T4 (calibra §2.7), medición de ancho de banda en una escuela (DP-A06).
+**Experimentos que deben correr antes de cerrar decisiones** (no bloquean T0-T6): F0.1 en el arnés de LT y en `experiments/f0-voice-probe/` (costo por adaptador, EPR del observador, tabla de detección de pronunciación; decide D-148-D-151 y calibra el holdback), F0.2 con el spike HD-2D (calibra §2.7 y D-154), medición de ancho de banda en una escuela (DP-A06, postergada con el piloto).
 
 ---
 
@@ -1172,7 +1278,7 @@ Orden por dependencias técnicas (el roadmap de producto decide calendario y con
 | # | Riesgo | Probabilidad / impacto | Señal temprana | Mitigación en la arquitectura |
 |---|---|---|---|---|
 | R1 | **Términos del proveedor de IA vs menores:** la API de Gemini vía AI Studio podría no permitir servicios de probable acceso por menores; además, datos del nivel gratuito usados para entrenamiento | Media / muy alto (bloquea pilotos escolares) | Lectura de términos vigentes | Adaptadores de proveedor; default de adultos en API paga y migración a canal empresarial o a otro proveedor antes de menores (DP-A05); revisión legal |
-| R2 | **La transcripción normaliza errores** del jugador o falla con acento rioplatense → el observador no ve errores o ve falsos | Alta / alto (el compañero pierde autoridad) | Tasa de preservación de errores sembrados en la sonda | Medición antes de prometer correcciones; observador con audio si hace falta (DP-A15); pronunciación fuera del alcance (DP-27 del GDD) |
+| R2 | **La transcripción normaliza errores** del jugador o falla con acento rioplatense → el observador no ve errores o ve falsos | Alta / alto (el compañero pierde autoridad) | EPR por fuente en F0.1 | Observador siempre con audio (D-095); regla de D-149 (sin fuente confiable, Lumi solo anota con lenguaje tentativo) |
 | R3 | **Ancho de banda de aula** compartido no sostiene 25 voces simultáneas | Media / alto en escuelas | Medición en una escuela | Binario, subida solo con habla, modo aula; Opus si hace falta (DP-A06); fallback a texto automático |
 | R4 | **Rendimiento en PCs escolares** peor que lo supuesto | Media / alto | Benchmark #5 | Tiers, `dialog-only`, presupuestos verificados en CI, 30 FPS en conversación |
 | R5 | **Costo de voz** por encima del umbral (silencio facturado, re-facturación de contexto, observador caro) | Media / muy alto (modelo de negocio) | Ledger desde el día 1 | Escenas cortas, contexto mínimo, sin silencio transmitido, `Repetir` sin costo, modo texto, alertas |
@@ -1185,12 +1291,15 @@ Orden por dependencias técnicas (el roadmap de producto decide calendario y con
 | R12 | **Pérdida de contexto WebGL** en GPUs débiles | Media / bajo | Eventos en telemetría | Paso a `dialog-only` sin perder la escena |
 | R13 | **Timbre distinto** entre líneas pre-generadas y voz en vivo | Media / bajo-medio | Escucha del operador | Mismo motor y misma voz cuando exista; si no, aperturas y cierres también por Live con texto fijo inyectado (más costo) |
 | R14 | **Divergencia con LT** tras portar | Alta / bajo | — | Notas de procedencia en el código; LT queda como laboratorio y no se sincroniza automáticamente |
+| R15 | **Detección de pronunciación poco confiable** con acento rioplatense: falsas alarmas que hacen desconfiar de Lumi, o normalización que esconde errores | Media / alto (la pronunciación es núcleo) | Tabla tipo E# × herramienta de F0.1 | Vara por tipo (D-151), solo tipos habilitados, confianza baja oculta, percepción y autocomparación siempre, nunca interrumpe (§5.12) |
+| R16 | **Sprites HD-2D**: no hay pack con licencia permitida y estilo uniforme para 13 vecinos; temblor del pixel art con cámara ortográfica; los billboards se ven mal en VR | Media / medio | F0.2 y primera integración de F3 | D-153 (un pack base + recolor + accesorios; registro obligatorio), snap a la grilla de píxel (§2.9), VR acepta rehacer el arte (D-139) |
+| R17 | **Precios de voz que se duplican** (Gemini, 2027-01-01) o retiro de un modelo | Alta / medio | Tabla de precios con fecha | Adaptador de cascada desde F5.1 (§5.11), ledger por adaptador, modelos en configuración |
 
 ---
 
 ## 11. ADRs (registro de decisiones de arquitectura)
 
-Estado: **Propuesto** = decisión de la revisión de arquitectura que el operador valida; vale como contrato para corridas headless hasta que el operador la cambie. Cada ADR vive en `docs/adr/ADR-NNN-<slug>.md` (F1.1 copia ADR-001…021); los ADR nuevos que propongan corridas futuras toman el siguiente número con el mismo formato.
+Estado: **Propuesto** = decisión de la revisión de arquitectura que el operador valida; vale como contrato para corridas headless hasta que el operador la cambie. Cada ADR vive en `docs/adr/ADR-NNN-<slug>.md` (F1.1 copia ADR-001…025); un ADR respaldado por una fila `decidida` de `00-decisiones.md` se copia como **Aceptado** (ADR-001/003 por D-086/D-136, ADR-002 por D-087, ADR-022 por D-139, ADR-023 por D-092); los ADR nuevos que propongan corridas futuras toman el siguiente número con el mismo formato.
 
 | ADR | Decisión | Alternativas descartadas | Qué se resigna | Estado |
 |---|---|---|---|---|
@@ -1204,7 +1313,7 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | ADR-008 | Observador de texto separado del NPC + política del compañero determinística en el núcleo, ejecutada en el servidor; líneas de Lumi por plantillas (§5.6, §3.5.2) | Que el NPC corrija; que un LLM decida las intervenciones; Lumi generada libremente | Espontaneidad de Lumi | Propuesto |
 | ADR-009 | Contenido en YAML con claves del GDD, schemas zod, compilado a JSON, validaciones cruzadas como gate (§6.1) | JSON a mano, TS como contenido, CMS | Ergonomía de un editor visual | Propuesto |
 | ADR-010 | Pipeline glTF con gltf-transform y meshopt, registro de licencias obligatorio, instancias y fusión en build, layout como datos (§6.4) | Draco, assets sin registro, editor de niveles | Edición visual de niveles | Propuesto |
-| ADR-011 | Toon material único con rampa de 2-3 bandas; contornos por casco invertido solo en personajes e interactivos; sin postprocesado en v1 (§2.8) | Contorno por postproceso; materiales PBR | Contornos perfectos en todo | Propuesto |
+| ADR-011 | Toon material único con rampa de 2-3 bandas para los **volúmenes** que lo necesiten; contornos solo en interactivos; el postprocesado pasa a ser efecto de tier (enmendado por ADR-022) (§2.8) | Contorno por postproceso; materiales PBR | Contornos perfectos en todo | Propuesto (enmendado 2026-10-06) |
 | ADR-012 | Tiers `low/medium/high/dialog-only` con detección propia y degradación en caliente; 30 FPS en conversación (§2.7) | Un solo nivel de calidad; base de datos de GPUs de terceros | Máxima fidelidad automática | Propuesto |
 | ADR-013 | Monorepo con npm workspaces (`apps/web`, `apps/server`, `packages/core`, `packages/content-schema`, `packages/protocol`) (§4) | Paquete único; pnpm + turborepo | Simplicidad de un solo `package.json` | Propuesto |
 | ADR-014 | Un proceso Node (estático + API + WS + jobs) y Postgres administrado con migraciones SQL a mano verificadas; auth propia con login de clase para menores (§7) | Supabase Auth (exige email), Firebase, archivos JSON (como LT) | Auth gestionada por terceros | Propuesto |
@@ -1215,6 +1324,10 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | ADR-019 | i18n con helper propio mínimo (`Intl.PluralRules`) sobre JSON por locale | i18next/FormatJS | Funciones avanzadas de formato | Propuesto |
 | ADR-020 | Repaso con Leitner de 6 cajas e intervalos del GDD (§3.5.4) | SM-2, FSRS | Ajuste fino por ítem | Propuesto |
 | ADR-021 | Máquinas de estado como tablas de transición puras en el núcleo, sin XState (§3.5) | XState | Visualizador y herramientas de XState | Propuesto |
+| ADR-022 | Render **HD-2D dentro de R3F**: tiles fusionados por chunk con atlas pixel (`nearest`), volúmenes simples, personajes como billboards, cámara ortográfica inclinada por presets, postprocesado por tier (§2.9) | 2D puro (Phaser/Pixi); mundo 3D low-poly (default anterior de la revisión de arquitectura, `07` opción B); motor aparte | Personajes 3D reutilizables en VR (el arte de personajes se rehace si se llega a VR) | Aceptado (D-139, decidida) |
+| ADR-023 | Voz **híbrida**: `RealtimeVoiceProvider` con adaptadores Live y cascada que emiten los mismos eventos, elegidos por configuración; observador siempre con audio; ledger por adaptador (§5.11) | Solo Live; solo cascada; WebRTC propio | Una sola vía de voz más simple | Aceptado (D-092, decidida; el adaptador del piloto lo decide D-149) |
+| ADR-024 | Servicio de **pronunciación** en el servidor: `ScriptedAssessor` (Azure PA) + `RealizationRecognizer` (ZIPA ONNX) con tabla de confusiones L1; núcleo puro de recurrencia y habilitación por tipo; LLM nunca juez; sin audio en el servidor (§5.12) | LLM multimodal como juez; ELSA/SpeechSuper como única fuente; reconocimiento en el navegador | Cobertura de todos los tipos de error desde el día 1 | Propuesto (D-150) |
+| ADR-025 | **Costuras del día 1 R10-R15** (input semántico, cámara por presets, tiers como contrato, audio y voz detrás de interfaces, UI como view-models, plataforma detrás de un adaptador), con lint y tests (§3.1) | Agregarlas cuando llegue cada destino | Algo de indirección temprana | Propuesto (D-145) |
 
 ---
 
@@ -1227,7 +1340,7 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | DP-06 Fin de turno | Actividad manual desde el cliente + VAD local con umbral 3 s configurable (2,5-4 s o "solo botón") + botón `Terminé`; pulsar para hablar como opción y default en modo aula; audio solo durante el habla | §5.5.2, ADR-007 |
 | DP-07 Técnica de "más despacio" | Instrucción al modelo por nivel + time-stretch OLA sin cambio de tono en el cliente (1,0 / 0,85 / 0,7); parámetro nativo de velocidad si la versión vigente lo ofrece | §5.5.4 |
 | DP-14 Física | No en el modo 1; controlador cinemático en el núcleo | §2.4, ADR-002 |
-| DP-36 Vía principal de voz | **Interino:** Live para escenas de voz, modelo de texto para modo texto (cascada con TTS cuando el jugador pide audio). Decide la sonda #1; el cambio es de configuración gracias a los adaptadores | §5.8, §5.10 |
+| DP-36 Vía principal de voz | **Decidido por el operador (D-092, 2026-10-06): híbrida.** Live ahora + adaptador de cascada; F0.1 decide el del piloto (D-149) | §5.11, ADR-023 |
 | DP-37 Moderación de salida en voz | Capas + holdback de audio (500 ms menores, 0-200 ms adultos) + corte y línea segura; cascada para menores si el riesgo residual medido no es aceptable | §7.7, ADR-015 |
 
 ### 12.2 DP nuevas de arquitectura (el operador decide; default para corridas headless)
@@ -1248,7 +1361,7 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | DP-A12 | Quién genera el audio de líneas guionadas | Script manual del operador / CI con clave / en vivo siempre | **Script manual del operador; salida versionada en git** | Las claves no entran a CI ni a corridas headless | §6.3 |
 | DP-A13 | Panel docente | Entrada aparte en la misma app / app separada / dentro del juego | **Entrada aparte (`docente.html`) en `apps/web`**, sin three.js | Un build, bundles separados | §7.5 |
 | DP-A14 | Analítica | Propia en Postgres / SaaS de analítica | **Propia en Postgres**, retención 13 meses | Menores; sin trackers de terceros | §7.6 |
-| DP-A15 | Observador con audio si la transcripción oculta errores | Solo texto / texto + audio del turno | **Medir primero; si la transcripción preserva menos del 80% de errores sembrados, agregar audio del turno del jugador al observador** | R2; cuesta más, decide con números | §5.7 |
+| DP-A15 | Observador con audio | Solo texto / texto + audio del turno | **Siempre texto + audio del turno** (actualizado 2026-10-06, D-095): la evidencia de normalización de los ASR es fuerte y el costo es ~US$0,0002/turno; F0.1 mide qué fuente usar (D-149) | R2 | §5.7 |
 | DP-A16 | Herramienta para ubicar assets | Solo YAML / superposición de grilla en dev / editor de niveles | **YAML + superposición de grilla y "click para copiar coordenadas" en desarrollo**; sin editor | Menos piezas; el operador corrige a ojo | §6.4.6 |
 | DP-A17 | Máquinas de estado | Tablas propias / XState | **Tablas de transición propias en el núcleo** | Cero dependencias; testeables | §3.5, ADR-021 |
 | DP-A18 | Retención de audio (holdback) por banda de edad | Valores | **500 ms menores, 150 ms adultos**, ajustables tras medir la latencia de transcripción | Seguridad vs latencia | §7.7 |
@@ -1258,7 +1371,7 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 
 ### 12.3 Sobre la propuesta de terceros (registro, no decisión de la revisión de arquitectura)
 
-- **Adoptado como contrato:** Vite + React + TS, R3F + drei, Zustand, HUD DOM + Tailwind, 3D declarativo, "3D y DOM nunca directo; el estado es la única fuente de verdad", low-poly fluido en web, carpetas separadas por lógica / UI / 3D (§2, §3, §4).
+- **Adoptado como contrato:** Vite + React + TS, R3F + drei, Zustand, HUD DOM + Tailwind, 3D declarativo, "3D y DOM nunca directo; el estado es la única fuente de verdad", carpetas separadas por lógica / UI / 3D (§2, §3, §4). El "low-poly" de la propuesta lo reemplazó el operador por HD-2D (D-139, §2.9).
 - **Ajustado:** Rapier → no en el modo 1 (ADR-002). Mundo abierto → dioramas por barrio [GDD §1.9]. "Lógica en hooks/stores" → lógica en un núcleo TS puro; los stores son delgados (ADR-003).
 - **Diferido sin adoptar ni descartar:** grid de construcción, tycoon y loop económico → **DP-15 del GDD**, decisión del operador; la arquitectura deja el lugar (§3.6) y prohíbe construirlo en el modo 1.
 
