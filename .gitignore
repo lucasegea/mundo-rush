@@ -4,3 +4,15 @@ node_modules/
 .env.*
 !.env.example
 dist/
+
+# F1.1a (03 §4.2, P0 §3, D-159)
+coverage/
+*.log
+*.tsbuildinfo
+assets-src/
+apps/web/public/content/
+apps/server/generated/
+apps/server/data/
+apps/server/models/
+experiments/f0-voice-probe/data/audio/
+.director/
