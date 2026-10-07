@@ -34,6 +34,8 @@ export default defineConfig({
       { test: { name: "content", root: "./scripts/content", include: ["**/*.test.ts"], testTimeout: 30000 } },
       // F1.3 A4: contraste de los tokens del HUD.
       { test: { name: "a11y", root: "./scripts/a11y", include: ["**/*.test.ts"] } },
+      // FD0: modo director (plugin, diario, CLI, MCP y config fusionada), solo desarrollo.
+      { test: { name: "director", root: "./tooling/director", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
     ],
   },
 });

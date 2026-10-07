@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lg-director": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["tooling/director/src/mcp.ts"]
+    }
+  }
+}

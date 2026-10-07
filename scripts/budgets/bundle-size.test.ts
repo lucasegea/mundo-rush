@@ -300,7 +300,7 @@ describe("A2 run() sobre un dist de fixture en disco", () => {
   });
 });
 
-// ---------- Cableado: verify corre check:budgets después del build; check:dev-only reservado ----------
+// ---------- Cableado: verify corre check:budgets después del build; check:dev-only (FD0) dentro ----------
 describe("scripts raíz", () => {
   const scripts = (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
 
@@ -309,8 +309,13 @@ describe("scripts raíz", () => {
     expect(scripts["check:budgets"]).toContain("npm run check:dev-only");
   });
 
-  test("check:dev-only es un centinela reservado hasta FD0 (03 §6.5.1)", () => {
-    expect(scripts["check:dev-only"]).toMatch(/sentinel until FD0/);
+  test("check:dev-only corre el detector del modo director (FD0, 03 §6.5.1), no el centinela de F1.1b", () => {
+    expect(scripts["check:dev-only"]).toBe("node scripts/budgets/dev-only.ts");
+  });
+
+  test("dev:director resuelve a vite --config tooling/director/vite.config.ts (FD0 A2)", () => {
+    expect(scripts["dev:director"]).toBe("vite --config tooling/director/vite.config.ts");
+    expect(scripts["director"]).toBe("node tooling/director/src/cli.ts");
   });
 
   test("verify mide el bundle después de construirlo", () => {

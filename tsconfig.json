@@ -7,6 +7,7 @@
     { "path": "./apps/server" },
     { "path": "./apps/web" },
     { "path": "./apps/web/tsconfig.node.json" },
-    { "path": "./tsconfig.tooling.json" }
+    { "path": "./tsconfig.tooling.json" },
+    { "path": "./tooling/director" }
   ]
 }

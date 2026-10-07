@@ -40,6 +40,7 @@ const F = {
   state: `${WEB}/state/__probe__.ts`,
   teacher: `${WEB}/teacher/__probe__.tsx`,
   dev: `${WEB}/dev/director/__probe__.tsx`,
+  tooling: "tooling/director/src/__probe__.ts",
 } as const;
 
 const imp = (spec: string): string => `import * as m from "${spec}";\nexport { m };\n`;
@@ -142,6 +143,14 @@ const FORBIDDEN: Case[] = [
   { name: "raíz de composición -> tooling/director", file: F.boot, code: imp("../../../../tooling/director/index"), rule: ZONE },
   { name: "apps/web (config) -> tooling/director", file: F.webConfig, code: imp("../../tooling/director/index"), rule: ZONE },
   { name: "scripts -> tooling/director", file: F.scripts, code: imp("../../tooling/director/index"), rule: ZONE },
+  // FD0 A2: el modo director real (cliente y Node) no entra al juego por ningún lado
+  { name: "world -> tooling/director", file: F.world, code: imp("../../../../tooling/director/index"), rule: ZONE, msg: "ADR-026" },
+  { name: "server -> dev/director (apps/server -> apps/web)", file: F.server, code: imp("../../web/src/dev/director/index"), rule: ZONE, msg: "server no importa web" },
+  { name: "server -> tooling/director/src/plugin", file: F.server, code: imp("../../../tooling/director/src/plugin"), rule: ZONE, msg: "ADR-026" },
+  { name: "ui -> dev/director/snapshot", file: F.ui, code: imp("../dev/director/snapshot"), rule: ZONE, msg: "ADR-026" },
+  { name: "world -> dev/director/emitter", file: F.world, code: imp("../dev/director/emitter"), rule: ZONE, msg: "ADR-026" },
+  { name: "services -> dev/director/journal", file: F.services, code: imp("../dev/director/journal"), rule: ZONE, msg: "ADR-026" },
+  { name: "packages -> tooling/director/src/read", file: F.protocol, code: imp("../../../tooling/director/src/read"), rule: ZONE, msg: "ADR-026" },
   // R5: efectos solo en services/
   ...(["fetch", "WebSocket", "indexedDB", "localStorage", "sessionStorage"] as const).flatMap((g) =>
     (["ui", "world", "state"] as const).map((layer): Case => ({ name: `R5: ${g} en ${layer}/`, file: F[layer], code: expr(g), rule: GLOBALS })),
@@ -234,6 +243,10 @@ const ALLOWED: Omit<Case, "rule">[] = [
   { name: "dev -> @lg/protocol", file: F.dev, code: imp("@lg/protocol") },
   { name: "server -> @lg/core", file: F.server, code: imp("@lg/core") },
   { name: "server -> core (relativo)", file: F.server, code: imp("../../../packages/core/src/index") },
+  { name: "tooling/director -> @lg/protocol", file: F.tooling, code: imp("@lg/protocol") },
+  { name: "tooling/director -> compilador de contenido (scripts/content/build.ts)", file: F.tooling, code: imp("../../../scripts/content/build") },
+  { name: "tooling/director -> apps/web/vite.config.ts (la única importación de apps/ permitida)", file: "tooling/director/__probe__.ts", code: imp("../../apps/web/vite.config") },
+  { name: "dev/director -> @lg/protocol/director", file: F.dev, code: imp("@lg/protocol/director") },
 ];
 
 // ---------- A4: el mismo código no determinista pasa en apps/server ----------
@@ -251,7 +264,11 @@ function pathTarget(file: string, spec: string): string | null {
   if (spec.startsWith(".")) return resolve(ROOT, dirname(file), spec);
   const alias = Object.keys(WEB_ALIASES).find((a) => spec.startsWith(a));
   if (alias) return resolve(ROOT, WEB, WEB_ALIASES[alias] ?? "", spec.slice(alias.length));
-  if (spec.startsWith("@lg/")) return resolve(ROOT, "packages", spec.slice(4), "src/index.ts");
+  if (spec.startsWith("@lg/")) {
+    // @lg/<paquete> → src/index.ts; @lg/<paquete>/<subruta> → src/<subruta> (p. ej. @lg/protocol/director)
+    const [pkg = "", ...sub] = spec.slice(4).split("/");
+    return resolve(ROOT, "packages", pkg, "src", sub.length > 0 ? sub.join("/") : "index.ts");
+  }
   return null;
 }
 
@@ -424,5 +441,48 @@ describe("F2: archivos reales del mundo 3D", () => {
     expect(moved.filter((m) => m.ruleId === SYNTAX && m.message.includes("R10")).length, describeMsgs(moved)).toBeGreaterThan(0);
     const inPlace = await lint(real, code);
     expect(inPlace.filter((m) => m.ruleId !== null && SEAM_RULES.includes(m.ruleId)), describeMsgs(inPlace)).toEqual([]);
+  });
+});
+
+// ---------- FD0 A2: cableado del plugin y archivos REALES del modo director ----------
+// El plugin se registra solo en tooling/director/vite.config.ts. apps/web/vite.config.ts (archivo real, filePath real)
+// que importe el plugin o la config del director falla con la zona apps → tooling. Los archivos reales del director
+// lintean limpios; con un import a lo que dev/ no puede tocar agregado, fallan.
+const WEB_CONFIG = "apps/web/vite.config.ts";
+const DIRECTOR_CONFIG = "tooling/director/vite.config.ts";
+const REAL_DEV = [`${WEB}/dev/director/index.ts`, `${WEB}/dev/director/snapshot.ts`, `${WEB}/dev/director/journal.ts`, `${WEB}/dev/director/emitter.ts`, `${WEB}/boot/dev.ts`];
+const REAL_TOOLING = [DIRECTOR_CONFIG, "tooling/director/src/plugin.ts", "tooling/director/src/read.ts", "tooling/director/src/cli.ts", "tooling/director/src/mcp.ts"];
+const FD0_FORBIDDEN: Case[] = [
+  { name: "apps/web/vite.config.ts real -> tooling/director/vite.config (la config del director)", file: WEB_CONFIG, code: "import \"../../tooling/director/vite.config\";\n", rule: ZONE, msg: "ADR-026" },
+  { name: "apps/web/vite.config.ts real -> tooling/director/src/plugin (el plugin)", file: WEB_CONFIG, code: "import { directorPlugin } from \"../../tooling/director/src/plugin\";\nexport const p = directorPlugin;\n", rule: ZONE, msg: "ADR-026" },
+  { name: "apps/web/vite.config.ts real -> tooling/director (barril)", file: WEB_CONFIG, code: "import \"../../tooling/director/index\";\n", rule: ZONE, msg: "ADR-026" },
+  { name: "dev/director/index.ts real -> world/", file: REAL_DEV[0] as string, code: "import \"../../world/index\";\n", rule: ZONE, msg: "ADR-026" },
+  { name: "dev/director/snapshot.ts real -> state/store.ts", file: REAL_DEV[1] as string, code: "import \"../../state/store\";\n", rule: ZONE, msg: "ADR-026" },
+  { name: "dev/director/journal.ts real -> services/content", file: REAL_DEV[2] as string, code: "import \"../../services/content/index\";\n", rule: ZONE, msg: "ADR-026" },
+  { name: "dev/director/emitter.ts real -> @modelcontextprotocol/sdk", file: REAL_DEV[3] as string, code: "import \"@modelcontextprotocol/sdk\";\n", rule: TS_IMP, msg: "ADR-026" },
+];
+
+describe("FD0 A2: cableado del plugin y archivos reales del modo director", () => {
+  test("los archivos reales y los destinos de los imports existen (guardia contra falso verde)", () => {
+    for (const f of [WEB_CONFIG, ...REAL_DEV, ...REAL_TOOLING]) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of FD0_FORBIDDEN) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test("apps/web/vite.config.ts no nombra al modo director", () => {
+    expect(realCode(WEB_CONFIG)).not.toMatch(/director/i);
+  });
+
+  test.each([WEB_CONFIG, ...REAL_DEV, ...REAL_TOOLING])("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(FD0_FORBIDDEN.map((c) => [c.name, c] as const))("%s falla con el ruleId esperado", async (_name, c) => {
+    const msgs = await lint(c.file, realCode(c.file) + c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
   });
 });

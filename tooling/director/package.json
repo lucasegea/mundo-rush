@@ -1,0 +1,21 @@
+{
+  "name": "@lg/director",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Modo director (solo desarrollo, D-187, ADR-026): plugin de Vite, CLI y servidor MCP. Nunca lo importa apps/, packages/ ni scripts/.",
+  "scripts": {
+    "director": "node src/cli.ts",
+    "mcp": "node src/mcp.ts"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "vite": "^8.3.3"
+  }
+}

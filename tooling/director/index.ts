@@ -1,4 +1,5 @@
-// tooling/director — reservado (03 §4.2, ADR-026). No es workspace; FD0 lo llena.
-// Marcador de F1.1a: existe solo para que la fixture apps/web -> tooling/director
-// del test de límites apunte a un archivo real (03 §4.3.2: sin falso verde).
-export {};
+// tooling/director — modo director, solo desarrollo (03 §6.5, ADR-026). Workspace `@lg/director` (private: true).
+// Nadie del producto lo importa (apps/**, packages/** y scripts/**: zona de lint `apps → tooling`).
+// El plugin se registra solo en ./vite.config.ts; la CLI es src/cli.ts y el servidor MCP src/mcp.ts.
+export { createDirectorHandler, createDirectorRuntime, directorPlugin, isLocalHost } from "./src/plugin.ts";
+export { formatWhere, listSessions, lookupContent, readJournal, readState } from "./src/read.ts";

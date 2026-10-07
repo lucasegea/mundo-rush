@@ -1,8 +1,8 @@
 // state/actions.ts — barril de acciones públicas: lo único que ui/ (y dev/director) despachan (R14, P0 T2).
 // Acciones delgadas: las reglas (tiers, saneo de ajustes, fase, pila de paneles) viven en @lg/core.
 import {
-  applySettingsPatch, canEnterWorld, cellAt, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom, IDLE,
-  nearbyInteractables, phaseAfterBoot, planPath, popPanel, prepareDiorama, presetAngles, pushPanel, sameIds,
+  applySettingsPatch, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom, IDLE,
+  isWalkable, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, presetAngles, pushPanel, sameIds,
   screenDirToWorld, stepBody, stepZoom, suggestTier,
   type Capabilities, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
   type SemanticAction, type SettingsPatch, type TextScale, type TierChoice,
@@ -15,6 +15,12 @@ export interface DialogOnlyCatalog {
   regionName: string;
   places: PlaceInfo[];
   npcs: NpcInfo[];
+}
+
+/** Contenido recompilado en caliente (modo director, FD0): lo que cambió, ya parseado por services/content. */
+export interface ContentUpdate {
+  catalog: DialogOnlyCatalog | null;
+  diorama: DioramaLayout | null;
 }
 
 type Params = Record<string, string | number>;
@@ -270,6 +276,38 @@ export function createActions(store: GameStore) {
 
     dioramaFailed(): void {
       set((s) => ({ world: { ...s.world, dioramaStatus: "error" }, ui: { ...s.ui, announcement: announcement(s, "announce.mapFailed") } }));
+    },
+
+    /**
+     * Recarga en caliente (FD0, 03 §6.5.2): entra el contenido recompilado. services/content solo la despacha sin
+     * escena abierta (el cambio aplica en la próxima escena). Si cambió el diorama actual, el núcleo re-deriva grilla
+     * y capas; el jugador se queda donde está si sigue siendo caminable; si no, pasa a la celda libre más cercana (o al
+     * spawn si no hay ninguna cerca). `ids`: los tocados.
+     */
+    contentReloaded(ids: readonly string[], update: ContentUpdate): void {
+      if (ids.length === 0) return;
+      set((s) => {
+        let { world, player } = s;
+        if (update.catalog) {
+          const c = update.catalog;
+          world = { ...world, catalog: "ready", regionName: c.regionName, places: c.places, npcs: c.npcs };
+        }
+        if (update.diorama && update.diorama.id === world.currentDiorama) {
+          const diorama = prepareDiorama(update.diorama);
+          const here = player.position;
+          const cell = here ? cellAt(diorama.grid, here.x, here.z) : null;
+          const stays = here !== null && cell !== null && isWalkable(diorama.grid, ...cell);
+          const free = cell && !stays ? nearestWalkable(diorama.grid, cell) : null;
+          const position = stays ? here : free ? cellCenter(diorama.grid, ...free) : diorama.spawn;
+          const nearby = nearbyInteractables(position, diorama.interactables);
+          world = { ...world, diorama, nearbyInteractables: nearby, focusedInteractable: nearby[0] ?? null };
+          player = stays ? player : {
+            ...player, position, previous: position, cell: cellAt(diorama.grid, position.x, position.z) as [number, number],
+            velocity: { x: 0, z: 0 }, intent: IDLE, path: [],
+          };
+        }
+        return world === s.world && player === s.player ? {} : { world, player };
+      });
     },
 
     /** Única entrada de input del juego (R10): services/input y state/bridge.ts traducen dispositivos a esto. */

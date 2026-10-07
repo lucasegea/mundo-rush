@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../node_modules/.tsbuild/director",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "allowImportingTsExtensions": true
+  },
+  "include": ["index.ts", "vite.config.ts", "src", "test"],
+  "references": [{ "path": "../../tsconfig.tooling.json" }, { "path": "../../apps/web/tsconfig.node.json" }]
+}

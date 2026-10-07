@@ -8,6 +8,8 @@ export * from "./companion";
 export * from "./progression";
 export * from "./learner";
 export * from "./ui";
+export * from "./inspect";
 export { useGameView } from "./hooks";
 export { readGame } from "./transient";
 export type { Announcement } from "../slices";
+export type { GameState } from "../store";

@@ -11,7 +11,7 @@ import { loadSavedSettings, persistSettings } from "../services/persistence";
 import type { Platform } from "../services/platform";
 import { detectCapabilities, type QualityEnv } from "../services/quality";
 import { startSimulation, type FrameScheduler } from "../services/simulation";
-import { runDevHook } from "./dev";
+import { runDevHook, type DevHot } from "./dev";
 
 export interface BootDeps {
   store: GameStore;
@@ -25,6 +25,8 @@ export interface BootDeps {
   fetchJson?: FetchJson;
   /** Dispositivos y reloj del mapa (F2). Sin esto (tests del shell) no se escucha input ni corre la simulación. */
   world?: { inputTarget: EventTarget; scheduler?: FrameScheduler };
+  /** Modo director (FD0): el canal de HMR para tests; en la app es import.meta.hot. */
+  devHot?: DevHot;
 }
 
 /** Arranca la app. Devuelve una función que suelta las suscripciones (para tests). */
@@ -56,6 +58,12 @@ export async function boot(deps: BootDeps): Promise<() => void> {
     stops.push(startSimulation({ step: actions.simulationStep, isActive: playing, ...(deps.world.scheduler ? { scheduler: deps.world.scheduler } : {}) }));
   }
 
-  await runDevHook();
+  const stopDev = await runDevHook({
+    store, actions, baseUrl: deps.baseUrl,
+    ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}),
+    ...(deps.devHot ? { hot: deps.devHot } : {}),
+    ...(deps.world ? { pageEvents: deps.world.inputTarget } : {}),
+  });
+  if (stopDev) stops.push(stopDev);
   return () => stops.forEach((stop) => stop());
 }
