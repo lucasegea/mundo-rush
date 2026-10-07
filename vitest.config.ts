@@ -13,7 +13,8 @@ export default defineConfig({
     // Los globs son relativos a la raíz del proyecto filtrado (packages/core), no a la del repo.
     coverage: {
       provider: "v8",
-      include: ["src/ids.ts", "src/runtime/**/*.ts"],
+      // F1.3 suma las reglas nuevas del núcleo: tiers (R12), ajustes y fase/paneles del shell.
+      include: ["src/ids.ts", "src/runtime/**/*.ts", "src/quality/**/*.ts", "src/settings/**/*.ts", "src/shell/**/*.ts"],
       reporter: ["text", "json-summary"],
       reportsDirectory: "./coverage/core",
       thresholds: { lines: 90 },
@@ -29,6 +30,8 @@ export default defineConfig({
       { test: { name: "adr", root: "./scripts/adr", include: ["**/*.test.ts"] } },
       // F1.2: el contenido real compila; lints, red, retirados, filtros, salida e incremental (A2-A9, A11).
       { test: { name: "content", root: "./scripts/content", include: ["**/*.test.ts"], testTimeout: 30000 } },
+      // F1.3 A4: contraste de los tokens del HUD.
+      { test: { name: "a11y", root: "./scripts/a11y", include: ["**/*.test.ts"] } },
     ],
   },
 });

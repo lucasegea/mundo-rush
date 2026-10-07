@@ -1,0 +1,93 @@
+/* Tokens del HUD (03 §2.6, GDD §5.4): variables CSS --lg-color-* y --lg-font-scale. Tailwind las expone como
+   utilidades (bg-paper, text-ink, …). Todo texto en rem: el tamaño de texto (100-200 %) escala el HUD entero
+   cambiando un solo valor raíz. scripts/a11y/contrast.ts lee ESTE archivo y exige ≥ 4,5:1 en los pares de texto. */
+@import "tailwindcss";
+
+:root {
+  /* HUD claro: papel crema y tinta oscura (GDD §5.4). */
+  --lg-color-paper: #fbf6ec;
+  --lg-color-surface: #ffffff;
+  --lg-color-ink: #2a2a33;
+  --lg-color-ink-muted: #55545f;
+  --lg-color-border: #8a857a;
+  --lg-color-accent: #2e5e86;
+  --lg-color-on-accent: #ffffff;
+  --lg-color-accent-soft: #dce8f2;
+  --lg-color-focus: #b3471d;
+  --lg-color-danger: #a12a1c;
+
+  /* Paleta del valle (GDD §5.4) para los retratos SVG por código (D-030). */
+  --lg-color-agua: #5fb3c8;
+  --lg-color-cielo-dia: #bfe3ec;
+  --lg-color-cielo-atardecer: #f2b28c;
+  --lg-color-noche: #2b3550;
+  --lg-color-tierra: #e8d3a9;
+  --lg-color-pasto: #8cc084;
+  --lg-color-campo: #d9b65a;
+  --lg-color-casa-1: #e9806e;
+  --lg-color-casa-2: #f2cf6b;
+  --lg-color-casa-3: #9ed8b8;
+  --lg-color-casa-4: #9cc7e8;
+  --lg-color-casa-5: #b9a6db;
+  --lg-color-casa-6: #f4ede2;
+  --lg-color-luz-bicho: #ffd27a;
+
+  --lg-font-scale: 1.25;
+  --lg-font-sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Alto contraste: blanco y negro puros (objetivo AAA). */
+:root[data-contrast="high"] {
+  --lg-color-paper: #ffffff;
+  --lg-color-surface: #ffffff;
+  --lg-color-ink: #000000;
+  --lg-color-ink-muted: #1f1f1f;
+  --lg-color-border: #000000;
+  --lg-color-accent: #003a70;
+  --lg-color-on-accent: #ffffff;
+  --lg-color-accent-soft: #fff1a8;
+  --lg-color-focus: #b00020;
+  --lg-color-danger: #8a0000;
+}
+
+@theme inline {
+  --color-paper: var(--lg-color-paper);
+  --color-surface: var(--lg-color-surface);
+  --color-ink: var(--lg-color-ink);
+  --color-ink-muted: var(--lg-color-ink-muted);
+  --color-line: var(--lg-color-border);
+  --color-accent: var(--lg-color-accent);
+  --color-on-accent: var(--lg-color-on-accent);
+  --color-accent-soft: var(--lg-color-accent-soft);
+  --color-focus: var(--lg-color-focus);
+  --color-danger: var(--lg-color-danger);
+  --font-sans: var(--lg-font-sans);
+}
+
+html {
+  font-size: calc(100% * var(--lg-font-scale));
+}
+
+body {
+  margin: 0;
+  background: var(--lg-color-paper);
+  color: var(--lg-color-ink);
+  font-family: var(--lg-font-sans);
+  line-height: 1.5;
+}
+
+/* Foco visible siempre (GDD §2.19). */
+:focus-visible {
+  outline: 3px solid var(--lg-color-focus);
+  outline-offset: 2px;
+}
+
+/* Reducir movimiento: el ajuste del jugador (el default sale de prefers-reduced-motion al arrancar). */
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
+}

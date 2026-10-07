@@ -59,7 +59,12 @@ export interface CheckReport {
   ok: boolean;
   results: BudgetResult[];
   skipped: string[];
+  /** Reglas que no son de tamaño (F1.3 A5): three dentro de la carga inicial del shell. */
+  violations: string[];
 }
+
+/** Firma de three.js en un chunk compilado: sus mensajes "THREE.WebGLRenderer: …" sobreviven a la minificación. */
+export const THREE_SIGNATURE = /["'`]THREE\.[A-Z]\w+/;
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = resolve(SCRIPT_DIR, "../..");
@@ -130,7 +135,12 @@ function result(name: string, budgetKey: keyof Budgets, capKb: number, chunks: C
  * Chequea el manifiesto contra los presupuestos de bundle. `gzipSize(file)` devuelve los bytes
  * gzip de un archivo del dist (inyectado: los tests pasan tamaños sin tocar disco).
  */
-export function checkBundle(manifest: Manifest, budgets: Budgets, gzipSize: (file: string) => number): CheckReport {
+export function checkBundle(
+  manifest: Manifest,
+  budgets: Budgets,
+  gzipSize: (file: string) => number,
+  fileText?: (file: string) => string,
+): CheckReport {
   if (!manifest[SHELL_ENTRY]) {
     throw new Error(`manifiesto: falta la entrada "${SHELL_ENTRY}" (¿build.manifest: true en apps/web/vite.config.ts?)`);
   }
@@ -140,6 +150,15 @@ export function checkBundle(manifest: Manifest, budgets: Budgets, gzipSize: (fil
   const shellKeys = staticClosure(manifest, SHELL_ENTRY);
   results.push(result(`shell (${SHELL_ENTRY}, carga inicial)`, "shell_js_css_gzip_kb", budgets.shell_js_css_gzip_kb,
     measure(manifest, shellKeys, gzipSize)));
+
+  // 03 §2.7.3: el shell carga sin three. Con el texto de los chunks a mano, se busca su firma (F1.3 A5).
+  const violations: string[] = [];
+  if (fileText) {
+    for (const key of shellKeys) {
+      const file = (manifest[key] as ManifestChunk).file;
+      if (file.endsWith(".js") && THREE_SIGNATURE.test(fileText(file))) violations.push(`three en la carga inicial del shell: ${file} (${key})`);
+    }
+  }
 
   const shellSet = new Set(shellKeys);
   const worldEntries = Object.keys(manifest).filter(
@@ -161,7 +180,7 @@ export function checkBundle(manifest: Manifest, budgets: Budgets, gzipSize: (fil
   skipped.push("assets_muelle_mb, assets_muelle_plaza_mb: sin assets todavía (F3)");
   skipped.push("audio_lineas_por_mision_mb: sin audio guionado todavía (F8)");
 
-  return { ok: results.every((r) => r.ok), results, skipped };
+  return { ok: results.every((r) => r.ok) && violations.length === 0, results, skipped, violations };
 }
 
 /** Texto del reporte. Si un presupuesto se pasa, nombra cada chunk de ese grafo con su tamaño. */
@@ -175,6 +194,7 @@ export function formatReport(report: CheckReport): string {
       for (const c of r.chunks) lines.push(`     - ${c.file} (${c.key}): ${kb(c.gzipBytes)} KB`);
     }
   }
+  for (const v of report.violations) lines.push(`FAIL ${v}`);
   for (const s of report.skipped) lines.push(`n/a  ${s}`);
   return lines.join("\n");
 }
@@ -188,7 +208,8 @@ export function run(distDir = DEFAULT_DIST, budgetsPath = BUDGETS_PATH, log: (li
   }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Manifest;
   const gzipSize = (file: string): number => gzipSync(readFileSync(join(distDir, file))).length;
-  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize);
+  const fileText = (file: string): string => readFileSync(join(distDir, file), "utf8");
+  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText);
   log(formatReport(report));
   return report.ok ? 0 : 1;
 }

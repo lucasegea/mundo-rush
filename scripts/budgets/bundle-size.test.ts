@@ -163,6 +163,18 @@ describe("A2 check:budgets sobre el manifiesto de Vite", () => {
     expect(checkBundle(m, BUDGETS, sizes({})).results[0]?.totalKb).toBe(110);
   });
 
+  test("F1.3 A5: three en la carga inicial del shell falla aunque entre en el tope; en el chunk 3D no", () => {
+    const text = (threeIn: string) => (file: string): string =>
+      file === threeIn ? 'console.warn("THREE.WebGLRenderer: Context Lost.")' : "export const x = 1;";
+    const inWorld = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), text("assets/three-e5.js"));
+    expect(inWorld.ok).toBe(true);
+    expect(inWorld.violations).toEqual([]);
+    const inShell = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), text("assets/vendor-b2.js"));
+    expect(inShell.results.every((r) => r.ok)).toBe(true);
+    expect(inShell.ok).toBe(false);
+    expect(formatReport(inShell)).toContain("FAIL three en la carga inicial del shell: assets/vendor-b2.js (_vendor-b2.js)");
+  });
+
   test("manifiesto sin index.html o con un import que falta falla claro", () => {
     expect(() => checkBundle({}, BUDGETS, sizes({}))).toThrow(/index.html/);
     const broken: Manifest = { "index.html": { file: "a.js", imports: ["_missing.js"] } };

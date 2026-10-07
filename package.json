@@ -18,8 +18,9 @@
     "build:content": "node scripts/content/build.ts",
     "check:budgets": "node scripts/budgets/bundle-size.ts && npm run check:dev-only",
     "check:dev-only": "node -e \"console.log('check:dev-only: sentinel until FD0 (03 §6.5.1)')\"",
+    "check:contrast": "node scripts/a11y/contrast.ts",
     "build": "tsc -b && npm run build --workspace @lg/web",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage:core && npm run validate:content && npm run build && npm run check:budgets"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage:core && npm run validate:content && npm run check:contrast && npm run build && npm run check:budgets"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

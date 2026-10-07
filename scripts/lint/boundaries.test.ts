@@ -2,7 +2,7 @@
 // Corre la config REAL (eslint.config.js) por la API de ESLint con texto en memoria y un
 // filePath virtual dentro de la carpeta destino. Cada caso prohibido tiene que fallar con el
 // ruleId esperado (no con cualquier error) y cada import por ruta apunta a un archivo que existe.
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ESLint, type Linter } from "eslint";
@@ -327,6 +327,40 @@ describe("A5: costuras fallan fuera de su carpeta", () => {
     const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
     expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
     if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+});
+
+// ---------- F1.3 A2: archivos REALES de ui/ y world/ en el set de fixtures ----------
+// El código real (no un __probe__ virtual) lintea limpio en su ruta, y el mismo archivo con un import cruzado
+// agregado falla por la regla de límites. Así el test sigue midiendo cuando ui/ y world/ crecen.
+const REAL_UI = `${WEB}/ui/shell/Shell.tsx`;
+const REAL_WORLD = `${WEB}/world/GameCanvas.tsx`;
+const realCode = (file: string): string => readFileSync(resolve(ROOT, file), "utf8");
+const REAL_FORBIDDEN: Case[] = [
+  { name: "ui/shell/Shell.tsx real -> world/GameCanvas (relativo)", file: REAL_UI, code: "import \"../../world/GameCanvas\";\n", rule: ZONE, msg: "R3" },
+  { name: "ui/shell/Shell.tsx real -> world (alias @world)", file: REAL_UI, code: "import \"@world/GameCanvas\";\n", rule: ZONE, msg: "R3" },
+  { name: "ui/shell/Shell.tsx real -> state/store.ts", file: REAL_UI, code: "import \"../../state/store\";\n", rule: ZONE, msg: "R14" },
+  { name: "ui/shell/Shell.tsx real -> services/quality", file: REAL_UI, code: "import \"../../services/quality/index\";\n", rule: ZONE, msg: "ui/ no importa services/" },
+  { name: "world/GameCanvas.tsx real -> ui/shell/Shell", file: REAL_WORLD, code: "import \"../ui/shell/Shell\";\n", rule: ZONE, msg: "R3" },
+];
+
+describe("F1.3 A2: archivos reales de ui/ y world/", () => {
+  test("los archivos reales y los destinos de sus imports cruzados existen (guardia contra falso verde)", () => {
+    for (const f of [REAL_UI, REAL_WORLD]) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of REAL_FORBIDDEN) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each([REAL_UI, REAL_WORLD])("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_FORBIDDEN.map((c) => [c.name, c] as const))("%s falla con el ruleId esperado", async (_name, c) => {
+    const msgs = await lint(c.file, realCode(c.file) + c.code);
+    const hits = msgs.filter((m) => m.ruleId === c.rule);
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
   });
 });
 
