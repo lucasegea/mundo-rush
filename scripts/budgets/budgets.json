@@ -1,0 +1,8 @@
+{
+  "shell_js_css_gzip_kb": 300,
+  "chunk_3d_gzip_kb": 450,
+  "docente_gzip_kb": 250,
+  "assets_muelle_mb": 6,
+  "assets_muelle_plaza_mb": 15,
+  "audio_lineas_por_mision_mb": 1.5
+}

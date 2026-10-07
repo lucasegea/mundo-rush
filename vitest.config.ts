@@ -8,6 +8,16 @@ const pkg = (name: string) => ({
 
 export default defineConfig({
   test: {
+    // Cobertura del núcleo base (F1.1b A3): solo con `npm run coverage:core` (`--coverage`).
+    // El alcance es el de A3 (ids, Clock, Rng, EventLog); las fases siguientes lo amplían.
+    // Los globs son relativos a la raíz del proyecto filtrado (packages/core), no a la del repo.
+    coverage: {
+      provider: "v8",
+      include: ["src/ids.ts", "src/runtime/**/*.ts"],
+      reporter: ["text", "json-summary"],
+      reportsDirectory: "./coverage/core",
+      thresholds: { lines: 90 },
+    },
     projects: [
       pkg("core"),
       pkg("protocol"),
@@ -15,6 +25,8 @@ export default defineConfig({
       { test: { name: "@lg/server", root: "./apps/server", include: ["test/**/*.test.ts"] } },
       "./apps/web/vitest.config.ts",
       { test: { name: "lint-boundaries", root: "./scripts/lint", include: ["**/*.test.ts"], testTimeout: 30000 } },
+      { test: { name: "budgets", root: "./scripts/budgets", include: ["**/*.test.ts"] } },
+      { test: { name: "adr", root: "./scripts/adr", include: ["**/*.test.ts"] } },
     ],
   },
 });

@@ -7,6 +7,8 @@ const src = (dir: string): string => fileURLToPath(new URL(`./src/${dir}`, impor
 // Alias de apps/web (P0 T3, 03 §4.2.1); espejo de "paths" en tsconfig.json.
 export default defineConfig({
   plugins: [react()],
+  // check:budgets lee dist/.vite/manifest.json (03 §2.7.3, F1.1b).
+  build: { manifest: true },
   resolve: {
     alias: {
       "@ui": src("ui"),
