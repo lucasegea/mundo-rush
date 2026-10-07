@@ -60,7 +60,14 @@
   "scene.back": "Volver a los lugares",
 
   "world.title": "El mapa",
-  "world.placeholder": "El mapa del valle todavía no está listo. Mientras, podés jugar en modo solo diálogo.",
+  "world.loading": "Cargando el mapa…",
+  "world.failed": "No se pudo cargar el mapa. Podés seguir en modo solo diálogo.",
+  "world.controls": "Caminá con WASD o las flechas, o hacé clic en el suelo. E para hablar. Rueda o + y − para el zoom.",
+  "world.prompt.talk": "E para hablar con {name}",
+  "world.talk": "Hablar con {name}",
+  "world.zoomIn": "Acercar",
+  "world.zoomOut": "Alejar",
+  "world.zoomLevel": "Zoom {value} de {total}",
   "world.toDialogOnly": "Ir al modo solo diálogo",
 
   "announce.ready": "Listo. Estás en el menú principal.",
@@ -80,5 +87,10 @@
   "announce.enteredWorld": "Estás en el mapa.",
   "announce.worldUnavailable": "El mapa no está disponible sin WebGL.",
   "announce.contentFailed": "No pudimos cargar los lugares.",
+  "announce.mapFailed": "No se pudo cargar el mapa.",
+  "announce.unreachable": "No se puede llegar ahí.",
+  "announce.notebookSoon": "El cuaderno llega más adelante.",
+  "announce.tierLowered": "Bajamos la calidad gráfica para que el mapa ande fluido.",
+  "announce.contextLost": "Se perdió el gráfico del mapa. Seguís en modo solo diálogo.",
   "announce.storageUnavailable": "Este navegador no deja guardar tus ajustes: valen hasta que cierres la pestaña."
 }

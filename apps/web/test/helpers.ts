@@ -1,6 +1,6 @@
 // Dobles y utilidades de los tests de apps/web (F1.3). Sin navegador real (D-016): jsdom donde hace falta DOM.
 import { compilarContenido, formatearHallazgo, type ArchivoFuente } from "@lg/content-schema";
-import { boot } from "../src/boot";
+import { boot, type BootDeps } from "../src/boot";
 import type { FetchJson } from "../src/services/content";
 import type { Platform } from "../src/services/platform";
 import type { QualityEnv } from "../src/services/quality";
@@ -51,6 +51,8 @@ export interface BootOptions {
   platform?: Pick<Platform, "storage">;
   fetchJson?: FetchJson;
   prefersReducedMotion?: boolean;
+  /** F2: input y lazo de simulación (sin esto, boot no escucha teclas ni corre pasos). */
+  world?: NonNullable<BootDeps["world"]>;
 }
 
 /** Arranca la app con el store y las acciones reales y un navegador simulado. */
@@ -63,4 +65,5 @@ export const bootApp = (o: BootOptions) =>
     prefersReducedMotion: o.prefersReducedMotion ?? false,
     baseUrl: "/",
     fetchJson: o.fetchJson ?? fetchFromContent(compiledClientContent()),
+    ...(o.world ? { world: o.world } : {}),
   });

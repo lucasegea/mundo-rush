@@ -11,7 +11,9 @@ import {
   loadBudgets,
   run,
   staticClosure,
+  THREE_MODULE,
   type Budgets,
+  type ChunkModules,
   type Manifest,
 } from "./bundle-size";
 
@@ -182,6 +184,60 @@ describe("A2 check:budgets sobre el manifiesto de Vite", () => {
   });
 });
 
+// ---------- F2 A6: three/@react-three por módulos, no por texto ----------
+describe("F2 A6 check:budgets con el mapa chunk → módulos", () => {
+  const OWN = ["apps/web/src/main.tsx", "apps/web/src/App.tsx"];
+  const clean: ChunkModules = {
+    "assets/index-a1.js": OWN,
+    "assets/vendor-b2.js": ["node_modules/react/index.js", "node_modules/zustand/esm/vanilla.mjs"],
+    "assets/GameCanvas-d4.js": ["apps/web/src/world/GameCanvas.tsx", "node_modules/@react-three/fiber/dist/x.js"],
+    "assets/three-e5.js": ["node_modules/three/build/three.module.js"],
+  };
+
+  test("el patrón reconoce three y @react-three/*, no parecidos", () => {
+    expect(THREE_MODULE.test("node_modules/three/build/three.core.js")).toBe(true);
+    expect(THREE_MODULE.test("node_modules/@react-three/drei/core/x.js")).toBe(true);
+    expect(THREE_MODULE.test("node_modules/@react-three/postprocessing/dist/index.js")).toBe(true);
+    expect(THREE_MODULE.test("node_modules/three-stdlib/index.js")).toBe(false);
+    expect(THREE_MODULE.test("node_modules/maath/index.js")).toBe(false);
+    expect(THREE_MODULE.test("apps/web/src/world/three.ts")).toBe(false);
+  });
+
+  test("three solo en chunks dinámicos pasa", () => {
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), undefined, clean);
+    expect(report.violations).toEqual([]);
+    expect(report.ok).toBe(true);
+  });
+
+  test("three en el chunk de entrada falla nombrando el módulo, aunque el texto no tenga la firma", () => {
+    const modules = { ...clean, "assets/index-a1.js": [...OWN, "node_modules/three/build/three.core.js"] };
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), () => "export const x = 1;", modules);
+    expect(report.results.every((r) => r.ok)).toBe(true);
+    expect(report.ok).toBe(false);
+    expect(formatReport(report)).toContain("assets/index-a1.js (index.html) trae node_modules/three/build/three.core.js");
+  });
+
+  test("@react-three en un chunk estático transitivo del shell falla", () => {
+    const modules = { ...clean, "assets/vendor-b2.js": [...(clean["assets/vendor-b2.js"] ?? []), "node_modules/@react-three/fiber/dist/events.js"] };
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), undefined, modules);
+    expect(report.ok).toBe(false);
+    expect(report.violations.join("\n")).toContain("assets/vendor-b2.js (_vendor-b2.js)");
+  });
+
+  test("un chunk del shell sin entrada en el mapa falla", () => {
+    const partial: ChunkModules = Object.fromEntries(Object.entries(clean).filter(([file]) => file !== "assets/vendor-b2.js"));
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), undefined, partial);
+    expect(report.ok).toBe(false);
+    expect(report.violations.join("\n")).toContain("mapa de módulos sin el chunk assets/vendor-b2.js");
+  });
+
+  test("el build real: vite.config.ts registra el plugin que escribe el mapa", () => {
+    const config = readFileSync(join(ROOT, "apps/web/vite.config.ts"), "utf8");
+    expect(config).toContain('fileName: ".vite/chunk-modules.json"');
+    expect(config).toMatch(/plugins: \[[^\]]*chunkModules\(\)/);
+  });
+});
+
 // ---------- A2 de punta a punta: archivos reales, gzip real ----------
 describe("A2 run() sobre un dist de fixture en disco", () => {
   const dir = mkdtempSync(join(tmpdir(), "lg-dist-"));
@@ -197,13 +253,18 @@ describe("A2 run() sobre un dist de fixture en disco", () => {
     }
     return buf;
   };
-  const writeDist = (name: string, entryBytes: number): string => {
+  const writeDist = (
+    name: string,
+    entryBytes: number,
+    modules: ChunkModules | null = { "assets/index-x.js": ["apps/web/src/main.tsx"] },
+  ): string => {
     const dist = join(dir, name);
     mkdirSync(join(dist, ".vite"), { recursive: true });
     mkdirSync(join(dist, "assets"), { recursive: true });
     writeFileSync(join(dist, "assets/index-x.js"), noise(entryBytes));
     const m: Manifest = { "index.html": { file: "assets/index-x.js", src: "index.html", isEntry: true } };
     writeFileSync(join(dist, ".vite/manifest.json"), JSON.stringify(m));
+    if (modules !== null) writeFileSync(join(dist, ".vite/chunk-modules.json"), JSON.stringify(modules));
     return dist;
   };
 
@@ -217,6 +278,19 @@ describe("A2 run() sobre un dist de fixture en disco", () => {
     const lines: string[] = [];
     expect(run(writeDist("ok", 100 * KB), undefined, (l) => lines.push(l))).toBe(0);
     expect(lines.join("\n")).toMatch(/^OK +shell/);
+  });
+
+  test("F2 A6: sin chunk-modules.json sale con 1 (nada de falso verde)", () => {
+    const lines: string[] = [];
+    expect(run(writeDist("nomap", 100 * KB, null), undefined, (l) => lines.push(l))).toBe(1);
+    expect(lines.join("\n")).toContain("chunk-modules.json");
+  });
+
+  test("F2 A6: un mapa de módulos con three en el shell sale con 1", () => {
+    const lines: string[] = [];
+    const dist = writeDist("threeinshell", 100 * KB, { "assets/index-x.js": ["apps/web/src/main.tsx", "node_modules/three/build/three.core.js"] });
+    expect(run(dist, undefined, (l) => lines.push(l))).toBe(1);
+    expect(lines.join("\n")).toContain("node_modules/three/build/three.core.js");
   });
 
   test("sin manifiesto sale con 1 y dice qué correr", () => {

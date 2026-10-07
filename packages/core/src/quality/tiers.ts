@@ -49,3 +49,13 @@ export function effectiveTier(choice: TierChoice, suggested: SelectableTier): Se
   if (choice === "auto" || !isSelectableTier(choice)) return safeSuggested;
   return choice;
 }
+
+/**
+ * Baja automática por rendimiento (§2.7.2.2, PerformanceMonitor): un escalón, nunca por debajo de `low` (el
+ * tier obligatorio) ni hacia `dialog-only` (eso solo pasa sin WebGL o a pedido). Nunca sube sola.
+ */
+export function downgradeTier(tier: SelectableTier): SelectableTier {
+  if (tier === "high") return "medium";
+  if (tier === "medium") return "low";
+  return tier;
+}

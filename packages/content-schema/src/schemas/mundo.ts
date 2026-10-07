@@ -65,13 +65,36 @@ export const AnclaSitio = z.strictObject({
   caminable_en: z.array(EstadoFundacion).optional(),
 });
 
+const Vec3 = z.tuple([z.number(), z.number(), z.number()]);
+const Vec2 = z.tuple([z.number(), z.number()]);
+const tilesDeFila = (fila: string): number => fila.trim().split(/\s+/).length;
+
+/** Capa de tiles (03 §6.4.3): cada fila, ids del atlas separados por espacios (0 = vacío); 1 tile = 1 m. */
+export const CapaTiles = z.strictObject({
+  capa: z.string().min(1),
+  origen: Vec2,
+  filas: z.array(z.string().regex(/^\s*\d+(\s+\d+)*\s*$/, "ids enteros separados por espacios")).min(1)
+    .refine((filas) => new Set(filas.map(tilesDeFila)).size === 1, { message: "todas las filas con la misma cantidad de tiles" }),
+});
+
 /**
- * Layout de diorama: F1.2 valida solo la forma general y las anclas `sitios:`.
- * Tiles, props y caminabilidad los cierra F2/F3 (03 §6.4.5).
+ * Layout de diorama. F1.2 validó la forma general y las anclas `sitios:`; F2 tipa lo que consume el mapa de
+ * prueba (tiles, cajas por código, NPCs, interactuables, zonas no caminables y aparición del jugador).
+ * Lo que llega con F3 (instancias de glTF, paleta, cámara de diálogo) sigue pasando sin tipar (looseObject).
  */
 export const Diorama = z.looseObject({
   id: DioramaId,
-  bounds: z.strictObject({ minX: z.number(), maxX: z.number(), minZ: z.number(), maxZ: z.number() }),
+  bounds: z.strictObject({ minX: z.number(), maxX: z.number(), minZ: z.number(), maxZ: z.number() })
+    .refine((b) => b.maxX > b.minX && b.maxZ > b.minZ, { message: "límites vacíos" }),
+  /** Aparición del jugador (F2; 03 §6.4.5 la usa para la conectividad). */
+  spawn: Vec3.optional(),
+  atlas_tiles: z.string().min(1).optional(),
+  tiles: z.array(CapaTiles).optional(),
+  /** Volúmenes; con `tam` (ancho, alto, profundidad) son cajas por código y su huella bloquea la grilla. */
+  props: z.array(z.looseObject({ asset: z.string().min(1), pos: Vec3, tam: Vec3.optional() })).optional(),
+  npcs: z.array(z.looseObject({ id: NpcId, spawn: Vec3, radio_interaccion: z.number().positive().optional() })).optional(),
+  interactuables: z.array(z.looseObject({ id: z.string().min(1), pos: Vec3, radio: z.number().positive().optional() })).optional(),
+  no_caminable: z.array(z.strictObject({ poligono: z.array(Vec2).min(3) })).optional(),
   sitios: z.array(AnclaSitio).default([]),
 });
 export type Diorama = z.infer<typeof Diorama>;

@@ -1,6 +1,8 @@
 // Slice `world` (03 §3.3). F1.3 llena solo lo que necesita el modo solo-diálogo: los lugares de la región
 // y dónde está cada NPC (contenido compilado de F1.2, cargado por services/content). El resto (dioramas,
 // flags, fundaciones, red, NPCs en el mapa, interactuables) arranca vacío y lo llenan F2-F3.3.
+// F2: el diorama cargado, listo para jugar (capas de tiles, cajas, NPCs, interactuables y grilla de caminabilidad).
+import type { DioramaRuntime } from "@lg/core";
 
 export type FoundationState = "idea" | "en_marcha" | "fundado" | "crece";
 
@@ -26,6 +28,9 @@ export interface WorldState {
   places: PlaceInfo[];
   npcs: NpcInfo[];
   currentDiorama: string | null;
+  /** Carga del diorama del mapa (services/content). */
+  dioramaStatus: "idle" | "loading" | "ready" | "error";
+  diorama: DioramaRuntime | null;
   loadedDioramas: string[];
   timeOfDay: "amanecer" | "dia" | "atardecer" | "noche";
   weather: string | null;
@@ -52,6 +57,8 @@ export const initialWorld = (): WorldState => ({
   places: [],
   npcs: [],
   currentDiorama: null,
+  dioramaStatus: "idle",
+  diorama: null,
   loadedDioramas: [],
   timeOfDay: "amanecer",
   weather: null,

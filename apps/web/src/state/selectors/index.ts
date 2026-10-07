@@ -9,4 +9,5 @@ export * from "./progression";
 export * from "./learner";
 export * from "./ui";
 export { useGameView } from "./hooks";
+export { readGame } from "./transient";
 export type { Announcement } from "../slices";

@@ -1,6 +1,6 @@
 // Slice `ui` (03 §3.3): paneles abiertos, modal, toasts, foco accesible, modo de puntero; más el anuncio
 // aria-live vigente y el lugar elegido en solo-diálogo.
-import type { Panel } from "@lg/core";
+import { DEFAULT_ZOOM_STEP, type Panel, type ZoomStep } from "@lg/core";
 
 /**
  * Un anuncio para la región aria-live: clave de i18n + parámetros. `keyParams` son parámetros que a su vez
@@ -26,6 +26,8 @@ export interface UiState {
   announcement: Announcement | null;
   /** Lugar elegido en el modo solo-diálogo. */
   dialogOnlyPlaceId: string | null;
+  /** Paso de zoom de la cámara del mapa (D-197): 0 lejos, 1 medio, 2 cerca. */
+  zoomStep: ZoomStep;
 }
 
 export const UI_PERSIST = "none" as const;
@@ -39,4 +41,5 @@ export const initialUi = (): UiState => ({
   pointerMode: "play",
   announcement: null,
   dialogOnlyPlaceId: null,
+  zoomStep: DEFAULT_ZOOM_STEP,
 });

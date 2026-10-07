@@ -23,5 +23,6 @@ if (container) {
     qualityEnv: browserQualityEnv(),
     prefersReducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
     baseUrl: import.meta.env.BASE_URL,
+    world: { inputTarget: window },
   });
 }

@@ -3,6 +3,10 @@
 // y grafo de imports ESTÁTICOS desde cada entrada HTML. Los imports dinámicos no cuentan en la carga
 // inicial (el chunk 3D se descarga en segundo plano).
 //
+// F2 A6: además lee dist/.vite/chunk-modules.json (lo escribe el plugin lg-chunk-modules de apps/web/vite.config.ts:
+// archivo de chunk → módulos que contiene) y falla si algún chunk del grafo estático de index.html trae módulos de
+// three o @react-three/*. La firma de texto de F1.3 queda como segunda red.
+//
 // Uso: node scripts/budgets/bundle-size.ts [--dist <dir>]   (por defecto apps/web/dist)
 // Sale con 1 si un presupuesto se pasa o si falta el manifiesto; con 0 si todo entra.
 import { existsSync, readFileSync } from "node:fs";
@@ -63,6 +67,12 @@ export interface CheckReport {
   violations: string[];
 }
 
+/** Archivo del chunk → ids de los módulos que contiene (rutas relativas: desde node_modules/ o desde la app). */
+export type ChunkModules = Record<string, string[]>;
+
+/** Un módulo de three o de @react-three/* (03 §2.7.3: el shell carga sin three). */
+export const THREE_MODULE = /(^|\/)node_modules\/(three|@react-three\/[^/]+)\//;
+
 /** Firma de three.js en un chunk compilado: sus mensajes "THREE.WebGLRenderer: …" sobreviven a la minificación. */
 export const THREE_SIGNATURE = /["'`]THREE\.[A-Z]\w+/;
 
@@ -71,6 +81,7 @@ const ROOT = resolve(SCRIPT_DIR, "../..");
 export const BUDGETS_PATH = join(SCRIPT_DIR, "budgets.json");
 export const DEFAULT_DIST = join(ROOT, "apps/web/dist");
 export const MANIFEST_RELATIVE = ".vite/manifest.json";
+export const CHUNK_MODULES_RELATIVE = ".vite/chunk-modules.json";
 
 const SHELL_ENTRY = "index.html";
 const DOCENTE_ENTRY = "docente.html";
@@ -140,6 +151,7 @@ export function checkBundle(
   budgets: Budgets,
   gzipSize: (file: string) => number,
   fileText?: (file: string) => string,
+  chunkModules?: ChunkModules,
 ): CheckReport {
   if (!manifest[SHELL_ENTRY]) {
     throw new Error(`manifiesto: falta la entrada "${SHELL_ENTRY}" (¿build.manifest: true en apps/web/vite.config.ts?)`);
@@ -157,6 +169,20 @@ export function checkBundle(
     for (const key of shellKeys) {
       const file = (manifest[key] as ManifestChunk).file;
       if (file.endsWith(".js") && THREE_SIGNATURE.test(fileText(file))) violations.push(`three en la carga inicial del shell: ${file} (${key})`);
+    }
+  }
+  // F2 A6: por módulos. Un chunk del grafo estático sin entrada en el mapa también falla (nada de falso verde).
+  if (chunkModules) {
+    for (const key of shellKeys) {
+      const file = (manifest[key] as ManifestChunk).file;
+      if (!file.endsWith(".js")) continue;
+      const modules = chunkModules[file];
+      if (!modules) {
+        violations.push(`mapa de módulos sin el chunk ${file} (${key})`);
+        continue;
+      }
+      const hit = modules.find((m) => THREE_MODULE.test(m));
+      if (hit) violations.push(`three/@react-three en la carga inicial del shell: ${file} (${key}) trae ${hit}`);
     }
   }
 
@@ -206,10 +232,16 @@ export function run(distDir = DEFAULT_DIST, budgetsPath = BUDGETS_PATH, log: (li
     log(`check:budgets: falta ${manifestPath}. Corré \`npm run build\` antes (build.manifest: true).`);
     return 1;
   }
+  const modulesPath = join(distDir, CHUNK_MODULES_RELATIVE);
+  if (!existsSync(modulesPath)) {
+    log(`check:budgets: falta ${modulesPath} (lo escribe el plugin lg-chunk-modules de apps/web/vite.config.ts).`);
+    return 1;
+  }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Manifest;
+  const chunkModules = JSON.parse(readFileSync(modulesPath, "utf8")) as ChunkModules;
   const gzipSize = (file: string): number => gzipSync(readFileSync(join(distDir, file))).length;
   const fileText = (file: string): string => readFileSync(join(distDir, file), "utf8");
-  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText);
+  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText, chunkModules);
   log(formatReport(report));
   return report.ok ? 0 : 1;
 }

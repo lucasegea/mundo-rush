@@ -371,3 +371,58 @@ describe("A5: costuras pasan dentro de su carpeta", () => {
     expect(hits, describeMsgs(hits)).toEqual([]);
   });
 });
+
+// ---------- F2: archivos REALES del mundo 3D (canvas, diorama, cámara) ----------
+// Lintean limpios; con un import a lo que world/ no puede tocar (slices, store, acciones, servicios, el núcleo como
+// valor) agregado, fallan. Una cámara creada fuera de world/camera/ falla por R11; dentro, pasa.
+const REAL_DIORAMA = `${WEB}/world/dioramas/Diorama.tsx`;
+const REAL_RIG = `${WEB}/world/camera/CameraRig.tsx`;
+const REAL_PLAYER = `${WEB}/world/actors/Player.tsx`;
+const REAL_WORLD_F2 = [REAL_WORLD, REAL_DIORAMA, REAL_RIG, REAL_PLAYER];
+const F2_FORBIDDEN: Case[] = [
+  { name: "world/dioramas/Diorama.tsx real -> state/slices", file: REAL_DIORAMA, code: "import \"../../state/slices/index\";\n", rule: ZONE, msg: "world/ solo usa state/selectors/ y state/bridge.ts" },
+  { name: "world/dioramas/Diorama.tsx real -> state/store.ts", file: REAL_DIORAMA, code: "import \"../../state/store\";\n", rule: ZONE, msg: "world/ solo usa state/selectors/ y state/bridge.ts" },
+  { name: "world/dioramas/Diorama.tsx real -> state/actions.ts", file: REAL_DIORAMA, code: "import \"../../state/actions\";\n", rule: ZONE, msg: "world/ solo usa state/selectors/ y state/bridge.ts" },
+  { name: "world/GameCanvas.tsx real -> services/input", file: REAL_WORLD, code: "import \"../services/input/index\";\n", rule: ZONE, msg: "world/ no importa services/" },
+  { name: "world/GameCanvas.tsx real -> services/simulation", file: REAL_WORLD, code: "import \"../services/simulation/index\";\n", rule: ZONE, msg: "world/ no importa services/" },
+  { name: "world/actors/Player.tsx real -> @lg/core como valor", file: REAL_PLAYER, code: "import { stepBody } from \"@lg/core\";\nexport const s = stepBody;\n", rule: [TS_IMP, IMP], msg: "solo como tipos" },
+  { name: "world/camera/CameraRig.tsx real -> ui/", file: REAL_RIG, code: "import \"../../ui/index\";\n", rule: ZONE, msg: "R3" },
+];
+
+describe("F2: archivos reales del mundo 3D", () => {
+  test("los archivos reales y los destinos de sus imports cruzados existen (guardia contra falso verde)", () => {
+    for (const f of REAL_WORLD_F2) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of F2_FORBIDDEN) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(REAL_WORLD_F2)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(F2_FORBIDDEN.map((c) => [c.name, c] as const))("%s falla con el ruleId esperado", async (_name, c) => {
+    const msgs = await lint(c.file, realCode(c.file) + c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test("R11: el <OrthographicCamera> de drei de CameraRig fuera de world/camera/ falla; dentro pasa", async () => {
+    const code = realCode(REAL_RIG);
+    const outside = await lint(`${WEB}/world/dioramas/__probe__.tsx`, code);
+    expect(outside.filter((m) => m.ruleId === IMP && m.message.includes("R11")).length, describeMsgs(outside)).toBeGreaterThan(0);
+    const inside = await lint(REAL_RIG, code);
+    expect(inside.filter((m) => m.ruleId !== null && SEAM_RULES.includes(m.ruleId)), describeMsgs(inside)).toEqual([]);
+  });
+
+  test("los listeners de dispositivo del juego viven solo en services/input (R10)", async () => {
+    const real = `${WEB}/services/input/input.ts`;
+    const code = realCode(real);
+    const moved = await lint(`${WEB}/services/simulation/__probe__.ts`, code);
+    expect(moved.filter((m) => m.ruleId === SYNTAX && m.message.includes("R10")).length, describeMsgs(moved)).toBeGreaterThan(0);
+    const inPlace = await lint(real, code);
+    expect(inPlace.filter((m) => m.ruleId !== null && SEAM_RULES.includes(m.ruleId)), describeMsgs(inPlace)).toEqual([]);
+  });
+});

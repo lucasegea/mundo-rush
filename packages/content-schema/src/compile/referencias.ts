@@ -163,6 +163,7 @@ export const chequearReferencias = (c: Conjunto, h: Hallazgo[]): void => {
   // Dioramas (03 §6.4.3): anclas ↔ fichas, solo para dioramas que ya existen (F2/F3 los crean).
   for (const { archivo, data: d } of c.dioramas) {
     d.sitios.forEach((s, i) => sitio(archivo, `sitios[${i}].id`, s.id));
+    (d.npcs ?? []).forEach((n, i) => npcConFicha(archivo, `npcs[${i}].id`, n.id));
     for (const f of c.fundaciones) {
       if (f.data.diorama === d.id && !d.sitios.some((s) => s.id === f.data.id)) err(f.archivo, "diorama", "referencia", `${f.data.id} no tiene ancla en sitios: de ${archivo}`);
     }

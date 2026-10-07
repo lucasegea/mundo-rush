@@ -8,6 +8,10 @@ import { App } from "../src/App";
 import { gameStore } from "../src/state/store";
 import { bootApp, memoryPlatform, resetStore } from "./helpers";
 
+// jsdom no tiene WebGL ni ResizeObserver: el canvas de R3F no se monta acá (el mundo se prueba con funciones puras
+// y el store; el operador lo camina en el navegador). El shell no depende de lo que dibuje el canvas.
+vi.mock("../src/world/GameCanvas", () => ({ default: () => null }));
+
 let consoleError: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {

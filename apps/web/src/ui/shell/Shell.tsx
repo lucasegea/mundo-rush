@@ -8,14 +8,14 @@ import { LiveRegion } from "../a11y/LiveRegion";
 import { useDocumentSettings, useFocusRequests } from "../a11y/hooks";
 import { DialogOnlyView } from "../dialog-only/DialogOnlyView";
 import { ScenePlaceholder } from "../dialog-only/ScenePlaceholder";
-import { WorldPlaceholder } from "../hud/WorldPlaceholder";
+import { WorldHud } from "../hud/WorldHud";
 import { MainMenu } from "../menus/MainMenu";
 import { Button } from "../primitives";
 import { SettingsPanel } from "../settings/SettingsPanel";
 
 function TopBar() {
   return (
-    <header aria-label={t("topbar.label")} className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-line bg-surface px-4 py-2">
+    <header aria-label={t("topbar.label")} className="pointer-events-auto flex flex-wrap items-center justify-between gap-2 border-b-2 border-line bg-surface px-4 py-2">
       <span className="text-lg font-bold">{t("app.title")}</span>
       <div className="flex gap-2">
         <Button id="topbar-menu" onClick={() => actions.openMainMenu("topbar-menu")}>{t("topbar.menu")}</Button>
@@ -27,7 +27,7 @@ function TopBar() {
 
 function PhaseView({ phase }: { phase: AppPhase }) {
   if (phase === "dialogOnly") return <DialogOnlyView />;
-  if (phase === "world") return <WorldPlaceholder />;
+  if (phase === "world") return <WorldHud />;
   return <p className="p-6">{t("app.loading")}</p>;
 }
 
@@ -43,8 +43,11 @@ export function Shell() {
   else if (panel?.kind === "scene") content = <ScenePlaceholder npcId={panel.npcId} name={view.sceneNpcName ?? panel.npcId} />;
   else content = <PhaseView phase={view.phase} />;
 
+  // En el mapa sin paneles, el shell queda transparente encima del canvas y deja pasar el puntero (solo sus
+  // controles lo reciben). Con un panel abierto, el panel tapa el mapa (el canvas pasa a frameloop "demand").
+  const overMap = panel === null && view.phase === "world";
   return (
-    <div className="min-h-dvh bg-paper text-ink">
+    <div className={overMap ? "pointer-events-none relative z-10 min-h-dvh text-ink" : "relative z-10 min-h-dvh bg-paper text-ink"}>
       {panel === null && view.phase !== "boot" ? <TopBar /> : null}
       <main id="main">{content}</main>
       <LiveRegion />
