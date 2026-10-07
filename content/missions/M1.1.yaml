@@ -1,0 +1,126 @@
+# M1.1 · Buenos días, Nell (02 §4.4). Requiere la presentación de Nell por Maya (M0.3, INTRO-NELL-MAYA).
+id: M1.1
+titulo: { es-AR: "Buenos días, Nell" }
+capitulo: 1
+region: R1
+mcer: A1
+tipo_tarea: social_con_meta
+can_do: { es-AR: "Puedo presentarme y decir de dónde vengo." }
+requiere: [M0.3, "intro:NPC-NELL"]
+meta: "Jugador: la llave del tablero del Cruce. Nell: saber quién es el nuevo que mandó Maya y si se va a quedar a ayudar."
+consigue: "La llave del tablero (y el permiso de Nell para \"escribir lo que el Cruce necesita\")."
+red:
+  altas: [{ npc: NPC-NELL, por: NPC-MAYA }]
+  presenta: [{ npc: NPC-OLLIE, por: NPC-NELL }]
+  nombra: [NPC-RUTH]
+fundacion: "SITIO-TABLERO → fundado: Nell te da la llave, limpian el vidrio y pinchan el primer papel: WHAT DOES THE CROSSING NEED? El tablero de pedidos queda abierto."
+saberes: [{ saber: SAB-ESCUELA-RURAL, rama: false }, { saber: SAB-MATE, rama: true }]
+hechos_verificables: [HV-M1.1-01, HV-M1.1-02]
+resultado_mundo: "El tablero del Cruce queda abierto con el primer papel."
+contagio: "Desde ahora Nell sale al porche cada mañana y saluda a quien pasa."
+npcs: [NPC-NELL]
+lenguaje_objetivo:
+  funciones: ["saludar según la hora", "presentarse", "decir origen", "preguntar y responder cómo estás", "devolver la pregunta"]
+  estructuras: ["to be (I'm / I am)", "I'm from…", "How are you? — I'm fine/good, thanks. And you?"]
+  chunks: []
+  vocabulario: [good morning, teacher, school, name, from, where, how, fine, good, tired, happy, board, key, neighbor, welcome, mate, room]
+pre_tarea:
+  plantilla: LUMI-M1.1-PRE
+  piezas_utiles: ["Good morning", "I'm from…", "How are you?"]
+beats:
+  - "Nell en el porche, con una taza; saluda con la mano."
+  - "Nell reconoce la presentación de Maya; se presenta."
+  - "Nell pregunta tu nombre (re-surface HAB-VINC-1: si ya lo sabe por Maya, lo dice ella y pide confirmar)."
+  - "Nell pregunta de dónde sos."
+  - "Nell pregunta cómo estás; espacio para devolver la pregunta."
+  - "Nell señala la escuela: una sola aula (saber). Momento cultural opcional (mate)."
+  - "Nell te da la llave del tablero; cruzan hasta el árbol; el primer papel."
+  - "Cierre y destilación."
+escenas:
+  - escena_id: M1.1-E1
+    npc: NPC-NELL
+    lugar: cruce.porche_nell
+    hora: manana
+    situacion: "Nell, maestra jubilada, está en su porche junto a la escuela cerrada, con una taza. Maya le habló del trabajador nuevo. Quiere saber quién es, de dónde viene y si se va a quedar a ayudar; al final le da la llave del tablero del Cruce."
+    necesidad_npc: "Saber quién es el nuevo que mandó Maya y si se va a quedar a ayudar."
+    banda: A1
+    andamiaje_npc:
+      - "I'm from the valley. You? (modela)"
+      - "Argentina? Brazil? Another place? (cualquier respuesta vale)"
+    vocabulario_nivel: [good morning, teacher, school, name, from, where, how, fine, good, tired, happy, board, key, neighbor, welcome, mate, room]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: [SAB-ESCUELA-RURAL, SAB-MATE]
+    apertura_guionada:
+      - { quien: NPC-NELL, en: "Good morning!", es_glosa: "¡Buen día!" }
+      - { quien: NPC-NELL, en: "You're the new worker!", es_glosa: "¡Sos el/la nuevo/a!" }
+      - { quien: NPC-NELL, en: "Maya told me.", es_glosa: "Maya me contó." }
+      - { quien: NPC-NELL, en: "I'm Nell. I was the teacher here.", es_glosa: "Soy Nell. Era la maestra acá." }
+    ramas:
+      - { si: "dice \"Good morning! I'm Nico. Nice to meet you.\"", quien: NPC-NELL, npc: "Nice to meet you, Nico! Where are you from?", tipo: ejemplo_ia }
+      - { si: "dice \"I'm from Argentina.\"", quien: NPC-NELL, npc: "Argentina? Far away! How are you today?", tipo: guionada }
+      - { si: "dice \"I from Argentina.\" (error local; cuenta como error de objetivo solo si se repite)", quien: NPC-NELL, npc: "Oh, you're from Argentina! Far away!", tipo: guionada, nota: "recast natural; no se señala; Lumi anota I'm from. Si lo repite en otro turno, Lumi escalón 2.", lumi: LUMI-SEN-2-01 }
+      - { si: "nombra otro lugar (\"Mars.\")", quien: NPC-NELL, npc: "Mars? Ha! A long trip!", tipo: guionada, nota: "vale" }
+      - { si: "ante How are you today?, dice \"I'm fine, thanks. And you?\"", quien: NPC-NELL, npc: "I'm good! But the Crossing is so quiet.", tipo: guionada, nota: "criterio opcional cumplido" }
+      - { si: "ante How are you today?, dice \"Fine.\"", quien: NPC-NELL, npc: "Fine! Good!", tipo: guionada, nota: "pausa breve: deja lugar para And you?; si no llega, sigue" }
+      - { si: "ante How are you today?, dice \"I'm tired.\"", quien: NPC-NELL, npc: "Tired? The fields are hard work!", tipo: guionada }
+      - { si: "pregunta \"Is it closed?\" por la escuela", quien: NPC-NELL, npc: "Yes. For many years. Too quiet now.", tipo: guionada }
+      - { si: "menciona Argentina o el mate (rama cultural, una sola vez, D-066)", quien: NPC-NELL, npc: "Argentina! Mate, right? A tea in a gourd!", tipo: guionada, nota: "mira el mate que asoma de tu mochila" }
+      - { si: "pasa el turno ante \"Where are you from?\"", quien: NPC-NELL, npc: "I'm from the valley. You?", tipo: guionada, nota: "modela; segundo pase: Argentina? Brazil? Another place?" }
+      - { si: "pregunta a Nell (\"Are you from here?\")", quien: NPC-NELL, npc: "Yes! Born here. I know everybody!", tipo: guionada, nota: "poción ámbar por preguntar por el otro" }
+      - { si: "pregunta por su silla", quien: NPC-NELL, npc: "It's my chair. It goes where I need.", tipo: guionada, nota: "y sigue" }
+    lineas_guionadas:
+      - { quien: NPC-NELL, en: "That was our school.", es_glosa: "Esa era nuestra escuela.", acotacion: "saber, si el jugador no preguntó antes; señala la escuela" }
+      - { quien: NPC-NELL, en: "One room, all the children.", es_glosa: "Una sola aula, todos los chicos." }
+      - { quien: NPC-NELL, en: "One teacher. Me!", es_glosa: "Una maestra. ¡Yo!" }
+    criterios_exito:
+      - { id: C1, texto: "Saludo apropiado." }
+      - { id: C2, texto: "Nombre (confirmación vale si Nell ya lo sabe).", habilidad: HAB-VINC-1 }
+      - { id: C3, texto: "Un lugar de origen (cualquiera)." }
+      - { id: C4, texto: "Responde How are you? y devuelve la pregunta.", opcional: true }
+    errores_de_objetivo: ["I from (falta el verbo en I'm from)"]
+    cierre_guionado:
+      - { quien: NPC-NELL, en: "Here's the key to the board.", es_glosa: "Acá está la llave del tablero." }
+      - { quien: NPC-NELL, en: "Write what the Crossing needs.", es_glosa: "Escribí lo que necesita el Cruce." }
+      - { quien: NPC-NELL, en: "Ollie knows every mailbox.", es_glosa: "Ollie conoce todos los buzones." }
+      - { quien: NPC-NELL, en: "Talk to him! Tell him Nell sent you.", es_glosa: "¡Hablá con él! Decile que te manda Nell.", acotacion: "cruzan hasta el árbol; Nell abre el vidrio; pinchan el papel" }
+      - { quien: LUMI, plantilla: LUMI-M1.1-CIERRE }
+    salida_si_no_converge:
+      disparador: "la escena no converge"
+      lineas:
+        - { quien: NPC-NELL, en: "You know what? Maya likes you. That's enough! Here's the key.", es_glosa: "¿Sabés qué? Le caés bien a Maya. ¡Alcanza! Acá está la llave." }
+      resultado: "Llave igual."
+    efectos:
+      - { fundacion: SITIO-TABLERO, estado: fundado }
+      - { intro: NPC-OLLIE }
+    eventos: [board_key_received, nell_trust+1, "net_add:NPC-NELL", "intro:NPC-OLLIE<-NPC-NELL", "known:NPC-RUTH", "SITIO-TABLERO:fundado", "saber:SAB-ESCUELA-RURAL"]
+    resumen_para_siguiente: "Nell conoció al jugador, le dio la llave del tablero del Cruce y lo mandó a hablar con Ollie (\"Tell him Nell sent you\")."
+    temas_permitidos: ["presentaciones", "de dónde sos", "cómo estás", "la escuela del Cruce", "el mate", "el tablero"]
+    temas_vedados_extra: []
+    pronunciacion:
+      - momento_id: M1.1-E1-PRON-1
+        tipo: repetir
+        linea_ref: "Argentina? Far away! How are you today?"
+        texto_esperado: "How are you?"
+        palabra_foco: "How"
+        par: null
+        sonidos: [E11]
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M1.1-PRON
+        obligatorio: false
+        nota: "Opcional al cierre. E11: /h/ realizada como [x], la jota rioplatense."
+lumi_marca: "I'm from si faltó el verbo; And you? si no devolvió la pregunta (para M1.8 y tablero)."
+pociones:
+  - { rama: ambar, evento: "presentarse con origen", max: 1 }
+  - { rama: ambar, evento: "devolver How are you? (cuenta para HAB-VINC-2: preguntó How are you? en 2 escenas)", max: 1 }
+  - { rama: ambar, evento: "pregunta algo sobre Nell", max: 1 }
+desbloqueos: []
+repaso:
+  resurfaces: ["Nice to meet you", "Hello / Good morning"]
+  planta: ["I'm from…", "How are you? / And you?"]
+  reaparece_en: [M1.8]
+mundo: [board_key_received, nell_trust+1, "net_add:NPC-NELL", "intro:NPC-OLLIE<-NPC-NELL", "known:NPC-RUTH", "SITIO-TABLERO:fundado", "saber:SAB-ESCUELA-RURAL", "saber:SAB-MATE"]
+modo_texto: "A1: opciones solo si el andamiaje es 1-2: \"I'm from ___.\" (con campo para el lugar) · \"I'm fine, thanks. And you?\""
+efectos: []
+duracion_objetivo_min: 3
+estado: draft

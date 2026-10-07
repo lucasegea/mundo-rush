@@ -1,0 +1,22 @@
+# Saber del prólogo dicho por Lumi con plantilla (02 §1.5, §2.7.3 LUMI-M0.2-CORN, §4.4 M0.2, §8).
+# Lumi no explica ciencia: la plantilla remite a la ficha. linea_sin_dato = LUMI-COMO-01 sin la nota (F1.2).
+id: SAB-CORN
+titulo_corto: { es-AR: "Corn: maíz (y a veces cualquier grano)" }
+linea_en: null
+plantilla: LUMI-M0.2-CORN
+linea_sin_dato: "***Corn.*** Maíz."
+explicacion_es: >-
+  En el inglés de Estados Unidos, corn es el maíz.
+  En el inglés británico, corn puede nombrar granos o cereales en general, y el maíz suele llamarse maize.
+hechos:
+  - id: HV-M0.2-01
+    texto_es: "En inglés estadounidense corn designa el maíz; en inglés británico corn puede designar granos o cereales en general (el maíz suele llamarse maize)."
+    fuente_sugerida: "Diccionario de referencia del inglés (Oxford, Merriam-Webster)"
+    rama: false
+fuente: "[FUENTE-PENDIENTE: diccionario de referencia del inglés]"
+estado: sin_verificar
+dicho_por: LUMI
+mision: M0.2
+rama: false
+ficcion: false
+usable_como_argumento: true

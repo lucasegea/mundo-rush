@@ -1,0 +1,1008 @@
+# Plantillas de Lumi (02 §2.7): catálogo genérico (§2.7.2) y del prólogo + M1.1-M1.2 (§2.7.3), tal cual.
+# Lumi solo dice estas líneas (ADR-008). ***…*** = inglés modelado (voz L2); {slot} = hueco; todas en draft (D-067).
+# Modos "todos" = accompanied, flagOnly, moreHelp. Bandas "A0-B1" = A0, A1, A2, B1.
+idioma_l1: es-AR
+plantillas:
+  # ---------- Catálogo genérico (02 §2.7.2) ----------
+  - id: LUMI-SEN-2-01
+    funcion: senal
+    escalon: 2
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "¿***{forma_jugador}***…?"
+    slots: [forma_jugador]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "sube el tono en la parte del error"
+    estado: draft
+  - id: LUMI-SEN-3-01
+    funcion: senal
+    escalon: 3
+    modos: [accompanied, moreHelp]
+    bandas: [A1, A2, B1]
+    tipo_error: [subject-verb]
+    texto: "Ojo con ***{foco_l2}***… ¿qué le pasa al verbo?"
+    slots: [foco_l2]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SEN-3-02
+    funcion: senal
+    escalon: 3
+    modos: [accompanied, moreHelp]
+    bandas: [A1, A2, B1]
+    tipo_error: [word-order]
+    texto: "En inglés el color va antes: ***{forma_correcta}***."
+    slots: [forma_correcta]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SEN-3-03
+    funcion: senal
+    escalon: 3
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "Mmm… mirá ***{foco_l2}***. ¿Cómo era?"
+    slots: [foco_l2]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SEN-4-01
+    funcion: senal
+    escalon: 4
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "{glosa_l1}… ***{forma_abierta}…***"
+    slots: [glosa_l1, forma_abierta]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "deja la frase abierta"
+    estado: draft
+  - id: LUMI-SEN-5-01
+    funcion: senal
+    escalon: 5
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "***{forma_correcta}*** Eso. Seguí, {npc} te escucha."
+    slots: [forma_correcta, npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SEN-5-02
+    funcion: senal
+    escalon: 5
+    modos: [moreHelp]
+    bandas: [A1, A2, B1]
+    tipo_error: [any]
+    texto: "Un detalle: ***{forma_correcta}***, con ***{foco_l2}***. Seguí."
+    slots: [forma_correcta, foco_l2]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-AUTO-01
+    funcion: autocorreccion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Ahí está: ***{forma_correcta}***. Lo arreglaste vos."
+    slots: [forma_correcta]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-L1-01
+    funcion: idioma_l1
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2]
+    tipo_error: null
+    texto: "{npc} no entiende español. Probá con ***{frase_modelo}***. Yo te espero."
+    slots: [npc, frase_modelo]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-FRUS-01
+    funcion: frustracion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Está bien que cueste. Tocá *Más simple* y {npc} te da dos opciones."
+    slots: [npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-COMO-01
+    funcion: como_se_dice
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "***{palabra_l2}.*** {palabra_l1}."
+    slots: [palabra_l2, palabra_l1]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-COMO-02
+    funcion: como_se_dice_fuera
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Esa no la tengo en mi frasco todavía. Preguntásela a un vecino: ***What's this?***"
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-PISTA-1-01
+    funcion: pista_1
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "{orientacion}"
+    slots: [orientacion]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "texto de la escena, campo de andamiaje"
+    estado: draft
+  - id: LUMI-PISTA-2-01
+    funcion: pista_2
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Podés decir ***{opcion_a}*** o ***{opcion_b}***."
+    slots: [opcion_a, opcion_b]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-PISTA-3-01
+    funcion: pista_3
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Probá: ***{frase_modelo}***"
+    slots: [frase_modelo]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-MARCAR-01
+    funcion: marcar
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Anotado. Esa vuelve otro día."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-AYUDA-01
+    funcion: ayuda_pedida
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Bien hecho en pedir ayuda. Para eso estoy."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: "solo la primera vez que usa Pasar el turno"
+    estado: draft
+  - id: LUMI-ANOTA-01
+    funcion: anotado_cierre
+    escalon: null
+    modos: [flagOnly]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Anoté {cantidad_texto} cositas para repasar. ¿Las vemos ahora o mañana?"
+    slots: [cantidad_texto]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-EVOC-01
+    funcion: evocacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "¿Te acordás cómo se decía *{palabra_l1}*?"
+    slots: [palabra_l1]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-EVOC-02
+    funcion: evocacion_ok
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "***{palabra_l2}.*** Eso."
+    slots: [palabra_l2]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-EVOC-03
+    funcion: evocacion_no
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "***{palabra_l2}.*** La guardo para mañana."
+    slots: [palabra_l2]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-FIN-01
+    funcion: fin_sesion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Hoy tu red sumó {cantidad_texto} personas. Es un buen lugar para parar."
+    slots: [cantidad_texto]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "solo si sumó ≥ 1"
+    estado: draft
+  - id: LUMI-FIN-02
+    funcion: fin_sesion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Hoy el Cruce cambió un poquito. Es un buen lugar para parar."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-REGRESO-01
+    funcion: regreso
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "¡Volviste! Maya preguntó por vos. Clover, no: Clover no pregunta nada."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: "solo después de M0.3"
+    estado: draft
+  - id: LUMI-REGLAS-01
+    funcion: reglas_valle
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "En el valle hablamos con cuidado. Probemos de nuevo con {npc}."
+    slots: [npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "[GUIONADA] (seguridad, una sola vez)"
+    estado: draft
+  - id: LUMI-IA-01
+    funcion: honestidad_ia
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Soy un personaje del juego, y me encanta acompañarte."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-RED-01
+    funcion: red
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "{npc} ya es parte de tu red. Te presentó {npc_presentador}."
+    slots: [npc, npc_presentador]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-RED-03
+    funcion: red
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "{npc} ya es parte de tu red. Se presentaron solos."
+    slots: [npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-RED-02
+    funcion: red_sin_presentacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Todavía no te presentaron. ¿Quién conoce a {npc}?"
+    slots: [npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-FUNDA-01
+    funcion: fundacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "{fundacion} ya está en el mapa. La hicieron entre {cantidad_texto}."
+    slots: [fundacion, cantidad_texto]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SABER-01
+    funcion: saber
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Lo de {titulo_saber} lo anoté en tu cuaderno de saberes."
+    slots: [titulo_saber]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SABER-02
+    funcion: saber_fuera
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "Eso no lo sé. Preguntale a {npc}: sabe más que yo."
+    slots: [npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-PRON-01
+    funcion: pronunciacion_invitacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: null
+    texto: "¿Probás decir ***{frase_modelo}***? Si no querés, no pasa nada."
+    slots: [frase_modelo]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  # ---------- Prólogo y M1.1-M1.2 (02 §2.7.3): modos todos, bandas A0-A1 ----------
+  - id: LUMI-ONB-01
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¡Hola! Perdón, me quedé dormido en el frasco."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-ONB-02
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Soy Lumi. Vine con vos desde casa, ¿te acordás?"
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-ONB-03
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Acá todos hablan inglés. Yo te ayudo, pero no puedo hablar por vos: no me escuchan."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-ONB-04
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "No hay apuro. Cuando alguien te hable, el silencio es tuyo."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-ONB-05
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Cuando termines de hablar, tocá *Terminé*."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-ONB-05T
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Cuando termines de escribir, tocá *Enviar*."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: "modo texto"
+    estado: draft
+  - id: LUMI-ONB-06
+    funcion: onboarding
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Si no te sale, tocá *Pasar el turno* y te ayudo."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SOBRE0-01
+    funcion: sobre_semillas
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Y esto? Un sobre con semillas… ¿Te leo la nota?"
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SOBRE0-02
+    funcion: sobre_semillas
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "*Plant me where people meet.* Sembrame donde se junta la gente."
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SOBRE0-03
+    funcion: sobre_semillas
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Quién sabía que venías? Qué raro…"
+    slots: []
+    audio: fijo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.1-PRE
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Ella es Inés, la capataz de la cuadrilla. Te va a saludar. Podés decir ***Hello*** y tu nombre: ***I'm…***"
+    slots: []
+    audio: fijo
+    mision: M0.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.1-L1
+    funcion: idioma_l1
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Inés sabe muy poquito de español. Probá en inglés: ***Hello***."
+    slots: []
+    audio: fijo
+    mision: M0.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.1-P3
+    funcion: pista_3
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Probá: ***Hello, I'm*** y tu nombre."
+    slots: []
+    audio: fijo
+    mision: M0.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.1-CIERRE
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¡Primer día y ya te presentaste! Le dijiste ***I'm {nombre_jugador}***. Eso va al frasco ámbar: presentarse."
+    slots: [nombre_jugador]
+    audio: al_vuelo
+    mision: M0.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.1-NOCONV
+    funcion: no_converge
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Inés ya sabe quién sos. La próxima, le decís tu nombre."
+    slots: []
+    audio: fijo
+    mision: M0.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.1-PRON
+    funcion: pronunciacion_invitacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Probás decir el nombre del valle? ***Kestrel Valley.*** Si no querés, no pasa nada."
+    slots: []
+    audio: fijo
+    mision: M0.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-INTRO
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Ves cómo brillan esas cosas? Apuntá y tocá *¿Cómo se dice?*"
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-PLANE
+    funcion: como_se_dice
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "***Plane.*** Avioneta. Bueno, avión: en inglés es la misma palabra."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-REPETIR
+    funcion: como_se_dice
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Lo decís vos? Si no querés, no pasa nada."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-CORN
+    funcion: como_se_dice
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "***Corn.*** Maíz. Ojo: en Inglaterra, ***corn*** a veces es cualquier grano."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: SAB-CORN
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-FIREFLY
+    funcion: como_se_dice
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "***Firefly.*** Bicho de luz. Como yo. Bueno, yo brillo más."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-SECRETO
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Un secreto: si me preguntás en inglés, ***What's this?***, también te contesto."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-WHATS
+    funcion: destilar
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¡Me preguntaste en inglés! Eso me hizo brillar un poquito."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-KOFI
+    funcion: red
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Ese es Kofi, de tu cuadrilla. Ya es parte de tu red."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-CIERRE
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Podés preguntarme cómo se dice cualquier cosa que brille así. Y si querés que me acuerde de una palabra, tocá *Marcar*."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.2-VINC1
+    funcion: destilar
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Desde ahora los vecinos te van a saludar por tu nombre."
+    slots: []
+    audio: fijo
+    mision: M0.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-PRE
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Esa nena busca algo. ¿Te acordás de la cabrita del canal? Piezas útiles: ***Yes***, ***the canal***."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-NO
+    funcion: pista_1
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿No la viste junto al canal? Era blanquita, con campanita."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-P2
+    funcion: pista_2
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Podés decir ***Yes*** o ***No***."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-CIERRE
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Le dijiste dónde estaba Clover: ***the canal***. Eso es azul: ubicar cosas."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: "sigue LUMI-EVOC-01 con \"maíz\", y LUMI-EVOC-02 o LUMI-EVOC-03 con \"corn\""
+    estado: draft
+  - id: LUMI-M0.3-SABER
+    funcion: saber
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Lo de las cabras que comen yuyos lo anoté en tu cuaderno de saberes."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: SAB-CABRAS
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-LUZ
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Mirá: un bicho de luz en el Cruce. Mañana Maya te presenta a Nell."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-PRON
+    funcion: pronunciacion_invitacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Probás decir ***Yes*** como Maya? Si no querés, no pasa nada."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-SEGUIR
+    funcion: fin_sesion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Seguimos un poco o lo dejamos acá?"
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M0.3-PARAR
+    funcion: fin_sesion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Dejo la luz prendida. Cuando vuelvas, acá estoy."
+    slots: []
+    audio: fijo
+    mision: M0.3
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.1-PRE
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Nell fue la maestra del Cruce. Maya le habló de vos. Piezas útiles: ***Good morning***, ***I'm from…***, ***How are you?***"
+    slots: []
+    audio: fijo
+    mision: M1.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.1-CIERRE
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Le dijiste de dónde venís: ***I'm from…*** Eso es ámbar. Y el tablero del Cruce vuelve a estar abierto."
+    slots: []
+    audio: fijo
+    mision: M1.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.1-PRON
+    funcion: pronunciacion_invitacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Probás ***How are you?***, con la ***h*** suave, como un suspiro?"
+    slots: []
+    audio: fijo
+    mision: M1.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.2-PRE
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Clover se escapó otra vez. Primero averiguá cómo es; después buscala con Ollie. Piezas útiles: ***What color is she?***, ***She's small***, ***red bell***."
+    slots: []
+    audio: fijo
+    mision: M1.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.2-CIERRE-1
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Le describiste a Clover con dos detalles: ***{forma_jugador}***. Eso es azul."
+    slots: [forma_jugador]
+    audio: al_vuelo
+    mision: M1.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.2-CIERRE-2
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Y le preguntaste a Maya el color: eso es ámbar."
+    slots: []
+    audio: fijo
+    mision: M1.2
+    saber: null
+    nota: "solo si hubo una pregunta de rasgo bien formada"
+    estado: draft
+  - id: LUMI-M1.2-RED
+    funcion: red
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Ollie conoce todos los buzones del valle. Mirá tu mapa: aparecieron nombres nuevos."
+    slots: []
+    audio: fijo
+    mision: M1.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.2-EVOC
+    funcion: evocacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Cómo le dijiste a Ollie que era chiquita?"
+    slots: []
+    audio: fijo
+    mision: M1.2
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M1.2-PRON
+    funcion: pronunciacion_invitacion
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "¿Probás ***She's small and white***? Si no querés, no pasa nada."
+    slots: []
+    audio: fijo
+    mision: M1.2
+    saber: null
+    nota: null
+    estado: draft

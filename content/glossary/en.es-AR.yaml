@@ -1,0 +1,744 @@
+# Glosario curado en → es-AR (02 §6.4; 03 §6.2). Semilla de la Región 1: filas de 02 §6.4.4 tal cual.
+# TODAS en draft: reviewed y approved son pasos humanos (D-067). Términos sensibles según D-179.
+# El build de desarrollo las muestra marcadas "borrador" (D-131); release solo approved; fv approved + reviewed (D-128).
+l2: en
+l1: es-AR
+entradas:
+  - id: gl.good_morning.phr
+    en: "good morning"
+    pos: "phr"
+    traducciones:
+      es-AR: { texto: "buen día", notas: "Ya estaba; Nell y Harlan (\"Morning.\")" }
+    cefr: A0
+    usado_en: [M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.im_from.phr
+    en: "I'm from…"
+    pos: "phr"
+    traducciones:
+      es-AR: { texto: "soy de…", notas: null }
+    cefr: A0
+    usado_en: [M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.field.n
+    en: "field"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "campo / lote", notas: "\"Lote\" para la parcela concreta" }
+    cefr: A1
+    usado_en: [M0.1, M0.3]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.farm.n
+    en: "farm"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "granja / campo", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.farmer.n
+    en: "farmer"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "productor/a", notas: "D-179; no \"granjero\" para los dueños grandes" }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.farmworker.n
+    en: "farmworker / worker"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "trabajador/a rural", notas: "D-179" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.crew.n
+    en: "crew"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "cuadrilla", notas: null }
+    cefr: B1
+    usado_en: [M0.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.crew_boss.n
+    en: "crew boss"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "capataz", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.bunkhouse.n
+    en: "bunkhouse"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "albergue (de la cuadrilla)", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.barn.n
+    en: "barn"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "granero", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.orchard.n
+    en: "orchard"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "monte (frutal)", notas: "AR: \"monte de manzanos\"" }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.garage.n
+    en: "garage"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "taller", notas: "Taller mecánico; no \"garaje\" en este contexto" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.school.n
+    en: "school"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "escuela", notas: null }
+    cefr: A0
+    usado_en: [M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.neighbor.n
+    en: "neighbor"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "vecino/a", notas: null }
+    cefr: A1
+    usado_en: [M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.town.n
+    en: "town"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "pueblo", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.council.n
+    en: "council"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "concejo", notas: "AR: Concejo Deliberante; ≠ \"consejo\"" }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.county.n
+    en: "county"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "condado", notas: "[FICCIÓN] en el valle" }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.ordinance.n
+    en: "ordinance"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "ordenanza", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.rule.n
+    en: "rule"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "regla", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.vote.vn
+    en: "vote"
+    pos: "v/n"
+    traducciones:
+      es-AR: { texto: "votar / votación", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.meeting.n
+    en: "meeting"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "reunión", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.board.n
+    en: "board"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "tablero", notas: "Tablero del Cruce" }
+    cefr: A1
+    usado_en: [M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.key.n
+    en: "key"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "llave", notas: null }
+    cefr: A1
+    usado_en: [M0.1, M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.crossing.n
+    en: "crossing / crossroads"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "cruce", notas: "Nombre propio the Crossing → \"el Cruce\"" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.goat.n
+    en: "goat"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "cabra", notas: null }
+    cefr: A1
+    usado_en: [M0.3, M1.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.bell.n
+    en: "bell"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "campanita / cencerro", notas: "\"Campanita\" para Clover" }
+    cefr: A1
+    usado_en: [M0.3, M1.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.eyes.n
+    en: "eyes"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "ojos", notas: null }
+    cefr: A0
+    usado_en: [M1.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.van.n
+    en: "van"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "camioneta", notas: null }
+    cefr: A1
+    usado_en: [M1.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.mail.n
+    en: "mail"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "correo", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.map.n
+    en: "map"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "mapa", notas: null }
+    cefr: A0
+    usado_en: [M0.1, M1.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.garden.n
+    en: "garden"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "huerta", notas: "Huerta (verduras); \"jardín\" si son solo flores" }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.lot.n
+    en: "lot"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "lote / terreno", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.list.n
+    en: "list"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "lista", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.seeds.n
+    en: "seeds"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "semillas", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.packet.n
+    en: "packet"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "sobre (de semillas)", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.envelope.n
+    en: "envelope"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "sobre", notas: "Los sobres del misterio" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.corn.n
+    en: "corn"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "maíz", notas: "En inglés británico puede ser \"granos\" (SAB-CORN)" }
+    cefr: A1
+    usado_en: [M0.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.beans.n
+    en: "beans"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "porotos", notas: "AR: porotos (no \"frijoles\")" }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.squash.n
+    en: "squash"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "zapallo", notas: "AR: zapallo (no \"calabaza\")" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.sunflower.n
+    en: "sunflower"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "girasol", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.cornflower.n
+    en: "cornflower"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "azulejo", notas: "Flor azul" }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.poppy.n
+    en: "poppy"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "amapola", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.daisy.n
+    en: "daisy"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "margarita", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.hose.n
+    en: "hose"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "manguera", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.pump.n
+    en: "pump"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "bomba (de agua)", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.tools.n
+    en: "tools / shovel / rake / saw"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "herramientas / pala / rastrillo / serrucho", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.post.n
+    en: "post(s) / fence"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "poste(s) / alambrado", notas: "AR: alambrado (rural)" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.ladybug.n
+    en: "ladybug"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "vaquita de San Antonio", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.aphid.n
+    en: "aphid(s)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "pulgón / pulgones", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.bug.n
+    en: "bug(s)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "bicho(s)", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.bee.n
+    en: "bee(s)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "abeja(s)", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.firefly.n
+    en: "firefly"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "bicho de luz / luciérnaga", notas: "AR: \"bicho de luz\" (Lumi)" }
+    cefr: A2
+    usado_en: [M0.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.plane.n
+    en: "plane"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "avión / avioneta", notas: "\"Avioneta\" para la de fumigar" }
+    cefr: A0
+    usado_en: [M0.1, M0.2]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.crop_duster.n
+    en: "crop duster / spray plane"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "avioneta fumigadora", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.pilot.n
+    en: "pilot"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "piloto", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.fly.v
+    en: "fly"
+    pos: "v"
+    traducciones:
+      es-AR: { texto: "volar", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.spray.v.agro
+    en: "spray (v)"
+    pos: "v"
+    traducciones:
+      es-AR: { texto: "fumigar / pulverizar / aplicar", notas: "D-179" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.spray.n.agro
+    en: "spray (n)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "fumigación / aplicación", notas: "D-179; los NPCs no dicen poison" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.farm_chemicals.n
+    en: "farm chemicals"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "agroquímicos", notas: "Tono neutro" }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.wind.n
+    en: "wind"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "viento", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.windsock.n
+    en: "windsock"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "manga de viento", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.flag.n
+    en: "flag"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "bandera", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.drift.n
+    en: "drift"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "deriva", notas: "Solo en el cuaderno de saberes" }
+    cefr: B2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.drone.n
+    en: "drone"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "dron", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.hedge.n
+    en: "hedge"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "cerco vivo", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.bush.n
+    en: "bush(es)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "arbusto(s)", notas: null }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.edge.n
+    en: "edge"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "borde", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.trap.n
+    en: "trap"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "trampa", notas: "Trampa cromática (amarilla)" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.count.vn
+    en: "count"
+    pos: "v/n"
+    traducciones:
+      es-AR: { texto: "contar / conteo", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.data.n
+    en: "data"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "datos", notas: null }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.gloves.n
+    en: "gloves / long sleeves"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "guantes / mangas largas", notas: "SAB-EPP" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.wash_your_hands.phr
+    en: "wash your hands"
+    pos: "phr"
+    traducciones:
+      es-AR: { texto: "lavate las manos", notas: "Voseo" }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.keep_out.phr
+    en: "keep out"
+    pos: "phr"
+    traducciones:
+      es-AR: { texto: "no entrar / prohibido el paso", notas: "Cartel" }
+    cefr: A2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.until_thursday.phr
+    en: "until Thursday"
+    pos: "phr"
+    traducciones:
+      es-AR: { texto: "hasta el jueves", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.days_of_the_week.n
+    en: "days of the week"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "días de la semana", notas: "Monday… = lunes…" }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.at_six.phr
+    en: "at six"
+    pos: "phr"
+    traducciones:
+      es-AR: { texto: "a las seis", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.early.adv
+    en: "early"
+    pos: "adv"
+    traducciones:
+      es-AR: { texto: "temprano", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.buffer_zone.n
+    en: "buffer zone"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "zona de resguardo", notas: "D-179; en el mapa: anillo verde (D-186)" }
+    cefr: B2
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.ipm.n
+    en: "integrated pest management (IPM)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "manejo integrado de plagas (MIP)", notas: "Solo cuaderno" }
+    cefr: C1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.draw.vn
+    en: "draw / paint / sign"
+    pos: "v/n"
+    traducciones:
+      es-AR: { texto: "dibujar / pintar / cartel", notas: null }
+    cefr: A1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.mate.n
+    en: "mate (drink)"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "mate", notas: "Sentido infusión; ≠ mate (UK, \"amigo\")" }
+    cefr: null
+    usado_en: [M1.1]
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }
+  - id: gl.one_room_school.n
+    en: "one-room school"
+    pos: "n"
+    traducciones:
+      es-AR: { texto: "escuela de una sola aula", notas: "SAB-ESCUELA-RURAL" }
+    cefr: B1
+    usado_en: []
+    estado: draft
+    revision: { rol: "revisor bilingüe", fecha: null }

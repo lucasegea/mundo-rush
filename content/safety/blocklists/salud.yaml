@@ -1,0 +1,8 @@
+# Salud solo en boca de NPC-GRACE (D-176; 02 §6.3 regla 26, §6.6 #17). Los demás derivan: "Ask Grace."
+id: salud
+regla: salud
+fuente: "02 §6.6 #17; D-176"
+aplica_a: todo
+sin_mayusculas: true
+excepto: [NPC-GRACE]
+terminos: [sick, sickness, disease*, cancer, poison*, die, dies, died, death, hospital*, illness*, symptom*, injur*, toxic]

@@ -1,0 +1,21 @@
+# Saber del prólogo (02 §1.5, §4.4 M0.3, §8). La línea es del cierre [GUIONADA] de Maya.
+id: SAB-CABRAS
+titulo_corto: { es-AR: "Cabras que comen yuyos" }
+linea_en: "Clover eats weeds!"
+plantilla: null
+linea_sin_dato: "Clover! Good goat!"
+explicacion_es: >-
+  Hay productores y administradores de tierras que usan cabras para controlar malezas.
+  Se llama pastoreo dirigido.
+hechos:
+  - id: HV-M0.3-01
+    texto_es: "Hay productores y administradores de tierras que usan cabras para controlar malezas (pastoreo dirigido)."
+    fuente_sugerida: "Extensión agrícola universitaria; servicio forestal"
+    rama: false
+fuente: "[FUENTE-PENDIENTE: extensión agrícola universitaria o servicio forestal]"
+estado: sin_verificar
+dicho_por: NPC-MAYA
+mision: M0.3
+rama: false
+ficcion: false
+usable_como_argumento: true

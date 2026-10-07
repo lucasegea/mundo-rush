@@ -1,0 +1,122 @@
+# M0.3 · Clover (02 §4.4). Maya es menor (es_menor): la escena es junto al árbol del Cruce, lugar público.
+id: M0.3
+titulo: { es-AR: "Clover" }
+capitulo: 0
+region: R1
+mcer: A0
+tipo_tarea: info_gap
+can_do: { es-AR: "Puedo responder sí o no y decir dónde está algo." }
+requiere: [M0.2]
+meta: "Jugador: decirle a Maya dónde viste a su cabra. Maya: saber si la viste y dónde."
+consigue: "Que Maya recupere a Clover y te invite al Cruce."
+red:
+  altas: [{ npc: NPC-MAYA, por: null }]
+  presenta: [{ npc: NPC-NELL, por: NPC-MAYA }]
+  nombra: []
+fundacion: "El Cruce aparece dibujado en tu mapa; primer bicho de luz sobre el árbol del Cruce."
+saberes: [{ saber: SAB-CABRAS, rama: false }]
+hechos_verificables: [HV-M0.3-01]
+resultado_mundo: "El Cruce aparece dibujado en el mapa. Fin del prólogo (§5, línea final del onboarding)."
+contagio: null
+npcs: [NPC-MAYA]
+lenguaje_objetivo:
+  funciones: ["responder sí/no", "ubicar"]
+  estructuras: []
+  chunks: ["Yes / No", "the canal", "the bridge", "here / there", "near the bridge"]
+  vocabulario: [goat, Clover, see, "yes", "no", where, canal, bridge, field, here, there, thank you, bell, weeds]
+pre_tarea:
+  plantilla: LUMI-M0.3-PRE
+  piezas_utiles: ["Yes", "the canal"]
+beats:
+  - "Maya mira para todos lados, ve a Lumi y lo saluda (complicidad)."
+  - "Maya pregunta si viste a su cabra; muestra un dibujo con tiza."
+  - "Turno del jugador: sí/no."
+  - "Maya pregunta dónde."
+  - "Turno del jugador: lugar (palabra o click en el mapa como apoyo)."
+  - "Maya corre y vuelve con Clover; cuenta que Clover come yuyos (saber)."
+  - "Maya te invita al Cruce y te nombra a Nell."
+  - "Cierre, destilación y primera evocación."
+escenas:
+  - escena_id: M0.3-E1
+    npc: NPC-MAYA
+    lugar: cruce.arbol
+    hora: manana
+    situacion: "Maya, de 9 años, busca a su cabra Clover junto al árbol del Cruce. Al bajar del colectivo, el jugador vio una cabrita blanca con campanita roja comiendo yuyos junto al puentecito del canal [onboarding 2:10]; Maya no lo sabe."
+    necesidad_npc: "Saber si viste a su cabra y dónde."
+    banda: A0
+    andamiaje_npc:
+      - "Clover. Goat. Yes? No?"
+      - "The canal? The field? (gesto a cada lado: dos opciones)"
+      - "Lumi pista nivel 2 (LUMI-M0.3-P2)"
+    vocabulario_nivel: [goat, Clover, see, "yes", "no", where, canal, bridge, field, here, there, thank you, bell, weeds]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: [SAB-CABRAS]
+    apertura_guionada:
+      - { quien: NPC-MAYA, en: "Hi! Oh! A firefly!", es_glosa: "¡Hola! ¡Ah! ¡Un bicho de luz!" }
+      - { quien: NPC-MAYA, en: "In the day?", es_glosa: "¿De día?", acotacion: "Lumi parpadea, sorprendido" }
+      - { quien: NPC-MAYA, en: "My goat… Clover!", es_glosa: "Mi cabra… ¡Clover!" }
+      - { quien: NPC-MAYA, en: "Did you see my goat?", es_glosa: "¿Viste a mi cabra?", acotacion: "muestra un dibujo con tiza de una cabrita blanca con campanita" }
+    ramas:
+      - { si: "dice \"Yes.\"", quien: NPC-MAYA, npc: "Yes? Where? Where?", tipo: ejemplo_ia }
+      - { si: "tras el Yes, dice \"The canal.\" / \"The bridge.\" / \"There.\" (+ señala)", quien: NPC-MAYA, npc: "The canal? Near the bridge? Thank you!", tipo: guionada, nota: "criterio cumplido → cierre" }
+      - { si: "tras el Yes, pasa el turno", quien: NPC-MAYA, npc: "The canal? The field?", tipo: guionada, nota: "gesto a cada lado: dos opciones" }
+      - { si: "tras el Yes, dice \"The field.\" (lugar equivocado; error de sentido)", quien: NPC-MAYA, npc: "The field? Okay! Hmm. No Clover. The canal?", tipo: guionada, nota: "error de predicción amable: corre dos pasos hacia el campo y vuelve; el jugador confirma" }
+      - { si: "dice \"No.\"", quien: NPC-MAYA, npc: "Oh no… Did you see a white goat?", tipo: guionada, lumi: LUMI-M0.3-NO, nota: "triste; entre las dos líneas, Lumi da la señal de comprensión (no corrección); la pregunta es la segunda oportunidad" }
+      - { si: "pasa el turno al inicio", quien: NPC-MAYA, npc: "Clover. Goat. Yes? No?", tipo: guionada }
+      - { si: "habla en español", quien: NPC-MAYA, npc: "Sorry! I don't understand. In English?", tipo: guionada, lumi: LUMI-M0.3-P2 }
+      - { si: "pregunta algo a Maya (\"What's your name?\")", quien: NPC-MAYA, npc: "I'm Maya! Did you see my goat?", tipo: guionada, nota: "responde y vuelve a su necesidad" }
+    criterios_exito:
+      - { id: C1, texto: "Respuesta afirmativa (yes/yeah/uh-huh)." }
+      - { id: C2, texto: "Un lugar correcto (canal/bridge/there + señal en el mapa)." }
+    errores_de_objetivo: []
+    cierre_guionado:
+      - { quien: NPC-MAYA, en: "Clover! Thank you! Thank you! Thank you!", es_glosa: "¡Clover! ¡Gracias!", acotacion: "corre al canal, vuelve con Clover tirando de la soga; la campanita suena" }
+      - { quien: NPC-MAYA, en: "Clover eats weeds!", es_glosa: "¡Clover come yuyos!" }
+      - { quien: NPC-MAYA, en: "Good goat!", es_glosa: "¡Buena cabra!" }
+      - { quien: NPC-MAYA, en: "Come to the Crossing!", es_glosa: "¡Vení al Cruce!" }
+      - { quien: NPC-MAYA, en: "Nell knows everybody!", es_glosa: "¡Nell conoce a todos!" }
+      - { quien: LUMI, plantilla: LUMI-M0.3-CIERRE }
+      - { quien: LUMI, plantilla: LUMI-EVOC-01, acotacion: "¿Te acordás cómo se decía maíz? Cualquier respuesta es bienvenida." }
+      - { quien: LUMI, plantilla: LUMI-EVOC-03, acotacion: "solo si la evocación no sale" }
+      - { quien: LUMI, plantilla: LUMI-M0.3-SABER }
+    salida_si_no_converge:
+      disparador: "la brecha no se cierra"
+      lineas:
+        - { quien: NPC-MAYA, en: "Can you show me?", es_glosa: "¿Me mostrás?", acotacion: "el jugador camina con Maya hasta el canal; Clover aparece" }
+      resultado: "Resultado igual en el mundo; sin poción azul."
+    efectos:
+      - { flag: firefly_crossing_1 }
+      - { intro: NPC-NELL }
+    eventos: [goat_found, maya_trust+1, "net_add:NPC-MAYA", "intro:NPC-NELL<-NPC-MAYA", crossing_on_map, firefly_crossing_1, "saber:SAB-CABRAS"]
+    resumen_para_siguiente: "El jugador le dijo a Maya que Clover estaba en el canal; Maya la recuperó, lo invitó al Cruce y le presentó a Nell (\"Nell knows everybody!\")."
+    temas_permitidos: ["la cabra Clover", "el canal", "el puente", "el Cruce", "Nell"]
+    temas_vedados_extra: []
+    pronunciacion:
+      - momento_id: M0.3-E1-PRON-1
+        tipo: repetir
+        linea_ref: "Yes? Where? Where?"
+        texto_esperado: "Yes"
+        palabra_foco: "yes"
+        par: null
+        sonidos: [E10]
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M0.3-PRON
+        obligatorio: false
+        nota: "Opcional al cierre. E10: sheísmo (yes → \"shes\"), alta relevancia para el rioplatense. Nunca se evalúa el Yes que el jugador dijo dentro de la brecha de información."
+lumi_marca: "the canal (si lo dijo sin artículo, se acepta y no se marca en A0); corn si la evocación no salió."
+pociones:
+  - { rama: azul, evento: "ubicar correctamente", max: 1 }
+  - { rama: ambar, evento: "agradece o saluda a Maya por iniciativa propia", max: 1 }
+  - { rama: celeste, evento: "responde la evocación correctamente (recuperación de ítem marcado)", max: 1 }
+desbloqueos:
+  - { habilidad: HAB-VINC-1, condicion: "si el jugador llegó a Ámbar 2 y no se abrió antes" }
+repaso:
+  resurfaces: [corn]
+  planta: ["the canal", white, goat]
+  reaparece_en: [M1.2, M2.6]
+mundo: [goat_found, maya_trust+1, "net_add:NPC-MAYA", "intro:NPC-NELL<-NPC-MAYA", crossing_on_map, firefly_crossing_1, "saber:SAB-CABRAS"]
+modo_texto: "A0: opciones \"Yes!\" / \"No.\" y luego \"The canal.\" / \"The bridge.\" / \"The field.\"; campo libre siempre visible."
+efectos: []
+duracion_objetivo_min: 2
+estado: draft

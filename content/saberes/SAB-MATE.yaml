@@ -1,0 +1,21 @@
+# Saber de M1.1, rama cultural opcional (02 §1.5, §4.4 M1.1, §8; D-066: una vez).
+id: SAB-MATE
+titulo_corto: { es-AR: "El mate" }
+linea_en: "Argentina! Mate, right? A tea in a gourd!"
+plantilla: null
+linea_sin_dato: "Argentina! Mate, right?"
+explicacion_es: >-
+  El mate es una infusión de yerba mate que se toma en un recipiente, tradicionalmente una calabaza.
+  Es típico de Argentina, Uruguay, Paraguay y el sur de Brasil.
+hechos:
+  - id: HV-M1.1-02
+    texto_es: "El mate es una infusión de yerba mate que se toma en un recipiente, tradicionalmente una calabaza, y es típico de Argentina, Uruguay, Paraguay y el sur de Brasil."
+    fuente_sugerida: "Enciclopedia o fuente botánica sobre Ilex paraguariensis"
+    rama: true
+fuente: "[FUENTE-PENDIENTE: enciclopedia o fuente botánica sobre Ilex paraguariensis]"
+estado: sin_verificar
+dicho_por: NPC-NELL
+mision: M1.1
+rama: true
+ficcion: false
+usable_como_argumento: true

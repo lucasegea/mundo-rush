@@ -1,0 +1,164 @@
+# M1.2 · La cabra de Maya (02 §4.4). Brecha de información doble en 2 escenas. Requiere la presentación de Ollie
+# por Nell (M1.1, INTRO-OLLIE-NELL). E1 con Maya (menor) junto al corral, lugar público.
+id: M1.2
+titulo: { es-AR: "La cabra de Maya" }
+capitulo: 1
+region: R1
+mcer: A1
+tipo_tarea: info_gap
+can_do: { es-AR: "Puedo describir un animal con color, tamaño y un detalle." }
+requiere: [M1.1, "intro:NPC-OLLIE"]
+meta: "Jugador: juntar los rasgos de Clover y que Ollie encuentre la cabra correcta. Maya: recuperar a Clover. Ollie: saber cuál de las tres cabras es."
+consigue: "Clover de vuelta y el mapa de buzones de Ollie."
+red:
+  altas: [{ npc: NPC-OLLIE, por: NPC-NELL }]
+  presenta: [{ npc: NPC-CALEB, por: NPC-OLLIE }]
+  nombra: [NPC-RUTH, NPC-JUNE, NPC-HARLAN]
+fundacion: "SITIO-PARADA → fundado: Ollie decide parar en el Cruce (\"Now somebody waits for me!\"); aparece el cartel Mail stop: The Crossing y un banco junto a los buzones."
+saberes: [{ saber: SAB-PUPILAS, rama: false }]
+hechos_verificables: [HV-M1.2-01]
+resultado_mundo: "La parada del correo en el Cruce y el mapa de buzones de Ollie, con Ruth, June y Harlan en gris."
+contagio: "Ollie empieza a saludar a Maya por su nombre."
+npcs: [NPC-MAYA, NPC-OLLIE]
+lenguaje_objetivo:
+  funciones: ["preguntar por características", "describir", "confirmar"]
+  estructuras: ["What color is she?", "Is she big or small?", "She's small and white.", "She has a red bell / She has got a red bell", "Is this your goat? / This one?"]
+  chunks: []
+  vocabulario: [goat, small, big, white, brown, black, red, bell, eyes, color, run away, again, van, mailbox, map]
+pre_tarea:
+  plantilla: LUMI-M1.2-PRE
+  piezas_utiles: ["What color is she?", "She's small", "red bell"]
+beats:
+  - "Escena 1: Maya llega entre risa y enojo: \"AGAIN!\". Pide ayuda."
+  - "El jugador pregunta por rasgos; Maya responde de a uno (solo da rasgos si le preguntan o si el jugador pasa el turno)."
+  - "Maya se queda \"por si vuelve\"; el mapa marca la parada del colectivo."
+  - "Escena 2: Ollie junto a su camioneta; vio tres cabras (visibles en el campo: grande negra, chica marrón, y una chica blanca con campanita roja… que en realidad está sentada en el asiento del acompañante)."
+  - "El jugador describe; Ollie señala; si el rasgo es equivocado, Ollie señala la cabra que coincide con el error (error de predicción)."
+  - "El jugador confirma o corrige; Ollie descubre a Clover en su camioneta; comenta sus ojos (saber)."
+  - "Ollie te da su mapa de buzones y decide parar en el Cruce."
+  - "Cierre: Maya llega corriendo; destilación."
+escenas:
+  - escena_id: M1.2-E1
+    npc: NPC-MAYA
+    lugar: cruce.corral
+    hora: manana
+    situacion: "Clover se escapó otra vez. Maya, de 9 años, llega al corral del Cruce entre risa y enojo y pide ayuda. Sabe cómo es su cabra (chiquita, blanca, campanita roja) pero solo da un rasgo si le preguntan o si el jugador pasa el turno."
+    necesidad_npc: "Recuperar a Clover."
+    banda: A1
+    andamiaje_npc:
+      - "She has a red bell! (un rasgo por pase)"
+      - "She's small!"
+      - "She's white!"
+    vocabulario_nivel: [goat, small, big, white, red, bell, color, run away, again]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: []
+    apertura_guionada:
+      - { quien: NPC-MAYA, en: "Clover ran away AGAIN!", es_glosa: "¡Clover se escapó OTRA VEZ!" }
+      - { quien: NPC-MAYA, en: "Again? AGAIN!", es_glosa: "¿Otra vez? ¡OTRA VEZ!" }
+      - { quien: NPC-MAYA, en: "Can you help me?", es_glosa: "¿Me ayudás?" }
+    ramas:
+      - { si: "dice \"Yes! What color is she?\"", quien: NPC-MAYA, npc: "She's white! White like milk!", tipo: ejemplo_ia }
+      - { si: "pregunta \"Is she big?\" o \"Big or small?\"", quien: NPC-MAYA, npc: "No! She's small. Very small!", tipo: guionada }
+      - { si: "pasa el turno", quien: NPC-MAYA, npc: "She has a red bell!", tipo: guionada, nota: "un rasgo por pase: después She's small!; después She's white!" }
+      - { si: "pregunta \"Where?\"", quien: NPC-MAYA, npc: "I don't know! Maybe the road? Ollie is at the road!", tipo: guionada, nota: "cierre anticipado si ya tiene ≥2 rasgos" }
+      - { si: "describe en vez de preguntar (\"Is she small and white?\")", quien: NPC-MAYA, npc: "Yes! You remember!", tipo: guionada, nota: "re-surface de M0.3 cumplido" }
+    criterios_exito:
+      - { id: C1, texto: "El jugador obtiene ≥2 de 3 rasgos mediante al menos 1 pregunta propia." }
+    errores_de_objetivo: []
+    cierre_guionado:
+      - { quien: NPC-MAYA, en: "Go to the road! Ask Ollie!", es_glosa: "¡Andá al camino! ¡Preguntale a Ollie!" }
+      - { quien: NPC-MAYA, en: "Pinky promise you find her?", es_glosa: "¿Promesa de meñique que la encontrás?" }
+    salida_si_no_converge:
+      disparador: "la escena no converge"
+      lineas:
+        - { quien: NPC-MAYA, en: "She's small! She's white! She has a red bell!", es_glosa: "¡Es chiquita! ¡Es blanca! ¡Tiene una campanita roja!", acotacion: "Maya dice los tres rasgos ella sola (sus líneas de pase) y te manda al camino" }
+      resultado: "El jugador tiene los tres rasgos y va al camino; rasgos al banco de repaso."
+    efectos: []
+    eventos: [maya_trust+1]
+    resumen_para_siguiente: "Maya contó cómo es Clover (chiquita, blanca, con campanita roja) y mandó al jugador a preguntarle a Ollie en el camino."
+    temas_permitidos: ["la cabra Clover", "colores", "tamaños", "la campanita", "Ollie"]
+    temas_vedados_extra: []
+  - escena_id: M1.2-E2
+    npc: NPC-OLLIE
+    lugar: campos.parada
+    hora: manana
+    situacion: "Ollie, el cartero, está junto a su camioneta en la parada del colectivo. Hoy vio tres cabras (visibles en el campo: una grande negra, una chica marrón y una chica blanca con campanita roja, que en realidad está sentada en el asiento del acompañante de su camioneta). Necesita saber cuál es la de Maya."
+    necesidad_npc: "Saber cuál de las tres cabras es."
+    banda: A1
+    andamiaje_npc:
+      - "Is she big or small?"
+      - "White? Brown? Black?"
+    vocabulario_nivel: [goat, small, big, white, brown, black, red, bell, eyes, van, mailbox, map]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: [SAB-PUPILAS]
+    apertura_guionada:
+      - { quien: NPC-OLLIE, en: "Nell sent you? Great!", es_glosa: "¿Te manda Nell? ¡Genial!" }
+      - { quien: NPC-OLLIE, en: "A goat? I saw three goats today!", es_glosa: "¿Una cabra? ¡Hoy vi tres cabras!" }
+      - { quien: NPC-OLLIE, en: "What does your goat look like?", es_glosa: "¿Cómo es tu cabra?", acotacion: "se frena" }
+      - { quien: NPC-OLLIE, en: "Sorry, sorry. Slowly: what is your goat like?", es_glosa: "Perdón. Despacio: ¿cómo es tu cabra?" }
+    ramas:
+      - { si: "dice \"She's small and white.\"", quien: NPC-OLLIE, npc: "Small and white… Hmm. Anything more?", tipo: ejemplo_ia }
+      - { si: "dice \"She has a red bell.\"", quien: null, npc: null, tipo: guionada, nota: "criterio cumplido → cierre" }
+      - { si: "dice \"She's big.\" (rasgo equivocado; error de sentido)", quien: NPC-OLLIE, npc: "This one? The big black goat?", tipo: guionada, nota: "señala la cabra grande negra; el jugador corrige (\"No! Small!\"): autocorrección dentro de la ficción, poción con gota brillante si corrige tras la señal" }
+      - { si: "dice \"She is brown.\"", quien: NPC-OLLIE, npc: "This one?", tipo: guionada, nota: "señala la marrón; el jugador corrige" }
+      - { si: "dice \"The goat is small\" sin color", quien: NPC-OLLIE, npc: "Small… The brown one or the white one?", tipo: guionada, nota: "dos opciones" }
+      - { si: "dice \"bell red\" (orden español; error de objetivo si se repite)", quien: NPC-OLLIE, npc: "A red bell? Oh!", tipo: guionada, lumi: LUMI-SEN-2-01, nota: "recast; Lumi anota y señala si se repite: LUMI-SEN-2-01 → LUMI-SEN-3-02" }
+      - { si: "pregunta \"Is this your goat?\" a Ollie", quien: NPC-OLLIE, npc: "My goat? No! I have no goat. I have a van!", tipo: guionada, nota: "humor del personaje; Lumi no señala" }
+      - { si: "pasa el turno", quien: NPC-OLLIE, npc: "Is she big or small?", tipo: guionada, nota: "segundo pase: White? Brown? Black?" }
+    criterios_exito:
+      - { id: C1, texto: "El jugador transmite ≥2 rasgos correctos (color, tamaño, campanita) y Ollie identifica a Clover.", habilidad: HAB-DESC-1 }
+    errores_de_objetivo: ["orden adjetivo-sustantivo en español (bell red)"]
+    cierre_guionado:
+      - { quien: NPC-OLLIE, en: "The small white one with the red bell?", es_glosa: "¿La chiquita blanca con la campanita roja?" }
+      - { quien: NPC-OLLIE, en: "Oh! Oh! I know! She's in my van!", es_glosa: "¡Ya sé! ¡Está en mi camioneta!", acotacion: "Clover asoma por la ventanilla del acompañante; campanita" }
+      - { quien: NPC-OLLIE, en: "Look at her eyes! Long lines!", es_glosa: "¡Mirale los ojos! ¡Rayas largas!", acotacion: "mira a Clover de cerca; saber SAB-PUPILAS" }
+      - { quien: NPC-OLLIE, en: "I know every mailbox. Here, a map!", es_glosa: "Conozco todos los buzones. ¡Tomá, un mapa!", acotacion: "saca un papel de la guantera" }
+      - { quien: NPC-OLLIE, en: "Caleb? Big blue mailbox. Tell him Ollie sent you!", es_glosa: "¿Caleb? Buzón azul grande. ¡Decile que te manda Ollie!" }
+      - { quien: NPC-OLLIE, en: "And now I stop at the Crossing!", es_glosa: "¡Y ahora paro en el Cruce!" }
+      - { quien: NPC-MAYA, en: "Clover! Thank you, Ollie! Thank you, [nombre]!", es_glosa: "¡Clover! ¡Gracias, Ollie! ¡Gracias, [nombre]!", acotacion: "llega corriendo", audio: al_vuelo }
+      - { quien: LUMI, plantilla: LUMI-M1.2-CIERRE-1 }
+      - { quien: LUMI, plantilla: LUMI-M1.2-CIERRE-2, acotacion: "si corresponde" }
+      - { quien: LUMI, plantilla: LUMI-M1.2-RED }
+      - { quien: LUMI, plantilla: LUMI-M1.2-EVOC }
+    salida_si_no_converge:
+      disparador: "la escena no converge"
+      lineas:
+        - { quien: NPC-OLLIE, en: "Can you show me? Look, look!", es_glosa: "¿Me mostrás? ¡Mirá, mirá!", acotacion: "el jugador hace click en la cabra correcta; Ollie la encuentra" }
+      resultado: "Resultado igual (incluido el mapa); rasgos al banco de repaso."
+    efectos:
+      - { fundacion: SITIO-PARADA, estado: fundado }
+      - { intro: NPC-CALEB }
+    eventos: [goat_found_2, ollie_trust+1, "net_add:NPC-OLLIE", "intro:NPC-CALEB<-NPC-OLLIE", "known:NPC-RUTH", "known:NPC-JUNE", "known:NPC-HARLAN", "SITIO-PARADA:fundado", "saber:SAB-PUPILAS"]
+    resumen_para_siguiente: "Ollie encontró a Clover en su camioneta, le dio al jugador su mapa de buzones, le presentó a Caleb (\"Tell him Ollie sent you!\") y desde ahora para en el Cruce."
+    temas_permitidos: ["la cabra Clover", "colores", "tamaños", "la camioneta", "los buzones", "el mapa", "Caleb"]
+    temas_vedados_extra: []
+    pronunciacion:
+      - momento_id: M1.2-E2-PRON-1
+        tipo: repetir
+        linea_ref: "pista nivel 3 de la escena 2"
+        texto_esperado: "She's small and white."
+        palabra_foco: "small"
+        par: null
+        sonidos: [E7, E9]
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M1.2-PRON
+        obligatorio: false
+        nota: "Opcional al cierre. E7: epéntesis (small → esmall); E9: /ʃ/ de she."
+lumi_marca: "Omisión de is (\"She small\") como local (se anota; señal solo si se repite y es el objetivo: describir); has/have (\"She have\"); orden adjetivo-sustantivo en español (\"bell red\") → objetivo de la misión: señal escalón 2 \"¿bell red…?\"; si no sale, escalón 3 (LUMI-SEN-3-02): \"En inglés el color va antes: red bell\"."
+pociones:
+  - { rama: ambar, evento: "pregunta de rasgo bien formada", max: 1 }
+  - { rama: azul, evento: "descripción con 2 rasgos", max: 1 }
+  - { rama: azul, evento: "descripción con la campanita (1 más)", max: 1 }
+  - { rama: azul, evento: "gota brillante: se autocorrige tras la señal o tras el This one? de Ollie", max: 1 }
+desbloqueos:
+  - { habilidad: HAB-DESC-1, condicion: "si llega a Azul 3 (habilita objetos perdidos: P-R1.3)" }
+repaso:
+  resurfaces: ["the canal", white, small, goat]
+  planta: [white, "She's small", "red bell", "What color…?"]
+  reaparece_en: [M1.6, M2.6, P-R1.3]
+mundo: [goat_found_2, ollie_trust+1, maya_trust+1, "net_add:NPC-OLLIE", "intro:NPC-CALEB<-NPC-OLLIE", "known:NPC-RUTH", "known:NPC-JUNE", "known:NPC-HARLAN", "SITIO-PARADA:fundado", "saber:SAB-PUPILAS"]
+modo_texto: "En andamiaje 1-2, opciones: \"What color is she?\" · \"Is she big or small?\" · \"She has a red bell.\" (escena 2: \"She's small and white.\")."
+efectos: []
+duracion_objetivo_min: 6
+estado: draft

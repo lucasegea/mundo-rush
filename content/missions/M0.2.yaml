@@ -1,0 +1,132 @@
+# M0.2 · ¿Cómo se dice? (02 §4.4). Misión de Lumi: sin NPC en tiempo real, todo audio cacheado. Los bloques que 02
+# marca "no aplica" van presentes con su razón (excepción de 02 §4.3); las líneas van en lineas_guionadas.
+id: M0.2
+titulo: { es-AR: "¿Cómo se dice?" }
+capitulo: 0
+region: R1
+mcer: A0
+tipo_tarea: exploracion
+can_do: { es-AR: "Puedo preguntar y repetir nombres de cosas." }
+requiere: [M0.1]
+meta: "Jugador: aprender a usar a Lumi para nombrar. Lumi: que descubras que todo lo que brilla se puede preguntar."
+consigue: "Los nombres de las cosas (y, si pregunta en inglés, la primera respuesta de Lumi a un What's this?)."
+red:
+  altas: [{ npc: NPC-KOFI, por: null }]
+  presenta: []
+  nombra: []
+fundacion: "Un camino de bichos de luz se dibuja del albergue hacia el Cruce: el mapa muestra por dónde seguir."
+saberes: [{ saber: SAB-CORN, rama: false }]
+hechos_verificables: [HV-M0.2-01]
+resultado_mundo: "El camino de bichos de luz del albergue al Cruce aparece en el mapa."
+contagio: null
+npcs: [NPC-KOFI]
+lenguaje_objetivo:
+  funciones: ["preguntar el nombre de algo", "repetir", "agradecer"]
+  estructuras: []
+  chunks: ["What's this?", "Thank you"]
+  vocabulario: [plane, corn, firefly]
+pre_tarea:
+  no_aplica: "La misión es de Lumi: su presentación del botón es la primera línea de las líneas guionadas (LUMI-M0.2-INTRO)."
+beats:
+  - "Tres cosas brillan apenas: la avioneta en el hangar lejano (plane), el maíz (corn), un bicho de luz que en realidad es Lumi (firefly)."
+  - "Lumi explica el botón \"¿Cómo se dice?\" (tecla Q / click derecho con Lumi activo) [GDD §2.4.3]."
+  - "El jugador apunta y pregunta; Lumi nombra en L2 y L1, lo escribe."
+  - "Opcional: el jugador lo repite en voz alta."
+  - "Kofi saluda desde el maíz."
+  - "Lumi enseña que también podés preguntarle en inglés: \"What's this?\"; y enseña Marcar."
+escenas:
+  - escena_id: M0.2-E1
+    npc: null
+    lugar: campos.camino_canal
+    hora: manana
+    situacion: "Camino del albergue al canal. Tres cosas brillan: la avioneta en el hangar lejano, el maíz y un bicho de luz (Lumi). Lumi enseña el botón ¿Cómo se dice? y Marcar. Kofi saluda desde el maíz con una línea ambiental cacheada."
+    necesidad_npc:
+      no_aplica: "Sin NPC en tiempo real; Kofi dice una sola línea ambiental cacheada."
+    banda: A0
+    andamiaje_npc:
+      no_aplica: "Sin NPC en tiempo real."
+    vocabulario_nivel: [plane, corn, firefly, "What's this?", thank you]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: [SAB-CORN]
+    apertura_guionada:
+      no_aplica: "Sin NPC en tiempo real; todas las líneas están en lineas_guionadas."
+    ramas:
+      no_aplica: "Esqueleto de diálogo no aplica (sin NPC en tiempo real)."
+    lineas_guionadas:
+      - { quien: LUMI, plantilla: LUMI-M0.2-INTRO }
+      - { quien: LUMI, plantilla: LUMI-M0.2-PLANE, acotacion: "al preguntar por la avioneta (plane)" }
+      - { quien: LUMI, plantilla: LUMI-M0.2-REPETIR, acotacion: "tras cada palabra nombrada" }
+      - { quien: LUMI, plantilla: LUMI-M0.2-CORN, acotacion: "al preguntar por el maíz (corn)" }
+      - { quien: LUMI, plantilla: LUMI-M0.2-FIREFLY, acotacion: "al preguntar por el bicho de luz (firefly); primer chiste" }
+      - { quien: NPC-KOFI, en: "Hey, friend! I'm Kofi! See you later!", es_glosa: "¡Eh, amigo/a! ¡Soy Kofi! ¡Nos vemos!", acotacion: "ambiental, desde el maíz, saluda con el sombrero; si el jugador contesta \"Hi, Kofi!\", Kofi levanta el pulgar; no hay criterio" }
+      - { quien: LUMI, plantilla: LUMI-M0.2-KOFI }
+      - { quien: LUMI, plantilla: LUMI-M0.2-SECRETO, acotacion: "tras el tercer objeto" }
+      - { quien: LUMI, plantilla: LUMI-M0.2-WHATS, acotacion: "si el jugador dice \"What's this?\" apuntando a un objeto nombrable: Lumi lo nombra y agrega" }
+      - { quien: LUMI, plantilla: LUMI-M0.2-VINC1, acotacion: "si el jugador ya tiene Ámbar 2: se abre HAB-VINC-1" }
+    criterios_exito:
+      - { id: C1, texto: "El jugador pidió el nombre de los 3 objetos (acción, no habla).", habilidad: HAB-BASE-NOMBRAR }
+      - { id: C2, texto: "Repite en voz alta al menos una palabra.", opcional: true }
+    errores_de_objetivo: []
+    cierre_guionado:
+      - { quien: LUMI, plantilla: LUMI-M0.2-CIERRE }
+    salida_si_no_converge:
+      no_aplica: "Si el jugador camina hacia el Cruce sin preguntar, Lumi nombra los objetos solo, una vez, y sigue."
+    efectos:
+      - { flag: path_lights_crossing }
+    eventos: [naming_unlocked, "net_add:NPC-KOFI", path_lights_crossing, "saber:SAB-CORN"]
+    resumen_para_siguiente: "El jugador aprendió a preguntarle a Lumi cómo se dice: plane, corn, firefly. Kofi lo saludó desde el maíz. El camino de bichos de luz lleva al Cruce."
+    temas_permitidos: ["nombres de cosas", "la avioneta", "el maíz", "bichos de luz"]
+    temas_vedados_extra: []
+    pronunciacion:
+      - momento_id: M0.2-E1-PRON-1
+        tipo: repetir
+        linea_ref: "LUMI-M0.2-PLANE"
+        texto_esperado: "Plane"
+        palabra_foco: "plane"
+        par: null
+        sonidos: []
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M0.2-REPETIR
+        obligatorio: false
+        nota: "Sin tipo objetivo: solo intento."
+      - momento_id: M0.2-E1-PRON-2
+        tipo: repetir
+        linea_ref: "LUMI-M0.2-CORN"
+        texto_esperado: "Corn"
+        palabra_foco: "corn"
+        par: null
+        sonidos: [E14]
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M0.2-REPETIR
+        obligatorio: false
+        nota: "E14: aspiración de /k/."
+      - momento_id: M0.2-E1-PRON-3
+        tipo: repetir
+        linea_ref: "LUMI-M0.2-FIREFLY"
+        texto_esperado: "Firefly"
+        palabra_foco: "firefly"
+        par: null
+        sonidos: [E13]
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M0.2-REPETIR
+        obligatorio: false
+        nota: "E13: acento en FIRE-fly. Primer momento guionado del juego; si ningún tipo está habilitado, solo verifica que haya intentado la palabra y ofrece \"así lo dijiste vos / así suena\" [GDD §2.4.7]."
+lumi_marca: "Nada automáticamente; el jugador puede marcar las palabras."
+pociones:
+  - { rama: celeste, evento: "1/3 de poción por cada palabra repetida en voz alta", max: 1 }
+  - { rama: ambar, evento: "pregunta \"What's this?\" en inglés", max: 1 }
+desbloqueos:
+  - { habilidad: HAB-BASE-NOMBRAR, condicion: null }
+  - { habilidad: HAB-VINC-1, condicion: "si el jugador ya tiene Ámbar 2" }
+repaso:
+  resurfaces: []
+  planta: [corn, plane, firefly]
+  reaparece_en: [M0.3]
+mundo: [naming_unlocked, "net_add:NPC-KOFI", path_lights_crossing, "saber:SAB-CORN"]
+modo_texto: "Idéntico; la repetición es escribir la palabra (1/3 de poción celeste, tolerancia a mayúsculas y un error de tipeo)."
+efectos: []
+duracion_objetivo_min: 1
+estado: draft

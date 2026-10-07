@@ -1,0 +1,96 @@
+# Ramas de pociones (01 §2.7.2) y árbol de habilidades de la v1 (01 §2.8.2), transcriptos tal cual.
+# La clave de rama es el color en minúscula, como en 02 §6.2.2 (`rama: verde`).
+ramas:
+  - { id: ambar, nombre: "Vincular (social)", color: "Ámbar", demuestra: "Saludar, presentarse, agradecer, preguntar por el otro, cortesía" }
+  - { id: verde, nombre: "Pedir y ofrecer (transacción)", color: "Verde", demuestra: "Pedir cosas, cantidades, ofrecer ayuda, aceptar y rechazar" }
+  - { id: azul, nombre: "Describir y ubicar", color: "Azul", demuestra: "Describir personas, objetos, lugares; direcciones" }
+  - { id: violeta, nombre: "Contar (narrar)", color: "Violeta", demuestra: "Pasado, secuencias, planes" }
+  - { id: coral, nombre: "Opinar y convencer", color: "Rojo coral", demuestra: "Opinar, comparar, argumentar, negociar, condicionales" }
+  - { id: celeste, nombre: "Entender (comprensión)", color: "Celeste", demuestra: "Seguir instrucciones o información del NPC y actuar en el mundo" }
+
+habilidades:
+  - id: HAB-BASE-NOMBRAR
+    nombre: "Preguntarle a Lumi \"¿cómo se dice?\""
+    pociones: []
+    requiere: "Inicio"
+    habilita: "Inspeccionar objetos y escuchar su nombre (estilo Influent)"
+  - id: HAB-VINC-1
+    nombre: "Presentarme"
+    pociones: [{ rama: ambar, cantidad: 2 }]
+    requiere: "M0.2"
+    habilita: "Los vecinos te saludan por tu nombre de juego; aparecen saludos en el tablero"
+  - id: HAB-VINC-2
+    nombre: "Charla de vereda (small talk)"
+    pociones: [{ rama: ambar, cantidad: 5 }]
+    requiere: "Preguntó \"How are you?\" en 2 escenas"
+    habilita: "3 NPCs tímidos u ocupados que solo saludaban (Harlan, Grace y Vance, 02 §3.5) ahora conversan; misiones cortas de charla con objetivo (P-R1.1, P-R1.2)"
+  - id: HAB-VINC-3
+    nombre: "Hablar a distancia (radio, teléfono)"
+    pociones: [{ rama: ambar, cantidad: 8 }, { rama: celeste, cantidad: 4 }]
+    requiere: "Cap. 2 (M2.2)"
+    habilita: "La Radio del Cruce: hablar con Nell y Bea por radio y misiones a distancia sin apoyo visual"
+  - id: HAB-PEDIR-1
+    nombre: "Pedir con cortesía"
+    pociones: [{ rama: verde, cantidad: 3 }]
+    requiere: "Usó \"please\" + \"can I\""
+    habilita: "Opciones de diálogo amables; Wes acepta escuchar tu pedido de favor (requisito de M1.5)"
+  - id: HAB-PEDIR-2
+    nombre: "Cantidades y listas"
+    pociones: [{ rama: verde, cantidad: 6 }]
+    requiere: "M1.4"
+    habilita: "Tablero del Cruce con listas; pedidos de materiales para las fundaciones (prestados o regalados, nunca comprados)"
+  - id: HAB-PEDIR-3
+    nombre: "Ofrecer y negociar favores"
+    pociones: [{ rama: verde, cantidad: 10 }, { rama: coral, cantidad: 3 }]
+    requiere: "Cap. 3"
+    habilita: "Intercambios entre vecinos (trueque de favores, sin dinero)"
+  - id: HAB-DESC-1
+    nombre: "Describir cosas"
+    pociones: [{ rama: azul, cantidad: 3 }]
+    requiere: "M1.2"
+    habilita: "Misiones de \"objetos perdidos\" del tablero"
+  - id: HAB-DESC-2
+    nombre: "Dar y seguir direcciones"
+    pociones: [{ rama: azul, cantidad: 6 }, { rama: celeste, cantidad: 3 }]
+    requiere: "M2.1"
+    habilita: "Ollie te lleva en la camioneta del correo (traslado rápido entre zonas hablando con Ollie)"
+  - id: HAB-DESC-3
+    nombre: "Describir personas"
+    pociones: [{ rama: azul, cantidad: 9 }]
+    requiere: "M2.4"
+    habilita: "Misiones de \"¿quién es quién?\" en la feria del sábado; reconocer vecinos nuevos"
+  - id: HAB-CONT-1
+    nombre: "Contar lo que pasó (pasado simple)"
+    pociones: [{ rama: violeta, cantidad: 3 }]
+    requiere: "M3.1"
+    habilita: "Harlan cuenta la historia del año de la plaga y te pide que se la cuentes a otros; la Radio del Cruce abre su \"rincón de historias\""
+  - id: HAB-CONT-2
+    nombre: "Hacer planes (going to / will)"
+    pociones: [{ rama: violeta, cantidad: 6 }]
+    requiere: "M3.4"
+    habilita: "Planificar con los vecinos la salita y la estación meteorológica"
+  - id: HAB-OPIN-1
+    nombre: "Opinar y dar razones"
+    pociones: [{ rama: coral, cantidad: 3 }]
+    requiere: "M3.5"
+    habilita: "Caleb y Wes te consultan entre avioneta y dron; opciones de diálogo con \"I think... because...\""
+  - id: HAB-OPIN-2
+    nombre: "Convencer (condicionales, propuestas)"
+    pociones: [{ rama: coral, cantidad: 7 }]
+    requiere: "M4.2"
+    habilita: "Desbloquea la audiencia pública (M4.4)"
+  - id: HAB-OPIN-3
+    nombre: "Mediar entre vecinos"
+    pociones: [{ rama: coral, cantidad: 9 }, { rama: ambar, cantidad: 10 }]
+    requiere: "M4.3"
+    habilita: "Misiones de mediación: dos NPCs en desacuerdo"
+  - id: HAB-ENT-1
+    nombre: "Oído de cuadrilla"
+    pociones: [{ rama: celeste, cantidad: 5 }]
+    requiere: null
+    habilita: "Los NPCs con acentos distintos (A2+) aparecen con misiones (exposición a variantes; la cuadrilla viene de muchos lugares)"
+  - id: HAB-ENT-2
+    nombre: "Leer carteles"
+    pociones: [{ rama: celeste, cantidad: 3 }, { rama: azul, cantidad: 3 }]
+    requiere: null
+    habilita: "Los carteles del valle se vuelven interactivos y dan pistas o misiones ocultas (mezcla de modalidades [Probable])"

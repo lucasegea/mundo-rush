@@ -1,0 +1,26 @@
+# Saber del prólogo (02 §1.5, §4.4 M0.1, §8). estado sin_verificar: solo el operador lo cambia (D-195).
+# linea_sin_dato y explicacion_es: redactadas por F1.2 desde 02 (la línea sin el hecho; la explicación desde los HV).
+id: SAB-AVIONETA
+titulo_corto: { es-AR: "Aviones que aplican sobre los cultivos" }
+linea_en: "That plane? It sprays the fields."
+plantilla: null
+linea_sin_dato: "That plane? Look!"
+explicacion_es: >-
+  Hay aviones que aplican productos sobre los cultivos desde el aire: se llama aplicación aérea.
+  Los plaguicidas se aplican para controlar plagas de los cultivos, como insectos.
+hechos:
+  - id: HV-M0.1-01
+    texto_es: "Existen aviones que aplican productos (por ejemplo, plaguicidas) sobre cultivos desde el aire: la aplicación aérea."
+    fuente_sugerida: "Organismo agrícola o de aviación civil; FAO"
+    rama: false
+  - id: HV-M0.1-02
+    texto_es: "Los plaguicidas se aplican para controlar plagas de los cultivos, como insectos."
+    fuente_sugerida: "FAO (definición de plaguicida)"
+    rama: true
+fuente: "[FUENTE-PENDIENTE: organismo agrícola o de aviación civil; FAO]"
+estado: sin_verificar
+dicho_por: NPC-INES
+mision: M0.1
+rama: false
+ficcion: false
+usable_como_argumento: true

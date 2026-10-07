@@ -1,0 +1,21 @@
+# Saber de M1.2 (02 §1.5, §4.4 M1.2, §8). La línea es la [GUIONADA] de Ollie al mirar a Clover.
+id: SAB-PUPILAS
+titulo_corto: { es-AR: "Las pupilas de las cabras" }
+linea_en: "Look at her eyes! Long lines!"
+plantilla: null
+linea_sin_dato: "Look at her eyes!"
+explicacion_es: >-
+  Las cabras tienen pupilas horizontales alargadas, de forma rectangular.
+  Es una forma común en herbívoros de pastoreo y se asocia con un campo visual amplio.
+hechos:
+  - id: HV-M1.2-01
+    texto_es: "Las cabras tienen pupilas horizontales alargadas (de forma rectangular), una forma común en herbívoros de pastoreo que se asocia con un campo visual amplio."
+    fuente_sugerida: "Artículo científico sobre la forma de las pupilas en animales (a verificar)"
+    rama: false
+fuente: "[FUENTE-PENDIENTE: artículo científico sobre la forma de las pupilas en animales — a verificar]"
+estado: sin_verificar
+dicho_por: NPC-OLLIE
+mision: M1.2
+rama: false
+ficcion: false
+usable_como_argumento: true

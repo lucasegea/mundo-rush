@@ -1,0 +1,15 @@
+# Fundación de M1.1 (02 §4.1.3, §4.4 M1.1; 03 §6.4.8; D-169). Nada se compra: costo null.
+id: SITIO-TABLERO
+nombre: { es-AR: "Tablero del Cruce", en: "Notice Board" }
+nombre_corto: "El tablero del Cruce"
+lugar: cruce.tablero
+diorama: plaza
+estados:
+  idea: { visual: "vidrio roto", desde: null }
+  fundado: { visual: "limpio, con papeles y un techito", desde: M1.1 }
+propuesta_por: NPC-NELL
+se_consigue_hablando: ["la llave del tablero (Nell)"]
+creditos: [NPC-NELL, jugador]
+uso_en_mundo: ["el primer papel: WHAT DOES THE CROSSING NEED?", "el tablero de pedidos del Cruce queda abierto"]
+costo: null
+estado: draft

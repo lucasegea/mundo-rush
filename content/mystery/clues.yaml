@@ -1,0 +1,136 @@
+# Tabla de pistas de la Región 1 (02 §1.6.3, §6.2.5): lo que cada NPC dice si le preguntás por un sobre.
+# La IA usa SOLO esto (02 §1.6.2). verdad_oculta (02 §1.6.2, D-172, D-177) nunca se inyecta antes del cap. 4
+# ni llega al cliente. npc null = "Otros".
+pistas:
+  - id: CLUE-INES-1
+    npc: NPC-INES
+    disparador: "player asks about any seed envelope"
+    linea_en: "Not mine! I don't write notes. I shout!"
+    glosa_es: "¡No es mío! Yo no escribo notas. ¡Grito!"
+    banda: A1
+    acotacion: "se ríe"
+    requiere: null
+    abre: "Despiste amable (en el cap. 4 resulta que el SOBRE-0 era suyo)"
+    verdad_oculta: "Inés escribió el SOBRE-0: quería que el nuevo se animara. Nunca se revela antes del cap. 4."
+    estado: draft
+  - id: CLUE-MAYA-1
+    npc: NPC-MAYA
+    disparador: "player asks about any seed envelope"
+    linea_en: "Brown paper! Ollie has brown paper!"
+    glosa_es: "¡Papel madera! ¡Ollie tiene papel madera!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Ollie"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-OLLIE-1
+    npc: NPC-OLLIE
+    disparador: "player asks about any seed envelope"
+    linea_en: "Brown envelopes? Everybody has brown envelopes. Sorry!"
+    glosa_es: "¿Sobres madera? Todos tienen. ¡Perdón!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Callejón sin salida amable (humor)"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-NELL-1
+    npc: NPC-NELL
+    disparador: "player asks about any seed envelope"
+    linea_en: "Hmm. Maybe. Maybe not."
+    glosa_es: "Mmm. Puede ser. Puede que no."
+    banda: A1
+    acotacion: "sonríe"
+    requiere: null
+    abre: "Sospecha"
+    verdad_oculta: "Nell escribió un sobre. Nunca se revela antes del cap. 4."
+    estado: draft
+  - id: CLUE-BEA-1
+    npc: NPC-BEA
+    disparador: "player asks about any seed envelope"
+    linea_en: "The writing is very neat. Not like mine!"
+    glosa_es: "La letra es muy prolija. ¡No como la mía!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Refuerza la pista de la letra"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-KOFI-1
+    npc: NPC-KOFI
+    disparador: "player asks about any seed envelope"
+    linea_en: "I saw a light at the Tree. Very early. Nobody knows who."
+    glosa_es: "Vi una luz en el árbol. Muy temprano. Nadie sabe quién."
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Refuerza el misterio"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-JUNE-1
+    npc: NPC-JUNE
+    disparador: "player asks about any seed envelope"
+    linea_en: "Sunflower seeds? Everybody grows sunflowers!"
+    glosa_es: "¿Semillas de girasol? ¡Todos tienen girasoles!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Despiste (June también escribió uno)"
+    verdad_oculta: "June escribió un sobre. Nunca se revela antes del cap. 4."
+    estado: draft
+  - id: CLUE-CALEB-1
+    npc: NPC-CALEB
+    disparador: "player asks about any seed envelope"
+    linea_en: "Not me. I type everything!"
+    glosa_es: "Yo no. ¡Yo todo lo escribo en la compu!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Descarta a Caleb"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-RUTH-1
+    npc: NPC-RUTH
+    disparador: "player asks about any seed envelope"
+    linea_en: "Old-style writing. Very old style."
+    glosa_es: "Letra a la antigua. Muy a la antigua."
+    banda: A1
+    acotacion: "mira hacia la casa de Harlan"
+    requiere: null
+    abre: "Apunta a los mayores (Nell, Harlan)"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-WES-1
+    npc: NPC-WES
+    disparador: "player asks about any seed envelope"
+    linea_en: "From the sky I see a lot. Not this!"
+    glosa_es: "Desde el cielo veo mucho. ¡Esto no!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "Humor"
+    verdad_oculta: null
+    estado: draft
+  - id: CLUE-HARLAN-1
+    npc: NPC-HARLAN
+    disparador: "player asks about any seed envelope"
+    linea_en: "Seeds are seeds. Hm."
+    glosa_es: "Las semillas son semillas. Mm."
+    banda: A1
+    acotacion: "mira para otro lado"
+    requiere: HAB-VINC-2
+    abre: "Pista falsa que en el cap. 4 resulta verdadera"
+    verdad_oculta: "Harlan escribió el SOBRE-3 (D-177). Nunca se revela antes del cap. 4."
+    estado: draft
+  - id: CLUE-OTROS-1
+    npc: null
+    disparador: "player asks about any seed envelope"
+    linea_en: "Not mine. Sorry!"
+    glosa_es: "No es mío. ¡Perdón!"
+    banda: A1
+    acotacion: null
+    requiere: null
+    abre: "—"
+    verdad_oculta: null
+    estado: draft

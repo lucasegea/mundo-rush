@@ -1,0 +1,14 @@
+# Sobres de semillas (02 §1.6.3, §5 minuto 3:10, §6.2.5; D-172). F1.2: SOBRE-0. SOBRE-1..3 entran en F8.
+sobres:
+  - id: SOBRE-0
+    aparece:
+      lugar: campos.albergue_cucheta
+      momento: "Onboarding (minuto ~2:35-3:10): sobre la almohada de tu cucheta"
+      tras: null
+    texto_en: "Plant me where people meet."
+    glosa_es: "Sembrame donde se junta la gente."
+    lectura_en_voz_alta: true
+    banda_lectura: A0
+    contiene: "semillas de girasol"
+    apunta_a: "A nadie todavía; Lumi: \"¿Quién sabía que venías?\""
+    estado: draft

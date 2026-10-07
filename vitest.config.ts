@@ -27,6 +27,8 @@ export default defineConfig({
       { test: { name: "lint-boundaries", root: "./scripts/lint", include: ["**/*.test.ts"], testTimeout: 30000 } },
       { test: { name: "budgets", root: "./scripts/budgets", include: ["**/*.test.ts"] } },
       { test: { name: "adr", root: "./scripts/adr", include: ["**/*.test.ts"] } },
+      // F1.2: el contenido real compila; lints, red, retirados, filtros, salida e incremental (A2-A9, A11).
+      { test: { name: "content", root: "./scripts/content", include: ["**/*.test.ts"], testTimeout: 30000 } },
     ],
   },
 });

@@ -1,0 +1,5 @@
+# Excepciones del lint de longitud (02 §3.3, §6.6 #3; 04 F1.2). Una línea [GUIONADA] de 02 que supera el tope de
+# su banda NO se reescribe: se lista acá por id (`<escena>.<bloque>.<n>`) y en "Desacuerdos entre documentos" del
+# reporte de la fase. Una entrada que ya no corresponde a una línea larga hace fallar validate:content.
+# F1.2: ninguna línea de M0.1-M1.2 supera el tope, la lista queda vacía.
+longitud: []

@@ -1,0 +1,30 @@
+# Red de presentaciones del prólogo y M1.1-M1.2 (02 §1.7, §4.2, §4.4, §6.2.8; D-168): Inés → Maya → Nell → Ollie → Caleb.
+# Inés y Maya (y Kofi) no requieren presentación: Inés te nombra a Maya en M0.1 sin arista (02 §4.4 M0.1).
+# Los caminos alternativos de 02 §3.1 (Inés → Nell, Kofi → Ollie, Wes → Caleb) no tienen línea en este contenido:
+# están en presentado_por de cada ficha y entran como aristas cuando una fase los escriba.
+presentaciones:
+  - id: INTRO-NELL-MAYA
+    npc: NPC-NELL
+    presentado_por: NPC-MAYA
+    mision: M0.3
+    linea_presentador_en: "Nell knows everybody!"
+    linea_reconocimiento_en: "Maya told me."
+    caminos_alternativos: []
+    bicho_de_luz: true
+  - id: INTRO-OLLIE-NELL
+    npc: NPC-OLLIE
+    presentado_por: NPC-NELL
+    mision: M1.1
+    linea_presentador_en: "Ollie knows every mailbox. Talk to him! Tell him Nell sent you."
+    linea_reconocimiento_en: "Nell sent you? Great!"
+    caminos_alternativos: []
+    bicho_de_luz: true
+  - id: INTRO-CALEB-OLLIE
+    npc: NPC-CALEB
+    presentado_por: NPC-OLLIE
+    mision: M1.2
+    linea_presentador_en: "Caleb? Big blue mailbox. Tell him Ollie sent you!"
+    # La primera línea de Caleb se escribe con M1.6 (F8).
+    linea_reconocimiento_en: null
+    caminos_alternativos: []
+    bicho_de_luz: true

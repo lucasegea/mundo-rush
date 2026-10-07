@@ -1,0 +1,246 @@
+# Región 1 y sus lugares (02 §0.3, §4.1.1, §4.1.2; 03 §4.2.1). Ids de diorama sin renombrar (D-180):
+# muelle = Los Campos, plaza = El Cruce. `publico: true` = a la vista, apto para escenas con menores.
+regiones:
+  - id: R1
+    nombre: { es-AR: "Región 1: Los Campos y El Cruce" }
+    dioramas: [muelle, plaza]
+    capitulos: [0, 1]
+    # Elenco de 02 §3.1 (D-166). Solo los 5 del prólogo y M1.1-M1.2 tienen ficha en F1.2; el resto entra en F8.
+    elenco:
+      - NPC-INES
+      - NPC-MAYA
+      - NPC-KOFI
+      - NPC-NELL
+      - NPC-OLLIE
+      - NPC-BEA
+      - NPC-JUNE
+      - NPC-WES
+      - NPC-CALEB
+      - NPC-RUTH
+      - NPC-HARLAN
+      - NPC-NOOR
+      - NPC-GRACE
+      - NPC-VANCE
+    # Saberes de la Región 1 (02 §1.5). F1.2 escribe las 6 fichas del prólogo y M1.1-M1.2; el resto, F8.
+    saberes:
+      - SAB-AVIONETA
+      - SAB-CORN
+      - SAB-CABRAS
+      - SAB-ESCUELA-RURAL
+      - SAB-MATE
+      - SAB-PUPILAS
+      - SAB-TRES-HERMANAS
+      - SAB-VAQUITAS
+      - SAB-AMPLIO-ESPECTRO
+      - SAB-DERIVA
+      - SAB-MANGA
+      - SAB-CERCO
+      - SAB-FRANJA-FLORES
+      - SAB-DRON
+      - SAB-MIP
+      - SAB-TRAMPA-AMARILLA
+      - SAB-ORDENANZA
+      - SAB-EPP
+      - SAB-REINGRESO
+      - SAB-BIBLIOTECA-HERRAMIENTAS
+
+lugares:
+  # ---------- Los Campos (diorama muelle, 02 §4.1.1) ----------
+  - id: campos.parada
+    nombre: { es-AR: "Parada del colectivo" }
+    en: "Welcome to Kestrel Valley"
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Donde para el colectivo de la cosecha, blanco y polvoriento, junto a un cartel de madera."
+  - id: campos.albergue
+    nombre: { es-AR: "Albergue de la cuadrilla" }
+    en: "Bunkhouse"
+    region: R1
+    diorama: muelle
+    publico: false
+    descripcion: "Galpón largo de chapa pintada de verde con ventanas chicas; adentro, cuchetas y una mesa larga."
+  - id: campos.albergue_cucheta
+    nombre: { es-AR: "Tu cucheta" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: false
+    descripcion: "Tu cucheta junto a la ventana del albergue; ahí aparece SOBRE-0."
+  - id: campos.mesa_ines
+    nombre: { es-AR: "Mesa de Inés" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Bajo un alero del albergue, con la lista de la cuadrilla y un pizarrón con horarios."
+  - id: campos.deposito_herramientas
+    nombre: { es-AR: "Depósito de herramientas de la cuadrilla" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Detrás del albergue."
+  - id: campos.granero_harlan
+    nombre: { es-AR: "Granero de Harlan" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Enfrente del albergue: rojo, viejo, con postes de madera apilados."
+  - id: campos.casa_harlan
+    nombre: { es-AR: "Casa de Harlan" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: false
+    descripcion: "Más allá del granero, con porche y mecedora."
+  - id: campos.campo_harlan
+    nombre: { es-AR: "Campo de maíz de Harlan" }
+    en: "Moss Farm"
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Maíz alto que llega hasta el albergue."
+  - id: campos.galpon_empaque
+    nombre: { es-AR: "Galpón de empaque" }
+    en: "Packing Shed"
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "A un costado: cajones y una cinta transportadora quieta."
+  - id: campos.camino_canal
+    nombre: { es-AR: "Camino del albergue al canal" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Sendero de tierra entre el albergue y el canal, junto al maíz (M0.2)."
+  - id: campos.canal
+    nombre: { es-AR: "Canal de riego" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Canal con un puentecito de tablas; ahí se ve a Clover en el onboarding."
+  - id: campos.tanque
+    nombre: { es-AR: "Tanque de agua" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Tanque sobre patas de hierro, más allá del canal."
+  - id: campos.pista
+    nombre: { es-AR: "Pista de pasto" }
+    en: "Airstrip – Keep Off"
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Al fondo de Los Campos."
+  - id: campos.hangar
+    nombre: { es-AR: "Hangar de Wes" }
+    en: null
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Con la avioneta amarilla y una manga de viento naranja en un poste."
+  - id: campos.camino_cruce
+    nombre: { es-AR: "Camino al Cruce" }
+    en: "To the Crossing →"
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: "Hacia el este; camino de tierra con alambrados a los costados (Crossing Road)."
+
+  # ---------- El Cruce (diorama plaza, 02 §4.1.2) ----------
+  - id: cruce.arbol
+    nombre: { es-AR: "Árbol del Cruce" }
+    en: "the Crossing Tree"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Un roble enorme en una esquina del cruce de caminos."
+  - id: cruce.tablero
+    nombre: { es-AR: "Tablero del Cruce" }
+    en: "Notice Board"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Clavado en el tronco del árbol; vidrio roto y sin papeles al empezar."
+  - id: cruce.lote
+    nombre: { es-AR: "Lote vacío" }
+    en: null
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Detrás del árbol: yuyos y una carretilla volcada. Ahí va la huerta."
+  - id: cruce.escuela
+    nombre: { es-AR: "Escuela de una sola aula" }
+    en: "Crossing School"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "En la esquina norte; blanca y cerrada, con un campanario vacío."
+  - id: cruce.porche_nell
+    nombre: { es-AR: "Porche de Nell" }
+    en: null
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "La casa de Nell, al lado de la escuela, con rampa, porche y macetas; el porche está a la vista."
+  - id: cruce.taller_bea
+    nombre: { es-AR: "Taller de Bea" }
+    en: "Garage – Open"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Al lado de la escuela: portón abierto, una bomba de agua vieja en la vereda y un mástil oxidado con una antena."
+  - id: cruce.casa_ines
+    nombre: { es-AR: "Casa azul de Inés y Maya" }
+    en: null
+    region: R1
+    diorama: plaza
+    publico: false
+    descripcion: "En la esquina sur."
+  - id: cruce.corral
+    nombre: { es-AR: "Corral de Clover" }
+    en: null
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Corral chiquito junto a la casa azul, a la vista de la calle; nunca está cerrado del todo."
+  - id: cruce.buzones
+    nombre: { es-AR: "Racimo de buzones" }
+    en: "Mail"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Junto al camino, donde pasa la camioneta de Ollie (SITIO-PARADA)."
+  - id: cruce.borde_caleb
+    nombre: { es-AR: "Borde del campo de Caleb" }
+    en: "Hart Farm"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Al este: el trigo y la soja llegan hasta el fondo de las casas, separados por un alambrado bajo."
+  - id: cruce.monte_ruth
+    nombre: { es-AR: "Monte de Ruth" }
+    en: "Brandt Orchard"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Al norte: filas de manzanos, un tanque, un portón y un tractor viejo."
+  - id: cruce.camino_june
+    nombre: { es-AR: "Camino a la granja de June" }
+    en: "Takeda Farm →"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Al sur; la granja se entra como escena, no como diorama aparte en la Región 1."
+  - id: cruce.camino_larkford
+    nombre: { es-AR: "Camino al condado" }
+    en: "Larkford →"
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: "Al oeste vuelve a Los Campos; un cartel señala el camino al condado."

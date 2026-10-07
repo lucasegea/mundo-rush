@@ -1,0 +1,16 @@
+# Tarjeta de nivel A1 (02 §3.3), con el ejemplo textual de {{level_card}} (A1, andamiaje 2). Solo servidor.
+banda: A1
+palabras_por_oracion: { min: 4, max: 10 }
+oraciones_por_turno: { min: 1, max: 2, nota: null }
+estructuras: "Presente simple, to be, can (pedido), there is/are, have got / has got, like, Did you…? y was solo como chunk fijo"
+preguntas: "Wh- simples (what, where, how many, what color, what time) o de opción"
+palabras_nuevas_por_turno: "1"
+velocidad_default: "Más lenta"
+ejemplo_tarjeta:
+  andamiaje: 2
+  texto: |
+    - Sentences of 4 to 8 words. One or two sentences per turn.
+    - Present simple, to be, can for requests, there is/are, has got, like. "Did you...?" only as a fixed question.
+    - Ask simple wh- questions (what, where, how many, what color, what time) or offer two options.
+    - At most 1 new word per turn, and only if the scene shows it.
+    - Speak slowly, with short pauses between sentences. Repeat the key word once if helpful.

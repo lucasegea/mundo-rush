@@ -4,7 +4,9 @@
     "rootDir": ".",
     "outDir": "node_modules/.tsbuild/tooling",
     "lib": ["ES2022"],
-    "types": ["node"]
+    "types": ["node"],
+    "allowImportingTsExtensions": true
   },
-  "include": ["vitest.config.ts", "scripts/**/*.ts"]
+  "include": ["vitest.config.ts", "scripts/**/*.ts"],
+  "references": [{ "path": "./packages/content-schema" }]
 }

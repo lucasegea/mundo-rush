@@ -1,0 +1,67 @@
+# Lo retirado de la premisa v0.1 (Lantern Bay). Volcado TAL CUAL de 02 §0.5.1 (fuente única): una fila por fila
+# de la tabla, con su grupo y su campo testea. No se agregan ni se quitan entradas.
+# tipo: id / nombre = límite de palabra respetando mayúsculas; termino = límite de palabra sin mayúsculas.
+# No se retira (nunca entra acá): muelle y plaza (ids de diorama, D-180), Celeste (rama de pociones),
+# M0.x/M1.x/P-R1.x/HAB-*, las plantillas genéricas de Lumi y los ids genéricos de glosario.
+fuente: "02-narrativa-guion.md §0.5.1"
+filas:
+  - grupo: "Ids de NPC de la v0.1 (17)"
+    tipo: id
+    retirado: [NPC-ROSA, NPC-LILY, NPC-BEN, NPC-SAM, NPC-AGNES, NPC-JULES, NPC-CRANE, NPC-MAE, NPC-OTIS, NPC-HANA, NPC-GUS, NPC-GOLDIE, NPC-LEO, NPC-WALTER, NPC-THEO, NPC-PRIYA, NPC-NADIA]
+    testea: si
+    nota: null
+  - grupo: "Nombres completos de NPC de la v0.1"
+    tipo: nombre
+    retirado: [Rosa Delgado, Ben Okafor, Sam Rivera, Agnes Hill, Victor Crane, Mae Collins, Otis Byrne, Hana Mori, Gus Abernathy, Marigold Shaw, Goldie Shaw, Leo Tran, Walter Finch, Theo Park, Priya Shah, Nadia Haddad]
+    testea: si
+    nota: null
+  - grupo: "Nombres de pila sin choque"
+    tipo: nombre
+    retirado: [Ben, Sam, Agnes, Jules, Mae, Otis, Hana, Gus, Goldie, Marigold, Walter, Priya, Nadia]
+    testea: si
+    nota: null
+  - grupo: "Nombres de pila que chocan con palabras comunes o nombres vigentes"
+    tipo: nombre
+    retirado: [Rosa, Lily, Leo, Crane, Theo, Haddad, Hill]
+    testea: "no"
+    nota: "Rosa (en español es el color rosa), Lily (lily, la flor), Leo (en español, \"yo leo\"), Crane (crane, el ave o la grúa), Theo (Theo Vance, NPC-VANCE, es vigente), Haddad (apellido de Noor, vigente), Hill (hill)"
+  - grupo: "Animales de la v0.1"
+    tipo: nombre
+    retirado: [Biscuit]
+    testea: si
+    nota: "el perro"
+  - grupo: "Animales de la v0.1 (palabra común)"
+    tipo: nombre
+    retirado: [Captain]
+    testea: "no"
+    nota: "el gato de Walter; captain es palabra común"
+  - grupo: "Misterio"
+    tipo: id
+    retirado: [NOTA-0, NOTA-1, NOTA-2, NOTA-3, CLUE-BEN-1, CLUE-MAE-1]
+    testea: si
+    nota: null
+  - grupo: "Plantillas de Lumi"
+    tipo: id
+    retirado: [LUMI-NOTA0-01, LUMI-NOTA0-02, LUMI-NOTA0-03, LUMI-M0.2-BOAT, LUMI-M0.2-LIGHTHOUSE, LUMI-M0.2-LANTERN, LUMI-M0.3-VENTANA]
+    testea: si
+    nota: null
+  - grupo: "Glosario"
+    tipo: id
+    retirado: [gl.lighthouse.n]
+    testea: si
+    nota: null
+  - grupo: "Lugares, programa y nombres propios"
+    tipo: nombre
+    retirado: [Lantern Bay, Bahía de los Faroles, The Kettle, The Gull, Okafor's Bakery, Lantern Hands, Lantern Bread, Lantern Night, Noche de los Faroles]
+    testea: si
+    nota: null
+  - grupo: "Términos de la premisa (sin mayúsculas)"
+    tipo: termino
+    retirado: [lantern, lanterns, lighthouse, ferry, faro, farol, faroles, farolito, festival]
+    testea: si
+    nota: "la fiesta del valle es el Día del Pueblo o the harvest party"
+  - grupo: "Zonas de la v0.1 (palabras comunes)"
+    tipo: termino
+    retirado: [Colina, Huertas]
+    testea: "no"
+    nota: "huerta es vigente"

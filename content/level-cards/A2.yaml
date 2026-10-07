@@ -1,0 +1,9 @@
+# Tarjeta de nivel A2 (02 §3.3). Solo servidor.
+banda: A2
+palabras_por_oracion: { min: 6, max: 14 }
+oraciones_por_turno: { min: 2, max: 2, nota: null }
+estructuras: "+ pasado simple frecuente, comparativos, going to, should"
+preguntas: "Abiertas"
+palabras_nuevas_por_turno: "1-2"
+velocidad_default: "Natural"
+ejemplo_tarjeta: null

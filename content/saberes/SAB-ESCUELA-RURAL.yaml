@@ -1,0 +1,21 @@
+# Saber de M1.1 (02 §1.5, §4.4 M1.1, §8). La línea es la [GUIONADA] de Nell al señalar la escuela.
+id: SAB-ESCUELA-RURAL
+titulo_corto: { es-AR: "Escuelas rurales de una sola aula" }
+linea_en: "That was our school. One room, all the children. One teacher. Me!"
+plantilla: null
+linea_sin_dato: "That was our school. One teacher. Me!"
+explicacion_es: >-
+  En zonas rurales existieron, y existen, escuelas de una sola aula.
+  Una maestra o un maestro enseña a la vez a chicos de varios grados.
+hechos:
+  - id: HV-M1.1-01
+    texto_es: "En zonas rurales existieron (y existen) escuelas de una sola aula donde una maestra o maestro enseña a la vez a chicos de varios grados."
+    fuente_sugerida: "Historia de la educación rural; organismos de educación"
+    rama: false
+fuente: "[FUENTE-PENDIENTE: historia de la educación rural; organismos de educación]"
+estado: sin_verificar
+dicho_por: NPC-NELL
+mision: M1.1
+rama: false
+ficcion: false
+usable_como_argumento: true

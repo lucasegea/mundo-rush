@@ -1,0 +1,8 @@
+# Apelativos cariñosos (02 §3.2 S5; D-073). Única excepción: "Dear X," como encabezado de carta en una escena de modo escritura.
+id: apelativos
+regla: apelativos
+fuente: "02 §3.2 S5"
+aplica_a: npc
+sin_mayusculas: true
+excepto: []
+terminos: [dear, honey, sweetie, sweetheart, darling, sweetpea, my love]

@@ -1,0 +1,120 @@
+# M0.1 · Hola, Inés (02 §4.4; esquema 02 §6.2.2-§6.2.3). Líneas [GUIONADA] tal cual 02; las [EJEMPLO IA] van como
+# ramas tipo ejemplo_ia (muestra de estilo, no texto fijo; 02 §0.4). Glosas es_glosa: solo diseño, nunca al cliente.
+id: M0.1
+titulo: { es-AR: "Hola, Inés" }
+capitulo: 0
+region: R1
+mcer: A0
+tipo_tarea: social_con_meta
+can_do: { es-AR: "Puedo saludar y decir mi nombre." }
+requiere: []
+meta: "Jugador: que Inés te anote y te dé la llave y el mapa. Inés: saber quién sos para su lista."
+consigue: "La llave del albergue y el mapa del valle."
+red:
+  altas: [{ npc: NPC-INES, por: null }]
+  presenta: []
+  nombra: [NPC-MAYA]
+fundacion: "Tu lugar en el valle: la luz de tu cucheta se enciende en el albergue (primer punto propio del mapa)."
+saberes: [{ saber: SAB-AVIONETA, rama: false }]
+hechos_verificables: [HV-M0.1-01, HV-M0.1-02]
+resultado_mundo: "El mapa muestra Los Campos dibujados y el Cruce como una mancha con \"?\"."
+contagio: null
+npcs: [NPC-INES, NPC-KOFI]
+lenguaje_objetivo:
+  funciones: ["saludar", "presentarse", "agradecer", "despedirse"]
+  estructuras: []
+  chunks: ["Hello / Hi", "I'm [nombre]", "My name is [nombre]", "Nice to meet you", "Thank you", "Bye"]
+  vocabulario: [hello, hi, welcome, "I'm", you, name, nice, meet, thank you, key, map, plane, field, crew, bye]
+pre_tarea:
+  plantilla: LUMI-M0.1-PRE
+  piezas_utiles: ["Hello", "I'm…"]
+beats:
+  - "Kofi baja tu mochila del colectivo (\"Kestrel Valley! Last stop!\"; ambiental, sin respuesta)."
+  - "Inés se acerca con su lista, saluda y se presenta, te señala."
+  - "Turno del jugador: saludo + nombre."
+  - "Inés repite el nombre con alegría y lo anota."
+  - "La avioneta pasa lejos sobre el maíz; Inés la nombra (saber)."
+  - "Inés entrega llave y mapa (con el Cruce en blanco) y nombra a Maya."
+  - "Cierre y destilación."
+escenas:
+  - escena_id: M0.1-E1
+    npc: NPC-INES
+    lugar: campos.parada
+    hora: amanecer
+    situacion: "Inés, capataz de la cuadrilla, recibe al trabajador nuevo en la parada del colectivo con su lista; quiere anotarlo y darle la llave del albergue y el mapa. La avioneta pasa lejos sobre el maíz."
+    necesidad_npc: "Saber quién sos para su lista."
+    banda: A0
+    andamiaje_npc:
+      - "I'm Inés. You…? (se señala, te señala)"
+      - "Hello… I'm…? (deja la frase abierta)"
+      - "Lumi pista nivel 3 (LUMI-M0.1-P3)"
+    vocabulario_nivel: [hello, hi, welcome, "I'm", you, name, nice, meet, thank you, key, map, plane, field, crew, bye]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: [SAB-AVIONETA]
+    apertura_guionada:
+      - { quien: NPC-KOFI, en: "Kestrel Valley! Last stop!", es_glosa: "¡Kestrel Valley! ¡Última parada!", acotacion: "ambiental, baja tu mochila del colectivo; sin respuesta" }
+      - { quien: NPC-INES, en: "Hello! Welcome to Kestrel Valley.", es_glosa: "¡Hola! Bienvenido/a a Kestrel Valley.", acotacion: "saluda" }
+      - { quien: NPC-INES, en: "I'm Inés.", es_glosa: "Soy Inés.", acotacion: "se señala" }
+      - { quien: NPC-INES, en: "And you?", es_glosa: "¿Y vos?", acotacion: "te señala" }
+    ramas:
+      - { si: "dice saludo + nombre (\"Hello! I'm Nico.\") o \"My name is Nico\"", quien: NPC-INES, npc: "Nico! Nice to meet you, Nico!", tipo: ejemplo_ia, nota: "criterio cumplido → beat 5" }
+      - { si: "dice solo el nombre (\"Nico.\")", quien: NPC-INES, npc: "Nico! Hello, Nico! I'm Inés. You are… Nico. Yes!", tipo: guionada, nota: "modela I'm sin pedir repetición; criterio de nombre cumplido. Saludo: si agrega Hello en cualquier momento, cumplido; si no, Inés dice Hello! otra vez con la mano levantada y espera." }
+      - { si: "dice solo \"Hello\"", quien: NPC-INES, npc: "Hello! I'm Inés. You are…?", tipo: guionada, nota: "se señala; espera" }
+      - { si: "pasa el turno", quien: NPC-INES, npc: "I'm Inés. You…?", tipo: guionada, nota: "andamiaje 1. Segundo pase: Hello… I'm…? Tercer pase: Lumi pista nivel 3.", lumi: LUMI-M0.1-P3 }
+      - { si: "habla en español (\"Hola, soy Nico\")", quien: NPC-INES, npc: "¡Hola! In English: Hello!", tipo: guionada, lumi: LUMI-M0.1-L1, nota: "¡Hola! es su única palabra en español del capítulo (D-184); espera" }
+      - { si: "dice \"Nice to meet you\" (en cualquier momento)", quien: NPC-INES, npc: "Nice to meet you too!", tipo: guionada, nota: "poción ámbar extra" }
+      - { si: "pregunta \"Why?\" tras la avioneta", quien: NPC-INES, npc: "For the bugs. On the corn.", tipo: ejemplo_ia }
+      - { si: "pregunta \"Is it bad?\" tras la avioneta", quien: NPC-INES, npc: "Ask Grace. The nurse.", tipo: guionada, nota: "rail de salud; sin más" }
+      - { si: "dice algo fuera de tema", quien: NPC-INES, npc: "Ha! Okay. And your name?", tipo: guionada }
+    lineas_guionadas:
+      - { quien: NPC-INES, en: "That plane? It sprays the fields.", es_glosa: "¿Esa avioneta? Fumiga los campos.", acotacion: "beat 5 (saber), tras el nombre: motor lejano; Inés mira al cielo" }
+    criterios_exito:
+      - { id: C1, texto: "El jugador produce un saludo (hello/hi/good morning/hey)." }
+      - { id: C2, texto: "El jugador produce su nombre de juego (con o sin \"I'm\"/\"My name is\")." }
+    errores_de_objetivo: []
+    cierre_guionado:
+      - { quien: NPC-INES, en: "Nice to meet you, [nombre]!", es_glosa: "¡Encantada, [nombre]!", audio: al_vuelo }
+      - { quien: NPC-INES, en: "Here's your key.", es_glosa: "Acá tenés tu llave." }
+      - { quien: NPC-INES, en: "And a map.", es_glosa: "Y un mapa." }
+      - { quien: NPC-INES, en: "Maya lives at the Crossing.", es_glosa: "Maya vive en el Cruce." }
+      - { quien: NPC-INES, en: "Bye!", es_glosa: "¡Chau!" }
+      - { quien: LUMI, plantilla: LUMI-M0.1-CIERRE }
+    salida_si_no_converge:
+      disparador: "a los 3 min o tras 3 pases sin respuesta"
+      lineas:
+        - { quien: NPC-INES, en: "It's okay! You're the new worker. Welcome!", es_glosa: "¡Está bien! Sos el/la nuevo/a. ¡Bienvenido/a!", acotacion: "entrega llave y mapa igual" }
+        - { quien: LUMI, plantilla: LUMI-M0.1-NOCONV }
+      resultado: "Llave y mapa igual. Sin pociones; Hello e I'm entran al banco de repaso."
+    efectos:
+      - { flag: lamp_bunk_on }
+    eventos: [map_received, key_received, ines_trust+1, "net_add:NPC-INES", lamp_bunk_on, "saber:SAB-AVIONETA"]
+    resumen_para_siguiente: "Inés anotó al jugador, le dio la llave del albergue y el mapa, y le nombró a Maya, que vive en el Cruce."
+    temas_permitidos: ["saludos", "nombres", "la cuadrilla", "la llave y el mapa", "la avioneta"]
+    temas_vedados_extra: []
+    pronunciacion:
+      - momento_id: M0.1-E1-PRON-1
+        tipo: repetir
+        linea_ref: "Hello! Welcome to Kestrel Valley."
+        texto_esperado: "Kestrel Valley"
+        palabra_foco: "Valley"
+        par: null
+        sonidos: [E4, E13]
+        consecuencia: null
+        quien_propone: lumi
+        plantilla: LUMI-M0.1-PRON
+        obligatorio: false
+        nota: "Opcional al cierre. E4: /v/ de Valley; E13: acento en KES-trel."
+lumi_marca: "Si no apareció \"Nice to meet you\", lo marca para repaso (aparece en M1.1). En A0 no se señala nada que no rompa el sentido; si el jugador dice \"I [nombre]\" se acepta y se anota \"I'm\" como ítem."
+pociones:
+  - { rama: ambar, evento: "presentarse con nombre", max: 1 }
+  - { rama: ambar, evento: "\"Nice to meet you\" o \"Thank you\" usado con sentido", max: 1 }
+desbloqueos: []
+repaso:
+  resurfaces: []
+  planta: ["Nice to meet you", "I'm…", "Thank you"]
+  reaparece_en: [M1.1, M2.3]
+mundo: [map_received, key_received, ines_trust+1, "net_add:NPC-INES", lamp_bunk_on, "saber:SAB-AVIONETA"]
+modo_texto: "A0: opciones sugeridas tocables: \"Hello! I'm [nombre].\" · \"Hi! My name is [nombre].\" · campo libre. Elegir opción = 1/3 de poción."
+efectos: []
+duracion_objetivo_min: 2
+estado: draft
