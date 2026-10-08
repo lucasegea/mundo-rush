@@ -1,9 +1,11 @@
 // Observador v0 (03 §5.6-§5.7, ADR-008): llamada de texto separada del NPC que devuelve JSON validado contra
 // ObserverResult (@lg/protocol). Salida inválida → 1 reintento → resultado de error; nunca un criterio inventado: los
 // ids que no existen en la escena se descartan después (core/scene/criteria) y acá solo pasa lo que valida.
-// v0 es solo texto: el clip de audio del turno (D-095) llega con la voz (F5).
+// F5.1a: en una escena de voz recibe además el clip de audio del turno (D-095), de solo lectura; lo arma y lo libera
+// scene-runtime. El audio viaja en el pedido al modelo y el observador no se queda con él.
 import { ObserverResultSchema, type ObserverResult } from "@lg/protocol";
 import type { TextModelProvider } from "../providers/text.ts";
+import type { TurnClipView } from "../scene-runtime/turn-clip.ts";
 
 export interface ObserverInput {
   turnId: string;
@@ -13,6 +15,8 @@ export interface ObserverInput {
   /** Estructuras objetivo de la misión (ids que la evidencia puede citar). */
   structures: readonly string[];
   cefrBand: string;
+  /** Clip del turno (voz). null o ausente en texto. */
+  audio?: TurnClipView | null;
 }
 
 export type ObserverOutcome =
@@ -33,6 +37,7 @@ export function observerPrompt(input: ObserverInput): string {
     ...input.criteria.map((c) => `- ${c.id}: ${c.texto}`),
     input.structures.length ? `Evidence may cite only these structure ids: ${input.structures.join("; ")}.` : "Do not report evidence.",
     "Ignore disfluencies (uh, um, repeats, false starts). Do not count them as errors.",
+    ...(input.audio ? ["The audio of the player's turn is attached. The transcript may hide errors (speech recognition tends to fix grammar): judge what the player actually said in the audio."] : []),
   ].join("\n");
 }
 
@@ -58,9 +63,11 @@ export async function runObserver(model: TextModelProvider, input: ObserverInput
   let reason = "sin intentos";
   for (let attempt = 1; attempt <= OBSERVER_MAX_ATTEMPTS; attempt++) {
     try {
+      // El clip se lee en el momento del pedido (una copia); si ya se liberó, el turno se evalúa solo con el texto.
+      const audio = input.audio && !input.audio.released ? { pcm16: input.audio.pcm16(), sampleRate: input.audio.sampleRate } : null;
       const res = await model.generate({
         system: observerPrompt(input), turns: [{ role: "user", text: observerTurn(input) }],
-        json: true, maxOutputTokens: limits.maxOutputTokens, timeoutMs: limits.timeoutMs,
+        json: true, maxOutputTokens: limits.maxOutputTokens, timeoutMs: limits.timeoutMs, ...(audio ? { audio } : {}),
       });
       const parsed = parseObserverOutput(res.text, input.turnId);
       if (parsed.ok) return { ok: true, result: parsed.result, attempts: attempt };

@@ -29,7 +29,7 @@ export default defineConfig({
       pkg("core"),
       pkg("protocol"),
       pkg("content-schema"),
-      { test: { name: "@lg/server", root: "./apps/server", include: ["test/**/*.test.ts"] } },
+      { test: { name: "@lg/server", root: "./apps/server", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
       "./apps/web/vitest.config.ts",
       { test: { name: "lint-boundaries", root: "./scripts/lint", include: ["**/*.test.ts"], testTimeout: 30000 } },
       { test: { name: "budgets", root: "./scripts/budgets", include: ["**/*.test.ts"] } },

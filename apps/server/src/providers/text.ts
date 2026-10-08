@@ -14,6 +14,8 @@ export interface TextRequest {
   readonly json: boolean;
   readonly maxOutputTokens: number;
   readonly timeoutMs: number;
+  /** Observador en voz (D-095): audio PCM16 del turno, adjunto al pedido. Nunca se guarda. */
+  readonly audio?: { readonly pcm16: Int16Array; readonly sampleRate: number };
 }
 
 export interface TextResponse {

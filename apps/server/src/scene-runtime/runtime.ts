@@ -5,6 +5,11 @@
 // en voz manda el cliente acá los da el propio runtime apenas envía el texto.
 // Nunca envía al cliente un prompt, un nombre de modelo ni una clave (A4): todo sale por mensajes del protocolo, que
 // son objetos estrictos, y `send` valida cada uno antes de mandarlo.
+// F5.1a (voz, 03 §5.4-§5.6, §5.11): con `modality: "voice"` abre UNA sesión del `RealtimeVoiceProvider` configurado
+// durante la pretarea, con el setup armado acá; es el único dueño del TurnClip de cada turno (lo arma con el audio del
+// jugador, lo pasa de solo lectura al observador y lo libera al terminar o a los 10 s); modera la salida (no el
+// adaptador); cierra la sesión al entrar a `closing` (hardCap incluido: la línea de cierre es la guionada) y registra el
+// costo de cada `usage` en el CostLedger. Si la voz no abre o se pierde, la misma escena sigue por texto.
 import { randomUUID } from "node:crypto";
 import {
   applyCriteriaReports, criteriaSatisfied, emptyCriteria, initialSceneSnapshot, metCriteriaIds, resolveScene,
@@ -25,9 +30,12 @@ import type { EvidenceStore } from "../store/evidence.ts";
 import { createModerator, type ModerationResult, type Moderator } from "../moderation/moderation.ts";
 import type { ModerationProvider } from "../providers/moderation.ts";
 import { createMemorySafetyStore, type SafetyEventStore } from "../store/safety.ts";
+import { costPolicyFromConfig, createMemoryCostLedger, type CostAlert, type CostLedger } from "../cost/ledger.ts";
+import type { CloseReason, RealtimeVoiceProvider, SceneVoiceSetup, VoiceEvent, VoiceProviderFactory } from "../providers/types.ts";
 import { applies, exitLines, isNpcLine, openingLines, readCatalog, renderScriptedText, type Catalog } from "./catalog.ts";
 import { foldProgress, type OperatorProgress } from "./progress.ts";
 import { buildNpcPrompt } from "./prompt.ts";
+import { createTurnClip, readOnly, type TurnClip, type TurnClipView } from "./turn-clip.ts";
 
 /** Línea guionada de un NPC que pide presentación y nadie lo presentó (02 §1.7). */
 export const NOT_INTRODUCED_LINE = "Hi! Do I know you?";
@@ -66,11 +74,26 @@ export interface SceneDeps {
   moderation?: ModerationProvider | null;
   /** safety_events (D-112). Sin él, en memoria. */
   safety?: SafetyEventStore;
+  /** Adaptador de voz elegido por configuración (providers/voice.ts). null o ausente: sin voz (la escena va por texto). */
+  voice?: VoiceProviderFactory | null;
+  /** Libro de costos de voz. Sin él, en memoria con las tarifas de models.yaml. */
+  ledger?: CostLedger;
+  /** Alerta de costo (D-027): no corta nada, solo avisa al operador. */
+  onCostAlert?: (alert: CostAlert) => void;
+  /** El libro de costos no pudo registrar un uso (p. ej. sin tarifa para el adaptador): se avisa y la escena sigue. */
+  onCostError?: (message: string) => void;
+  /** Diagnóstico (tests): vista de solo lectura de cada TurnClip al crearse, para ver que se libera. */
+  onTurnClip?: (clip: TurnClipView) => void;
 }
 
 export interface SceneSession {
   /** Un mensaje crudo del cliente (ya parseado como JSON). Resuelve cuando la escena quedó quieta. */
   receive(raw: unknown): Promise<void>;
+  /**
+   * Un frame de audio del jugador (PCM16 16 kHz, ADR-017). false: la escena no está en voz (el gateway avisa); en voz,
+   * un frame fuera del turno hablado (p. ej. el que llega tarde) se descarta en silencio.
+   */
+  receiveAudio(pcm16: Int16Array): boolean;
   /** La conexión se cerró: una escena activa se aborta (se reanuda desde su inicio, 03 §3.5.1). */
   close(): void;
   readonly snapshot: SceneSnapshot;
@@ -103,9 +126,50 @@ interface Run {
   cancelCaps: (() => void)[];
   cancelTurnTimer: (() => void) | null;
   moderator: Moderator;
+  /** Sesión de voz de la escena (null en texto, o después de cerrarla o perderla). */
+  voice: VoiceRun | null;
 }
 
-/** En modo texto el runtime da por terminada la línea de cada estado apenas la manda. */
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve(v: T): void;
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve: (v: T) => void = () => {};
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+/** Un turno de voz: el del jugador (con clip) o una respuesta pedida por una nota [DIRECTOR] (sin clip). */
+interface VoiceTurn {
+  turnId: string;
+  clip: TurnClip | null;
+  cancelClipTimer: (() => void) | null;
+  /** Transcripción final del jugador; "" si no se oyó nada o la voz se perdió. */
+  transcript: Deferred<string>;
+  npcText: string[];
+  npcFinal: string | null;
+  /** true: el NPC terminó; false: la voz se perdió antes. */
+  npcDone: Deferred<boolean>;
+  /** Moderación o tope: el audio que siga llegando de este turno no sale. */
+  cut: boolean;
+}
+
+interface VoiceRun {
+  provider: RealtimeVoiceProvider;
+  opened: boolean;
+  openedAt: number;
+  /** Turno del jugador abierto (entre voice.turnStart y el commit). */
+  speaking: VoiceTurn | null;
+  turns: Map<string, VoiceTurn>;
+}
+
+/**
+ * El runtime da por terminada la línea de cada estado apenas la manda. En voz también, mientras las líneas guionadas no
+ * tengan audio cacheado (03 §6.3, F8) ni el cliente confirme su reproducción (F5.2): las dice el cliente como texto.
+ * `npcTurn` no está acá: en voz lo cierra el `npcTurnDone` del adaptador.
+ */
 const AUTO_DONE: Partial<Record<SceneStateName, SceneEvent>> = {
   npcOpening: { type: "openingDone" },
   signal: { type: "companionDone" },
@@ -117,8 +181,14 @@ const AUTO_DONE: Partial<Record<SceneStateName, SceneEvent>> = {
 
 const ACTIVE_RUN: readonly SceneStateName[] = ["pretask", "npcOpening", "playerTurn", "npcTurn", "signal", "nonConverging", "closing", "posttask", "containment"];
 
-export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage) => void): SceneSession {
+export function createSceneSession(
+  deps: SceneDeps,
+  sendRaw: (msg: ServerMessage) => void,
+  /** Audio del NPC hacia el cliente (frames binarios, NPC_AUDIO_SAMPLE_RATE). */
+  sendAudioOut: (pcm16: Int16Array) => void = () => {},
+): SceneSession {
   const scheduler = deps.scheduler ?? realScheduler;
+  const ledger = deps.ledger ?? createMemoryCostLedger(costPolicyFromConfig(deps.models));
   const newId = deps.newId ?? (() => randomUUID());
   const iso = (): string => new Date(deps.clock.now()).toISOString();
   let snap: SceneSnapshot = initialSceneSnapshot();
@@ -230,38 +300,244 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
 
     const obs = await observing;
     if (!stillOn(r, gen, turn)) return;
+    const verdict = judge(r, obs, structures);
+    if (verdict === "risk") return safetyStop(r, { action: "containment", layer: "observer", category: "observador" });
+    if (verdict === "inappropriate") {
+      await replying;
+      if (!stillOn(r, gen, turn)) return;
+      return safetyStop(r, { action: "cut", layer: "observer", category: "observador" });
+    }
+    if (verdict === "criteria") return dispatch({ type: "criteriaMet" });
+    const reply = await replying;
+    if (!stillOn(r, gen, turn)) return;
+    if (reply && "text" in reply) {
+      // Salida en texto: moderación síncrona y completa antes de mostrar (03 §7.7 punto 4).
+      if (!(await speakModerated(r, reply.text, () => stillOn(r, gen, turn)))) return;
+    } else if (reply) {
+      send({ type: "scene.notice", code: "model_unavailable", message: "El NPC no pudo responder (modelo no disponible)." });
+    }
+    dispatch({ type: "npcDone" });
+  }
+
+  /**
+   * Aplica el resultado del observador. El observador también es una capa de seguridad, y su veredicto gana siempre
+   * sobre los criterios: un turno marcado no cumple la escena, no deja evidencia (ni cita) y no recibe la respuesta.
+   */
+  function judge(r: Run, obs: Awaited<ReturnType<typeof runObserver>> | null, structures: readonly string[]):
+    "risk" | "inappropriate" | "criteria" | "continue" {
     if (obs?.ok) {
-      // El observador también es una capa de seguridad, y su veredicto gana siempre sobre los criterios: un turno
-      // marcado no cumple la escena, no deja evidencia (ni cita) y no recibe la respuesta del modelo.
-      if (obs.result.safety === "risk") return safetyStop(r, { action: "containment", layer: "observer", category: "observador" });
-      if (obs.result.safety === "inappropriate") {
-        await replying;
-        if (!stillOn(r, gen, turn)) return;
-        return safetyStop(r, { action: "cut", layer: "observer", category: "observador" });
-      }
+      if (obs.result.safety === "risk") return "risk";
+      if (obs.result.safety === "inappropriate") return "inappropriate";
       const update = applyCriteriaReports(r.criteriaDefs, r.criteria, obs.result.criteria);
       r.criteria = update.state;
       for (const ev of obs.result.evidence) {
         if (structures.includes(ev.structureId)) appendEvidence(r, { kind: ev.kind, structureId: ev.structureId, branch: ev.branch, quote: ev.quote });
       }
-      if (criteriaSatisfied(r.criteriaDefs, r.criteria)) return dispatch({ type: "criteriaMet" });
+      if (criteriaSatisfied(r.criteriaDefs, r.criteria)) return "criteria";
     } else if (obs) {
       send({ type: "scene.notice", code: "observer_invalid", message: "El observador no devolvió un resultado válido; el turno sigue sin evaluar." });
     }
-    const reply = await replying;
-    if (!stillOn(r, gen, turn)) return;
-    if (reply && "text" in reply) {
-      // Salida en texto: moderación síncrona y completa antes de mostrar (03 §7.7 punto 4).
-      const output = await r.moderator.checkOutput(reply.text, r.npc?.id ?? "LUMI");
-      if (!stillOn(r, gen, turn)) return;
-      if (output.action !== "allow") return safetyStop(r, { ...output, action: "cut" });
-      send({ type: "npc.line", line: { lineId: newId(), speaker: r.npc?.id ?? "LUMI", kind: "reply", text: reply.text, template: null } });
-      r.transcript.push({ speaker: "npc", text: reply.text });
-      r.lastNpcLine = reply.text;
-    } else if (reply) {
-      send({ type: "scene.notice", code: "model_unavailable", message: "El NPC no pudo responder (modelo no disponible)." });
+    return "continue";
+  }
+
+  /** Modera la línea del NPC y, si pasa, la manda y la anota. false: se cortó (o la escena ya siguió). */
+  async function speakModerated(r: Run, text: string, still: () => boolean): Promise<boolean> {
+    const output = await r.moderator.checkOutput(text, r.npc?.id ?? "LUMI");
+    if (!still()) return false;
+    if (output.action !== "allow") {
+      safetyStop(r, { ...output, action: "cut" });
+      return false;
     }
-    dispatch({ type: "npcDone" });
+    send({ type: "npc.line", line: { lineId: newId(), speaker: r.npc?.id ?? "LUMI", kind: "reply", text, template: null } });
+    r.transcript.push({ speaker: "npc", text });
+    r.lastNpcLine = text;
+    return true;
+  }
+
+  // ---------- voz (F5.1a) ----------
+
+  const voiceSetup = (r: Run): SceneVoiceSetup => ({
+    systemInstruction: r.system ?? "",
+    voiceName: (r.npc && deps.models.voice.voices.byNpc[r.npc.id]) ?? deps.models.voice.voices.default,
+    languageCode: deps.models.voice.languageCode,
+  });
+
+  const newVoiceTurn = (turnId: string, withClip: boolean): VoiceTurn => ({
+    turnId, clip: withClip ? createTurnClip(turnId) : null, cancelClipTimer: null,
+    transcript: deferred<string>(), npcText: [], npcFinal: null, npcDone: deferred<boolean>(), cut: false,
+  });
+
+  const releaseClip = (t: VoiceTurn): void => {
+    t.cancelClipTimer?.();
+    t.cancelClipTimer = null;
+    t.clip?.release();
+  };
+
+  /** Abre la sesión de voz durante la pretarea; si no abre, la escena sigue por texto (sceneFailed). */
+  function openVoice(r: Run, v: VoiceRun): void {
+    const gen = r.generation;
+    track(v.provider.open(voiceSetup(r)).then(() => {
+      if (run !== r || r.generation !== gen || r.voice !== v) return void v.provider.close("abort");
+      v.opened = true;
+      v.openedAt = deps.clock.now();
+      // La apertura guionada ya dicha entra como turno previo del modelo: no dispara una respuesta (P0 §4.2).
+      if (r.openingTurn) v.provider.injectContext([{ role: "user", text: SCENE_START_NOTE }, { role: "model", text: r.openingTurn }]);
+      dispatch({ type: "sceneReady" });
+    }, () => {
+      if (run !== r || r.voice !== v) return;
+      r.voice = null;
+      send({ type: "scene.notice", code: "model_unavailable", message: "La voz no está disponible ahora; la escena sigue por texto." });
+      dispatch({ type: "sceneFailed", reason: "net" });
+    }));
+  }
+
+  /** Cierra la sesión de voz: libera los clips, cierra el adaptador y escribe la fila de costo de la escena. */
+  function closeVoice(r: Run, reason: CloseReason): void {
+    const v = r.voice;
+    if (!v) return;
+    r.voice = null;
+    for (const t of v.turns.values()) {
+      releaseClip(t);
+      t.transcript.resolve("");
+      t.npcDone.resolve(false);
+    }
+    track(v.provider.close(reason).catch(() => {}));
+    if (!v.opened) return;
+    // Corre también dentro del handler del socket de Live (error no recuperable): un fallo del libro (disco lleno,
+    // archivo bloqueado) no puede tirar el proceso, igual que en recordTurn.
+    try {
+      const { alert } = ledger.closeScene({
+        at: iso(), sceneRunId: r.sceneRunId, accountId: deps.accountId, adapter: v.provider.adapter,
+        wallSeconds: Math.max(0, (deps.clock.now() - v.openedAt) / 1000),
+      });
+      if (alert) deps.onCostAlert?.(alert);
+    } catch (err) {
+      deps.onCostError?.(err instanceof Error ? err.message : "error del libro de costos");
+    }
+  }
+
+  function onVoiceEvent(r: Run, v: VoiceRun, ev: VoiceEvent): void {
+    if (run !== r || r.voice !== v) return;
+    const t = "turnId" in ev && ev.turnId ? v.turns.get(ev.turnId) : undefined;
+    switch (ev.type) {
+      case "playerTranscriptPartial":
+        return; // el cliente lo verá con el audio (F5.2)
+      case "playerTranscriptFinal":
+        return t?.transcript.resolve(ev.text);
+      case "npcTextFinal":
+        if (t) t.npcFinal = ev.text;
+        return;
+      case "npcTranscript":
+        t?.npcText.push(ev.text);
+        return;
+      case "npcAudioChunk":
+        // Invariante (a): audio del NPC solo en npcTurn, del turno vigente y no cortado.
+        if (t && !t.cut && snap.state === "npcTurn" && t.turnId === `${r.sceneRunId}:${snap.ctx.turnIndex}`) sendAudioOut(ev.pcm16);
+        return;
+      case "interrupted":
+        if (t) t.cut = true;
+        return;
+      case "npcTurnDone":
+        t?.transcript.resolve("");
+        t?.npcDone.resolve(true);
+        return;
+      case "usage":
+        // Corre dentro del manejador del socket del proveedor: una tarifa faltante no puede tirar el proceso.
+        try {
+          ledger.recordTurn({
+            at: iso(), sceneRunId: r.sceneRunId, turnId: ev.turnId, accountId: deps.accountId,
+            adapter: v.provider.adapter, provider: v.provider.provider, model: v.provider.model, usage: ev.usage,
+          });
+        } catch (err) {
+          deps.onCostError?.(err instanceof Error ? err.message : "error del libro de costos");
+        }
+        return;
+      case "sessionEnding":
+        return; // el adaptador se reconecta solo con el handle de reanudación
+      case "error":
+        if (ev.recoverable) return;
+        // La voz se perdió: la misma escena sigue por texto desde el último turno (03 §5.4 punto 5, §5.8).
+        closeVoice(r, "error");
+        send({ type: "scene.notice", code: "model_unavailable", message: "Se perdió la voz; la escena sigue por texto." });
+        return dispatch({ type: "voiceLost" });
+    }
+  }
+
+  /** Turno de voz cerrado: transcripción → moderación de entrada → observador (con el clip) → línea del NPC moderada. */
+  async function processVoiceTurn(r: Run, t: VoiceTurn): Promise<void> {
+    const gen = r.generation;
+    const turn = snap.ctx.turnIndex;
+    const still = (): boolean => stillOn(r, gen, turn);
+    const structures = [...r.mission.lenguaje_objetivo.estructuras, ...r.mission.lenguaje_objetivo.chunks];
+    let verdict: ReturnType<typeof judge> = "continue";
+    try {
+      if (t.clip) {
+        const playerText = await t.transcript.promise;
+        if (!still()) return;
+        if (playerText !== "") {
+          const input = await r.moderator.checkInput(playerText);
+          if (!still()) return;
+          if (input.action !== "allow") {
+            t.cut = true;
+            return safetyStop(r, input);
+          }
+          r.transcript.push({ speaker: "player", text: playerText });
+        }
+        const obs = await runObserver(deps.observerModel, {
+          turnId: t.turnId, playerText, lastNpcLine: r.lastNpcLine, criteria: r.scene.criterios_exito, structures,
+          cefrBand: r.scene.banda, audio: readOnly(t.clip),
+        }, deps.models.roles.observer);
+        releaseClip(t); // el observador ya leyó el clip: se libera (no espera a los 10 s)
+        if (!still()) return;
+        verdict = judge(r, obs, structures);
+        if (verdict === "risk") {
+          t.cut = true;
+          return safetyStop(r, { action: "containment", layer: "observer", category: "observador" });
+        }
+      }
+      const spoke = await t.npcDone.promise;
+      if (!still()) return;
+      if (verdict === "inappropriate") return safetyStop(r, { action: "cut", layer: "observer", category: "observador" });
+      const text = (t.npcFinal ?? t.npcText.join("")).trim();
+      if (spoke && text !== "" && !t.cut && !(await speakModerated(r, text, still))) return;
+      dispatch(verdict === "criteria" ? { type: "criteriaMet" } : { type: "npcDone" });
+    } finally {
+      releaseClip(t);
+    }
+  }
+
+  /** El jugador empieza a hablar (voice.turnStart): turno nuevo con su clip, o retoma el que estaba en pausa. */
+  function voiceTurnStart(r: Run, v: VoiceRun): void {
+    if (snap.sub === "endPending" && v.speaking) return dispatch({ type: "speechResume" });
+    const t = newVoiceTurn(`${r.sceneRunId}:${snap.ctx.turnIndex + 1}`, true);
+    if (t.clip) deps.onTurnClip?.(readOnly(t.clip));
+    v.turns.set(t.turnId, t);
+    v.speaking = t;
+    v.provider.startTurn(t.turnId);
+    dispatch({ type: "speechStart" });
+  }
+
+  /** Commit del turno hablado: activityEnd al proveedor y el clip empieza a contar sus 10 s. */
+  function commitVoiceTurn(r: Run, v: VoiceRun, via: "pressDone" | "turnTimer" | "pass" | "hardCap"): void {
+    const t = v.speaking;
+    v.speaking = null;
+    if (!t) return;
+    // hardCap: la sesión se cierra ya, no hay respuesta ni transcripción que esperar. pass: el turno hablado se descarta.
+    if (via === "hardCap" || via === "pass") {
+      v.turns.delete(t.turnId);
+      return releaseClip(t);
+    }
+    t.cancelClipTimer = scheduler.schedule(deps.models.voice.clipTtlMs, () => releaseClip(t));
+    v.provider.endTurn(t.turnId);
+    track(processVoiceTurn(r, t));
+  }
+
+  /** Pase con nota [DIRECTOR] en voz: el modelo responde a la nota, sin turno hablado. */
+  function directorReply(r: Run, v: VoiceRun, note: "simpler" | "continue"): void {
+    const t = newVoiceTurn(`${r.sceneRunId}:${snap.ctx.turnIndex}`, false);
+    v.turns.set(t.turnId, t);
+    v.provider.injectContext([{ role: "user", text: DIRECTOR_NOTES[note] }], t.turnId);
+    track(processVoiceTurn(r, t));
   }
 
   // ---------- efectos ----------
@@ -281,7 +557,8 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
   function runEffect(r: Run, eff: SceneEffect): void {
     switch (eff.type) {
       case "openSession":
-        queue.push({ type: "sceneReady" }); // texto: no hay sesión Live que precalentar
+        if (r.voice) return openVoice(r, r.voice); // voz: se abre durante la pretarea (03 §5.4 punto 1)
+        queue.push({ type: "sceneReady" }); // texto: no hay sesión que precalentar
         return;
       case "startPretask": {
         const pre = applies(r.mission.pre_tarea);
@@ -324,10 +601,17 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
         r.cancelTurnTimer = null;
         return;
       case "commitTurn":
-        // El texto entra al transcripto recién después de la moderación de entrada (processTurn): un turno cortado
+        // Texto: entra al transcripto recién después de la moderación de entrada (processTurn): un turno cortado
         // nunca llega al modelo. Si el commit es por el tope duro, la escena cierra y el texto no se usa.
+        // Voz: activityEnd y el turno se procesa con la transcripción y el clip.
+        if (r.voice && snap.ctx.modality === "voice") commitVoiceTurn(r, r.voice, eff.via);
         return;
       case "requestNpcReply": {
+        if (r.voice && snap.ctx.modality === "voice") {
+          // Sin nota, la respuesta ya la pidió el activityEnd del commit; con nota, la pide la nota [DIRECTOR].
+          if (eff.directorNote) directorReply(r, r.voice, eff.directorNote);
+          return;
+        }
         const text = r.pendingText;
         r.pendingText = null;
         track(processTurn(r, text, eff.directorNote));
@@ -335,6 +619,15 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
       }
       case "closeSession":
         r.generation++; // lo que esté en vuelo ya no habla (invariante e)
+        // Live se cierra al entrar a closing (también por hardCap: la línea de cierre es la guionada, D-130).
+        closeVoice(r, snap.state === "aborted" ? "abort" : snap.ctx.closingReason === "hardCap" ? "hardCap" : "done");
+        return;
+      case "cutAudio":
+        for (const t of r.voice?.turns.values() ?? []) t.cut = true;
+        return;
+      case "modalityChanged":
+        // Voz → texto (sceneFailed, voiceLost, budgetExhausted): la sesión de voz no sigue.
+        if (eff.modality === "text") closeVoice(r, "error");
         return;
       case "sceneEnded":
         finish(r, eff.outcome);
@@ -342,12 +635,10 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
       case "sceneAborted":
         send({ type: "scene.end", outcome: "aborted", criteriaMet: [], evidence: r.evidence });
         return;
-      // Sin efecto en texto en F4.1: Lumi (F6), audio (F5) y el menú de pase (lo muestra el cliente por scene.state).
+      // Sin efecto todavía: Lumi (F6) y el menú de pase (lo muestra el cliente por scene.state).
       case "showPassMenu":
       case "passOption":
       case "companionSignal":
-      case "cutAudio":
-      case "modalityChanged":
       case "posttask":
         return;
     }
@@ -369,7 +660,7 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
         sendState();
         for (const eff of t.effects) runEffect(r, eff);
         const auto = AUTO_DONE[snap.state];
-        if (auto && snap.state !== prev && snap.ctx.modality === "text") queue.push(auto);
+        if (auto && snap.state !== prev) queue.push(auto);
       }
     } finally {
       draining = false;
@@ -378,7 +669,7 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
 
   // ---------- mensajes del cliente ----------
 
-  function start(npcId: string | null): void {
+  function start(npcId: string | null, wanted: "voice" | "text"): void {
     if (run && ACTIVE_RUN.includes(snap.state)) return fail("scene_busy", "Ya hay una escena en curso.");
     const catalog = readCatalog(deps.content());
     const npc = npcId === null ? null : catalog.npc(npcId) ?? null;
@@ -404,20 +695,53 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
       criteria: emptyCriteria(), transcript: [], evidence: [], lastNpcLine: null, pendingText: null,
       generation: 0, cancelCaps: [], cancelTurnTimer: null,
       moderator: createModerator({ lists: catalog.safety.lists, classifier: deps.moderation ?? null }),
+      voice: null,
     };
+    // Voz solo con un NPC y un adaptador configurado; sin adaptador (p. ej. sin clave), la escena va por texto con aviso.
+    // Una escena sin NPC (solo Lumi) no abre sesión de voz: Lumi habla por plantillas (02 §2.7).
+    let modality: "voice" | "text" = "text";
+    if (wanted === "voice" && npc) {
+      if (deps.voice) {
+        const provider = deps.voice();
+        const v: VoiceRun = { provider, opened: false, openedAt: 0, speaking: null, turns: new Map() };
+        const r = run;
+        provider.on((ev) => onVoiceEvent(r, v, ev));
+        run.voice = v;
+        modality = "voice";
+      } else {
+        send({ type: "scene.notice", code: "model_unavailable", message: "La voz no está disponible (sin proveedor configurado); la escena va por texto." });
+      }
+    }
     snap = initialSceneSnapshot();
-    send({ type: "scene.opened", sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality: "text" });
-    dispatch({ type: "interact", npcId, sceneId: scene.escena_id, modality: "text" });
+    send({ type: "scene.opened", sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality });
+    dispatch({ type: "interact", npcId, sceneId: scene.escena_id, modality });
+  }
+
+  /** Mensajes de voz: solo con la sesión de voz abierta y en el turno del jugador. */
+  function handleVoice(type: "voice.turnStart" | "voice.turnEnd"): void {
+    const r = run;
+    const v = r?.voice;
+    if (!r || !v?.opened || snap.ctx.modality !== "voice") return fail("not_voice", "La escena no está en modo voz.");
+    if (snap.state !== "playerTurn") return fail("not_your_turn", "No es tu turno.");
+    if (type === "voice.turnStart") {
+      if (snap.sub !== "waiting" && snap.sub !== "endPending") return fail("not_your_turn", "No es tu turno.");
+      return voiceTurnStart(r, v);
+    }
+    // Fin del turno hablado (Terminé o el umbral de silencio del cliente): pausa + confirmación.
+    if (snap.sub !== "speaking" && snap.sub !== "endPending") return fail("not_your_turn", "No hay un turno hablado abierto.");
+    if (snap.sub === "speaking") dispatch({ type: "speechPause" });
+    dispatch({ type: "pressDone" });
   }
 
   function handle(msg: ClientMessage): void {
     switch (msg.type) {
       case "scene.start":
-        return start(msg.npcId);
+        return start(msg.npcId, msg.modality ?? "text");
       case "turn.text": {
         if (!run || snap.state !== "playerTurn" || (snap.sub !== "waiting" && snap.sub !== "speaking" && snap.sub !== "endPending")) {
           return fail("not_your_turn", "No es tu turno.");
         }
+        if (snap.ctx.modality === "voice") return fail("not_your_turn", "La escena está en voz: el turno se habla.");
         run.pendingText = msg.text;
         if (snap.sub === "waiting") dispatch({ type: "speechStart" });
         if (snap.sub === "speaking") dispatch({ type: "speechPause" });
@@ -433,7 +757,7 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
         return dispatch({ type: "abort" });
       case "voice.turnStart":
       case "voice.turnEnd":
-        return fail("not_implemented", "La voz llega en F5.");
+        return handleVoice(msg.type);
     }
   }
 
@@ -448,12 +772,22 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
       handle(parsed.data);
       await settled();
     },
+    receiveAudio(pcm16) {
+      const v = run?.voice;
+      if (!v?.opened || snap.ctx.modality !== "voice") return false;
+      const t = v.speaking;
+      if (!t || snap.state !== "playerTurn" || snap.sub !== "speaking") return true;
+      t.clip?.append(pcm16); // el clip es de scene-runtime (copia propia)
+      v.provider.sendAudio(t.turnId, pcm16);
+      return true;
+    },
     close() {
       if (run && ACTIVE_RUN.includes(snap.state)) dispatch({ type: "abort" });
       if (run) {
         run.cancelCaps.forEach((c) => c());
         run.cancelTurnTimer?.();
         run.generation++;
+        closeVoice(run, "abort");
       }
     },
     get snapshot() {

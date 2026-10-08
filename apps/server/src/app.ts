@@ -14,6 +14,8 @@ import { createSceneSession, type Scheduler } from "./scene-runtime/runtime.ts";
 import { createFileEvidenceStore, createMemoryEvidenceStore, DEFAULT_EVIDENCE_PATH, type EvidenceStore } from "./store/evidence.ts";
 import type { ModerationProvider } from "./providers/moderation.ts";
 import { createFileSafetyStore, createMemorySafetyStore, DEFAULT_SAFETY_PATH, type SafetyEventStore } from "./store/safety.ts";
+import { costPolicyFromConfig, createFileCostLedger, createMemoryCostLedger, DEFAULT_COST_LEDGER_PATH, type CostAlert, type CostLedger } from "./cost/ledger.ts";
+import type { VoiceProviderFactory } from "./providers/types.ts";
 
 /** Reloj del proceso (el núcleo nunca lee la hora; la inyecta la app, R4). */
 export const systemClock: Clock = { now: () => Date.now() };
@@ -30,6 +32,11 @@ export interface GameServerOptions {
   newId?: () => string;
   moderation?: ModerationProvider | null;
   safety?: SafetyEventStore;
+  /** F5.1a: adaptador de voz elegido por configuración (providers/voice.ts); null o ausente, sin voz. */
+  voice?: VoiceProviderFactory | null;
+  ledger?: CostLedger;
+  onCostAlert?: (alert: CostAlert) => void;
+  onCostError?: (message: string) => void;
 }
 
 export interface GameServer {
@@ -42,15 +49,19 @@ export function createGameServer(opts: GameServerOptions): GameServer {
   const clock = opts.clock ?? systemClock;
   const operatorMode = operatorModeOn(opts.env);
   const tokens = createTokenRegistry(clock);
+  // Un libro de costos por proceso (el promedio móvil cruza escenas y conexiones).
+  const ledger = opts.ledger ?? createMemoryCostLedger(costPolicyFromConfig(opts.models));
   const server = createHttpServer(sceneRoutes(tokens, operatorMode));
   const gateway = attachSceneGateway(server, {
     tokens, operatorMode,
-    openSession: (send) => createSceneSession({
+    openSession: (send, sendAudio) => createSceneSession({
       content: opts.content, npcModel: opts.npcModel, observerModel: opts.observerModel, models: opts.models,
       evidence: opts.evidence, accountId: OPERATOR_ACCOUNT, clock,
       ...(opts.scheduler ? { scheduler: opts.scheduler } : {}), ...(opts.newId ? { newId: opts.newId } : {}),
       ...(opts.moderation !== undefined ? { moderation: opts.moderation } : {}), ...(opts.safety ? { safety: opts.safety } : {}),
-    }, send),
+      ...(opts.voice !== undefined ? { voice: opts.voice } : {}), ledger,
+      ...(opts.onCostAlert ? { onCostAlert: opts.onCostAlert } : {}), ...(opts.onCostError ? { onCostError: opts.onCostError } : {}),
+    }, send, sendAudio),
   });
   return { server, operatorMode, close: () => gateway.close() };
 }
@@ -81,12 +92,17 @@ export function textProvidersFromEnv(models: ModelsConfig, env: Record<string, s
  */
 export function storesFromEnv(
   env: Record<string, string | undefined>,
-  paths: { evidence?: string; safety?: string } = {},
-): { evidence: EvidenceStore; safety: SafetyEventStore; persistent: boolean } {
-  if (env[FAKE_MODELS_VAR] === "1") return { evidence: createMemoryEvidenceStore(), safety: createMemorySafetyStore(), persistent: false };
+  paths: { evidence?: string; safety?: string; costLedger?: string } = {},
+  models?: ModelsConfig,
+): { evidence: EvidenceStore; safety: SafetyEventStore; ledger: CostLedger | null; persistent: boolean } {
+  const policy = models ? costPolicyFromConfig(models) : null;
+  if (env[FAKE_MODELS_VAR] === "1") {
+    return { evidence: createMemoryEvidenceStore(), safety: createMemorySafetyStore(), ledger: policy ? createMemoryCostLedger(policy) : null, persistent: false };
+  }
   return {
     evidence: createFileEvidenceStore(paths.evidence ?? DEFAULT_EVIDENCE_PATH),
     safety: createFileSafetyStore(paths.safety ?? DEFAULT_SAFETY_PATH),
+    ledger: policy ? createFileCostLedger(policy, paths.costLedger ?? DEFAULT_COST_LEDGER_PATH) : null,
     persistent: true,
   };
 }

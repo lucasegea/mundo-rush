@@ -13,11 +13,20 @@ import { createMemoryEvidenceStore, type EvidenceStore } from "../src/store/evid
 import type { ModerationProvider } from "../src/providers/moderation.ts";
 import { createMemorySafetyStore, type SafetyEventStore } from "../src/store/safety.ts";
 import { fakeNpcModel, fakeObserverModel, observerJson, type CriteriaRule, type FakeModel } from "./fakes/text-model.ts";
+import type { VoiceProviderFactory } from "../src/providers/types.ts";
+import type { CostAlert, CostLedger } from "../src/cost/ledger.ts";
+import type { TurnClipView } from "../src/scene-runtime/turn-clip.ts";
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 let cached: ServerContent | null = null;
 /** El contenido real de content/, compilado en memoria (modo dev). */
+/** Valor presente o falla el test con un mensaje claro (en lugar de `x!`, que el lint prohíbe). */
+export function must<T>(v: T | null | undefined, what = "valor"): T {
+  if (v === null || v === undefined) throw new Error(`falta ${what}`);
+  return v;
+}
+
 export function realContent(): ServerContent {
   if (!cached) {
     const r = compilarContenido(leerContenido(REPO_ROOT), "dev");
@@ -62,6 +71,12 @@ export function manualScheduler(clock: ManualClock): ManualScheduler {
 export interface Harness {
   session: SceneSession;
   sent: ServerMessage[];
+  /** Audio del NPC que salió hacia el cliente (F5.1a). */
+  audioOut: Int16Array[];
+  /** Clips de turno creados (vista de solo lectura). */
+  clips: TurnClipView[];
+  alerts: CostAlert[];
+  costErrors: string[];
   npc: FakeModel;
   observer: ReturnType<typeof fakeObserverModel>;
   evidence: EvidenceStore;
@@ -86,6 +101,11 @@ export interface HarnessOptions {
   /** F4.2: clasificador de moderación falso y registro de safety_events. */
   moderation?: ModerationProvider;
   safety?: SafetyEventStore;
+  /** F5.1a: adaptador de voz (referencia en memoria o Live contra el servidor falso), libro de costos y config. */
+  voice?: VoiceProviderFactory | null;
+  ledger?: CostLedger;
+  models?: ModelsConfig;
+  observerModel?: FakeModel & { observed: { turnId: string; playerText: string; attempt: number }[] };
 }
 
 export function harness(opts: HarnessOptions = {}): Harness {
@@ -93,19 +113,25 @@ export function harness(opts: HarnessOptions = {}): Harness {
   const scheduler = manualScheduler(clock);
   const sent: ServerMessage[] = [];
   const npc = fakeNpcModel(opts.replies);
-  const observer = fakeObserverModel(opts.observe ?? ((call) => observerJson(call, opts.rules ?? [])));
+  const observer = opts.observerModel ?? fakeObserverModel(opts.observe ?? ((call) => observerJson(call, opts.rules ?? [])));
   const evidence = opts.evidence ?? createMemoryEvidenceStore();
   const safety = opts.safety ?? createMemorySafetyStore();
-  const models = loadModelsConfig();
+  const models = opts.models ?? loadModelsConfig();
+  const audioOut: Int16Array[] = [];
+  const clips: TurnClipView[] = [];
+  const alerts: CostAlert[] = [];
+  const costErrors: string[] = [];
   let n = 0;
   const open = (): SceneSession => createSceneSession({
     content: opts.content ?? realContent, npcModel: npc, observerModel: observer, models, evidence,
     accountId: "op-local", clock, scheduler, newId: () => `id-${++n}`, safety,
     ...(opts.moderation ? { moderation: opts.moderation } : {}),
-  }, (m) => sent.push(m));
+    ...(opts.voice !== undefined ? { voice: opts.voice } : {}), ...(opts.ledger ? { ledger: opts.ledger } : {}),
+    onTurnClip: (c) => clips.push(c), onCostAlert: (a) => alerts.push(a), onCostError: (m) => costErrors.push(m),
+  }, (m) => sent.push(m), (pcm) => audioOut.push(pcm));
   const session = open();
   return {
-    session, sent, npc, observer, evidence, safety, clock, scheduler, models,
+    session, sent, audioOut, clips, alerts, costErrors, npc, observer, evidence, safety, clock, scheduler, models,
     of: <T extends ServerMessage["type"]>(type: T) => sent.filter((m): m is Extract<ServerMessage, { type: T }> => m.type === type),
     steps: () => sent.filter((m) => m.type === "scene.state").map((m) => (m.type === "scene.state" && m.sub ? `${m.state}.${m.sub}` : m.type === "scene.state" ? m.state : "")),
     reconnect: open,

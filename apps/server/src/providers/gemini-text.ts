@@ -9,6 +9,26 @@ interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
 }
 
+/** PCM16 mono → WAV (cabecera RIFF de 44 bytes): formato de audio que acepta generateContent como inlineData. */
+export function pcm16ToWav(pcm16: Int16Array, sampleRate: number): Buffer {
+  const data = Buffer.from(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength);
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0, "ascii");
+  h.writeUInt32LE(36 + data.byteLength, 4);
+  h.write("WAVE", 8, "ascii");
+  h.write("fmt ", 12, "ascii");
+  h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20); // PCM
+  h.writeUInt16LE(1, 22); // mono
+  h.writeUInt32LE(sampleRate, 24);
+  h.writeUInt32LE(sampleRate * 2, 28);
+  h.writeUInt16LE(2, 32);
+  h.writeUInt16LE(16, 34);
+  h.write("data", 36, "ascii");
+  h.writeUInt32LE(data.byteLength, 40);
+  return Buffer.concat([h, data]);
+}
+
 export function createGeminiTextProvider(apiKey: string, model: string, fetchImpl: typeof fetch = fetch): TextModelProvider {
   if (apiKey === "") throw new ProviderError("falta la clave del proveedor de texto", "unavailable");
   return {
@@ -16,7 +36,14 @@ export function createGeminiTextProvider(apiKey: string, model: string, fetchImp
     async generate(req: TextRequest): Promise<TextResponse> {
       const body = {
         systemInstruction: { parts: [{ text: req.system }] },
-        contents: req.turns.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
+        contents: req.turns.map((t, i) => ({
+          role: t.role,
+          parts: [
+            { text: t.text },
+            // El clip del turno va con el primer turno (el del jugador); se codifica acá y no se guarda.
+            ...(i === 0 && req.audio ? [{ inlineData: { mimeType: "audio/wav", data: pcm16ToWav(req.audio.pcm16, req.audio.sampleRate).toString("base64") } }] : []),
+          ],
+        })),
         generationConfig: { maxOutputTokens: req.maxOutputTokens, ...(req.json ? { responseMimeType: "application/json" } : {}) },
       };
       let res: Response;

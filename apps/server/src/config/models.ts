@@ -15,9 +15,34 @@ const Role = z.strictObject({
   timeoutMs: z.number().int().positive(),
 });
 
+const VoiceRole = z.strictObject({
+  provider: z.enum(["gemini-live"]),
+  model: z.string().min(1),
+  openTimeoutMs: z.number().int().positive(),
+  maxReconnects: z.number().int().nonnegative(),
+});
+
+const PerM = z.number().nonnegative();
+/** Tarifas por adaptador (US$; 03 §5.9): tokens por millón, STT por minuto, TTS por millón de caracteres. */
+export const PricesSchema = z.strictObject({
+  version: z.string(),
+  source: z.string(),
+  adapters: z.strictObject({
+    "gemini-live": z.strictObject({ audioInPerM: PerM, audioOutPerM: PerM, textInPerM: PerM, textOutPerM: PerM }),
+    cascade: z.strictObject({ sttPerMin: PerM, textInPerM: PerM, textOutPerM: PerM, ttsPerMChars: PerM }),
+  }),
+});
+export type Prices = z.infer<typeof PricesSchema>;
+
 export const ModelsConfigSchema = z.strictObject({
-  roles: z.strictObject({ textNpc: Role, observer: Role }),
-  voice: z.strictObject({ npc: z.strictObject({ adapter: z.enum(["live", "cascade"]) }) }),
+  roles: z.strictObject({ textNpc: Role, observer: Role, npcVoice: VoiceRole }),
+  voice: z.strictObject({
+    npc: z.strictObject({ adapter: z.enum(["live", "cascade"]) }),
+    observer: z.strictObject({ source: z.enum(["adapter"]) }),
+    voices: z.strictObject({ default: z.string().min(1), byNpc: z.record(z.string(), z.string().min(1)) }),
+    languageCode: z.string().min(2),
+    clipTtlMs: z.number().int().positive(),
+  }),
   observer: z.strictObject({ liveGrammarSignals: z.boolean() }),
   scene: z.strictObject({
     softCapMs: z.number().int().positive(),
@@ -26,7 +51,8 @@ export const ModelsConfigSchema = z.strictObject({
   }).refine((s) => s.softCapMs < s.hardCapMs, { message: "softCapMs tiene que ser menor que hardCapMs" }),
   /** Capa "clasificador" de la moderación (03 §7.7, F4.2). `none`: corren solo las listas y las reglas. */
   moderation: z.strictObject({ classifier: z.enum(["none"]) }),
-  prices: z.strictObject({ version: z.string(), source: z.string() }),
+  prices: PricesSchema,
+  cost: z.strictObject({ alertUsdPerMin: z.number().positive(), windowScenes: z.number().int().positive() }),
 });
 export type ModelsConfig = z.infer<typeof ModelsConfigSchema>;
 export type ModelRole = ModelsConfig["roles"]["textNpc"];

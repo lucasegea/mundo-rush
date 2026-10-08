@@ -1,6 +1,7 @@
 // Gateway de escena (03 §4.2 gateway/, §5.3, D-158): POST /scene-token emite un token de un solo uso (modo operador:
-// sin login, cuenta `op-local`) y el WebSocket /scene?token=… abre una sesión de escena con él. Solo texto en F4.1:
-// un frame binario (audio, F5) se contesta `not_implemented`. Los errores HTTP usan el sobre { ok: false, error }.
+// sin login, cuenta `op-local`) y el WebSocket /scene?token=… abre una sesión de escena con él. F5.1a: los frames
+// binarios son audio PCM16 (ADR-017, framing en @lg/protocol): los del cliente van a la sesión (`not_voice` si la escena
+// no está en voz) y la voz del NPC sale como frames binarios. Los errores HTTP usan el sobre { ok: false, error }.
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
@@ -56,11 +57,19 @@ function refuse(socket: Duplex, status: number, code: "unauthorized" | "forbidde
   socket.end(`HTTP/1.1 ${status} ${reason}\r\ncontent-type: application/json; charset=utf-8\r\ncontent-length: ${Buffer.byteLength(body)}\r\ncache-control: no-store\r\nconnection: close\r\n\r\n${body}`);
 }
 
+/** Frame binario → PCM16 little-endian (un byte suelto al final se descarta). */
+export function pcm16FromFrame(data: RawData): Int16Array {
+  const buf = Array.isArray(data) ? Buffer.concat(data) : Buffer.isBuffer(data) ? data : Buffer.from(data);
+  const out = new Int16Array(Math.floor(buf.byteLength / 2));
+  for (let i = 0; i < out.length; i++) out[i] = buf.readInt16LE(i * 2);
+  return out;
+}
+
 export interface GatewayOptions {
   tokens: TokenRegistry;
   operatorMode: boolean;
-  /** Crea la sesión de escena de una conexión; `send` manda un mensaje del protocolo. */
-  openSession(send: (msg: ServerMessage) => void): SceneSession;
+  /** Crea la sesión de escena de una conexión; `send` manda un mensaje del protocolo y `sendAudio`, la voz del NPC. */
+  openSession(send: (msg: ServerMessage) => void, sendAudio: (pcm16: Int16Array) => void): SceneSession;
 }
 
 /** Engancha el WebSocket de escena al servidor HTTP. Devuelve el cierre. */
@@ -78,12 +87,18 @@ export function attachSceneGateway(server: Server, opts: GatewayOptions): { clos
     const out = (msg: ServerMessage): void => {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
     };
-    const session = opts.openSession(out);
+    const audioOut = (pcm16: Int16Array): void => {
+      if (ws.readyState === ws.OPEN) ws.send(Buffer.from(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength), { binary: true });
+    };
+    const session = opts.openSession(out, audioOut);
     // Los mensajes de una conexión se procesan en orden.
     let chain = Promise.resolve();
     ws.on("message", (data: RawData, isBinary: boolean) => {
       chain = chain.then(async () => {
-        if (isBinary) return out({ type: "error", code: "not_implemented", message: "Audio binario: llega con la voz (F5)." });
+        if (isBinary) {
+          if (!session.receiveAudio(pcm16FromFrame(data))) out({ type: "error", code: "not_voice", message: "Audio en una escena que no está en voz." });
+          return;
+        }
         let raw: unknown;
         try {
           raw = JSON.parse(data.toString());

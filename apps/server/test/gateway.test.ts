@@ -11,11 +11,15 @@ import { readCatalog } from "../src/scene-runtime/catalog.ts";
 import { createMemoryEvidenceStore } from "../src/store/evidence.ts";
 import { fakeNpcModel, fakeObserverModel, M01_RULES, observerJson } from "./fakes/text-model.ts";
 import { realContent } from "./helpers.ts";
+import { voiceProviderFromConfig } from "../src/providers/voice.ts";
+import type { VoiceProviderFactory } from "../src/providers/types.ts";
+import { startFakeLiveServer, type FakeLiveServer } from "./fakes/live-server.ts";
 
 /** Valor de clave falso: si aparece en cualquier frame, se filtró. */
 const FAKE_KEY = "lg-test-key-0123456789abcdef";
 
 let game: GameServer | null = null;
+let live: FakeLiveServer | null = null;
 const sockets: WebSocket[] = [];
 
 afterEach(async () => {
@@ -26,13 +30,16 @@ afterEach(async () => {
     g.close();
     await new Promise<void>((done) => g.server.close(() => done()));
   }
+  await live?.close();
+  live = null;
 });
 
-async function start(operator: boolean) {
+async function start(operator: boolean, voice?: VoiceProviderFactory | null) {
   const npc = fakeNpcModel(["Hello! And your name?"]);
   const observer = fakeObserverModel((c) => observerJson(c, M01_RULES));
   const env = { ...(operator ? { LG_OPERATOR_MODE: "1" } : {}), [GEMINI_KEY_VAR]: FAKE_KEY };
-  game = createGameServer({ env, content: realContent, models: loadModelsConfig(), evidence: createMemoryEvidenceStore(), npcModel: npc, observerModel: observer });
+  game = createGameServer({ env, content: realContent, models: loadModelsConfig(), evidence: createMemoryEvidenceStore(), npcModel: npc, observerModel: observer,
+    ...(voice !== undefined ? { voice } : {}) });
   const g = game;
   await new Promise<void>((done) => g.server.listen(0, "127.0.0.1", done));
   const port = (g.server.address() as AddressInfo).port;
@@ -41,6 +48,8 @@ async function start(operator: boolean) {
 
 interface Client {
   frames: string[];
+  /** Frames binarios (voz del NPC). */
+  binary: Buffer[];
   messages: ServerMessage[];
   socket: WebSocket;
   send(msg: unknown): void;
@@ -51,9 +60,14 @@ function connect(url: string): Promise<Client> {
   const socket = new WebSocket(url);
   sockets.push(socket);
   const frames: string[] = [];
+  const binary: Buffer[] = [];
   const messages: ServerMessage[] = [];
   let waiters: { pred: (m: ServerMessage) => boolean; done: (m: ServerMessage) => void }[] = [];
-  socket.on("message", (data) => {
+  socket.on("message", (data, isBinary) => {
+    if (isBinary) {
+      binary.push(Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer));
+      return;
+    }
     const text = data.toString();
     frames.push(text);
     const msg = ServerMessageSchema.parse(JSON.parse(text));
@@ -65,7 +79,7 @@ function connect(url: string): Promise<Client> {
   return new Promise((resolveOpen, reject) => {
     socket.once("error", reject);
     socket.once("open", () => resolveOpen({
-      frames, messages, socket,
+      frames, binary, messages, socket,
       send: (msg) => socket.send(JSON.stringify(msg)),
       until: (pred) => {
         const hit = messages.find(pred);
@@ -127,11 +141,11 @@ describe("gateway de escena (modo operador)", () => {
     expect(JSON.parse(again.body)).toEqual({ ok: false, error: { code: "unauthorized", message: "Token de escena inválido o vencido." } });
   });
 
-  test("frame binario (audio, F5) → not_implemented; JSON roto → bad_message", async () => {
+  test("frame binario (audio) fuera de una escena de voz → not_voice; JSON roto → bad_message", async () => {
     const { http, ws } = await start(true);
     const client = await connect(wsUrl(ws, await token(http)));
     client.socket.send(Buffer.from([1, 2, 3]));
-    await client.until((m) => m.type === "error" && m.code === "not_implemented");
+    await client.until((m) => m.type === "error" && m.code === "not_voice");
     client.socket.send("{nope");
     await client.until((m) => m.type === "error" && m.code === "bad_message");
   });
@@ -206,5 +220,59 @@ describe("A4: inspección del protocolo", () => {
     const line = { lineId: "l1", speaker: "NPC-INES", kind: "reply", text: "Hi", template: null };
     expect(ServerMessageSchema.safeParse({ type: "npc.line", line }).success).toBe(true);
     expect(ServerMessageSchema.safeParse({ type: "npc.line", line: { ...line, system: "You are Ines" } }).success).toBe(false);
+  });
+});
+
+describe("F5.1a A6: inspección del protocolo en una escena de voz (Live contra el servidor falso)", () => {
+  test("ni el setup, ni la clave, ni el modelo, ni la voz del proveedor cruzan el cable hacia el cliente", async () => {
+    live = await startFakeLiveServer();
+    const fake = live;
+    const models = loadModelsConfig();
+    const selection = voiceProviderFromConfig(models, { [GEMINI_KEY_VAR]: FAKE_KEY }, { liveEndpoint: fake.url });
+    const { http, ws } = await start(true, selection.factory);
+    const t = await token(http);
+    const client = await connect(wsUrl(ws, t));
+    client.send({ type: "scene.start", npcId: "NPC-INES", modality: "voice" });
+    await client.until((m) => m.type === "scene.state" && m.state === "playerTurn" && m.sub === "waiting");
+    client.send({ type: "voice.turnStart" });
+    await client.until((m) => m.type === "scene.state" && m.sub === "speaking");
+    client.socket.send(Buffer.from(Int16Array.from([5, -5, 6]).buffer), { binary: true });
+    client.send({ type: "voice.turnEnd" });
+    await client.until((m) => m.type === "scene.end");
+
+    expect(client.messages.find((m) => m.type === "scene.opened")).toMatchObject({ modality: "voice" });
+    // La sesión Live existió del lado del servidor: recibió el setup armado por el servidor, con la clave en su URL.
+    const conn = fake.connections[0];
+    const setup = conn?.received.find((m) => "setup" in m)?.["setup"] as { systemInstruction: { parts: { text: string }[] } } | undefined;
+    const instruction = setup?.systemInstruction.parts[0]?.text ?? "";
+    expect(instruction.length).toBeGreaterThan(200);
+    expect(conn?.url).toContain("key=");
+    expect(client.binary.length).toBeGreaterThan(0); // la voz del NPC llegó como frames binarios
+
+    const wire = [t.raw, ...client.frames, ...client.binary.map((b) => b.toString("latin1"))].join("\n");
+    const lowerWire = wire.toLowerCase();
+    const chunks = instruction.split("\n").map((l) => l.trim()).filter((l) => l.length >= 24);
+    expect(chunks.length).toBeGreaterThan(10);
+    expect(chunks.filter((c) => wire.includes(c))).toEqual([]);
+    for (const needle of [
+      FAKE_KEY, GEMINI_KEY_VAR, models.roles.npcVoice.model, models.voice.voices.default, "gemini", "generativelanguage",
+      "BidiGenerateContent", "systemInstruction", "=== PERSONA", "[DIRECTOR]", fake.url,
+    ]) {
+      expect(lowerWire.includes(needle.toLowerCase()), `se filtró: ${needle}`).toBe(false);
+    }
+  });
+
+  test("sin clave (A9): pedir voz da el aviso model_unavailable y la escena va por texto", async () => {
+    const selection = voiceProviderFromConfig(loadModelsConfig(), {});
+    expect(selection.factory).toBeNull();
+    const { http, ws } = await start(true, selection.factory);
+    const client = await connect(wsUrl(ws, await token(http)));
+    client.send({ type: "scene.start", npcId: "NPC-INES", modality: "voice" });
+    await client.until((m) => m.type === "scene.state" && m.state === "playerTurn");
+    expect(client.messages.find((m) => m.type === "scene.notice")).toMatchObject({ code: "model_unavailable" });
+    expect(client.messages.find((m) => m.type === "scene.opened")).toMatchObject({ modality: "text" });
+    client.send({ type: "turn.text", text: "Hello! I'm Nico." });
+    await client.until((m) => m.type === "scene.end");
+    expect(client.frames.join("\n").toLowerCase()).not.toContain(GEMINI_KEY_VAR.toLowerCase());
   });
 });

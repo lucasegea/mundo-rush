@@ -179,7 +179,7 @@ describe("mensajes del cliente", () => {
     await h.session.receive({ type: "turn.choose", option: "hint" });
     await h.session.receive({ type: "scene.start", npcId: "NPC-INES" });
     await h.session.receive({ type: "scene.start", npcId: "NPC-INES" });
-    expect(h.of("error").map((e) => e.code)).toEqual(["bad_message", "not_implemented", "unknown_npc", "not_your_turn", "scene_busy"]);
+    expect(h.of("error").map((e) => e.code)).toEqual(["bad_message", "not_voice", "unknown_npc", "not_your_turn", "scene_busy"]);
   });
 
   test("abort y cierre de la conexión: la escena queda abortada, sin efectos ni misión cumplida", async () => {

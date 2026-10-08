@@ -1,13 +1,23 @@
 // Mensajes cliente ↔ servidor de una escena por texto (F4.1; 03 §5.3, §5.6-§5.8) y contratos que viajan con ellos:
 // salida del observador (03 §5.7), evento de evidencia (03 §3.5.3) y efectos de misión (03 §6.4.8).
 // Todos los objetos son estrictos: un campo de más (un prompt, un nombre de modelo, una clave) no valida (A4).
-// Los mensajes de voz quedan reservados (F5): existen en el esquema y el servidor responde `not_implemented`.
+// F5.1a: voz en el servidor. El cliente pide una escena de voz (`scene.start` con `modality: "voice"`), marca inicio y
+// fin de su turno (`voice.turnStart`/`voice.turnEnd`, D-091) y manda el audio en frames binarios aparte (ADR-017).
+// El audio del cliente llega en F5.2.
 import { z } from "zod";
 
 const NpcId = z.string().regex(/^NPC-[A-Z0-9-]+$/);
 const MissionId = z.string().regex(/^M\d+\.\d+$/);
 const SceneId = z.string().regex(/^M\d+\.\d+-E\d+$/);
 const Iso = z.iso.datetime();
+
+/**
+ * Framing del audio en el WebSocket de escena (ADR-017): frames BINARIOS sin cabecera, PCM16 little-endian mono.
+ * Cliente → servidor: la voz del jugador a 16 kHz, solo entre `voice.turnStart` y `voice.turnEnd`.
+ * Servidor → cliente: la voz del NPC a 24 kHz, solo durante `npcTurn` (invariante a de 03 §3.5.1).
+ */
+export const PLAYER_AUDIO_SAMPLE_RATE = 16000;
+export const NPC_AUDIO_SAMPLE_RATE = 24000;
 
 /** Ruta del WebSocket de escena y del token de un solo uso (03 §5.3, D-158). */
 export const SCENE_WS_PATH = "/scene";
@@ -77,13 +87,19 @@ export const PassOptionSchema = z.enum(["hint", "repeat", "simpler", "continue"]
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
   /** Hablar con un NPC; `null` abre la escena del compañero sin NPC (como M0.2). Modo operador: cuenta `op-local`. */
-  z.strictObject({ type: z.literal("scene.start"), npcId: NpcId.nullable() }),
+  z.strictObject({
+    type: z.literal("scene.start"),
+    npcId: NpcId.nullable(),
+    /** Por omisión, texto. Voz sin sesión disponible (sin clave, proveedor caído): la escena sigue por texto con aviso. */
+    modality: z.enum(["voice", "text"]).optional(),
+  }),
   /** Turno por texto: el jugador escribe y aprieta Terminé. */
   z.strictObject({ type: z.literal("turn.text"), text: z.string().trim().min(1).max(500) }),
   z.strictObject({ type: z.literal("turn.pass") }),
   z.strictObject({ type: z.literal("turn.choose"), option: PassOptionSchema }),
   z.strictObject({ type: z.literal("scene.abort") }),
-  // Reservados para voz (F5): el audio va en frames binarios aparte (framing de 03 §4.2).
+  // Voz (F5.1a): inicio y fin del turno hablado (fin = `Terminé` o el umbral de silencio local). El audio va en frames
+  // binarios aparte (PLAYER_AUDIO_SAMPLE_RATE).
   z.strictObject({ type: z.literal("voice.turnStart") }),
   z.strictObject({ type: z.literal("voice.turnEnd") }),
 ]);
@@ -110,7 +126,8 @@ export const SAFETY_LAYERS = ["input", "output", "observer"] as const;
 export type SafetyLayer = (typeof SAFETY_LAYERS)[number];
 
 export const NOTICE_CODES = ["observer_invalid", "model_unavailable", "containment"] as const;
-export const ERROR_CODES = ["bad_message", "not_implemented", "scene_busy", "no_scene", "unknown_npc", "not_your_turn"] as const;
+/** `not_voice`: un mensaje o frame de voz en una escena que no está en modo voz. */
+export const ERROR_CODES = ["bad_message", "not_implemented", "scene_busy", "no_scene", "unknown_npc", "not_your_turn", "not_voice"] as const;
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({

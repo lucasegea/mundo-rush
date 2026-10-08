@@ -489,11 +489,16 @@ describe("FD0 A2: cableado del plugin y archivos reales del modo director", () =
 
 // ---------- F4.1 A6: apps/server escribe a disco solo en src/store/ y src/cost/ (D-108, D-157) ----------
 // Archivos reales del servidor lintean limpios; con una escritura a disco agregada, fallan fuera de store/ y cost/.
-// Dentro de store/ (y de cost/, que todavía no existe: probe virtual en su carpeta futura) la misma escritura pasa.
+// Dentro de store/ y de cost/ (F5.1a: el libro de costos real) la misma escritura pasa. F5.1a suma los módulos de voz
+// (adaptador Live, selección, TurnClip) a los archivos reales que no pueden escribir a disco.
 const REAL_GATEWAY = "apps/server/src/gateway/scene.ts";
 const REAL_RUNTIME = "apps/server/src/scene-runtime/runtime.ts";
 const REAL_EVIDENCE = "apps/server/src/store/evidence.ts";
-const REAL_SERVER = [REAL_GATEWAY, REAL_RUNTIME, REAL_EVIDENCE, "apps/server/src/content/loader.ts", "apps/server/src/main.ts"];
+const REAL_LEDGER = "apps/server/src/cost/ledger.ts";
+const REAL_LIVE = "apps/server/src/providers/gemini-live/adapter.ts";
+const REAL_CLIP = "apps/server/src/scene-runtime/turn-clip.ts";
+const REAL_SERVER = [REAL_GATEWAY, REAL_RUNTIME, REAL_EVIDENCE, "apps/server/src/content/loader.ts", "apps/server/src/main.ts",
+  REAL_LEDGER, REAL_LIVE, REAL_CLIP, "apps/server/src/providers/voice.ts"];
 const DISK = "D-108";
 const DISK_WRITES: { name: string; code: string; rule: string }[] = [
   { name: "writeFileSync importado de node:fs", code: "\nimport { writeFileSync as __w } from \"node:fs\";\nexport const __p = () => __w(\"x\", \"y\");\n", rule: IMP },
@@ -508,6 +513,7 @@ describe("F4.1 A6: escrituras a disco del servidor", () => {
   test("los archivos reales existen y store/ tiene su módulo (guardia contra falso verde)", () => {
     for (const f of REAL_SERVER) expect(isFile(resolve(ROOT, f)), f).toBe(true);
     expect(existsSync(resolve(ROOT, "apps/server/src/store"))).toBe(true);
+    expect(existsSync(resolve(ROOT, "apps/server/src/cost"))).toBe(true);
   });
 
   test.each(REAL_SERVER)("%s lintea limpio tal como está", async (file) => {
@@ -516,7 +522,7 @@ describe("F4.1 A6: escrituras a disco del servidor", () => {
     expect(hits, describeMsgs(hits)).toEqual([]);
   });
 
-  test.each(DISK_WRITES.flatMap((c) => [REAL_GATEWAY, REAL_RUNTIME].map((f) => [`${f} + ${c.name}`, f, c] as const)))(
+  test.each(DISK_WRITES.flatMap((c) => [REAL_GATEWAY, REAL_RUNTIME, REAL_LIVE, REAL_CLIP].map((f) => [`${f} + ${c.name}`, f, c] as const)))(
     "%s falla con el ruleId esperado", async (_name, file, c) => {
       const msgs = await lint(file, realCode(file) + c.code);
       const hits = msgs.filter((m) => m.ruleId === c.rule && m.message.includes(DISK));
@@ -524,8 +530,8 @@ describe("F4.1 A6: escrituras a disco del servidor", () => {
     });
 
   test.each(DISK_WRITES.map((c) => [c.name, c] as const))("%s pasa en src/store/ y src/cost/", async (_name, c) => {
-    for (const file of [REAL_EVIDENCE, "apps/server/src/cost/__probe__.ts"]) {
-      const base = file === REAL_EVIDENCE ? realCode(file) : "";
+    for (const file of [REAL_EVIDENCE, REAL_LEDGER]) {
+      const base = realCode(file);
       const msgs = await lint(file, base + c.code);
       const hits = msgs.filter((m) => m.ruleId !== null && m.message.includes(DISK));
       expect(hits, `${file}: ${describeMsgs(hits)}`).toEqual([]);
