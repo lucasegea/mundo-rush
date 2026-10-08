@@ -16,6 +16,8 @@ export interface SettingsView {
   highContrast: boolean;
   reduceMotion: boolean;
   subtitles: boolean;
+  /** Chip de pista a los 10 s (D-035). */
+  hintChip: boolean;
   npcSpeed: NpcSpeed;
   npcSpeeds: readonly NpcSpeed[];
   feedbackMode: FeedbackMode;
@@ -41,6 +43,7 @@ export const selectSettingsView = createViewSelector(
       highContrast: a.highContrast,
       reduceMotion: a.reduceMotion,
       subtitles: a.subtitles,
+      hintChip: settings.input.hintChip,
       npcSpeed: settings.npcSpeed,
       npcSpeeds: NPC_SPEEDS,
       feedbackMode: settings.feedbackMode,

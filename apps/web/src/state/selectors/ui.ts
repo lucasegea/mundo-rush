@@ -9,17 +9,11 @@ export interface ShellView {
   phase: AppPhase;
   /** Panel visible (el de arriba de la pila) o null. */
   panel: Panel | null;
-  /** Nombre del NPC del placeholder de escena, si ese es el panel visible. */
-  sceneNpcName: string | null;
 }
 
 export const selectShellView = createViewSelector(
-  (s: GameState) => [s.session.phase, s.ui.panels, s.world.npcs] as const,
-  (phase, panels, npcs): ShellView => {
-    const panel = panels[panels.length - 1] ?? null;
-    const sceneNpcName = panel?.kind === "scene" ? (npcs.find((n) => n.id === panel.npcId)?.name ?? panel.npcId) : null;
-    return { phase, panel, sceneNpcName };
-  },
+  (s: GameState) => [s.session.phase, s.ui.panels] as const,
+  (phase, panels): ShellView => ({ phase, panel: panels[panels.length - 1] ?? null }),
 );
 
 export interface MainMenuView {

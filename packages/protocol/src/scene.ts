@@ -100,10 +100,14 @@ const LineSchema = z.strictObject({
   lineId: z.string().min(1),
   /** NPC que habla o LUMI (sus líneas viajan como id de plantilla, nunca texto libre del modelo). */
   speaker: z.union([NpcId, z.literal("LUMI")]),
-  kind: z.enum(["pretask", "opening", "reply", "closing", "exit", "notIntroduced"]),
+  /** `safe`: línea segura guionada que reemplaza un turno cortado por la moderación (F4.2, 03 §7.7). */
+  kind: z.enum(["pretask", "opening", "reply", "closing", "exit", "notIntroduced", "safe"]),
   text: z.string().nullable(),
   template: z.string().nullable(),
 });
+
+export const SAFETY_LAYERS = ["input", "output", "observer"] as const;
+export type SafetyLayer = (typeof SAFETY_LAYERS)[number];
 
 export const NOTICE_CODES = ["observer_invalid", "model_unavailable", "containment"] as const;
 export const ERROR_CODES = ["bad_message", "not_implemented", "scene_busy", "no_scene", "unknown_npc", "not_your_turn"] as const;
@@ -131,6 +135,18 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     outcome: z.enum(["success", "partial", "hardCap", "containment", "aborted"]),
     criteriaMet: z.array(z.string()),
     evidence: z.array(EvidenceEventSchema),
+  }),
+  /**
+   * Corte de moderación (F4.2, 03 §7.7): en qué capa se detectó (entrada del jugador, salida del NPC u observador) y
+   * qué pasó (corte + línea segura, o contención). Nunca lleva el texto cortado ni el término que disparó.
+   */
+  z.strictObject({ type: z.literal("scene.safety"), layer: z.enum(SAFETY_LAYERS), action: z.enum(["cut", "containment"]) }),
+  /** Contención (D-112): línea fuera de la ficción y recurso de ayuda local. `provisional`: textos sin revisar (F13). */
+  z.strictObject({
+    type: z.literal("scene.containment"),
+    line: z.string().min(1),
+    resource: z.strictObject({ label: z.string().min(1), detail: z.string().min(1) }).nullable(),
+    provisional: z.boolean(),
   }),
   /** Evento de error que no corta la escena (p. ej. el observador no validó dos veces). */
   z.strictObject({ type: z.literal("scene.notice"), code: z.enum(NOTICE_CODES), message: z.string() }),

@@ -27,24 +27,21 @@ export interface OpenScene {
   missionId: string | null;
   sceneId: string | null;
   npcId: string | null;
-  /** Estado de la máquina de escena (03 §3.5.1); `idle` mientras la escena es el placeholder de F2. */
+  /** Estado de la máquina de escena (03 §3.5.1); `idle` hasta que el servidor abre la escena. */
   step: string;
   /** Turnos con línea final en esta escena. */
   turnIndex: number;
 }
 
-/**
- * La escena abierta: la de la máquina de escena (F4) o, mientras tanto, el panel placeholder de escena (F2).
- * La misión todavía no está en el store (llega con F4.1): sale null.
- */
+/** La escena abierta: el HUD de diálogo (F4.2) con lo que contó el servidor (misión, escena, paso de la máquina). */
 export const selectOpenScene = (s: GameState): OpenScene | null => {
   const top = s.ui.panels[s.ui.panels.length - 1];
-  const placeholderNpc = top?.kind === "scene" ? top.npcId : null;
-  if (s.dialogue.sceneId === null && placeholderNpc === null) return null;
+  const panelOpen = top?.kind === "scene";
+  if (s.dialogue.sceneId === null && !panelOpen) return null;
   return {
-    missionId: null,
+    missionId: s.dialogue.missionId,
     sceneId: s.dialogue.sceneId,
-    npcId: s.dialogue.npcId ?? placeholderNpc,
+    npcId: s.dialogue.npcId ?? (panelOpen ? top.npcId : null),
     step: s.dialogue.state,
     turnIndex: s.dialogue.subtitles.final.length,
   };

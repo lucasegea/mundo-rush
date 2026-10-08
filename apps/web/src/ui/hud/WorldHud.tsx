@@ -23,6 +23,7 @@ export function WorldHud() {
           </div>
         ) : null}
         <p className="max-w-xl rounded-lg bg-surface/90 px-3 py-2 text-sm">{t("world.controls")}</p>
+        <Button id="world-story" className="pointer-events-auto" onClick={() => actions.enterScene(null, "world-story")}>{t("world.continueStory")}</Button>
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-2">

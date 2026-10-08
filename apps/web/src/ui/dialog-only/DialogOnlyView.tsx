@@ -1,6 +1,7 @@
 // Modo solo-diálogo (03 §2.7.1-§2.7.2, GDD §2.19): render alternativo sin WebGL. Lista de lugares de la región
-// (contenido de F1.2), quién está en cada uno con su retrato SVG (D-030) y "entrar a la escena" (placeholder
-// hasta F4). Todo por teclado: los lugares son botones con aria-pressed.
+// (contenido de F1.2), quién está en cada uno con su retrato SVG (D-030) y "entrar a la escena" (abre el HUD de
+// diálogo de F4.2). "Seguir la historia" abre la escena que no tiene NPC (las de Lumi, como M0.2). Todo por teclado:
+// los lugares son botones con aria-pressed.
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";
 import { selectDialogOnlyView, selectSettingsView, useGameView } from "../../state/selectors";
@@ -18,6 +19,9 @@ export function DialogOnlyView() {
       <h1 id="dialog-only-title" ref={heading} tabIndex={-1} className="text-2xl font-bold">{t("dialogOnly.title")}</h1>
       {tierLocked ? <p className="rounded-lg border-2 border-line bg-surface p-3">{t("settings.tier.locked")}</p> : null}
       <p>{t("dialogOnly.intro")}</p>
+      <div>
+        <Button id="dialog-only-story" onClick={() => actions.enterScene(null, "dialog-only-story")}>{t("dialogOnly.continueStory")}</Button>
+      </div>
 
       {view.status === "error" ? <p role="alert" className="font-semibold text-danger">{t("dialogOnly.error")}</p> : null}
       {view.status === "loading" || view.status === "idle" ? <p>{t("dialogOnly.loading")}</p> : null}

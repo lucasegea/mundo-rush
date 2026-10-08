@@ -19,6 +19,6 @@ export type { Resultado, ResultadoIncremental } from "./compile/compilar.ts";
 export { filtrarGlosario, filtrarSaberes } from "./compile/vistas.ts";
 export type { Salida } from "./compile/vistas.ts";
 export { buscarRetirados, RUTA_RETIRADOS } from "./compile/retirados.ts";
-export { encontrarCifra, oraciones, palabras } from "./compile/lints.ts";
+export { encontrarCifra, oraciones, palabras, regexTermino } from "./compile/lints.ts";
 export { formatearHallazgo } from "./compile/tipos.ts";
 export type { ArchivoFuente, Hallazgo, Modo } from "./compile/tipos.ts";

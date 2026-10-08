@@ -4,7 +4,7 @@ import { parseDocument } from "yaml";
 import type { z } from "zod";
 import { ArbolHabilidades, ArchivoGlosario, TarjetaNivel } from "../schemas/aprendizaje.ts";
 import type { EntradaGlosario, Habilidad, RamaInfo } from "../schemas/aprendizaje.ts";
-import { ArchivoAllowlist, ArchivoRetirados, ListaBloqueo, TemasGlobales } from "../schemas/control.ts";
+import { ArchivoAllowlist, ArchivoContencion, ArchivoRetirados, ListaBloqueo, TemasGlobales } from "../schemas/control.ts";
 import { ArchivoLumi } from "../schemas/lumi.ts";
 import type { PlantillaLumi } from "../schemas/lumi.ts";
 import { Mision } from "../schemas/mision.ts";
@@ -40,6 +40,8 @@ export interface Conjunto {
   dioramas: Entrada<Infer<typeof Diorama>>[];
   bloqueos: Entrada<Infer<typeof ListaBloqueo>>[];
   temas: Infer<typeof TemasGlobales> | null;
+  /** Contención y línea segura (F4.2, D-112). */
+  contencion: Infer<typeof ArchivoContencion> | null;
   retirados: Entrada<Infer<typeof ArchivoRetirados>> | null;
   allowlist: Entrada<Infer<typeof ArchivoAllowlist>> | null;
   /** Textos planos que van solo al servidor (content/prompts/*.txt), por nombre de archivo sin extensión. */
@@ -51,12 +53,12 @@ export interface Conjunto {
 export const conjuntoVacio = (): Conjunto => ({
   misiones: [], npcs: [], pedidos: [], fundaciones: [], saberes: [], presentaciones: [], sobres: [], pistas: [],
   plantillas: [], glosario: [], habilidades: [], ramas: [], regiones: [], lugares: [], niveles: [], dioramas: [],
-  bloqueos: [], temas: null, retirados: null, allowlist: null, prompts: {}, idsPorArchivo: new Map(),
+  bloqueos: [], temas: null, contencion: null, retirados: null, allowlist: null, prompts: {}, idsPorArchivo: new Map(),
 });
 
 type Tipo =
   | "mision" | "npc" | "pedido" | "fundacion" | "saber" | "presentaciones" | "sobres" | "pistas" | "lumi"
-  | "glosario" | "habilidades" | "lugares" | "nivel" | "diorama" | "bloqueo" | "temas" | "retirados"
+  | "glosario" | "habilidades" | "lugares" | "nivel" | "diorama" | "bloqueo" | "temas" | "contencion" | "retirados"
   | "allowlist" | "prompt" | "ignorado";
 
 /** Ruta canónica → tipo (03 §4.2.1). Lo que no matchea es un error: nada se ignora en silencio. */
@@ -77,6 +79,7 @@ const RUTAS: [RegExp, Tipo][] = [
   [/^content\/dioramas\/[^/]+\.yaml$/, "diorama"],
   [/^content\/safety\/blocklists\/[^/]+\.yaml$/, "bloqueo"],
   [/^content\/safety\/topics\.global\.yaml$/, "temas"],
+  [/^content\/safety\/containment\.es-AR\.yaml$/, "contencion"],
   [/^content\/retired-ids\.yaml$/, "retirados"],
   [/^content\/lint-allowlist\.yaml$/, "allowlist"],
   [/^content\/prompts\/[^/]+\.txt$/, "prompt"],
@@ -221,6 +224,7 @@ export const agregarArchivo = (c: Conjunto, f: ArchivoFuente, h: Hallazgo[]): vo
       break;
     }
     case "temas": c.temas = validar(TemasGlobales, f.ruta, raw, h); break;
+    case "contencion": c.contencion = validar(ArchivoContencion, f.ruta, raw, h); break;
     case "retirados": {
       const d = validar(ArchivoRetirados, f.ruta, raw, h);
       if (d) c.retirados = { archivo: f.ruta, base: "", data: d };

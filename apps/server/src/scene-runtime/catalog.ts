@@ -1,7 +1,7 @@
 // Vista tipada del contenido compilado del servidor (apps/server/generated/content/, D-159). El compilador de F1.2 ya
 // validó todo contra @lg/content-schema; acá solo se indexa. Los tipos vienen del esquema (import de tipos: en runtime
 // el servidor no carga el compilador).
-import type { Escena, LineaGuionada, Mision, Npc, Pista, Presentacion, Saber, TarjetaNivel } from "@lg/content-schema";
+import type { ArchivoContencion, Escena, LineaGuionada, ListaBloqueo, Mision, Npc, Pista, Presentacion, Saber, TarjetaNivel } from "@lg/content-schema";
 import type { ServerContent } from "../content/loader.ts";
 
 export type ServerSaber = Saber & { visible_en_modo: boolean };
@@ -17,6 +17,8 @@ export interface Catalog {
   /** Arista de la red que presenta a `npcId` (la primera; D-168). */
   introOf(npcId: string): Presentacion | undefined;
   npcBase: string;
+  /** Listas de bloqueo (moderación en runtime, F4.2) y contención + línea segura (D-112). */
+  safety: { lists: ListaBloqueo[]; containment: ArchivoContencion };
 }
 
 const arr = <T>(content: ServerContent, file: string): T[] => {
@@ -35,6 +37,8 @@ export function readCatalog(content: ServerContent): Catalog {
   const prompts = content["prompts.json"] as Record<string, string> | undefined;
   const npcBase = prompts?.["npc-base"];
   if (typeof npcBase !== "string") throw new Error("contenido compilado sin prompts.json › npc-base");
+  const seguridad = content["seguridad.json"] as { listas?: ListaBloqueo[]; contencion?: ArchivoContencion | null } | undefined;
+  if (!seguridad?.contencion || !Array.isArray(seguridad.listas)) throw new Error("contenido compilado sin seguridad.json › contencion/listas: corré npm run build:content");
   return {
     missions,
     npc: (id) => npcs.find((n) => n.id === id),
@@ -45,6 +49,7 @@ export function readCatalog(content: ServerContent): Catalog {
     clue: (id) => pistas.find((p) => p.id === id),
     introOf: (npcId) => red.find((r) => r.npc === npcId),
     npcBase,
+    safety: { lists: seguridad.listas, containment: seguridad.contencion },
   };
 }
 
@@ -60,3 +65,21 @@ export const exitLines = (scene: Escena): LineaGuionada[] => applies(scene.salid
 /** Apertura guionada; una escena sin NPC (M0.2) abre con su primera línea guionada (la presentación de Lumi). */
 export const openingLines = (scene: Escena): LineaGuionada[] =>
   applies(scene.apertura_guionada) ?? (scene.lineas_guionadas ?? []).slice(0, 1);
+
+/** Huecos de una línea guionada: `[nombre]` (convención de las fichas) o `{nombre_jugador}` (plantillas, 02 §2.6). */
+const SLOT = /(,\s*)?\s?(\[[\p{Ll}_]+\]|\{[\p{Ll}_]+\})/gu;
+const PLAYER_SLOTS = new Set(["[nombre]", "{nombre_jugador}"]);
+
+/**
+ * Texto de una línea guionada listo para mostrar: el hueco del nombre se llena con el nombre de juego; sin nombre (el
+ * avatar y el nombre llegan con el onboarding, más adelante) o con un hueco que el runtime todavía no sabe llenar, la
+ * línea se dice sin el hueco ("Nice to meet you, [nombre]!" → "Nice to meet you!"). Nunca sale un `[hueco]` crudo.
+ */
+export function renderScriptedText(text: string, playerName: string | null): string {
+  const name = playerName?.trim() || null;
+  return text
+    .replace(SLOT, (whole, comma: string | undefined, slot: string) =>
+      name && PLAYER_SLOTS.has(slot) ? whole.replace(slot, name) : "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}

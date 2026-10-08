@@ -6,6 +6,8 @@ export interface LearnerState {
   scaffoldLevel: 1 | 2 | 3 | 4 | 5;
   scaffoldWindow: string[];
   dueItems: string[];
+  /** Palabras marcadas para repasar desde el HUD (D-068). Las lleva al cuaderno F7; hoy viven en la sesión. */
+  marked: string[];
 }
 
 export const LEARNER_PERSIST = "server" as const;
@@ -16,4 +18,5 @@ export const initialLearner = (): LearnerState => ({
   scaffoldLevel: 1,
   scaffoldWindow: [],
   dueItems: [],
+  marked: [],
 });

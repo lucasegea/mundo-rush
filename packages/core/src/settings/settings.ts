@@ -3,6 +3,9 @@
 // Ninguna de estas funciones se desbloquea con progreso (GDD §2.19, regla inviolable 3).
 import { isSelectableTier, isTierChoice, type SelectableTier, type TierChoice } from "../quality/tiers";
 
+/** Silencio en tu turno antes del chip de pista (D-035, GDD §2.6.2: 10 s; el andamiaje lo ajusta en F6). */
+export const HINT_CHIP_DELAY_MS = 10_000;
+
 /** Tamaño de texto: 4 pasos entre 100 % y 200 % (GDD §2.19), default 125 %. */
 export const TEXT_SCALES = [100, 125, 150, 175, 200] as const;
 export type TextScale = (typeof TEXT_SCALES)[number];
@@ -48,6 +51,8 @@ export interface Settings {
     /** Umbral de fin de turno en ms (el botón "Terminé" siempre está). */
     endOfTurnMs: number;
     buttonOnly: boolean;
+    /** Chip visual "¿Querés una pista?" a los 10 s de silencio en tu turno (D-035; desactivable, sin sonido). */
+    hintChip: boolean;
     /** Acción semántica → tecla (R10). Vacío hasta F2. */
     keymap: Record<string, string>;
   };
@@ -75,7 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
     volumes: { npc: 100, lumi: 100, music: 70, ambient: 70, sfx: 80 },
     lumiVoice: true,
   },
-  input: { pushToTalk: false, endOfTurnMs: 1500, buttonOnly: false, keymap: {} },
+  input: { pushToTalk: false, endOfTurnMs: 1500, buttonOnly: false, hintChip: true, keymap: {} },
   feedbackMode: "accompanied",
   npcSpeed: "slowest", // GDD §2.6: A0 = Muy lenta
   helpLevel: "auto",
@@ -146,6 +151,7 @@ export function applySettingsPatch(current: Settings, patch: SettingsPatch | nul
       pushToTalk: bool(pi.pushToTalk, current.input.pushToTalk),
       endOfTurnMs: clamp(pi.endOfTurnMs, 300, 10000, current.input.endOfTurnMs),
       buttonOnly: bool(pi.buttonOnly, current.input.buttonOnly),
+      hintChip: bool(pi.hintChip, current.input.hintChip),
       keymap: pi.keymap && typeof pi.keymap === "object" ? { ...pi.keymap } : current.input.keymap,
     },
     feedbackMode: oneOf(FEEDBACK_MODES, patch.feedbackMode, current.feedbackMode),

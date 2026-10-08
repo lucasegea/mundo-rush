@@ -7,8 +7,9 @@ import {
   type Capabilities, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
   type SemanticAction, type SettingsPatch, type TextScale, type TierChoice, type WorldEffect,
 } from "@lg/core";
+import type { ServerMessage } from "@lg/protocol";
 import { gameStore, type GameState, type GameStore } from "./store";
-import type { NpcInfo, PlaceInfo } from "./slices";
+import { freshScene, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo } from "./slices";
 import { selectMapActive } from "./selectors/world";
 
 export interface DialogOnlyCatalog {
@@ -24,6 +25,57 @@ export interface ContentUpdate {
 }
 
 type Params = Record<string, string | number>;
+
+/** Opciones de "Pasar el turno" (03 §5.5.3). */
+export type PassChoice = "hint" | "repeat" | "simpler" | "continue";
+
+/** Largo máximo de un turno escrito (el mismo tope que valida el protocolo). */
+export const MAX_TURN_CHARS = 500;
+
+const ACTIVE_STEPS = new Set(["pretask", "npcOpening", "playerTurn", "npcTurn", "signal", "nonConverging", "closing", "posttask", "containment"]);
+const WRITABLE_SUBS = new Set(["waiting", "speaking", "endPending"]);
+
+/** Línea del servidor → línea del historial (Lumi: solo id de plantilla). */
+const lineFrom = (l: Extract<ServerMessage, { type: "npc.line" }>["line"]): DialogueLine =>
+  ({ id: l.lineId, speaker: l.speaker, kind: l.kind, text: l.text, template: l.template });
+
+/** Aplica un mensaje del servidor al slice `dialogue` (puro: lo usa la acción `sceneMessage`). */
+export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): DialogueState {
+  switch (msg.type) {
+    case "scene.opened":
+      return { ...d, sceneRunId: msg.sceneRunId, missionId: msg.missionId, sceneId: msg.sceneId, npcId: msg.npcId, modality: msg.modality, outcome: null, blocked: null };
+    case "scene.state":
+      return {
+        ...d, state: msg.state, turnSubstate: msg.sub, turnIndex: msg.turnIndex, modality: msg.modality,
+        silenceMenuOpen: msg.state === "playerTurn" && msg.sub === "passMenu",
+      };
+    case "npc.line": {
+      const line = lineFrom(msg.line);
+      const isNpcText = line.speaker !== "LUMI" && line.text !== null;
+      return {
+        ...d, history: [...d.history, line],
+        subtitles: line.text !== null ? { final: [...d.subtitles.final, line.text], partial: null } : d.subtitles,
+        lastNpcLine: isNpcText ? line.text : d.lastNpcLine,
+      };
+    }
+    case "scene.blocked":
+      return { ...d, blocked: msg.reason, npcId: msg.npcId ?? d.npcId };
+    case "scene.end":
+      return { ...d, outcome: msg.outcome };
+    case "scene.safety":
+      // El turno cortado se marca en el historial (sin el texto del NPC: no se mostró).
+      return msg.action === "cut" && msg.layer !== "output"
+        ? { ...d, history: [...d.history, { id: `cut-${d.history.length}`, speaker: "system", kind: "cut", text: null, template: null }] }
+        : d;
+    case "scene.containment":
+      return { ...d, containment: { line: msg.line, resource: msg.resource, provisional: msg.provisional } };
+    case "scene.notice":
+      return { ...d, notice: msg.code };
+    case "scene.effects":
+    case "error":
+      return d;
+  }
+}
 
 export function createActions(store: GameStore) {
   const get = store.getState;
@@ -59,6 +111,29 @@ export function createActions(store: GameStore) {
       return { ui: { ...s.ui, panels, returnFocus: [...s.ui.returnFocus, openerId] } };
     });
 
+  /** Abre el HUD de diálogo y pide la escena al servicio (F4.2): una escena nueva arranca de cero (GDD §2.16). */
+  const openScene = (s: GameState, npcId: string | null, openerId: string | null): Partial<GameState> => {
+    const seq = (s.dialogue.request?.seq ?? 0) + 1;
+    return {
+      ui: { ...s.ui, panels: pushPanel(s.ui.panels, { kind: "scene", npcId }), returnFocus: [...s.ui.returnFocus, openerId] },
+      dialogue: freshScene({ ...s.dialogue, request: { seq, npcId } }),
+    };
+  };
+
+  /** Efectos de misión sobre el mundo con la regla del núcleo (03 §6.4.8); sin cambios, parche vacío. */
+  const withEffects = (s: GameState, effects: readonly WorldEffect[]): Partial<GameState> => {
+    const { flags, foundations, network } = s.world;
+    const next = applyWorldEffects({ flags, foundations, intros: network.intros }, effects);
+    if (next.flags === flags && next.foundations === foundations && next.intros === network.intros) return {};
+    return { world: { ...s.world, flags: { ...next.flags }, foundations: { ...next.foundations }, network: { ...network, intros: [...next.intros] } } };
+  };
+
+  /** Deja un comando para el servicio de escena (R5: la red vive en services/). */
+  const enqueue = (d: DialogueState, msg: DialogueState["outbox"][number]["msg"]): DialogueState =>
+    ({ ...d, outbox: [...d.outbox, { seq: d.outboxSeq + 1, msg }], outboxSeq: d.outboxSeq + 1 });
+
+  const canWrite = (d: DialogueState): boolean => d.state === "playerTurn" && d.turnSubstate !== null && WRITABLE_SUBS.has(d.turnSubstate);
+
   // ---------- mapa (F2) ----------
 
   const withIntent = (s: GameState, intent: MoveIntent): Partial<GameState> =>
@@ -83,11 +158,7 @@ export function createActions(store: GameStore) {
     if (!item || (npcOnly && item.kind !== "npc")) return {};
     if (!nearby.includes(item.id)) return walkTo(s, item.x, item.z);
     if (item.kind !== "npc") return {}; // los objetos con glosario llegan con F3
-    const panels = pushPanel(s.ui.panels, { kind: "scene", npcId: item.id });
-    return {
-      player: { ...s.player, intent: IDLE, path: [], velocity: { x: 0, z: 0 } },
-      ui: { ...s.ui, panels, returnFocus: [...s.ui.returnFocus, null] },
-    };
+    return { player: { ...s.player, intent: IDLE, path: [], velocity: { x: 0, z: 0 } }, ...openScene(s, item.id, null) };
   };
 
   const zoom = (direction: 1 | -1) => (s: GameState): Partial<GameState> => {
@@ -225,9 +296,109 @@ export function createActions(store: GameStore) {
       set((s) => ({ ui: { ...s.ui, dialogOnlyPlaceId: placeId } }));
     },
 
-    /** Placeholder de "entrar a la escena": el diálogo real llega con F4. */
-    enterScene(npcId: string, openerId: string | null = null): void {
-      openPanel({ kind: "scene", npcId }, openerId);
+    /** Entrar a la escena con un NPC (o, con `null`, seguir la historia sin NPC: escenas de Lumi como M0.2). */
+    enterScene(npcId: string | null, openerId: string | null = null): void {
+      set((s) => openScene(s, npcId, openerId));
+    },
+
+    /** Salir del HUD de diálogo: el servicio cierra la conexión (el servidor aborta una escena en curso). */
+    leaveScene(): void {
+      set((s) => {
+        const top = s.ui.panels[s.ui.panels.length - 1];
+        if (top?.kind !== "scene") return {};
+        return {
+          ui: { ...s.ui, panels: popPanel(s.ui.panels), returnFocus: s.ui.returnFocus.slice(0, -1), focusRequest: s.ui.returnFocus[s.ui.returnFocus.length - 1] ?? null },
+          dialogue: { ...freshScene(s.dialogue), request: null },
+        };
+      });
+    },
+
+    /** "Terminé" en modo texto: manda lo escrito y cierra el turno. Vacío o fuera de turno no manda nada y lo dice. */
+    submitTurn(text: string): void {
+      set((s) => {
+        const clean = text.trim();
+        if (!canWrite(s.dialogue)) return { ui: { ...s.ui, announcement: announcement(s, "announce.notYourTurn") } };
+        if (clean.length === 0) return { ui: { ...s.ui, announcement: announcement(s, "announce.emptyTurn") } };
+        const body = clean.slice(0, MAX_TURN_CHARS);
+        const d = enqueue(s.dialogue, { type: "turn.text", text: body });
+        const line: DialogueLine = { id: `player-${d.outboxSeq}`, speaker: "player", kind: "player", text: body, template: null };
+        // Hasta que el servidor confirme, el turno queda cerrado del lado del cliente (no se manda dos veces).
+        return { dialogue: { ...d, history: [...d.history, line], turnSubstate: "committed" } };
+      });
+    },
+
+    /** "Pasar el turno": abre el menú de las 4 opciones (03 §5.5.3). */
+    passTurn(): void {
+      set((s) => {
+        if (s.dialogue.state !== "playerTurn" || (s.dialogue.turnSubstate !== "waiting" && s.dialogue.turnSubstate !== "endPending")) return {};
+        return { dialogue: enqueue(s.dialogue, { type: "turn.pass" }) };
+      });
+    },
+
+    /** Una opción del menú de pase. `repeat` además vuelve a leer la última línea del NPC por aria-live, sin costo. */
+    choosePass(option: PassChoice): void {
+      set((s) => {
+        if (!s.dialogue.silenceMenuOpen) return {};
+        const dialogue = { ...enqueue(s.dialogue, { type: "turn.choose", option }), silenceMenuOpen: false };
+        const last = s.dialogue.lastNpcLine;
+        return option === "repeat" && last !== null
+          ? { dialogue, ui: { ...s.ui, announcement: announcement(s, "announce.repeat", { line: last }) } }
+          : { dialogue };
+      });
+    },
+
+    /** Palabra fuera del glosario (o sin traducción visible): se marca para repasar, sin traducción inventada (D-068). */
+    markForReview(word: string): void {
+      set((s) => {
+        const w = word.trim().toLowerCase();
+        if (w === "") return {};
+        const marked = s.learner.marked.includes(w) ? s.learner.marked : [...s.learner.marked, w];
+        return { learner: { ...s.learner, marked }, ui: { ...s.ui, announcement: announcement(s, "announce.marked", { word: w }) } };
+      });
+    },
+
+    setHintChip: (on: boolean) => changeSettings({ input: { hintChip: on } }, on ? "announce.hintChip.on" : "announce.hintChip.off"),
+
+    // ---------- servicio de escena (services/scene) ----------
+
+    sceneConnecting(): void {
+      set((s) => ({ dialogue: { ...s.dialogue, connection: "connecting" } }));
+    },
+    sceneConnected(): void {
+      set((s) => ({ dialogue: { ...s.dialogue, connection: "open" } }));
+    },
+    /** Falla clara: sin servidor de escenas no hay diálogo; se dice en el HUD y por aria-live. */
+    sceneConnectionFailed(): void {
+      set((s) => ({ dialogue: { ...s.dialogue, connection: "error" }, ui: { ...s.ui, announcement: announcement(s, "announce.sceneOffline") } }));
+    },
+    sceneConnectionClosed(): void {
+      set((s) => (s.dialogue.connection === "open" ? { dialogue: { ...s.dialogue, connection: "closed" } } : {}));
+    },
+    /** Comandos ya mandados por el servicio (hasta `seq` inclusive). */
+    outboxSent(seq: number): void {
+      set((s) => (s.dialogue.outbox.length === 0 ? {} : { dialogue: { ...s.dialogue, outbox: s.dialogue.outbox.filter((o) => o.seq > seq) } }));
+    },
+    /** Un mensaje del servidor de escena; `scene.effects` además cambia el mundo (03 §6.4.8). */
+    sceneMessage(msg: ServerMessage): void {
+      set((s) => {
+        const dialogue = reduceSceneMessage(s.dialogue, msg);
+        const patch: Partial<GameState> = dialogue === s.dialogue ? {} : { dialogue };
+        if (msg.type === "scene.effects") Object.assign(patch, withEffects(s, msg.effects));
+        if (msg.type === "scene.end") patch.ui = { ...s.ui, announcement: announcement(s, `announce.sceneEnd.${msg.outcome}`) };
+        if (msg.type === "scene.containment") patch.ui = { ...s.ui, announcement: announcement(s, "announce.containment") };
+        return patch;
+      });
+    },
+
+    lexiconLoading(): void {
+      set((s) => ({ dialogue: { ...s.dialogue, lexicon: { ...s.dialogue.lexicon, status: "loading" } } }));
+    },
+    lexiconLoaded(lexicon: Omit<Lexicon, "status">): void {
+      set((s) => ({ dialogue: { ...s.dialogue, lexicon: { ...lexicon, status: "ready" } } }));
+    },
+    /** Sin glosario el HUD sigue: tocar una palabra solo ofrece marcarla (nunca se inventa una traducción). */
+    lexiconFailed(): void {
+      set((s) => ({ dialogue: { ...s.dialogue, lexicon: { ...s.dialogue.lexicon, status: "error" } } }));
     },
 
     focusHandled(): void {
@@ -316,12 +487,7 @@ export function createActions(store: GameStore) {
      * repetir un efecto no cambia nada). El mundo 3D los refleja leyendo el store.
      */
     sceneEffectsApplied(effects: readonly WorldEffect[]): void {
-      set((s) => {
-        const { flags, foundations, network } = s.world;
-        const next = applyWorldEffects({ flags, foundations, intros: network.intros }, effects);
-        if (next.flags === flags && next.foundations === foundations && next.intros === network.intros) return {};
-        return { world: { ...s.world, flags: { ...next.flags }, foundations: { ...next.foundations }, network: { ...network, intros: [...next.intros] } } };
-      });
+      set((s) => withEffects(s, effects));
     },
 
     /** Única entrada de input del juego (R10): services/input y state/bridge.ts traducen dispositivos a esto. */
@@ -368,6 +534,9 @@ export function createActions(store: GameStore) {
 }
 
 export type GameActions = ReturnType<typeof createActions>;
+
+/** true mientras la escena sigue viva en el servidor (03 §3.5.1, estados activos). */
+export const isSceneActive = (d: DialogueState): boolean => ACTIVE_STEPS.has(d.state);
 
 /** Las acciones del store único. */
 export const actions: GameActions = createActions(gameStore);

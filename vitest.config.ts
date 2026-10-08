@@ -18,7 +18,9 @@ export default defineConfig({
         // F2: movimiento, entrada semántica, cámara y dioramas.
         "src/movement/**/*.ts", "src/input/**/*.ts", "src/camera/**/*.ts", "src/world/**/*.ts",
         // F4.1: máquina de escena, criterios y efectos de misión.
-        "src/scene/**/*.ts"],
+        "src/scene/**/*.ts",
+        // F4.2: reglas del HUD de diálogo (glosario por build, palabras tocables).
+        "src/dialogue/**/*.ts"],
       reporter: ["text", "json-summary"],
       reportsDirectory: "./coverage/core",
       thresholds: { lines: 90 },
@@ -38,6 +40,8 @@ export default defineConfig({
       { test: { name: "a11y", root: "./scripts/a11y", include: ["**/*.test.ts"] } },
       // F4.1: compuerta de la eval en vivo de texto (la eval en sí no corre en tests, D-027).
       { test: { name: "eval", root: "./scripts/eval", include: ["**/*.test.ts"] } },
+      // F4.2 A4: el cliente web real contra el servidor de escenas real, sin canvas y con modelos guionados.
+      { test: { name: "integration", root: "./scripts/integration", include: ["**/*.test.ts"], testTimeout: 60000 } },
       // FD0: modo director (plugin, diario, CLI, MCP y config fusionada), solo desarrollo.
       { test: { name: "director", root: "./tooling/director", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
     ],

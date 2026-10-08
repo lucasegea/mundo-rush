@@ -6,6 +6,7 @@ import { App } from "./App";
 import { boot } from "./boot";
 import { browserQualityEnv } from "./services/quality";
 import { createWebPlatform } from "./services/platform";
+import { browserSceneConnector } from "./services/scene/connector";
 import { actions } from "./state/actions";
 import { gameStore } from "./state/store";
 
@@ -24,5 +25,12 @@ if (container) {
     prefersReducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
     baseUrl: import.meta.env.BASE_URL,
     world: { inputTarget: window },
+    // F4.2: el servidor de escenas por el mismo origen (Vite hace de proxy a apps/server en dev y en preview).
+    scene: {
+      connector: browserSceneConnector({
+        httpBase: window.location.origin,
+        wsBase: `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`,
+      }),
+    },
   });
 }

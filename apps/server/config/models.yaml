@@ -10,6 +10,10 @@ voice:
   npc: { adapter: live }
 observer:
   liveGrammarSignals: false
+# Moderación de texto (03 §7.7, F4.2): las listas de content/safety/blocklists/ y las reglas corren siempre. El
+# clasificador del proveedor (DP-A05) queda en `none` hasta tener clave y autorización (D-027).
+moderation:
+  classifier: none
 scene:
   softCapMs: 240000
   hardCapMs: 300000

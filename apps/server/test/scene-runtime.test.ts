@@ -205,4 +205,13 @@ describe("mensajes del cliente", () => {
     expect(h.of("scene.end")[0]?.outcome).toBe("containment");
     expect(h.of("scene.effects")).toEqual([]);
   });
+
+  test("riesgo que además cumple criterios: contención, sin evidencia (el texto del jugador no se guarda)", async () => {
+    const evidence = createMemoryEvidenceStore();
+    const h = harness({ evidence, observe: (c) => observerJson(c, M01_RULES, { safety: "risk" }) });
+    await play(h, "NPC-INES", ["Hello! I'm Nico."]);
+    expect(h.of("scene.end")[0]?.outcome).toBe("containment");
+    expect(h.of("scene.end")[0]?.criteriaMet ?? []).toEqual([]);
+    expect(evidence.list("op-local")).toEqual([]);
+  });
 });

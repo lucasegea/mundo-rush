@@ -7,7 +7,7 @@ import { selectShellView, useGameView } from "../../state/selectors";
 import { LiveRegion } from "../a11y/LiveRegion";
 import { useDocumentSettings, useFocusRequests } from "../a11y/hooks";
 import { DialogOnlyView } from "../dialog-only/DialogOnlyView";
-import { ScenePlaceholder } from "../dialog-only/ScenePlaceholder";
+import { DialogueHud } from "../dialogue/DialogueHud";
 import { WorldHud } from "../hud/WorldHud";
 import { MainMenu } from "../menus/MainMenu";
 import { Button } from "../primitives";
@@ -40,12 +40,13 @@ export function Shell() {
   let content;
   if (panel?.kind === "mainMenu") content = <MainMenu />;
   else if (panel?.kind === "settings") content = <SettingsPanel />;
-  else if (panel?.kind === "scene") content = <ScenePlaceholder npcId={panel.npcId} name={view.sceneNpcName ?? panel.npcId} />;
+  // F4.2: el MISMO HUD de diálogo sobre el canvas del mapa o en solo-diálogo (A3); solo cambia el marco.
+  else if (panel?.kind === "scene") content = <DialogueHud surface={view.phase === "world" ? "canvas" : "dialogOnly"} />;
   else content = <PhaseView phase={view.phase} />;
 
-  // En el mapa sin paneles, el shell queda transparente encima del canvas y deja pasar el puntero (solo sus
-  // controles lo reciben). Con un panel abierto, el panel tapa el mapa (el canvas pasa a frameloop "demand").
-  const overMap = panel === null && view.phase === "world";
+  // En el mapa sin paneles (o con el HUD de diálogo), el shell queda transparente encima del canvas y deja pasar el
+  // puntero (solo sus controles lo reciben). Los demás paneles tapan el mapa (el canvas pasa a frameloop "demand").
+  const overMap = view.phase === "world" && (panel === null || panel.kind === "scene");
   return (
     <div className={overMap ? "pointer-events-none relative z-10 min-h-dvh text-ink" : "relative z-10 min-h-dvh bg-paper text-ink"}>
       {panel === null && view.phase !== "boot" ? <TopBar /> : null}

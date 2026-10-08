@@ -22,7 +22,10 @@ import type { ModelsConfig } from "../config/models.ts";
 import { runObserver } from "../observer/observer.ts";
 import type { TextModelProvider, TextTurn } from "../providers/text.ts";
 import type { EvidenceStore } from "../store/evidence.ts";
-import { applies, exitLines, isNpcLine, openingLines, readCatalog, type Catalog } from "./catalog.ts";
+import { createModerator, type ModerationResult, type Moderator } from "../moderation/moderation.ts";
+import type { ModerationProvider } from "../providers/moderation.ts";
+import { createMemorySafetyStore, type SafetyEventStore } from "../store/safety.ts";
+import { applies, exitLines, isNpcLine, openingLines, readCatalog, renderScriptedText, type Catalog } from "./catalog.ts";
 import { foldProgress, type OperatorProgress } from "./progress.ts";
 import { buildNpcPrompt } from "./prompt.ts";
 
@@ -59,6 +62,10 @@ export interface SceneDeps {
   clock: Clock;
   scheduler?: Scheduler;
   newId?: () => string;
+  /** Clasificador de moderación (F4.2, 03 §7.7). null o ausente: la capa no corre; las listas y reglas sí. */
+  moderation?: ModerationProvider | null;
+  /** safety_events (D-112). Sin él, en memoria. */
+  safety?: SafetyEventStore;
 }
 
 export interface SceneSession {
@@ -95,6 +102,7 @@ interface Run {
   generation: number;
   cancelCaps: (() => void)[];
   cancelTurnTimer: (() => void) | null;
+  moderator: Moderator;
 }
 
 /** En modo texto el runtime da por terminada la línea de cada estado apenas la manda. */
@@ -118,6 +126,7 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
   const queue: SceneEvent[] = [];
   let draining = false;
   const pending = new Set<Promise<void>>();
+  const safetyStore = deps.safety ?? createMemorySafetyStore();
 
   /** Todo mensaje pasa por el esquema estricto: lo que no está en el protocolo no sale (A4). */
   const send = (msg: ServerMessage): void => sendRaw(ServerMessageSchema.parse(msg));
@@ -131,8 +140,10 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
   const sendLines = (r: Run, lines: readonly LineaGuionada[], kind: "pretask" | "opening" | "closing" | "exit"): void => {
     for (const l of lines) {
       if (isNpcLine(l)) {
-        send({ type: "npc.line", line: { lineId: newId(), speaker: l.quien, kind, text: l.en, template: null } });
-        if (r.npc && l.quien === r.npc.id) r.lastNpcLine = l.en;
+        // El servidor todavía no conoce el nombre de juego (llega con el onboarding): los huecos se dicen sin él.
+        const text = renderScriptedText(l.en, null);
+        send({ type: "npc.line", line: { lineId: newId(), speaker: l.quien, kind, text, template: null } });
+        if (r.npc && l.quien === r.npc.id) r.lastNpcLine = text;
       } else {
         send({ type: "npc.line", line: { lineId: newId(), speaker: "LUMI", kind, text: null, template: l.plantilla } });
       }
@@ -170,11 +181,41 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
   const stillOn = (r: Run, gen: number, turn: number): boolean =>
     run === r && r.generation === gen && snap.state === "npcTurn" && snap.ctx.turnIndex === turn;
 
+  /**
+   * Corte o contención por moderación (03 §7.7): queda el safety_event (sin el texto) y el cliente lo sabe por
+   * `scene.safety`. En un corte el NPC dice la línea segura guionada (en una escena sin NPC no se dice nada: Lumi solo
+   * habla por plantillas) y el turno sigue; en contención la máquina pasa a `containment`.
+   */
+  function safetyStop(r: Run, verdict: Exclude<ModerationResult, { action: "allow" }>): void {
+    safetyStore.append({
+      id: newId(), accountId: deps.accountId, at: iso(), sceneRunId: r.sceneRunId, missionId: r.mission.id,
+      sceneId: r.scene.escena_id, layer: verdict.layer, action: verdict.action, category: verdict.category, visibility: "operator",
+    });
+    send({ type: "scene.safety", layer: verdict.layer, action: verdict.action });
+    if (verdict.action === "containment") return dispatch({ type: "safetyRisk" });
+    if (r.npc) {
+      const text = r.catalog.safety.containment.linea_segura_en;
+      send({ type: "npc.line", line: { lineId: newId(), speaker: r.npc.id, kind: "safe", text, template: null } });
+      r.transcript.push({ speaker: "npc", text });
+      r.lastNpcLine = text;
+    }
+    dispatch({ type: "npcDone" });
+  }
+
   async function processTurn(r: Run, playerText: string | null, note: "simpler" | "continue" | null): Promise<void> {
     const gen = r.generation;
     const turn = snap.ctx.turnIndex;
     const role = deps.models.roles;
     const structures = [...r.mission.lenguaje_objetivo.estructuras, ...r.mission.lenguaje_objetivo.chunks];
+    // Modo texto: la entrada se modera ANTES de llegar al modelo o al observador (03 §7.7 punto 2).
+    if (playerText !== null) {
+      // Sin clasificador la decisión es síncrona: el modelo se llama en el mismo tick (como en F4.1).
+      const pendingInput = r.moderator.checkInput(playerText);
+      const input = pendingInput instanceof Promise ? await pendingInput : pendingInput;
+      if (!stillOn(r, gen, turn)) return;
+      if (input.action !== "allow") return safetyStop(r, input);
+      r.transcript.push({ speaker: "player", text: playerText });
+    }
     // El observador corre mientras el NPC responde (03 §5.6); la decisión se toma con los dos resultados.
     const observing = playerText === null ? Promise.resolve(null) : runObserver(deps.observerModel, {
       turnId: `${r.sceneRunId}:${turn}`, playerText, lastNpcLine: r.lastNpcLine,
@@ -190,12 +231,19 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
     const obs = await observing;
     if (!stillOn(r, gen, turn)) return;
     if (obs?.ok) {
+      // El observador también es una capa de seguridad, y su veredicto gana siempre sobre los criterios: un turno
+      // marcado no cumple la escena, no deja evidencia (ni cita) y no recibe la respuesta del modelo.
+      if (obs.result.safety === "risk") return safetyStop(r, { action: "containment", layer: "observer", category: "observador" });
+      if (obs.result.safety === "inappropriate") {
+        await replying;
+        if (!stillOn(r, gen, turn)) return;
+        return safetyStop(r, { action: "cut", layer: "observer", category: "observador" });
+      }
       const update = applyCriteriaReports(r.criteriaDefs, r.criteria, obs.result.criteria);
       r.criteria = update.state;
       for (const ev of obs.result.evidence) {
         if (structures.includes(ev.structureId)) appendEvidence(r, { kind: ev.kind, structureId: ev.structureId, branch: ev.branch, quote: ev.quote });
       }
-      if (obs.result.safety === "risk") return dispatch({ type: "safetyRisk" });
       if (criteriaSatisfied(r.criteriaDefs, r.criteria)) return dispatch({ type: "criteriaMet" });
     } else if (obs) {
       send({ type: "scene.notice", code: "observer_invalid", message: "El observador no devolvió un resultado válido; el turno sigue sin evaluar." });
@@ -203,6 +251,10 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
     const reply = await replying;
     if (!stillOn(r, gen, turn)) return;
     if (reply && "text" in reply) {
+      // Salida en texto: moderación síncrona y completa antes de mostrar (03 §7.7 punto 4).
+      const output = await r.moderator.checkOutput(reply.text, r.npc?.id ?? "LUMI");
+      if (!stillOn(r, gen, turn)) return;
+      if (output.action !== "allow") return safetyStop(r, { ...output, action: "cut" });
       send({ type: "npc.line", line: { lineId: newId(), speaker: r.npc?.id ?? "LUMI", kind: "reply", text: reply.text, template: null } });
       r.transcript.push({ speaker: "npc", text: reply.text });
       r.lastNpcLine = reply.text;
@@ -253,7 +305,16 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
         if (eff.line === "opening") sendLines(r, openingLines(r.scene), "opening");
         else if (eff.line === "closing") sendLines(r, r.scene.cierre_guionado, "closing");
         else if (eff.line === "exit") sendLines(r, exitLines(r.scene), "exit");
-        else send({ type: "scene.notice", code: "containment", message: "Escena detenida por seguridad." });
+        else {
+          // Contención (D-112): línea fuera de la ficción + recurso de ayuda local; textos provisorios hasta F13.
+          const c = r.catalog.safety.containment;
+          const resource = c.recursos[c.pais_por_defecto];
+          send({ type: "scene.notice", code: "containment", message: "Escena detenida por seguridad." });
+          send({
+            type: "scene.containment", line: c.contencion_es,
+            resource: resource ? { label: resource.etiqueta, detail: resource.detalle } : null, provisional: c.estado !== "revisado",
+          });
+        }
         return;
       case "startTurnTimer":
         r.cancelTurnTimer = scheduler.schedule(deps.models.scene.turnTimerMs, () => dispatch({ type: "turnTimer" }));
@@ -263,7 +324,8 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
         r.cancelTurnTimer = null;
         return;
       case "commitTurn":
-        if (r.pendingText !== null) r.transcript.push({ speaker: "player", text: r.pendingText });
+        // El texto entra al transcripto recién después de la moderación de entrada (processTurn): un turno cortado
+        // nunca llega al modelo. Si el commit es por el tope duro, la escena cierra y el texto no se usa.
         return;
       case "requestNpcReply": {
         const text = r.pendingText;
@@ -341,6 +403,7 @@ export function createSceneSession(deps: SceneDeps, sendRaw: (msg: ServerMessage
       criteriaDefs: scene.criterios_exito.map((c) => ({ id: c.id, optional: c.opcional })),
       criteria: emptyCriteria(), transcript: [], evidence: [], lastNpcLine: null, pendingText: null,
       generation: 0, cancelCaps: [], cancelTurnTimer: null,
+      moderator: createModerator({ lists: catalog.safety.lists, classifier: deps.moderation ?? null }),
     };
     snap = initialSceneSnapshot();
     send({ type: "scene.opened", sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality: "text" });

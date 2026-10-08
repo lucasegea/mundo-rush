@@ -15,11 +15,14 @@ export function canEnterWorld(tier: SelectableTier): boolean {
   return tier !== "dialog-only";
 }
 
-/** Paneles del shell DOM. `scene` es el placeholder de "entrar a la escena" (el diálogo real llega en F4). */
+/**
+ * Paneles del shell DOM. `scene` es el HUD de diálogo (F4.2) con el NPC que se eligió; `npcId: null` = seguir la
+ * historia sin NPC (las escenas de Lumi, como M0.2).
+ */
 export type Panel =
   | { kind: "mainMenu" }
   | { kind: "settings" }
-  | { kind: "scene"; npcId: string };
+  | { kind: "scene"; npcId: string | null };
 
 export type PanelKind = Panel["kind"];
 

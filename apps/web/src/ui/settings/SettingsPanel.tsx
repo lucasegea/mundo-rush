@@ -55,6 +55,7 @@ export function SettingsPanel() {
 
       <section aria-labelledby="settings-conversation" className="flex flex-col gap-4">
         <h2 id="settings-conversation" className="text-xl font-semibold">{t("settings.section.conversation")}</h2>
+        <Toggle id="settings-hint-chip" label={t("settings.hintChip")} description={t("settings.hintChip.desc")} checked={view.hintChip} onChange={actions.setHintChip} />
         <RadioGroup
           name="settings-npc-speed"
           legend={t("settings.npcSpeed")}

@@ -9,6 +9,7 @@
     { "path": "./apps/web/tsconfig.node.json" },
     { "path": "./tsconfig.tooling.json" },
     { "path": "./scripts/eval" },
+    { "path": "./scripts/integration" },
     { "path": "./tooling/director" }
   ]
 }

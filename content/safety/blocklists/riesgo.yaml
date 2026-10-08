@@ -1,0 +1,46 @@
+# Señales de riesgo en lo que escribe el jugador (03 §7.7 puntos 2 y 5; 02 §3.2 S3; D-112). PROVISORIA: la revisan
+# especialistas antes de cualquier piloto (F13). Solo frases claras: un falso positivo corta la escena y abre la
+# contención. Dispara contención (no un corte). El lint de contenido no la corre (aplica_a: jugador).
+id: riesgo
+regla: riesgo
+fuente: "03 §7.7; 02 §3.2 S3; D-112"
+aplica_a: jugador
+sin_mayusculas: true
+excepto: []
+terminos:
+  - kill myself
+  - killing myself
+  - suicid*
+  - self-harm
+  - self harm
+  - hurt myself
+  - hurting myself
+  - cut myself
+  - cutting myself
+  - want to die
+  - wanna die
+  - end my life
+  - don't want to live
+  - do not want to live
+  - someone hurts me
+  - he hurts me
+  - she hurts me
+  - they hurt me
+  - he hits me
+  - she hits me
+  - they hit me
+  - abuses me
+  - abused me
+  - matarme
+  - me quiero matar
+  - lastimarme
+  - me quiero morir
+  - quiero morirme
+  - no quiero vivir
+  - me pegan
+  - me lastiman
+  - me lastima
+  - abusan de mí
+  - abusan de mi
+  - abusa de mí
+  - abusa de mi

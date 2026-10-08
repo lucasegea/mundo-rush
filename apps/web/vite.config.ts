@@ -32,8 +32,18 @@ function chunkModules(): Plugin {
   };
 }
 
+/**
+ * F4.2: el HUD habla con apps/server por el MISMO origen (03 §7.8: connect-src solo a la API propia). En `vite` y en
+ * `vite preview`, /scene-token y el WebSocket /scene van al servidor de escenas en 127.0.0.1 (LG_PORT, 8787 por
+ * defecto; D-158). Sin servidor arriba, el HUD dice que no hay conexión.
+ */
+const SCENE_SERVER = `http://127.0.0.1:${process.env["LG_PORT"] ?? "8787"}`;
+const sceneProxy = { "/scene": { target: SCENE_SERVER, ws: true, changeOrigin: false } };
+
 // Alias de apps/web (P0 T3, 03 §4.2.1); espejo de "paths" en tsconfig.json.
 export default defineConfig({
+  server: { proxy: sceneProxy },
+  preview: { proxy: sceneProxy },
   // Tailwind v4 (03 §2.6): tokens en src/styles/tokens.css.
   plugins: [react(), tailwindcss(), chunkModules()],
   // check:budgets lee dist/.vite/manifest.json y chunk-modules.json (03 §2.7.3, F1.1b, F2).

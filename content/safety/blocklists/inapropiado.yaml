@@ -1,0 +1,49 @@
+# Lenguaje inapropiado (02 §3.2 S4-S5; 01 §2.17.1; 03 §7.7). En runtime: entrada del jugador o salida del NPC con uno
+# de estos términos → corte + línea segura + safety_event (F4.2). Como lint de contenido (aplica_a: todo) garantiza
+# que ninguna línea del juego los tenga. PROVISORIA (la amplía la revisión de F13). Sin términos ambiguos del campo
+# (rapeseed, cock, forro, concha): un falso positivo corta una charla inocente.
+id: inapropiado
+regla: inapropiado
+fuente: "02 §3.2 S4-S5; 01 §2.17.1; 03 §7.7"
+aplica_a: todo
+sin_mayusculas: true
+excepto: []
+terminos:
+  - fuck*
+  - shit
+  - shitty
+  - bitch*
+  - bastard*
+  - asshole*
+  - pussy
+  - porn*
+  - nude
+  - nudes
+  - sexy
+  - sex
+  - sexual*
+  - rape
+  - raped
+  - raping
+  - nigg*
+  - fag
+  - faggot*
+  - retard*
+  - puta
+  - putas
+  - puto
+  - putos
+  - mierda*
+  - pelotud*
+  - pija
+  - verga
+  - coger
+  - cogiendo
+  - garch*
+  - culiad*
+  - sexo
+  - porno
+  - desnud*
+  - maricón
+  - maricon
+  - trolo

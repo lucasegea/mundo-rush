@@ -8,11 +8,6 @@ import { applies, exitLines, isNpcLine, openingLines, type Catalog } from "./cat
 /** Andamiaje por defecto hasta que exista el modelo del alumno (F6/F7): 2 de 5 (02 §3.3, ejemplo de tarjeta A1). */
 export const DEFAULT_SCAFFOLD_LEVEL = 2;
 
-/**
- * Línea de seguridad de S3: PROVISORIA hasta los textos de contención revisados (D-112: mecanismo en F4.2, textos
- * finales en F13). Fuera de la ficción y sin preguntas.
- */
-export const PROVISIONAL_SAFETY_LINE_EN = "Let's stop here for a moment. Lumi will help you now.";
 
 /** Rail de menores en inglés (02 §6.6 #14 y la ficha de Noor, 02 §3.4): se suma a la persona si `es_menor`. */
 export const MINOR_RAILS = [
@@ -101,7 +96,8 @@ export function placeholderValues(input: PromptInput): Record<string, string> {
   const moves = applies(scene.andamiaje_npc) ?? [];
   return {
     allowed_topics: scene.temas_permitidos.join("; "),
-    safety_line_en: PROVISIONAL_SAFETY_LINE_EN,
+    // Línea S3: content/safety/containment.es-AR.yaml (PROVISORIA hasta los textos revisados, D-112 / F13).
+    safety_line_en: catalog.safety.containment.contencion_en,
     scene_facts: facts,
     who_knows_more: whoKnows.length ? whoKnows.join("; ") : "nobody in particular",
     world_state: worldStateText(catalog, world),

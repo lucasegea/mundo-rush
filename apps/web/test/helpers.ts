@@ -53,6 +53,8 @@ export interface BootOptions {
   prefersReducedMotion?: boolean;
   /** F2: input y lazo de simulación (sin esto, boot no escucha teclas ni corre pasos). */
   world?: NonNullable<BootDeps["world"]>;
+  /** F4.2: servidor de escenas (falso en los tests del HUD). */
+  scene?: NonNullable<BootDeps["scene"]>;
 }
 
 /** Arranca la app con el store y las acciones reales y un navegador simulado. */
@@ -66,4 +68,5 @@ export const bootApp = (o: BootOptions) =>
     baseUrl: "/",
     fetchJson: o.fetchJson ?? fetchFromContent(compiledClientContent()),
     ...(o.world ? { world: o.world } : {}),
+    ...(o.scene ? { scene: o.scene } : {}),
   });

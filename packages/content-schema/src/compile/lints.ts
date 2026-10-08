@@ -21,6 +21,7 @@ const esEncabezadoDeCarta = (l: Linea, termino: string): boolean =>
 
 const aplica = (lista: ListaBloqueo, l: Linea): boolean => {
   if (l.quien !== null && lista.excepto.includes(l.quien)) return false;
+  if (lista.aplica_a === "jugador") return false; // moderación de entrada en runtime (F4.2), no un lint de contenido
   if (lista.aplica_a === "todo") return true;
   if (lista.aplica_a === "lumi") return l.quien === "LUMI" && l.idioma === "es";
   return l.idioma === "en";

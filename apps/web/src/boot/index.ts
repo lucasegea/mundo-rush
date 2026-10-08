@@ -11,6 +11,7 @@ import { loadSavedSettings, persistSettings } from "../services/persistence";
 import type { Platform } from "../services/platform";
 import { detectCapabilities, type QualityEnv } from "../services/quality";
 import { startSimulation, type FrameScheduler } from "../services/simulation";
+import type { SceneConnector } from "../services/scene";
 import { runDevHook, type DevHot } from "./dev";
 
 export interface BootDeps {
@@ -25,6 +26,11 @@ export interface BootDeps {
   fetchJson?: FetchJson;
   /** Dispositivos y reloj del mapa (F2). Sin esto (tests del shell) no se escucha input ni corre la simulación. */
   world?: { inputTarget: EventTarget; scheduler?: FrameScheduler };
+  /**
+   * Servidor de escenas (F4.2). Sin esto (tests del shell) el HUD de diálogo abre pero no conecta. El servicio se
+   * carga por import() diferido con la primera escena pedida (zod y el protocolo no entran al chunk inicial).
+   */
+  scene?: { connector: SceneConnector };
   /** Modo director (FD0): el canal de HMR para tests; en la app es import.meta.hot. */
   devHot?: DevHot;
 }
@@ -56,6 +62,21 @@ export async function boot(deps: BootDeps): Promise<() => void> {
   if (deps.world) {
     stops.push(startInput({ target: deps.world.inputTarget, dispatch: actions.dispatch, isActive: playing }));
     stops.push(startSimulation({ step: actions.simulationStep, isActive: playing, ...(deps.world.scheduler ? { scheduler: deps.world.scheduler } : {}) }));
+  }
+
+  if (deps.scene) {
+    const { connector } = deps.scene;
+    let stopScene: (() => void) | null = null;
+    let cancelled = false;
+    const stopSceneLoad = store.subscribe((s) => s.dialogue.request !== null, (requested) => {
+      if (!requested || stopScene) return;
+      stopSceneLoad();
+      void import("../services/scene").then(({ startSceneService }) => {
+        if (cancelled) return;
+        stopScene = startSceneService({ store, actions, connector, baseUrl: deps.baseUrl, ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}) });
+      });
+    }, { fireImmediately: true });
+    stops.push(() => { cancelled = true; stopSceneLoad(); stopScene?.(); });
   }
 
   const stopDev = await runDevHook({

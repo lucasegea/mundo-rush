@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
 import { z } from "zod";
+import type { ModerationProvider } from "../providers/moderation.ts";
 
 export const MODELS_CONFIG_PATH = fileURLToPath(new URL("../../config/models.yaml", import.meta.url));
 
@@ -23,6 +24,8 @@ export const ModelsConfigSchema = z.strictObject({
     hardCapMs: z.number().int().positive(),
     turnTimerMs: z.number().int().positive(),
   }).refine((s) => s.softCapMs < s.hardCapMs, { message: "softCapMs tiene que ser menor que hardCapMs" }),
+  /** Capa "clasificador" de la moderación (03 §7.7, F4.2). `none`: corren solo las listas y las reglas. */
+  moderation: z.strictObject({ classifier: z.enum(["none"]) }),
   prices: z.strictObject({ version: z.string(), source: z.string() }),
 });
 export type ModelsConfig = z.infer<typeof ModelsConfigSchema>;
@@ -43,3 +46,11 @@ export const GEMINI_KEY_VAR = "LG_GEMINI_API_KEY";
 
 /** Presencia de la clave, nunca su valor. */
 export const hasGeminiKey = (env: Record<string, string | undefined>): boolean => (env[GEMINI_KEY_VAR] ?? "") !== "";
+
+/** El clasificador de moderación configurado (F4.2). Hoy solo `none`: un proveedor real necesita clave (D-027). */
+export function moderationProviderFromConfig(models: ModelsConfig): ModerationProvider | null {
+  switch (models.moderation.classifier) {
+    case "none":
+      return null;
+  }
+}

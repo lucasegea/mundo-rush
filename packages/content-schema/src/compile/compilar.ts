@@ -25,6 +25,7 @@ const OBLIGATORIOS = [
   "content/retired-ids.yaml",
   "content/lint-allowlist.yaml",
   "content/safety/topics.global.yaml",
+  "content/safety/containment.es-AR.yaml",
   "content/red/presentaciones.yaml",
 ];
 

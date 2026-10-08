@@ -10,6 +10,8 @@ import type { ServerContent } from "../src/content/loader.ts";
 import { loadModelsConfig, type ModelsConfig } from "../src/config/models.ts";
 import { createSceneSession, type Scheduler, type SceneSession } from "../src/scene-runtime/runtime.ts";
 import { createMemoryEvidenceStore, type EvidenceStore } from "../src/store/evidence.ts";
+import type { ModerationProvider } from "../src/providers/moderation.ts";
+import { createMemorySafetyStore, type SafetyEventStore } from "../src/store/safety.ts";
 import { fakeNpcModel, fakeObserverModel, observerJson, type CriteriaRule, type FakeModel } from "./fakes/text-model.ts";
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -63,6 +65,7 @@ export interface Harness {
   npc: FakeModel;
   observer: ReturnType<typeof fakeObserverModel>;
   evidence: EvidenceStore;
+  safety: SafetyEventStore;
   clock: ManualClock;
   scheduler: ManualScheduler;
   models: ModelsConfig;
@@ -80,6 +83,9 @@ export interface HarnessOptions {
   replies?: readonly string[];
   evidence?: EvidenceStore;
   content?: () => ServerContent;
+  /** F4.2: clasificador de moderación falso y registro de safety_events. */
+  moderation?: ModerationProvider;
+  safety?: SafetyEventStore;
 }
 
 export function harness(opts: HarnessOptions = {}): Harness {
@@ -89,15 +95,17 @@ export function harness(opts: HarnessOptions = {}): Harness {
   const npc = fakeNpcModel(opts.replies);
   const observer = fakeObserverModel(opts.observe ?? ((call) => observerJson(call, opts.rules ?? [])));
   const evidence = opts.evidence ?? createMemoryEvidenceStore();
+  const safety = opts.safety ?? createMemorySafetyStore();
   const models = loadModelsConfig();
   let n = 0;
   const open = (): SceneSession => createSceneSession({
     content: opts.content ?? realContent, npcModel: npc, observerModel: observer, models, evidence,
-    accountId: "op-local", clock, scheduler, newId: () => `id-${++n}`,
+    accountId: "op-local", clock, scheduler, newId: () => `id-${++n}`, safety,
+    ...(opts.moderation ? { moderation: opts.moderation } : {}),
   }, (m) => sent.push(m));
   const session = open();
   return {
-    session, sent, npc, observer, evidence, clock, scheduler, models,
+    session, sent, npc, observer, evidence, safety, clock, scheduler, models,
     of: <T extends ServerMessage["type"]>(type: T) => sent.filter((m): m is Extract<ServerMessage, { type: T }> => m.type === type),
     steps: () => sent.filter((m) => m.type === "scene.state").map((m) => (m.type === "scene.state" && m.sub ? `${m.state}.${m.sub}` : m.type === "scene.state" ? m.state : "")),
     reconnect: open,

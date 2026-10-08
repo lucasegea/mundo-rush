@@ -44,7 +44,7 @@ describe("contenido real", () => {
     expect(base.errores.map(formatearHallazgo)).toEqual([]);
     expect(base.salida).not.toBeNull();
     expect(base.conjunto.misiones.length).toBeGreaterThan(0);
-    expect(base.conjunto.bloqueos.length).toBe(6);
+    expect(base.conjunto.bloqueos.length).toBe(8); // F4.2: + riesgo e inapropiado (03 §7.7)
     expect(base.conjunto.niveles.length).toBeGreaterThan(0);
   });
 });

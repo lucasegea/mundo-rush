@@ -59,7 +59,8 @@ export const vistaServidor = (c: Conjunto, modo: Modo): Salida => ({
   "niveles.json": c.niveles.map((n) => n.data),
   "dioramas.json": c.dioramas.map((d) => d.data),
   "prompts.json": c.prompts,
-  "seguridad.json": { temas: c.temas, listas: c.bloqueos.map((b) => b.data) },
+  // F4.2: las listas también moderan en runtime (entrada del jugador y salida del NPC) y la contención (D-112).
+  "seguridad.json": { temas: c.temas, listas: c.bloqueos.map((b) => b.data), contencion: c.contencion },
 });
 
 /** Archivo → contenido para apps/web/public/content/ (solo lo visible; dev marca estados para la UI). */
@@ -84,6 +85,8 @@ export const vistaCliente = (c: Conjunto, modo: Modo): Salida => ({
   "glosario.json": filtrarGlosario(c.glosario.map((g) => g.data), modo),
   "habilidades.json": { ramas: c.ramas, habilidades: c.habilidades.map((x) => x.data) },
   "lugares.json": { regiones: c.regiones.map(({ data: r }) => ({ id: r.id, nombre: r.nombre, dioramas: r.dioramas })), lugares: c.lugares.map((l) => l.data) },
+  // F4.2: qué estados del glosario muestra el HUD (03 §8.3, D-131): el valor es el modo de compilación.
+  "manifiesto.json": { glossaryDisplay: modo },
   // F2: el mapa necesita el layout entero (tiles, volúmenes, NPCs, zonas no caminables); no trae nada de diseño.
   "dioramas.json": c.dioramas.map((d) => d.data),
 });
