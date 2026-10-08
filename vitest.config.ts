@@ -16,7 +16,9 @@ export default defineConfig({
       // F1.3 suma las reglas nuevas del núcleo: tiers (R12), ajustes y fase/paneles del shell.
       include: ["src/ids.ts", "src/runtime/**/*.ts", "src/quality/**/*.ts", "src/settings/**/*.ts", "src/shell/**/*.ts",
         // F2: movimiento, entrada semántica, cámara y dioramas.
-        "src/movement/**/*.ts", "src/input/**/*.ts", "src/camera/**/*.ts", "src/world/**/*.ts"],
+        "src/movement/**/*.ts", "src/input/**/*.ts", "src/camera/**/*.ts", "src/world/**/*.ts",
+        // F4.1: máquina de escena, criterios y efectos de misión.
+        "src/scene/**/*.ts"],
       reporter: ["text", "json-summary"],
       reportsDirectory: "./coverage/core",
       thresholds: { lines: 90 },
@@ -34,6 +36,8 @@ export default defineConfig({
       { test: { name: "content", root: "./scripts/content", include: ["**/*.test.ts"], testTimeout: 30000 } },
       // F1.3 A4: contraste de los tokens del HUD.
       { test: { name: "a11y", root: "./scripts/a11y", include: ["**/*.test.ts"] } },
+      // F4.1: compuerta de la eval en vivo de texto (la eval en sí no corre en tests, D-027).
+      { test: { name: "eval", root: "./scripts/eval", include: ["**/*.test.ts"] } },
       // FD0: modo director (plugin, diario, CLI, MCP y config fusionada), solo desarrollo.
       { test: { name: "director", root: "./tooling/director", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
     ],

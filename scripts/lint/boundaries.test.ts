@@ -486,3 +486,54 @@ describe("FD0 A2: cableado del plugin y archivos reales del modo director", () =
     expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
   });
 });
+
+// ---------- F4.1 A6: apps/server escribe a disco solo en src/store/ y src/cost/ (D-108, D-157) ----------
+// Archivos reales del servidor lintean limpios; con una escritura a disco agregada, fallan fuera de store/ y cost/.
+// Dentro de store/ (y de cost/, que todavía no existe: probe virtual en su carpeta futura) la misma escritura pasa.
+const REAL_GATEWAY = "apps/server/src/gateway/scene.ts";
+const REAL_RUNTIME = "apps/server/src/scene-runtime/runtime.ts";
+const REAL_EVIDENCE = "apps/server/src/store/evidence.ts";
+const REAL_SERVER = [REAL_GATEWAY, REAL_RUNTIME, REAL_EVIDENCE, "apps/server/src/content/loader.ts", "apps/server/src/main.ts"];
+const DISK = "D-108";
+const DISK_WRITES: { name: string; code: string; rule: string }[] = [
+  { name: "writeFileSync importado de node:fs", code: "\nimport { writeFileSync as __w } from \"node:fs\";\nexport const __p = () => __w(\"x\", \"y\");\n", rule: IMP },
+  { name: "createWriteStream importado de fs", code: "\nimport { createWriteStream as __c } from \"fs\";\nexport const __p = () => __c(\"x\");\n", rule: IMP },
+  { name: "appendFile de node:fs/promises", code: "\nimport { appendFile as __a } from \"node:fs/promises\";\nexport const __p = () => __a(\"x\", \"y\");\n", rule: IMP },
+  { name: "import * as fs (evasión por espacio de nombres)", code: "\nimport * as __fs from \"node:fs\";\nexport const __p = () => __fs.readFileSync(\"x\");\n", rule: SYNTAX },
+  { name: "fs.promises.writeFile por propiedad", code: "\nimport { promises as __pr } from \"node:fs\";\nexport const __p = () => __pr.writeFile(\"x\", \"y\");\n", rule: SYNTAX },
+  { name: "import(\"node:fs\") dinámico", code: "\nexport const __p = () => import(\"node:fs\");\n", rule: SYNTAX },
+];
+
+describe("F4.1 A6: escrituras a disco del servidor", () => {
+  test("los archivos reales existen y store/ tiene su módulo (guardia contra falso verde)", () => {
+    for (const f of REAL_SERVER) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    expect(existsSync(resolve(ROOT, "apps/server/src/store"))).toBe(true);
+  });
+
+  test.each(REAL_SERVER)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(DISK_WRITES.flatMap((c) => [REAL_GATEWAY, REAL_RUNTIME].map((f) => [`${f} + ${c.name}`, f, c] as const)))(
+    "%s falla con el ruleId esperado", async (_name, file, c) => {
+      const msgs = await lint(file, realCode(file) + c.code);
+      const hits = msgs.filter((m) => m.ruleId === c.rule && m.message.includes(DISK));
+      expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    });
+
+  test.each(DISK_WRITES.map((c) => [c.name, c] as const))("%s pasa en src/store/ y src/cost/", async (_name, c) => {
+    for (const file of [REAL_EVIDENCE, "apps/server/src/cost/__probe__.ts"]) {
+      const base = file === REAL_EVIDENCE ? realCode(file) : "";
+      const msgs = await lint(file, base + c.code);
+      const hits = msgs.filter((m) => m.ruleId !== null && m.message.includes(DISK));
+      expect(hits, `${file}: ${describeMsgs(hits)}`).toEqual([]);
+    }
+  });
+
+  test("leer de node:fs sigue permitido fuera de store/", async () => {
+    const msgs = await lint(F.server, "import { readFileSync } from \"node:fs\";\nexport const p = () => readFileSync(\"x\", \"utf8\");\n");
+    expect(msgs.filter((m) => m.message.includes(DISK)), describeMsgs(msgs)).toEqual([]);
+  });
+});

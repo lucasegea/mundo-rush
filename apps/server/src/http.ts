@@ -1,4 +1,4 @@
-// Servidor HTTP de @lg/server (F1.1b): por ahora solo /health. node:http sin framework.
+// Servidor HTTP de @lg/server (F1.1b): /health; F4.1 suma rutas por `createHttpServer(rutas)` (token de escena). node:http sin framework.
 // Sobre de respuesta JSON único:
 //   éxito  → { ok: true,  data: … }
 //   error  → { ok: false, error: { code, message } }   (code estable, message legible)
@@ -10,7 +10,7 @@ export const SERVICE_NAME = "@lg/server";
 export const DEFAULT_HOST = "127.0.0.1";
 export const DEFAULT_PORT = 8787;
 
-export type ErrorCode = "not_found" | "method_not_allowed" | "internal";
+export type ErrorCode = "not_found" | "method_not_allowed" | "internal" | "forbidden" | "unauthorized" | "bad_request";
 export type Envelope<T> = { ok: true; data: T } | { ok: false; error: { code: ErrorCode; message: string } };
 
 export interface HealthBody {
@@ -18,9 +18,11 @@ export interface HealthBody {
   service: typeof SERVICE_NAME;
 }
 
-type Handler = (req: IncomingMessage, res: ServerResponse) => void;
+export type Handler = (req: IncomingMessage, res: ServerResponse) => void;
+/** ruta → método → manejador. */
+export type Routes = Record<string, Record<string, Handler>>;
 
-function send<T>(res: ServerResponse, status: number, body: Envelope<T>, method?: string, headers: Record<string, string> = {}): void {
+export function send<T>(res: ServerResponse, status: number, body: Envelope<T>, method?: string, headers: Record<string, string> = {}): void {
   const json = JSON.stringify(body);
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -31,7 +33,7 @@ function send<T>(res: ServerResponse, status: number, body: Envelope<T>, method?
   res.end(method === "HEAD" ? undefined : json);
 }
 
-const fail = (res: ServerResponse, status: number, code: ErrorCode, message: string, method?: string, headers?: Record<string, string>): void =>
+export const fail = (res: ServerResponse, status: number, code: ErrorCode, message: string, method?: string, headers?: Record<string, string>): void =>
   send(res, status, { ok: false, error: { code, message } }, method, headers);
 
 const health: Handler = (req, res) => {
@@ -39,16 +41,24 @@ const health: Handler = (req, res) => {
   send(res, 200, { ok: true, data: body }, req.method);
 };
 
-const ROUTES: Record<string, Record<string, Handler>> = {
+const BASE_ROUTES: Routes = {
   "/health": { GET: health, HEAD: health },
 };
 
+/** Manejador de requests con las rutas base más `extra`. */
+export function createHandler(extra: Routes = {}): Handler {
+  const routes: Routes = { ...BASE_ROUTES, ...extra };
+  return (req, res) => routeRequest(routes, req, res);
+}
+
 /** Manejador de requests; exportado para probarlo sin red si hace falta. */
-export function handle(req: IncomingMessage, res: ServerResponse): void {
+export const handle: Handler = createHandler();
+
+function routeRequest(routes: Routes, req: IncomingMessage, res: ServerResponse): void {
   const method = req.method ?? "GET";
   try {
     const { pathname } = new URL(req.url ?? "/", "http://localhost");
-    const route = ROUTES[pathname];
+    const route = routes[pathname];
     if (!route) {
       fail(res, 404, "not_found", "Ruta desconocida.", method);
       return;
@@ -67,8 +77,8 @@ export function handle(req: IncomingMessage, res: ServerResponse): void {
   }
 }
 
-export function createHttpServer(): Server {
-  return createServer(handle);
+export function createHttpServer(extra: Routes = {}): Server {
+  return createServer(createHandler(extra));
 }
 
 /** Lee host y puerto del entorno: LG_PORT (entero 0-65535; 0 = efímero). El host es siempre loopback. */

@@ -1,0 +1,19 @@
+# Modelos como configuración (03 §5.10, D-093, ADR-018). Sin claves: las claves van en variables de entorno del proceso
+# del servidor (LG_GEMINI_API_KEY) y nunca llegan al cliente (03 §5.3). F4.1 usa solo los roles de texto.
+# Los ids de modelo cambian: validarlos contra el proveedor al arrancar (ADR-018, P0) queda diferido (sin clave no se
+# puede; F4.1 no llama a ninguna API paga). Ids tomados de un prototipo de voz anterior (03 §5.2); verificar vigencia antes de usar.
+roles:
+  textNpc:  { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 256, timeoutMs: 8000 }
+  observer: { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 1024, timeoutMs: 4000 }
+  # Reservados (F5.1, F6): npcVoice, summary, lumiTts, npcLinesTts, moderation.
+voice:
+  npc: { adapter: live }
+observer:
+  liveGrammarSignals: false
+scene:
+  softCapMs: 240000
+  hardCapMs: 300000
+  turnTimerMs: 3000
+prices:
+  version: "2026-10-04"
+  source: "informe de negocio §3.1 (pendiente: tabla por modelo con fecha de consulta, F5.1a)"

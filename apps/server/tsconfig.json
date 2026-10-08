@@ -5,7 +5,9 @@
     "outDir": "../../node_modules/.tsbuild/server",
     "lib": ["ES2022"],
     "types": ["node"],
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
   },
-  "include": ["src", "test"]
+  "include": ["src", "test"],
+  "references": [{ "path": "../../tsconfig.tooling.json" }]
 }

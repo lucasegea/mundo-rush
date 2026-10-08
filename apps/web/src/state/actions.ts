@@ -1,11 +1,11 @@
 // state/actions.ts — barril de acciones públicas: lo único que ui/ (y dev/director) despachan (R14, P0 T2).
 // Acciones delgadas: las reglas (tiers, saneo de ajustes, fase, pila de paneles) viven en @lg/core.
 import {
-  applySettingsPatch, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom, IDLE,
+  applySettingsPatch, applyWorldEffects, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom, IDLE,
   isWalkable, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, presetAngles, pushPanel, sameIds,
   screenDirToWorld, stepBody, stepZoom, suggestTier,
   type Capabilities, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
-  type SemanticAction, type SettingsPatch, type TextScale, type TierChoice,
+  type SemanticAction, type SettingsPatch, type TextScale, type TierChoice, type WorldEffect,
 } from "@lg/core";
 import { gameStore, type GameState, type GameStore } from "./store";
 import type { NpcInfo, PlaceInfo } from "./slices";
@@ -307,6 +307,20 @@ export function createActions(store: GameStore) {
           };
         }
         return world === s.world && player === s.player ? {} : { world, player };
+      });
+    },
+
+    /**
+     * Efectos de misión que emitió el servidor al cerrar una escena (`scene.effects`, F4.1, 03 §6.4.8): flags,
+     * fundaciones y presentaciones, con la misma regla del núcleo que usa el servidor (una fundación nunca retrocede;
+     * repetir un efecto no cambia nada). El mundo 3D los refleja leyendo el store.
+     */
+    sceneEffectsApplied(effects: readonly WorldEffect[]): void {
+      set((s) => {
+        const { flags, foundations, network } = s.world;
+        const next = applyWorldEffects({ flags, foundations, intros: network.intros }, effects);
+        if (next.flags === flags && next.foundations === foundations && next.intros === network.intros) return {};
+        return { world: { ...s.world, flags: { ...next.flags }, foundations: { ...next.foundations }, network: { ...network, intros: [...next.intros] } } };
       });
     },
 

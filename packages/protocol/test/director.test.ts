@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   DIALOGUE_CAP, DirectorSnapshotSchema, JournalEventSchema, PATH_CAP, SNAPSHOT_EVENT, type DirectorSnapshot,
 } from "../src/director";
+import * as director from "../src/director";
 import * as index from "../src/index";
 
 const AT = "2026-10-07T12:00:00.000Z";
@@ -37,7 +38,11 @@ describe("DirectorSnapshot (v: 1)", () => {
   });
 
   test("el índice del paquete no expone el modo director (solo la subruta @lg/protocol/director)", () => {
-    expect(Object.keys(index)).toEqual(["PACKAGE_NAME"]);
+    // F4.1 suma los mensajes de escena al índice; ningún export del modo director entra.
+    const directorExports = Object.keys(director);
+    expect(directorExports.length).toBeGreaterThan(0);
+    expect(Object.keys(index).filter((k) => directorExports.includes(k))).toEqual([]);
+    expect(Object.keys(index)).toContain("PACKAGE_NAME");
     expect(SNAPSHOT_EVENT.startsWith("lg:director:")).toBe(true);
   });
 });

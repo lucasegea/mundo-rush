@@ -8,6 +8,7 @@
     { "path": "./apps/web" },
     { "path": "./apps/web/tsconfig.node.json" },
     { "path": "./tsconfig.tooling.json" },
+    { "path": "./scripts/eval" },
     { "path": "./tooling/director" }
   ]
 }

@@ -14,5 +14,6 @@ export default mergeConfig(baseConfig, {
   root: fileURLToPath(new URL("../../apps/web/", import.meta.url)),
   // Solo local (D-158): el plugin se niega a activarse con otro host.
   server: { host: "127.0.0.1", watch: { ignored: ["**/public/content/**", "**/.director/**"] } },
-  plugins: [directorPlugin()],
+  // F4.1 (A8): el plugin también levanta apps/server con LG_DEV_CONTENT_WATCH=1 para las escenas.
+  plugins: [directorPlugin({ scenesServer: true })],
 });

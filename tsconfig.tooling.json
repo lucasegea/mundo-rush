@@ -8,5 +8,6 @@
     "allowImportingTsExtensions": true
   },
   "include": ["vitest.config.ts", "scripts/**/*.ts"],
+  "exclude": ["scripts/eval/**"],
   "references": [{ "path": "./packages/content-schema" }]
 }

@@ -37,6 +37,13 @@ const cameraImports = [
     message: "R11: cámaras y controles solo en world/camera/." },
 ];
 const platformImports = { group: ["@tauri-apps/*", "@capacitor/*"], message: "R15: solo en services/platform/." };
+// F4.1: escrituras a disco del servidor (fs.write*, createWriteStream, appendFile*). `write`/`writeSync` sueltos quedan
+// fuera del selector de llamadas para no confundirlos con streams y sockets; como import de fs sí se bloquean.
+const FS_MODULES = ["fs", "node:fs", "fs/promises", "node:fs/promises"];
+const FS_RE = "/^(node:)?fs(\\u002Fpromises)?$/";
+const DISK_WRITE_FNS = ["writeFile", "writeFileSync", "appendFile", "appendFileSync", "createWriteStream", "writev", "writevSync"];
+const DISK_WRITE_IMPORTS = [...DISK_WRITE_FNS, "write", "writeSync"];
+const DISK_WRITE_MSG = "D-108: apps/server escribe a disco solo en src/store/ y src/cost/.";
 
 export default tseslint.config(
   { ignores: ["**/dist/**", "**/node_modules/**", "experiments/**", "tooling/eslint-fixtures/**",
@@ -155,4 +162,18 @@ export default tseslint.config(
   // ---------- 5. Efectos solo en services/ (R5) ----------
   { files: [`${WEB}/{ui,world,state}/**/*.{ts,tsx}`],
     rules: { "no-restricted-globals": ["error", "fetch", "WebSocket", "indexedDB", "localStorage", "sessionStorage"] } },
+
+  // ---------- 6. apps/server escribe a disco solo en src/store/ y src/cost/ (F4.1, D-108, D-157) ----------
+  {
+    files: ["apps/server/src/**/*.ts"],
+    ignores: ["apps/server/src/store/**", "apps/server/src/cost/**"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: FS_MODULES.map((name) => ({ name, importNames: DISK_WRITE_IMPORTS, message: DISK_WRITE_MSG })) }],
+      "no-restricted-syntax": ["error",
+        { selector: `ImportDeclaration[source.value=${FS_RE}] > :matches(ImportNamespaceSpecifier, ImportDefaultSpecifier)`,
+          message: `${DISK_WRITE_MSG} Importá de fs solo nombres de lectura.` },
+        { selector: `ImportExpression[source.value=${FS_RE}]`, message: DISK_WRITE_MSG },
+        { selector: `CallExpression[callee.property.name=/^(${DISK_WRITE_FNS.join("|")})$/]`, message: DISK_WRITE_MSG }],
+    },
+  },
 );

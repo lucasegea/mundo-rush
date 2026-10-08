@@ -19,6 +19,7 @@ import { construir, crearCompiladorIncremental, leerContenido } from "../../../s
 import { REPO_ROOT, statePath, writeJsonAtomic } from "./files.ts";
 import { createJournalWriter, pruneJournal } from "./journal.ts";
 import { readJournal, readState } from "./read.ts";
+import { startScenesServer, type ScenesServer } from "./server.ts";
 
 export const PLUGIN_NAME = "lg-director";
 export const ROUTE_PREFIX = "/__director/";
@@ -171,15 +172,28 @@ export interface DirectorPluginOptions {
   root?: string;
   /** Espera para juntar cambios de content/ (un guardado suele disparar varios eventos). */
   debounceMs?: number;
+  /**
+   * Levantar apps/server con LG_DEV_CONTENT_WATCH=1 (F4.1, A8). `true` usa el arranque real; una función lo reemplaza
+   * (tests). Apagado por defecto: solo tooling/director/vite.config.ts lo prende.
+   */
+  scenesServer?: boolean | ((log: (m: string) => void) => ScenesServer);
+}
+
+/** Lo que el plugin expone a quien lo inspecciona (la config del director, sus tests). */
+export interface DirectorPluginApi {
+  readonly startsScenesServer: boolean;
 }
 
 /** El plugin. Solo `serve`; con un host que no es loopback no hace nada y lo dice. */
 export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
   const root = options.root ?? REPO_ROOT;
   const debounceMs = options.debounceMs ?? 120;
+  const launchServer = options.scenesServer === true ? startScenesServer : options.scenesServer || null;
+  const api: DirectorPluginApi = { startsScenesServer: launchServer !== null };
   return {
     name: PLUGIN_NAME,
     apply: "serve",
+    api,
     configureServer(server) {
       const host = server.config.server.host;
       if (!isLocalHost(host)) {
@@ -223,6 +237,12 @@ export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
           }
         }, debounceMs);
       });
+      if (launchServer) {
+        // Después de compilar: el servidor lee apps/server/generated/content/ con la primera escena.
+        const scenes = launchServer((m) => server.config.logger.info(m));
+        server.httpServer?.once("close", () => scenes.stop());
+        process.once("exit", () => scenes.stop());
+      }
       server.config.logger.info(`[director] activo: .director/state.json, ${ROUTE_PREFIX}state, ${ROUTE_PREFIX}journal; observando content/`);
     },
   };

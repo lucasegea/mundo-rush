@@ -7,6 +7,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./scene": {
+      "types": "./src/scene/index.ts",
+      "default": "./src/scene/index.ts"
     }
   },
   "types": "./src/index.ts"
