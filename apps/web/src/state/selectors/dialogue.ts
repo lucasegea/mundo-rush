@@ -3,7 +3,7 @@
 // (03 §8.3, D-131). Una palabra sin entrada visible no tiene traducción (D-068): la UI ofrece marcarla.
 import { glossaryKey, glossaryVisibility, HINT_CHIP_DELAY_MS, isGlossaryDisplay, plainTemplateText, tokenizeLine, type LineToken } from "@lg/core";
 import type { GameState } from "../store";
-import type { DialogueLine, Lexicon } from "../slices";
+import type { DialogueLine, Lexicon, MicProblem } from "../slices";
 import { createViewSelector } from "./view";
 
 export interface DialogueView {
@@ -40,6 +40,24 @@ export interface HudLine {
 
 export type HudPhase = "connecting" | "offline" | "starting" | "npcSpeaking" | "yourTurn" | "passMenu" | "ended" | "blocked";
 
+/** F5.2: qué está pasando con la voz (indicador "te escucho / pensando"). */
+export type VoicePhase = "asking" | "yourTurn" | "listening" | "thinking" | "npcSpeaking";
+
+export interface VoiceHudView {
+  phase: VoicePhase;
+  /** Se puede abrir el turno hablado ("Hablar"). */
+  canTalk: boolean;
+  /** Hay un turno hablado abierto que "Terminé" cierra. */
+  canFinish: boolean;
+  /** El turno se está cerrando (cola corta de audio antes del fin). */
+  ending: boolean;
+  /** Nivel del micrófono 0..1. */
+  level: number;
+  /** Lo que el servidor va oyendo (parcial). */
+  heard: string | null;
+  hint: "silent" | "unheard" | null;
+}
+
 export interface DialogueHudView {
   /** Con quién (null = escena sin NPC: seguir la historia con Lumi). */
   npcId: string | null;
@@ -62,6 +80,12 @@ export interface DialogueHudView {
   /** Clave de palabra → entrada visible en este build. */
   glossary: Readonly<Record<string, GlossaryView>>;
   glossaryReady: boolean;
+  /** F5.2: controles de voz; null si la escena va por texto. */
+  voice: VoiceHudView | null;
+  /** F5.2: la escena va por texto porque no hay micrófono o permiso (mensaje claro en el HUD). */
+  micProblem: MicProblem | null;
+  /** F5.2: el micrófono se perdió con la escena en voz (hay que salir y volver a entrar). */
+  micLost: boolean;
 }
 
 const glossaryCache = new WeakMap<Lexicon, Record<string, GlossaryView>>();
@@ -105,6 +129,29 @@ const hudLine = (l: DialogueLine, lex: Lexicon, npcName: (id: string) => string 
   return { id: l.id, who: "npc", name: npcName(l.speaker), kind: l.kind, lang: "en", text, tokens: tokenizeLine(text) };
 };
 
+const voicePhaseOf = (d: GameState["dialogue"]): VoicePhase => {
+  const audio = d.voice.audio;
+  if (audio === "asking") return "asking";
+  if (audio === "listening" || d.voice.talk !== "idle") return "listening";
+  if (audio === "playing") return "npcSpeaking";
+  if (audio === "ready" && d.state === "playerTurn" && (d.turnSubstate === "waiting" || d.turnSubstate === "passMenu")) return "yourTurn";
+  return "thinking";
+};
+
+const voiceView = (d: GameState["dialogue"]): VoiceHudView | null => {
+  if (d.modality !== "voice" || d.sceneId === null || d.voice.audio === "off" || d.voice.audio === "noPermission") return null;
+  const phase = voicePhaseOf(d);
+  return {
+    phase,
+    canTalk: phase === "yourTurn" && d.turnSubstate === "waiting" && d.voice.talk === "idle",
+    canFinish: d.voice.talk === "talking",
+    ending: d.voice.talk === "ending",
+    level: d.voice.level,
+    heard: d.voice.heard,
+    hint: d.voice.turnHint,
+  };
+};
+
 const phaseOf = (d: GameState["dialogue"]): HudPhase => {
   if (d.connection === "error" || (d.connection === "closed" && d.outcome === null && d.blocked === null)) return "offline";
   if (d.blocked) return "blocked";
@@ -127,7 +174,7 @@ export const selectDialogueHudView = createViewSelector(
       npcId,
       npcName: npcId ? (name(npcId) ?? npcId) : null,
       phase,
-      canWrite: phase === "yourTurn" && sub !== null && ["waiting", "speaking", "endPending"].includes(sub),
+      canWrite: d.modality === "text" && phase === "yourTurn" && sub !== null && ["waiting", "speaking", "endPending"].includes(sub),
       canPass: phase === "yourTurn" && (sub === "waiting" || sub === "endPending"),
       waiting: phase === "yourTurn" && sub === "waiting",
       hintChipEnabled: hintChip,
@@ -139,6 +186,9 @@ export const selectDialogueHudView = createViewSelector(
       notice: d.notice,
       glossary: visibleGlossary(d.lexicon),
       glossaryReady: d.lexicon.status === "ready",
+      voice: voiceView(d),
+      micProblem: d.modality === "text" ? d.voice.micProblem : null,
+      micLost: d.modality === "voice" && d.sceneId !== null && d.voice.audio === "noPermission",
     };
   },
 );

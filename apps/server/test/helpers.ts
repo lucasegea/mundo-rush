@@ -16,6 +16,7 @@ import { fakeNpcModel, fakeObserverModel, observerJson, type CriteriaRule, type 
 import type { VoiceProviderFactory } from "../src/providers/types.ts";
 import type { CostAlert, CostLedger } from "../src/cost/ledger.ts";
 import type { TurnClipView } from "../src/scene-runtime/turn-clip.ts";
+import type { ConversationHooks } from "../src/scene-runtime/hooks.ts";
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -106,6 +107,8 @@ export interface HarnessOptions {
   ledger?: CostLedger;
   models?: ModelsConfig;
   observerModel?: FakeModel & { observed: { turnId: string; playerText: string; attempt: number }[] };
+  /** F5.2: ganchos de conversación. */
+  conversation?: ConversationHooks;
 }
 
 export function harness(opts: HarnessOptions = {}): Harness {
@@ -127,6 +130,7 @@ export function harness(opts: HarnessOptions = {}): Harness {
     accountId: "op-local", clock, scheduler, newId: () => `id-${++n}`, safety,
     ...(opts.moderation ? { moderation: opts.moderation } : {}),
     ...(opts.voice !== undefined ? { voice: opts.voice } : {}), ...(opts.ledger ? { ledger: opts.ledger } : {}),
+    ...(opts.conversation ? { conversation: opts.conversation } : {}),
     onTurnClip: (c) => clips.push(c), onCostAlert: (a) => alerts.push(a), onCostError: (m) => costErrors.push(m),
   }, (m) => sent.push(m), (pcm) => audioOut.push(pcm));
   const session = open();

@@ -12,6 +12,7 @@ import type { Platform } from "../services/platform";
 import { detectCapabilities, type QualityEnv } from "../services/quality";
 import { startSimulation, type FrameScheduler } from "../services/simulation";
 import type { SceneConnector } from "../services/scene";
+import type { AudioEngine } from "../services/audio";
 import { runDevHook, type DevHot } from "./dev";
 
 export interface BootDeps {
@@ -30,7 +31,11 @@ export interface BootDeps {
    * Servidor de escenas (F4.2). Sin esto (tests del shell) el HUD de diálogo abre pero no conecta. El servicio se
    * carga por import() diferido con la primera escena pedida (zod y el protocolo no entran al chunk inicial).
    */
-  scene?: { connector: SceneConnector };
+  scene?: {
+    connector: SceneConnector;
+    /** F5.2: motor de audio (micrófono + voz del NPC). Sin esto, las escenas van por texto. */
+    audio?: { createEngine: () => Promise<AudioEngine> };
+  };
   /** Modo director (FD0): el canal de HMR para tests; en la app es import.meta.hot. */
   devHot?: DevHot;
 }
@@ -65,7 +70,7 @@ export async function boot(deps: BootDeps): Promise<() => void> {
   }
 
   if (deps.scene) {
-    const { connector } = deps.scene;
+    const { connector, audio } = deps.scene;
     let stopScene: (() => void) | null = null;
     let cancelled = false;
     const stopSceneLoad = store.subscribe((s) => s.dialogue.request !== null, (requested) => {
@@ -73,7 +78,10 @@ export async function boot(deps: BootDeps): Promise<() => void> {
       stopSceneLoad();
       void import("../services/scene").then(({ startSceneService }) => {
         if (cancelled) return;
-        stopScene = startSceneService({ store, actions, connector, baseUrl: deps.baseUrl, ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}) });
+        stopScene = startSceneService({
+          store, actions, connector, baseUrl: deps.baseUrl,
+          ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}), ...(audio ? { audio } : {}),
+        });
       });
     }, { fireImmediately: true });
     stops.push(() => { cancelled = true; stopSceneLoad(); stopScene?.(); });

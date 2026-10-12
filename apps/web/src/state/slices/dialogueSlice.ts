@@ -14,6 +14,27 @@ export interface DialogueLine {
 }
 
 export type SceneConnection = "idle" | "connecting" | "open" | "closed" | "error";
+
+/** Estado del audio del cliente (F5.2): lo calcula la máquina de services/audio/machine.ts. */
+export type AudioState = "off" | "asking" | "noPermission" | "ready" | "listening" | "thinking" | "playing";
+/** Por qué no hay voz del lado del cliente: la escena va por texto con un mensaje claro. */
+export type MicProblem = "denied" | "noDevice" | "unsupported" | "failed";
+
+/** La voz del jugador en el HUD (F5.2). services/audio la escribe por acciones; la UI la lee por selectores. */
+export interface VoiceUi {
+  audio: AudioState;
+  micProblem: MicProblem | null;
+  /** Nivel del micrófono 0..1 (medidor de chequeo). */
+  level: number;
+  /** Intención del jugador: turno hablado abierto o cerrándose (services/audio manda el fin tras una cola corta). */
+  talk: "idle" | "talking" | "ending";
+  /** Lo que el servidor va oyendo del turno en curso (transcripción parcial). */
+  heard: string | null;
+  /** Aviso del último turno: el micrófono no captó voz, o el servidor no entendió nada. */
+  turnHint: "silent" | "unheard" | null;
+}
+
+export const initialVoiceUi = (): VoiceUi => ({ audio: "off", micProblem: null, level: 0, talk: "idle", heard: null, turnHint: null });
 export type SceneOutcome = "success" | "partial" | "hardCap" | "containment" | "aborted";
 
 export interface OutboxItem {
@@ -71,6 +92,8 @@ export interface DialogueState {
   /** Último aviso del servidor que no corta la escena (código del protocolo). */
   notice: string | null;
   lexicon: Lexicon;
+  /** F5.2: voz del jugador (micrófono, turno hablado, medidor). */
+  voice: VoiceUi;
 }
 
 /** No se persiste: la escena se reanuda desde su inicio (GDD §2.16). */
@@ -108,4 +131,5 @@ export const initialDialogue = (): DialogueState => ({
   containment: null,
   notice: null,
   lexicon: initialLexicon(),
+  voice: initialVoiceUi(),
 });

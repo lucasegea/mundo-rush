@@ -10,6 +10,13 @@ import { browserSceneConnector } from "./services/scene/connector";
 import { actions } from "./state/actions";
 import { gameStore } from "./state/store";
 
+// F5.2: voz por defecto; `?voz=0` en la URL fuerza el modo texto (diagnóstico). El motor de audio (único AudioContext,
+// R13) se carga diferido con la primera escena: no entra al chunk inicial.
+const voiceOn = new URLSearchParams(window.location.search).get("voz") !== "0";
+const audio = voiceOn
+  ? { createEngine: () => import("./services/audio/engine").then((m) => m.createBrowserAudioEngine()) }
+  : undefined;
+
 const container = document.getElementById("root");
 if (container) {
   createRoot(container).render(
@@ -31,6 +38,7 @@ if (container) {
         httpBase: window.location.origin,
         wsBase: `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`,
       }),
+      ...(audio ? { audio } : {}),
     },
   });
 }

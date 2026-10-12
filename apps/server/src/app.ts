@@ -16,6 +16,7 @@ import type { ModerationProvider } from "./providers/moderation.ts";
 import { createFileSafetyStore, createMemorySafetyStore, DEFAULT_SAFETY_PATH, type SafetyEventStore } from "./store/safety.ts";
 import { costPolicyFromConfig, createFileCostLedger, createMemoryCostLedger, DEFAULT_COST_LEDGER_PATH, type CostAlert, type CostLedger } from "./cost/ledger.ts";
 import type { VoiceProviderFactory } from "./providers/types.ts";
+import type { ConversationHooks } from "./scene-runtime/hooks.ts";
 
 /** Reloj del proceso (el núcleo nunca lee la hora; la inyecta la app, R4). */
 export const systemClock: Clock = { now: () => Date.now() };
@@ -37,6 +38,8 @@ export interface GameServerOptions {
   ledger?: CostLedger;
   onCostAlert?: (alert: CostAlert) => void;
   onCostError?: (message: string) => void;
+  /** F5.2: ganchos de conversación de cada escena (scene-runtime/hooks.ts). */
+  conversation?: ConversationHooks;
 }
 
 export interface GameServer {
@@ -61,6 +64,7 @@ export function createGameServer(opts: GameServerOptions): GameServer {
       ...(opts.moderation !== undefined ? { moderation: opts.moderation } : {}), ...(opts.safety ? { safety: opts.safety } : {}),
       ...(opts.voice !== undefined ? { voice: opts.voice } : {}), ledger,
       ...(opts.onCostAlert ? { onCostAlert: opts.onCostAlert } : {}), ...(opts.onCostError ? { onCostError: opts.onCostError } : {}),
+      ...(opts.conversation ? { conversation: opts.conversation } : {}),
     }, send, sendAudio),
   });
   return { server, operatorMode, close: () => gateway.close() };

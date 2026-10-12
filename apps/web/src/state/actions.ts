@@ -9,7 +9,7 @@ import {
 } from "@lg/core";
 import type { ServerMessage } from "@lg/protocol";
 import { gameStore, type GameState, type GameStore } from "./store";
-import { freshScene, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo } from "./slices";
+import { freshScene, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo, type VoiceUi } from "./slices";
 import { selectMapActive } from "./selectors/world";
 
 export interface DialogOnlyCatalog {
@@ -56,7 +56,18 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
         ...d, history: [...d.history, line],
         subtitles: line.text !== null ? { final: [...d.subtitles.final, line.text], partial: null } : d.subtitles,
         lastNpcLine: isNpcText ? line.text : d.lastNpcLine,
+        voice: d.voice.heard === null ? d.voice : { ...d.voice, heard: null },
       };
+    }
+    case "turn.transcript": {
+      // F5.2: lo que el servidor oyó del jugador. Parcial: se muestra mientras habla; final: entra al historial.
+      if (msg.speaker !== "player") return d;
+      if (!msg.final) return { ...d, voice: { ...d.voice, heard: msg.text } };
+      const text = msg.text.trim();
+      const voice = { ...d.voice, heard: null, turnHint: text === "" ? ("unheard" as const) : d.voice.turnHint };
+      if (text === "") return { ...d, voice };
+      const line: DialogueLine = { id: `heard-${msg.turnId}`, speaker: "player", kind: "player", text, template: null };
+      return { ...d, voice, history: [...d.history, line] };
     }
     case "scene.blocked":
       return { ...d, blocked: msg.reason, npcId: msg.npcId ?? d.npcId };
@@ -65,7 +76,7 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
     case "scene.safety":
       // El turno cortado se marca en el historial (sin el texto del NPC: no se mostró).
       return msg.action === "cut" && msg.layer !== "output"
-        ? { ...d, history: [...d.history, { id: `cut-${d.history.length}`, speaker: "system", kind: "cut", text: null, template: null }] }
+        ? { ...d, history: [...d.history, { id: `cut-${d.history.length}`, speaker: "system", kind: "cut", text: null, template: null }], voice: { ...d.voice, heard: null } }
         : d;
     case "scene.containment":
       return { ...d, containment: { line: msg.line, resource: msg.resource, provisional: msg.provisional } };
@@ -132,7 +143,14 @@ export function createActions(store: GameStore) {
   const enqueue = (d: DialogueState, msg: DialogueState["outbox"][number]["msg"]): DialogueState =>
     ({ ...d, outbox: [...d.outbox, { seq: d.outboxSeq + 1, msg }], outboxSeq: d.outboxSeq + 1 });
 
-  const canWrite = (d: DialogueState): boolean => d.state === "playerTurn" && d.turnSubstate !== null && WRITABLE_SUBS.has(d.turnSubstate);
+  const canWrite = (d: DialogueState): boolean =>
+    d.modality === "text" && d.state === "playerTurn" && d.turnSubstate !== null && WRITABLE_SUBS.has(d.turnSubstate);
+
+  /** F5.2: se puede abrir un turno hablado (escena en voz, tu turno esperando, audio listo y sin turno abierto). */
+  const canTalk = (d: DialogueState): boolean =>
+    d.modality === "voice" && d.state === "playerTurn" && d.turnSubstate === "waiting" && d.voice.audio === "ready" && d.voice.talk === "idle";
+
+  const withVoice = (d: DialogueState, patch: Partial<VoiceUi>): DialogueState => ({ ...d, voice: { ...d.voice, ...patch } });
 
   // ---------- mapa (F2) ----------
 
@@ -358,6 +376,44 @@ export function createActions(store: GameStore) {
     },
 
     setHintChip: (on: boolean) => changeSettings({ input: { hintChip: on } }, on ? "announce.hintChip.on" : "announce.hintChip.off"),
+
+    // ---------- voz (F5.2): la UI pide, services/audio ejecuta ----------
+
+    /** "Hablar": abre el turno hablado (voice.turnStart). Fuera de turno o con el NPC sonando, no hace nada y lo dice. */
+    voiceTalkStart(): void {
+      set((s) => {
+        if (!canTalk(s.dialogue)) return s.dialogue.voice.talk === "idle" ? { ui: { ...s.ui, announcement: announcement(s, "announce.notYourTurn") } } : {};
+        const d = enqueue(s.dialogue, { type: "voice.turnStart" });
+        return { dialogue: withVoice(d, { talk: "talking", heard: null, turnHint: null }) };
+      });
+    },
+
+    /** "Terminé" o soltar "Hablar": el turno se cierra (services/audio manda el fin después de una cola corta de audio). */
+    voiceTalkEnd(): void {
+      set((s) => (s.dialogue.voice.talk === "talking" ? { dialogue: withVoice(s.dialogue, { talk: "ending" }) } : {}));
+    },
+
+    /**
+     * services/audio terminó de mandar el audio del turno: voice.turnEnd al servidor. `heardSpeech`: el VAD local
+     * detectó voz (si no, el HUD sugiere revisar el micrófono). Con `send: false` el turno se descarta sin mandar el fin
+     * (la escena ya no está en tu turno, p. ej. por el tope de tiempo).
+     */
+    voiceTurnClosed(heardSpeech: boolean, send = true): void {
+      set((s) => {
+        if (s.dialogue.voice.talk === "idle") return {};
+        const d = send ? enqueue(s.dialogue, { type: "voice.turnEnd" }) : s.dialogue;
+        return { dialogue: withVoice(d, { talk: "idle", turnHint: heardSpeech ? null : "silent" }) };
+      });
+    },
+
+    /** services/audio informa su estado, el nivel del micrófono o por qué no hay micrófono. */
+    audioChanged(patch: Partial<Pick<VoiceUi, "audio" | "micProblem" | "level">>): void {
+      set((s) => {
+        const v = s.dialogue.voice;
+        const changed = (Object.keys(patch) as (keyof typeof patch)[]).some((k) => patch[k] !== v[k]);
+        return changed ? { dialogue: withVoice(s.dialogue, patch) } : {};
+      });
+    },
 
     // ---------- servicio de escena (services/scene) ----------
 

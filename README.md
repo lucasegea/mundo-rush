@@ -27,6 +27,8 @@ npm run verify      # el gate de toda fase: los 7 pasos en orden, falla si falla
 | `npm run build` | `tsc -b` + `vite build` de `apps/web` (build de desarrollo, 03 §8.3; emite `dist/.vite/manifest.json`) |
 | `npm run check:budgets` | `scripts/budgets/bundle-size.ts`: mide en gzip el grafo estático de `index.html` (y el chunk 3D y `docente.html` cuando existan) contra `scripts/budgets/budgets.json` (= `03` §2.7.3); después corre `check:dev-only`, centinela hasta FD0. Va después de `build` porque lee su salida |
 
+**Jugar (por voz):** `npm run dev:play` levanta servidor (modo operador) + web en `http://127.0.0.1:5173`; ver [`docs/PLAY.md`](docs/PLAY.md).
+
 Servidor: `npm start --workspace @lg/server` escucha en `http://127.0.0.1:8787` (`LG_PORT` lo cambia). `GET /health` → `200 {"ok":true,"data":{"status":"ok","service":"@lg/server"}}`; cualquier error responde `{"ok":false,"error":{"code","message"}}` (ruta desconocida: `404 not_found`).
 
 Un `npm run lint` rojo por un límite de módulos es un bloqueante, no una advertencia (03 §4.3.2).

@@ -3,7 +3,8 @@
 // Todos los objetos son estrictos: un campo de más (un prompt, un nombre de modelo, una clave) no valida (A4).
 // F5.1a: voz en el servidor. El cliente pide una escena de voz (`scene.start` con `modality: "voice"`), marca inicio y
 // fin de su turno (`voice.turnStart`/`voice.turnEnd`, D-091) y manda el audio en frames binarios aparte (ADR-017).
-// El audio del cliente llega en F5.2.
+// F5.2: el cliente captura y reproduce ese audio (apps/web/src/services/audio) y recibe lo que el servidor oyó de su
+// turno (`turn.transcript`).
 import { z } from "zod";
 
 const NpcId = z.string().regex(/^NPC-[A-Z0-9-]+$/);
@@ -164,6 +165,18 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     line: z.string().min(1),
     resource: z.strictObject({ label: z.string().min(1), detail: z.string().min(1) }).nullable(),
     provisional: z.boolean(),
+  }),
+  /**
+   * F5.2: lo que el servidor oyó del jugador en un turno de voz (`final: false` mientras habla; `final: true` cuando la
+   * transcripción quedó completa y pasó la moderación de entrada). `npc` queda reservado para el holdback de F5.1b: hoy
+   * la línea del NPC llega moderada y completa por `npc.line`. Nunca lleva audio (D-108).
+   */
+  z.strictObject({
+    type: z.literal("turn.transcript"),
+    turnId: z.string().min(1),
+    speaker: z.enum(["player", "npc"]),
+    text: z.string().max(2000),
+    final: z.boolean(),
   }),
   /** Evento de error que no corta la escena (p. ej. el observador no validó dos veces). */
   z.strictObject({ type: z.literal("scene.notice"), code: z.enum(NOTICE_CODES), message: z.string() }),

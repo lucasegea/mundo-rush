@@ -8,6 +8,8 @@ export { createGameServer, systemClock, textProvidersFromEnv } from "./app.ts";
 export type { GameServer, GameServerOptions } from "./app.ts";
 export { createSceneSession, NOT_INTRODUCED_LINE, realScheduler } from "./scene-runtime/runtime.ts";
 export type { SceneDeps, SceneSession, Scheduler } from "./scene-runtime/runtime.ts";
+// F5.2: ganchos de conversación (la costura para sistemas que leen la escena turno a turno).
+export type { ConversationHooks, ConversationSceneEnd, ConversationSceneInfo, ConversationTurn } from "./scene-runtime/hooks.ts";
 export { createFileEvidenceStore, createMemoryEvidenceStore } from "./store/evidence.ts";
 export type { EvidenceStore } from "./store/evidence.ts";
 export { loadModelsConfig, MODELS_CONFIG_PATH } from "./config/models.ts";

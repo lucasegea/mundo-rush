@@ -7,11 +7,15 @@ export interface FakeSceneServer {
   connector: SceneConnector;
   /** Mensajes del cliente, ya parseados, en orden. */
   sent: ClientMessage[];
+  /** F5.2: frames binarios del cliente (voz del jugador), en orden. */
+  binary: ArrayBuffer[];
   /** Conexiones abiertas en total y cuántas se cerraron. */
   readonly opened: number;
   readonly closed: number;
   /** Manda un mensaje del servidor a la última conexión. */
   push(msg: ServerMessage | string): void;
+  /** F5.2: manda un frame binario (voz del NPC) a la última conexión. */
+  pushBinary(bytes: ArrayBuffer): void;
   /** El servidor cierra la conexión. */
   drop(): void;
   /** Espera a que haya `n` conexiones abiertas. */
@@ -20,12 +24,14 @@ export interface FakeSceneServer {
 
 export function fakeSceneServer(opts: { fail?: boolean } = {}): FakeSceneServer {
   const sent: ClientMessage[] = [];
+  const binary: ArrayBuffer[] = [];
   let handlers: SceneHandlers | null = null;
   let opened = 0;
   let closed = 0;
   let waiters: { n: number; done(): void }[] = [];
   const server: FakeSceneServer = {
     sent,
+    binary,
     get opened() { return opened; },
     get closed() { return closed; },
     connector: {
@@ -36,12 +42,16 @@ export function fakeSceneServer(opts: { fail?: boolean } = {}): FakeSceneServer 
         waiters = waiters.filter((w) => (w.n <= opened ? (w.done(), false) : true));
         return Promise.resolve({
           send: (text: string) => { sent.push(JSON.parse(text) as ClientMessage); },
+          sendBinary: (bytes: ArrayBuffer) => { binary.push(bytes); },
           close: () => { closed++; handlers = null; },
         });
       },
     },
     push(msg) {
       handlers?.onMessage(typeof msg === "string" ? msg : JSON.stringify(msg));
+    },
+    pushBinary(bytes) {
+      handlers?.onBinary?.(bytes);
     },
     drop() {
       const h = handlers;

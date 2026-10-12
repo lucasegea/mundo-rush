@@ -7,6 +7,7 @@ import { startSceneService } from "../src/services/scene";
 import { actions } from "../src/state/actions";
 import { gameStore } from "../src/state/store";
 import { fakeSceneServer, openingFor } from "./fake-scene";
+import { fakeEngineFactory } from "./fake-audio";
 import { compiledClientContent, fetchFromContent, resetStore } from "./helpers";
 
 describe("conector", () => {
@@ -18,23 +19,30 @@ describe("conector", () => {
   class FakeWs {
     static last: FakeWs | null = null;
     static failOpen = false;
+    static OPEN = 1;
+    readonly OPEN = 1;
+    readyState = 1;
+    binaryType = "blob";
     onopen: (() => void) | null = null;
     onerror: (() => void) | null = null;
     onmessage: ((ev: { data: unknown }) => void) | null = null;
     onclose: (() => void) | null = null;
-    sent: string[] = [];
+    sent: (string | ArrayBuffer)[] = [];
     closed = false;
     constructor(public url: string) {
       FakeWs.last = this;
       queueMicrotask(() => (FakeWs.failOpen ? this.onerror?.() : this.onopen?.()));
     }
-    send(t: string) { this.sent.push(t); }
+    send(t: string | ArrayBuffer) { this.sent.push(t); }
     close() { this.closed = true; }
   }
   const asWs = FakeWs as unknown as typeof WebSocket;
   const reply = (status: number, body: unknown) => vi.fn(async () => new Response(JSON.stringify(body), { status }));
-  const handlers = (): SceneHandlers & { got: string[]; closes: number } => {
-    const h = { got: [] as string[], closes: 0, onMessage: (t: string) => { h.got.push(t); }, onClose: () => { h.closes++; } };
+  const handlers = (): SceneHandlers & { got: string[]; bin: ArrayBuffer[]; closes: number } => {
+    const h = {
+      got: [] as string[], bin: [] as ArrayBuffer[], closes: 0,
+      onMessage: (t: string) => { h.got.push(t); }, onBinary: (b: ArrayBuffer) => { h.bin.push(b); }, onClose: () => { h.closes++; },
+    };
     return h;
   };
 
@@ -49,11 +57,17 @@ describe("conector", () => {
     const ws = FakeWs.last;
     if (!ws) throw new Error("sin WebSocket");
     expect(ws.url).toBe("ws://h/scene?token=abc");
+    expect(ws.binaryType).toBe("arraybuffer"); // F5.2: la voz del NPC llega como ArrayBuffer
     s.send("x");
-    expect(ws.sent).toEqual(["x"]);
+    const bytes = new ArrayBuffer(4);
+    s.sendBinary(bytes);
+    expect(ws.sent).toEqual(["x", bytes]);
     ws.onmessage?.({ data: "{\"a\":1}" });
-    ws.onmessage?.({ data: new ArrayBuffer(2) }); // binario: llega vacío y el servicio lo descarta
-    expect(h.got).toEqual(["{\"a\":1}", ""]);
+    const npc = new ArrayBuffer(2);
+    ws.onmessage?.({ data: npc }); // binario: va a onBinary, no a onMessage
+    ws.onmessage?.({ data: 42 }); // ni texto ni ArrayBuffer: se ignora
+    expect(h.got).toEqual(["{\"a\":1}"]);
+    expect(h.bin).toEqual([npc]);
     ws.onclose?.();
     expect(h.closes).toBe(1);
     s.close();
@@ -136,5 +150,67 @@ describe("servicio de escena", () => {
     expect(warn).toHaveBeenCalledTimes(3);
     server.drop();
     expect(gameStore.getState().dialogue.connection).toBe("closed");
+  });
+});
+
+describe("servicio de escena con voz (F5.2)", () => {
+  let stop: (() => void) | null = null;
+  beforeEach(() => resetStore());
+  afterEach(() => { stop?.(); stop = null; });
+
+  const start = (engines = fakeEngineFactory(), server = fakeSceneServer()) => {
+    stop = startSceneService({
+      store: gameStore, actions, connector: server.connector, baseUrl: "/", fetchJson: fetchFromContent(compiledClientContent()),
+      audio: { createEngine: engines.createEngine },
+    });
+    return { server, engines };
+  };
+  const voiceOpening = (): void => {
+    const { server } = current;
+    server.push({ type: "scene.opened", sceneRunId: "run-1", missionId: "M0.1", sceneId: "M0.1-E1", npcId: "NPC-INES", modality: "voice" });
+    server.push({ type: "scene.state", state: "playerTurn", sub: "waiting", modality: "voice", turnIndex: 0, softCapReached: false });
+  };
+  let current: ReturnType<typeof start>;
+
+  test("con micrófono: pide la escena en voz; la voz del jugador sale en binario y la del NPC llega al motor", async () => {
+    current = start();
+    const { server, engines } = current;
+    actions.enterScene("NPC-INES", null);
+    await server.waitOpen();
+    await vi.waitFor(() => expect(server.sent[0]).toEqual({ type: "scene.start", npcId: "NPC-INES", modality: "voice" }));
+    voiceOpening();
+    actions.voiceTalkStart();
+    engines.last?.speak(0.2, 258); // 258 = 0x0102
+    expect(server.sent[1]).toEqual({ type: "voice.turnStart" });
+    expect(server.binary).toHaveLength(1);
+    expect(new Uint8Array(server.binary[0] ?? new ArrayBuffer(0)).slice(0, 2)).toEqual(Uint8Array.from([2, 1])); // PCM16 LE
+    const npc = new ArrayBuffer(4);
+    new DataView(npc).setInt16(0, -2, true);
+    server.pushBinary(npc);
+    expect([...(engines.last?.played[0] ?? [])]).toEqual([-2, 0]);
+  });
+
+  test("sin permiso de micrófono: pide la escena por texto y suelta el motor", async () => {
+    current = start(fakeEngineFactory({ ok: false, problem: "denied" }));
+    const { server, engines } = current;
+    actions.enterScene("NPC-INES", null);
+    await server.waitOpen();
+    await vi.waitFor(() => expect(server.sent[0]).toEqual({ type: "scene.start", npcId: "NPC-INES", modality: "text" }));
+    expect(engines.last?.closed).toBe(true);
+    expect(gameStore.getState().dialogue.voice.micProblem).toBe("denied");
+  });
+
+  test("salir de la escena suelta el micrófono; volver a entrar lo pide de nuevo", async () => {
+    current = start();
+    const { server, engines } = current;
+    actions.enterScene("NPC-INES", null);
+    await server.waitOpen();
+    await vi.waitFor(() => expect(server.sent).toHaveLength(1));
+    const first = engines.last;
+    actions.leaveScene();
+    expect(first?.closed).toBe(true);
+    actions.enterScene("NPC-INES", null);
+    await server.waitOpen(2);
+    expect(engines.created).toBe(2);
   });
 });

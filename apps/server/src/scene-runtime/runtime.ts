@@ -36,6 +36,7 @@ import { applies, exitLines, isNpcLine, openingLines, readCatalog, renderScripte
 import { foldProgress, type OperatorProgress } from "./progress.ts";
 import { buildNpcPrompt } from "./prompt.ts";
 import { createTurnClip, readOnly, type TurnClip, type TurnClipView } from "./turn-clip.ts";
+import { callHook, type ConversationHooks } from "./hooks.ts";
 
 /** Línea guionada de un NPC que pide presentación y nadie lo presentó (02 §1.7). */
 export const NOT_INTRODUCED_LINE = "Hi! Do I know you?";
@@ -84,6 +85,8 @@ export interface SceneDeps {
   onCostError?: (message: string) => void;
   /** Diagnóstico (tests): vista de solo lectura de cada TurnClip al crearse, para ver que se libera. */
   onTurnClip?: (clip: TurnClipView) => void;
+  /** F5.2: ganchos de conversación (hooks.ts): arranque, cada turno de jugador y NPC, y fin de la escena. */
+  conversation?: ConversationHooks;
 }
 
 export interface SceneSession {
@@ -144,6 +147,10 @@ function deferred<T>(): Deferred<T> {
 /** Un turno de voz: el del jugador (con clip) o una respuesta pedida por una nota [DIRECTOR] (sin clip). */
 interface VoiceTurn {
   turnId: string;
+  /** turnIndex de la escena al que pertenece este turno (el del jugador cuenta al confirmarse). */
+  index: number;
+  /** Lo que se va oyendo del jugador (transcripción parcial acumulada). */
+  heard: string;
   clip: TurnClip | null;
   cancelClipTimer: (() => void) | null;
   /** Transcripción final del jugador; "" si no se oyó nada o la voz se perdió. */
@@ -178,6 +185,13 @@ const AUTO_DONE: Partial<Record<SceneStateName, SceneEvent>> = {
   closing: { type: "closingDone" },
   posttask: { type: "posttaskDone" },
 };
+
+/** Tope de `turn.transcript` en @lg/protocol. */
+const MAX_TRANSCRIPT_CHARS = 2000;
+
+/** Junta pedazos de la transcripción de entrada con un espacio entre palabras (como el adaptador Live). */
+const joinHeard = (acc: string, piece: string): string =>
+  acc && !acc.endsWith(" ") && !piece.startsWith(" ") ? `${acc} ${piece}` : `${acc}${piece}`;
 
 const ACTIVE_RUN: readonly SceneStateName[] = ["pretask", "npcOpening", "playerTurn", "npcTurn", "signal", "nonConverging", "closing", "posttask", "containment"];
 
@@ -232,6 +246,20 @@ export function createSceneSession(
     pending.add(done);
   };
 
+  // ---------- ganchos de conversación (F5.2) ----------
+
+  const emitTurn = (r: Run, speaker: "player" | "npc", text: string, final: boolean, kind: "turn" | "safe" = "turn",
+    turnIndex: number = snap.ctx.turnIndex): void => callHook(deps.conversation, deps.conversation?.onTurn, {
+    sceneRunId: r.sceneRunId, missionId: r.mission.id, sceneId: r.scene.escena_id, npcId: r.npc?.id ?? null,
+    turnId: `${r.sceneRunId}:${turnIndex}`, turnIndex, speaker, text, final, modality: snap.ctx.modality, kind,
+  });
+
+  /** Un turno entra al transcripto de la escena (ya moderado) y los ganchos se enteran. */
+  const addTranscript = (r: Run, speaker: "player" | "npc", text: string, kind: "turn" | "safe" = "turn"): void => {
+    r.transcript.push({ speaker, text });
+    emitTurn(r, speaker, text, true, kind);
+  };
+
   // ---------- turno del NPC (texto) ----------
 
   const modelTurns = (r: Run, note: string | null): TextTurn[] => {
@@ -266,7 +294,7 @@ export function createSceneSession(
     if (r.npc) {
       const text = r.catalog.safety.containment.linea_segura_en;
       send({ type: "npc.line", line: { lineId: newId(), speaker: r.npc.id, kind: "safe", text, template: null } });
-      r.transcript.push({ speaker: "npc", text });
+      addTranscript(r, "npc", text, "safe");
       r.lastNpcLine = text;
     }
     dispatch({ type: "npcDone" });
@@ -284,7 +312,7 @@ export function createSceneSession(
       const input = pendingInput instanceof Promise ? await pendingInput : pendingInput;
       if (!stillOn(r, gen, turn)) return;
       if (input.action !== "allow") return safetyStop(r, input);
-      r.transcript.push({ speaker: "player", text: playerText });
+      addTranscript(r, "player", playerText);
     }
     // El observador corre mientras el NPC responde (03 §5.6); la decisión se toma con los dos resultados.
     const observing = playerText === null ? Promise.resolve(null) : runObserver(deps.observerModel, {
@@ -349,7 +377,7 @@ export function createSceneSession(
       return false;
     }
     send({ type: "npc.line", line: { lineId: newId(), speaker: r.npc?.id ?? "LUMI", kind: "reply", text, template: null } });
-    r.transcript.push({ speaker: "npc", text });
+    addTranscript(r, "npc", text);
     r.lastNpcLine = text;
     return true;
   }
@@ -362,10 +390,17 @@ export function createSceneSession(
     languageCode: deps.models.voice.languageCode,
   });
 
-  const newVoiceTurn = (turnId: string, withClip: boolean): VoiceTurn => ({
-    turnId, clip: withClip ? createTurnClip(turnId) : null, cancelClipTimer: null,
-    transcript: deferred<string>(), npcText: [], npcFinal: null, npcDone: deferred<boolean>(), cut: false,
-  });
+  const newVoiceTurn = (r: Run, index: number, withClip: boolean): VoiceTurn => {
+    const turnId = `${r.sceneRunId}:${index}`;
+    return {
+      turnId, index, heard: "", clip: withClip ? createTurnClip(turnId) : null, cancelClipTimer: null,
+      transcript: deferred<string>(), npcText: [], npcFinal: null, npcDone: deferred<boolean>(), cut: false,
+    };
+  };
+
+  /** Lo que el servidor oyó del jugador viaja al cliente como texto (el tope del esquema nunca se pasa). */
+  const sendHeard = (t: VoiceTurn, text: string, final: boolean): void =>
+    send({ type: "turn.transcript", turnId: t.turnId, speaker: "player", text: text.slice(0, MAX_TRANSCRIPT_CHARS), final });
 
   const releaseClip = (t: VoiceTurn): void => {
     t.cancelClipTimer?.();
@@ -421,7 +456,11 @@ export function createSceneSession(
     const t = "turnId" in ev && ev.turnId ? v.turns.get(ev.turnId) : undefined;
     switch (ev.type) {
       case "playerTranscriptPartial":
-        return; // el cliente lo verá con el audio (F5.2)
+        // F5.2: el cliente ve lo que se va oyendo; los ganchos, como turno no final (sin moderar todavía).
+        if (!t?.clip || ev.text === "") return;
+        t.heard = joinHeard(t.heard, ev.text);
+        sendHeard(t, t.heard, false);
+        return emitTurn(r, "player", t.heard, false, "turn", t.index);
       case "playerTranscriptFinal":
         return t?.transcript.resolve(ev.text);
       case "npcTextFinal":
@@ -481,8 +520,9 @@ export function createSceneSession(
             t.cut = true;
             return safetyStop(r, input);
           }
-          r.transcript.push({ speaker: "player", text: playerText });
+          addTranscript(r, "player", playerText);
         }
+        sendHeard(t, playerText, true); // "" = no se oyó nada (el cliente lo dice)
         const obs = await runObserver(deps.observerModel, {
           turnId: t.turnId, playerText, lastNpcLine: r.lastNpcLine, criteria: r.scene.criterios_exito, structures,
           cefrBand: r.scene.banda, audio: readOnly(t.clip),
@@ -509,7 +549,7 @@ export function createSceneSession(
   /** El jugador empieza a hablar (voice.turnStart): turno nuevo con su clip, o retoma el que estaba en pausa. */
   function voiceTurnStart(r: Run, v: VoiceRun): void {
     if (snap.sub === "endPending" && v.speaking) return dispatch({ type: "speechResume" });
-    const t = newVoiceTurn(`${r.sceneRunId}:${snap.ctx.turnIndex + 1}`, true);
+    const t = newVoiceTurn(r, snap.ctx.turnIndex + 1, true);
     if (t.clip) deps.onTurnClip?.(readOnly(t.clip));
     v.turns.set(t.turnId, t);
     v.speaking = t;
@@ -534,7 +574,7 @@ export function createSceneSession(
 
   /** Pase con nota [DIRECTOR] en voz: el modelo responde a la nota, sin turno hablado. */
   function directorReply(r: Run, v: VoiceRun, note: "simpler" | "continue"): void {
-    const t = newVoiceTurn(`${r.sceneRunId}:${snap.ctx.turnIndex}`, false);
+    const t = newVoiceTurn(r, snap.ctx.turnIndex, false);
     v.turns.set(t.turnId, t);
     v.provider.injectContext([{ role: "user", text: DIRECTOR_NOTES[note] }], t.turnId);
     track(processVoiceTurn(r, t));
@@ -552,6 +592,7 @@ export function createSceneSession(
       send({ type: "scene.effects", missionId: r.mission.id, sceneId: r.scene.escena_id, effects });
     }
     send({ type: "scene.end", outcome, criteriaMet, evidence: r.evidence });
+    callHook(deps.conversation, deps.conversation?.onSceneEnd, { sceneRunId: r.sceneRunId, outcome, criteriaMet });
   };
 
   function runEffect(r: Run, eff: SceneEffect): void {
@@ -634,6 +675,7 @@ export function createSceneSession(
         return;
       case "sceneAborted":
         send({ type: "scene.end", outcome: "aborted", criteriaMet: [], evidence: r.evidence });
+        callHook(deps.conversation, deps.conversation?.onSceneEnd, { sceneRunId: r.sceneRunId, outcome: "aborted", criteriaMet: [] });
         return;
       // Sin efecto todavía: Lumi (F6) y el menú de pase (lo muestra el cliente por scene.state).
       case "showPassMenu":
@@ -714,6 +756,7 @@ export function createSceneSession(
     }
     snap = initialSceneSnapshot();
     send({ type: "scene.opened", sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality });
+    callHook(deps.conversation, deps.conversation?.onSceneStart, { sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality });
     dispatch({ type: "interact", npcId, sceneId: scene.escena_id, modality });
   }
 

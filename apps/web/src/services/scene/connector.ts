@@ -9,11 +9,15 @@ export const SCENE_WS_PATH = "/scene";
 /** Una conexión abierta con el servidor de escenas. */
 export interface SceneSocket {
   send(text: string): void;
+  /** F5.2: frame binario (voz del jugador, PCM16 16 kHz; ADR-017). */
+  sendBinary(bytes: ArrayBuffer): void;
   close(): void;
 }
 
 export interface SceneHandlers {
   onMessage(text: string): void;
+  /** F5.2: frame binario del servidor (voz del NPC, PCM16 24 kHz). */
+  onBinary?(bytes: ArrayBuffer): void;
   onClose(): void;
 }
 
@@ -43,14 +47,22 @@ export function browserSceneConnector(o: BrowserConnectorOptions): SceneConnecto
       const wsPath = (body.data as { wsPath?: unknown } | undefined)?.wsPath;
       if (typeof wsPath !== "string" || !wsPath.startsWith(SCENE_WS_PATH)) throw new Error("scene-token: respuesta sin wsPath");
       const ws = new WS(`${o.wsBase}${wsPath}`);
+      ws.binaryType = "arraybuffer"; // la voz del NPC llega como ArrayBuffer (no Blob)
       await new Promise<void>((resolve, reject) => {
         ws.onopen = () => resolve();
         ws.onerror = () => reject(new Error("WebSocket de escena: no se pudo abrir"));
       });
       ws.onerror = null;
-      ws.onmessage = (ev: MessageEvent) => handlers.onMessage(typeof ev.data === "string" ? ev.data : "");
+      ws.onmessage = (ev: MessageEvent) => {
+        if (typeof ev.data === "string") handlers.onMessage(ev.data);
+        else if (ev.data instanceof ArrayBuffer) handlers.onBinary?.(ev.data);
+      };
       ws.onclose = () => handlers.onClose();
-      return { send: (text) => ws.send(text), close: () => ws.close() };
+      return {
+        send: (text) => ws.send(text),
+        sendBinary: (bytes) => { if (ws.readyState === ws.OPEN) ws.send(bytes); },
+        close: () => ws.close(),
+      };
     },
   };
 }
