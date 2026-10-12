@@ -130,12 +130,13 @@ describe("A2 arte placeholder generado por código (D-137)", () => {
 });
 
 describe("A4 CameraRig: exactamente los presets de R11", () => {
-  test("las claves del registro son CAMERA_PRESET_IDS; topdown, iso y dialogueFrame implementados", () => {
+  test("las claves del registro son CAMERA_PRESET_IDS; perspective3D y dialogueFrame implementados (D-207)", () => {
     expect(Object.keys(CAMERA_RIG_PRESETS).sort()).toEqual([...CAMERA_PRESET_IDS].sort());
-    expect(CAMERA_RIG_PRESETS.topdownOrtho).toBe("implemented");
-    expect(CAMERA_RIG_PRESETS.isoOrtho).toBe("implemented");
+    // Plan estetica-c M1: el código ortográfico queda en el rig sin uso hasta M7.
+    expect(CAMERA_RIG_PRESETS.topdownOrtho).toBe("declared");
+    expect(CAMERA_RIG_PRESETS.isoOrtho).toBe("declared");
     expect(CAMERA_RIG_PRESETS.dialogueFrame).toBe("implemented");
-    expect(CAMERA_RIG_PRESETS.perspective3D).toBe("declared");
+    expect(CAMERA_RIG_PRESETS.perspective3D).toBe("implemented");
     expect(CAMERA_RIG_PRESETS.xrTabletop).toBe("declared");
   });
 

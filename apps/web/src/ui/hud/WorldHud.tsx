@@ -1,4 +1,4 @@
-// HUD del mapa (F2, R14): vista del store, nunca del canvas (R3). El aviso "E para hablar" sale de
+// HUD del mapa (F2, R14): vista del store, nunca del canvas (R3). El aviso "E Hablar con <nombre>" sale de
 // `selectWorldHudView`, que lee los interactuables cercanos que calculó el núcleo. Todo lo que se hace con
 // teclas tiene también un botón (accesibilidad: teclado completo y puntero, sin depender de un solo dispositivo).
 import { t } from "../../i18n";
@@ -26,18 +26,21 @@ export function WorldHud() {
         <Button id="world-story" className="pointer-events-auto" onClick={() => actions.enterScene(null, "world-story")}>{t("world.continueStory")}</Button>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div role="status" aria-live="polite" className="flex flex-col items-start gap-2">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+        <span aria-hidden="true" />
+        {/* Abajo al centro: a quién le va a responder la E. Sale de selectInteractionPrompt, el mismo selector que
+            resalta al NPC en el mundo (plan estetica-c M1 ítem 15), así el nombre del aviso y el resaltado no difieren. */}
+        <div role="status" aria-live="polite" className="flex justify-center">
           {view.prompt ? (
-            <>
-              <p className="rounded-lg bg-surface px-3 py-2 font-semibold">{t("world.prompt.talk", { name: view.prompt.name })}</p>
-              <Button id="world-talk" variant="primary" className="pointer-events-auto" onClick={() => actions.interact(view.prompt?.id ?? null)}>
+            <p id="world-prompt" className="pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-line bg-surface px-3 py-2 shadow-lg">
+              <kbd className="rounded-md border-2 border-line bg-paper px-2 font-semibold">{t("world.prompt.key")}</kbd>{" "}
+              <Button id="world-talk" variant="primary" onClick={() => actions.interact(view.prompt?.id ?? null)}>
                 {t("world.talk", { name: view.prompt.name })}
               </Button>
-            </>
+            </p>
           ) : null}
         </div>
-        <div className="pointer-events-auto flex items-center gap-2 rounded-lg bg-surface/90 p-1">
+        <div className="pointer-events-auto flex items-center gap-2 justify-self-end rounded-lg bg-surface/90 p-1">
           <Button id="world-zoom-out" aria-disabled={view.zoomStep === 0} onClick={() => actions.zoomOut()}>{t("world.zoomOut")}</Button>
           <span className="px-1 text-sm">{t("world.zoomLevel", { value: view.zoomStep + 1, total: view.zoomSteps })}</span>
           <Button id="world-zoom-in" aria-disabled={view.zoomStep === view.zoomSteps - 1} onClick={() => actions.zoomIn()}>{t("world.zoomIn")}</Button>

@@ -1,6 +1,6 @@
 // Selectores del slice `world`: view-model del modo solo-diálogo (lugares de la región y quién está en cada uno)
 // y, desde F2, lo que world/ dibuja, el aviso de interacción del HUD y los parámetros de render del mapa.
-import { presetAngles, ZOOM_STEPS, type CameraPreset, type DioramaRuntime, type SelectableTier, type ZoomStep } from "@lg/core";
+import { presetAngles, ZOOM_STEPS, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier, type ZoomStep } from "@lg/core";
 import type { GameState } from "../store";
 import { selectEffectiveTier } from "./settings";
 import { createViewSelector } from "./view";
@@ -94,6 +94,15 @@ export const selectInteractionPrompt = createViewSelector(
   },
 );
 
+/**
+ * El NPC resaltado en el mundo (plan estetica-c M1 ítem 15): el mismo que nombra el aviso del HUD, porque los dos salen
+ * de `selectInteractionPrompt` (A13). Sin nadie en rango, o si lo más cercano no es un NPC, no hay resaltado.
+ */
+export const selectHighlightedNpc = createViewSelector(
+  (s: GameState) => [selectInteractionPrompt(s)] as const,
+  (prompt): string | null => (prompt?.kind === "npc" ? prompt.id : null),
+);
+
 export interface WorldHudView {
   mapStatus: GameState["world"]["dioramaStatus"];
   prompt: InteractionPrompt | null;
@@ -106,9 +115,33 @@ export const selectWorldHudView = createViewSelector(
   (mapStatus, prompt, zoomStep): WorldHudView => ({ mapStatus, prompt, zoomStep, zoomSteps: ZOOM_STEPS }),
 );
 
+/**
+ * Plano de a dos (plan estetica-c M1 ítem 3): mientras el panel de arriba es la escena con un NPC que está en el
+ * diorama, world/ encuadra a los dos. Las posiciones son las lógicas (el jugador ya acomodado por `standoffPoint`).
+ */
+export interface ConversationFrame {
+  npcId: string;
+  npc: { x: number; z: number };
+  player: { x: number; z: number };
+}
+
+const topPanel = (panels: readonly Panel[]): Panel | undefined => panels[panels.length - 1];
+
+export const selectConversationFrame = createViewSelector(
+  (s: GameState) => [s.session.phase, s.ui.panels, s.world.diorama, s.player.position] as const,
+  (phase, panels, diorama, player): ConversationFrame | null => {
+    const top = topPanel(panels);
+    if (phase !== "world" || top?.kind !== "scene" || top.npcId === null || !player) return null;
+    const npc = diorama?.npcs.find((n) => n.id === top.npcId);
+    return npc ? { npcId: npc.id, npc: { x: npc.x, z: npc.z }, player: { x: player.x, z: player.z } } : null;
+  },
+);
+
 export interface WorldRenderView {
   tier: SelectableTier;
-  preset: CameraPreset;
+  /** `dialogueFrame` mientras dura una charla con un NPC del diorama; si no, la cámara de los ajustes. */
+  preset: CameraPresetId;
+  /** Ángulos de la cámara del mapa (la de los ajustes); el plano de a dos calcula los suyos en world/camera/. */
   pitchDeg: number;
   yawDeg: number;
   zoomStep: ZoomStep;
@@ -116,19 +149,23 @@ export interface WorldRenderView {
   cameraMotion: "follow" | "cut";
   /** Postprocesado permitido (el nivel por tier lo fija TIER_PARAMS); apagado con "reducir movimiento" (§2.9). */
   post: boolean;
-  /** Un panel tapa el mapa: el canvas pasa a frameloop "demand" (§2.7.4). */
+  /**
+   * Un panel tapa el mapa: el canvas pasa a frameloop "demand" (§2.7.4). Con la escena arriba sigue vivo (la
+   * transición de cámara y el idle de los personajes, plan estetica-c M1 ítem 5); el tope de 30 FPS llega en M6.
+   */
   paused: boolean;
 }
 
 export const selectWorldRender = createViewSelector(
-  (s: GameState) => [selectEffectiveTier(s), s.settings.camera, s.settings.accessibility.reduceMotion, s.ui.zoomStep, s.ui.panels.length] as const,
-  (tier, preset, reduceMotion, zoomStep, panels): WorldRenderView => {
-    const { pitchDeg, yawDeg } = presetAngles(preset);
+  (s: GameState) => [selectEffectiveTier(s), s.settings.camera, s.settings.accessibility.reduceMotion, s.ui.zoomStep, s.ui.panels, selectConversationFrame(s) !== null] as const,
+  (tier, camera, reduceMotion, zoomStep, panels, talking): WorldRenderView => {
+    const { pitchDeg, yawDeg } = presetAngles(camera);
+    const top = topPanel(panels);
     return {
-      tier, preset, pitchDeg, yawDeg, zoomStep,
+      tier, preset: talking ? "dialogueFrame" : camera, pitchDeg, yawDeg, zoomStep,
       cameraMotion: reduceMotion ? "cut" : "follow",
       post: !reduceMotion && tier !== "low" && tier !== "dialog-only",
-      paused: panels > 0,
+      paused: top !== undefined && top.kind !== "scene",
     };
   },
 );

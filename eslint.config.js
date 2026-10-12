@@ -26,6 +26,13 @@ const r13 = [
   { selector: "NewExpression[callee.property.name=/^(AudioContext|webkitAudioContext|OfflineAudioContext|Audio)$/]",
     message: "R13: un solo AudioContext, en services/audio/." },
 ];
+// D-207 / plan estetica-c M1 A16: world/ importa three por nombre (`import { MeshToonMaterial } from "three"`), nunca el
+// espacio de nombres entero (fuera de world/camera/). Más estricta que R11; va en la MISMA lista que R10, R11 y R13 de
+// world/ porque en flat config un bloque posterior con no-restricted-syntax reemplaza las opciones del anterior.
+const threeNamespace = [
+  { selector: "ImportDeclaration[source.value=/^three($|[^a-z0-9-])/] > ImportNamespaceSpecifier",
+    message: "D-207: world/ importa three por nombre (import { X } from \"three\"), no import * as THREE." },
+];
 const r15Props = [
   { object: "navigator", property: "xr", message: "R15: navigator.xr solo en services/platform/." },
   { object: "navigator", property: "getGamepads", message: "R10: gamepad solo en services/input/." },
@@ -149,6 +156,9 @@ export default tseslint.config(
       "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }],
     },
   },
+  // world/ (salvo world/camera/): las costuras de siempre más three por nombre (D-207). Misma lista, nada se pierde.
+  { files: [`${WEB}/world/**/*.{ts,tsx}`], ignores: [`${WEB}/world/camera/**`],
+    rules: { "no-restricted-syntax": ["error", ...r10, ...r11, ...r13, ...threeNamespace] } },
   // Dentro de cada carpeta-costura se relaja SOLO su propia regla (las demás siguen):
   { files: [`${WEB}/services/input/**`],    rules: { "no-restricted-syntax": ["error", ...r11, ...r13],
       "no-restricted-properties": ["error", r15Props[0]], "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }] } },

@@ -15,13 +15,24 @@ export interface CameraAngles {
   yawDeg: number;
 }
 
-/** Ángulos de los presets implementados. `dialogueFrame` encuadra con la misma vista que `topdownOrtho`. */
+/** `perspective3D` (D-207, propuesta C §4): lente largo inclinado 50° y girado 45°. */
+export const PERSPECTIVE_PITCH_DEG = 50;
+export const PERSPECTIVE_YAW_DEG = 45;
+/** Plano de a dos de la charla (propuesta C §4): la cámara baja a 20°; el giro lo decide el encuadre. */
+export const DIALOGUE_PITCH_DEG = 20;
+
+/**
+ * Ángulos de los presets. `dialogueFrame` da su inclinación con el giro del mapa (el giro real lo calcula el
+ * encuadre de a dos en world/camera/rig.ts). Los ortográficos quedan hasta M7 (el rig ya no los usa).
+ */
 export function presetAngles(preset: CameraPresetId): CameraAngles {
+  if (preset === "perspective3D") return { pitchDeg: PERSPECTIVE_PITCH_DEG, yawDeg: PERSPECTIVE_YAW_DEG };
+  if (preset === "dialogueFrame") return { pitchDeg: DIALOGUE_PITCH_DEG, yawDeg: PERSPECTIVE_YAW_DEG };
   if (preset === "isoOrtho") return { pitchDeg: ISO_PITCH_DEG, yawDeg: 45 };
   return { pitchDeg: TOPDOWN_PITCH_DEG, yawDeg: 0 };
 }
 
-/** 3 pasos de zoom (D-053, D-197): 0 = más lejos, 2 = más cerca; 1 = ~15 tiles de ancho. */
+/** 3 pasos de zoom (D-053, D-197): 0 = más lejos, 2 = más cerca (con perspective3D, 40 / 30 / 22 m). */
 export const ZOOM_STEPS = 3;
 export type ZoomStep = 0 | 1 | 2;
 export const DEFAULT_ZOOM_STEP: ZoomStep = 1;

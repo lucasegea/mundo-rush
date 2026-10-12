@@ -4,7 +4,7 @@
 // un EventTarget; el clic de R3F entra por state/bridge.ts. Ambos tienen que producir las MISMAS acciones (R10).
 // El lazo de simulación corre con un planificador falso: el tiempo lo avanza el test.
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { planPath, SIM_DT, type DioramaLayout } from "@lg/core";
+import { circleBlocked, facingFrom, planPath, SIM_DT, type DioramaLayout } from "@lg/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { loadDiorama, pickDiorama } from "../src/services/content";
 import { startInput, WORLD_SURFACE_ATTR } from "../src/services/input";
@@ -12,10 +12,12 @@ import type { FrameScheduler } from "../src/services/simulation";
 import { actions } from "../src/state/actions";
 import { bridge } from "../src/state/bridge";
 import {
-  readGame, selectInteractionPrompt, selectMapActive, selectMapView, selectWorldHudView, selectWorldRender,
+  readGame, selectConversationFrame, selectHighlightedNpc, selectInteractionPrompt, selectMapActive, selectMapView,
+  selectWorldHudView, selectWorldRender,
 } from "../src/state/selectors";
 import { gameStore } from "../src/state/store";
 import { WorldHud } from "../src/ui/hud/WorldHud";
+import { labelEntries } from "../src/world/labels/labels";
 import { bootApp, compiledClientContent, resetStore } from "./helpers";
 
 /** Planificador de cuadros manual: `advance(ms)` corre un cuadro con el reloj adelantado. */
@@ -280,19 +282,21 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
 });
 
 describe("A8 aviso de interacción en el HUD (del store, no del canvas)", () => {
-  test("acercarse a un NPC muestra «E para hablar con …»; alejarse lo saca", async () => {
+  test("acercarse a un NPC muestra «E Hablar con …» (tarjeta abajo al centro); alejarse lo saca", async () => {
     await startMap();
     render(<WorldHud />);
-    expect(screen.queryByText(/E para hablar con/)).toBeNull();
+    expect(document.getElementById("world-prompt")).toBeNull();
     const nell = npc("NPC-NELL");
     act(() => bridge.moveTo(nell.x + 1, nell.z));
     act(() => { settle(); });
     expect(selectInteractionPrompt(gameStore.getState())?.id).toBe("NPC-NELL");
-    expect(screen.getByText(`E para hablar con ${npcName("NPC-NELL")}`)).toBeTruthy();
+    const prompt = document.getElementById("world-prompt");
+    expect(prompt?.querySelector("kbd")?.textContent).toBe("E");
+    expect(prompt?.textContent?.replace(/\s+/g, " ")).toBe(`E Hablar con ${npcName("NPC-NELL")}`);
     expect(screen.getByRole("button", { name: `Hablar con ${npcName("NPC-NELL")}` })).toBeTruthy();
     act(() => bridge.moveTo(0.5, 3));
     act(() => { settle(); });
-    expect(screen.queryByText(/E para hablar con/)).toBeNull();
+    expect(document.getElementById("world-prompt")).toBeNull();
   });
 
   test("el botón del HUD habla igual que E", async () => {
@@ -411,5 +415,108 @@ describe("unreachable: un destino sin camino se dice por aria-live", () => {
     act(() => bridge.moveTo(2, 0));
     expect(gameStore.getState().ui.announcement?.key).toBe("announce.unreachable");
     expect(gameStore.getState().player.intent.kind).toBe("idle");
+  });
+});
+
+// Plan estetica-c M1 (D-207): las partes del look C que viven en el store, sobre el diorama de prueba real.
+describe("estetica-c M1 en el mapa real", () => {
+  test("A7: con los árboles agregados el diorama tiene 8 a 14 árboles y pinos, y su tronco bloquea la grilla", async () => {
+    await startMap();
+    const d = gameStore.getState().world.diorama;
+    if (!d) throw new Error("sin diorama");
+    const trees = d.boxes.filter((b) => b.asset === "codigo/arbol" || b.asset === "codigo/pino");
+    expect(trees.length).toBeGreaterThanOrEqual(8);
+    expect(trees.length).toBeLessThanOrEqual(14);
+    for (const t of trees) expect(circleBlocked(d.grid, t.x, t.z, 0.05), `${t.asset} en ${t.x},${t.z}`).toBe(true);
+  });
+
+  test("A9: al abrir la escena con Inés el jugador queda a 2,6 m, de su lado, caminable y mirándola", async () => {
+    await startMap();
+    const ines = npc("NPC-INES");
+    act(() => bridge.pointer({ kind: "interactable", id: "NPC-INES" }));
+    act(() => { runUntil(() => gameStore.getState().world.nearbyInteractables.includes("NPC-INES")); });
+    const before = pos();
+    const tick = gameStore.getState().player.simTick;
+    act(() => { key("keydown", "KeyE"); });
+    expect(gameStore.getState().ui.panels).toEqual([{ kind: "scene", npcId: "NPC-INES" }]);
+    const p = gameStore.getState().player;
+    const after = pos();
+    const d = gameStore.getState().world.diorama;
+    if (!d) throw new Error("sin diorama");
+    expect(Math.abs(Math.hypot(after.x - ines.x, after.z - ines.z) - 2.6)).toBeLessThanOrEqual(0.25);
+    expect(circleBlocked(d.grid, after.x, after.z, 0.24)).toBe(false);
+    // Del lado desde el que llegó.
+    expect((before.x - ines.x) * (after.x - ines.x) + (before.z - ines.z) * (after.z - ines.z)).toBeGreaterThan(0);
+    expect(p.previous).toEqual(p.position);
+    expect(p.facing).toBe(facingFrom(ines.x - after.x, ines.z - after.z, p.facing));
+    expect(p.simTick).toBe(tick + 1);
+    expect(p.intent.kind).toBe("idle");
+  });
+
+  test("A9: enterScene (solo-diálogo o escena sin mapa) no mueve al jugador", async () => {
+    await startMap();
+    const before = pos();
+    act(() => actions.enterScene("NPC-INES"));
+    expect(pos()).toEqual(before);
+    stop();
+    resetStore();
+    await act(async () => { stop = await bootApp({ webgl2: false }); });
+    act(() => actions.enterDialogOnly());
+    const still = gameStore.getState().player.position;
+    act(() => actions.enterScene("NPC-INES"));
+    expect(gameStore.getState().player.position).toEqual(still);
+  });
+
+  test("A10: con la escena arriba el canvas sigue vivo y la cámara es el plano de a dos; con ajustes, pausa", async () => {
+    await startMap();
+    const nell = npc("NPC-NELL");
+    act(() => bridge.moveTo(nell.x + 1, nell.z));
+    act(() => { settle(); });
+    expect(selectConversationFrame(gameStore.getState())).toBeNull();
+    act(() => { key("keydown", "KeyE"); });
+    const render1 = selectWorldRender(gameStore.getState());
+    expect(render1.paused).toBe(false);
+    expect(render1.preset).toBe("dialogueFrame");
+    expect(selectConversationFrame(gameStore.getState())?.npcId).toBe("NPC-NELL");
+    act(() => actions.openSettings());
+    expect(selectWorldRender(gameStore.getState()).paused).toBe(true);
+    expect(selectConversationFrame(gameStore.getState())).toBeNull();
+    act(() => actions.closePanel());
+    act(() => actions.closePanel());
+    expect(selectWorldRender(gameStore.getState()).preset).toBe("perspective3D");
+    // A8: una escena con un NPC que no está en este diorama no encuadra a nadie.
+    act(() => actions.enterScene("NPC-MAYA"));
+    expect(gameStore.getState().ui.panels.at(-1)).toEqual({ kind: "scene", npcId: "NPC-MAYA" });
+    expect(selectConversationFrame(gameStore.getState())).toBeNull();
+    expect(selectWorldRender(gameStore.getState()).preset).toBe("perspective3D");
+  });
+
+  test("A13: el NPC resaltado y el del aviso del HUD siempre coinciden (incluido el medio entre Inés y Harlan)", async () => {
+    await startMap();
+    render(<WorldHud />);
+    const ines = npc("NPC-INES");
+    const harlan = npc("NPC-HARLAN");
+    const nell = npc("NPC-NELL");
+    const spots: [number, number][] = [
+      [0.5, 3], [nell.x + 1, nell.z], [ines.x - 1, ines.z], [(ines.x + harlan.x) / 2, (ines.z + harlan.z) / 2],
+      [harlan.x - 1, harlan.z], [harlan.x - 0.6, harlan.z - 1.2], [ines.x + 0.4, ines.z + 1.3], [-6, -2],
+    ];
+    const seen = new Set<string | null>();
+    for (const [x, z] of spots) {
+      act(() => bridge.moveTo(x, z));
+      act(() => { settle(); });
+      const s = gameStore.getState();
+      const highlighted = selectHighlightedNpc(s);
+      const prompt = selectWorldHudView(s).prompt;
+      seen.add(highlighted);
+      expect(highlighted, `en ${x},${z}`).toBe(prompt?.kind === "npc" ? prompt.id : null);
+      const lit = labelEntries(selectMapView(s).actors, highlighted, null).filter((l) => l.highlighted);
+      expect(lit.map((l) => l.id)).toEqual(highlighted === null ? [] : [highlighted]);
+      const card = document.getElementById("world-prompt");
+      if (highlighted === null) expect(card).toBeNull();
+      else expect(card?.textContent?.replace(/\s+/g, " ")).toBe(`E Hablar con ${npcName(highlighted)}`);
+    }
+    // El recorrido pasa por los tres NPCs y por lugares sin nadie en rango.
+    expect([...seen].sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-NELL", null].sort());
   });
 });

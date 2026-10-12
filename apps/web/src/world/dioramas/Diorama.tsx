@@ -1,51 +1,75 @@
-// world/dioramas/Diorama.tsx — dibuja el diorama que el store cargó (capas de tiles, cajas, NPCs) y recibe los
-// clics: el suelo → `moveTo`, un NPC → `interact`. Los clics entran como acciones semánticas por state/bridge.ts
-// (R3: nada de eventos del DOM; R10: el mismo traductor del núcleo que usa services/input).
-import type { ThreeEvent } from "@react-three/fiber";
+// world/dioramas/Diorama.tsx — dibuja el diorama que el store cargó en el look C (plan estetica-c M1): el grafo
+// estático de scene.ts (terreno, agua, props, árboles, detalle), los NPCs como chibis con su etiqueta de nombre y las
+// sombras blob. Recibe los clics: el suelo → `moveTo`, un NPC → `interact`. Los clics entran como acciones semánticas
+// por state/bridge.ts (R3: nada de eventos del DOM; R10: el mismo traductor del núcleo que usa services/input).
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useMemo } from "react";
 import type { DioramaRuntime } from "@lg/core";
 import { bridge } from "../../state/bridge";
 import type { MapActor } from "../../state/selectors";
-import { Boxes } from "../props/Boxes";
-import { Billboard, type SpritePose } from "../sprites/Billboard";
-import { drawSpriteSheet, NPC_PALETTES, type SpritePalette } from "../sprites/sheet";
-import { TileLayers } from "../tiles/TileLayers";
+import { BlobShadows } from "../actors/BlobShadows";
+import { Chibi, type ActorPose } from "../actors/Chibi";
+import { LABEL_HEIGHT } from "../actors/chibiModel";
+import { labelEntries } from "../labels/labels";
+import { NameLabel } from "../labels/NameLabel";
+import { followTarget } from "../runtime";
+import { tickWater, waterMaterial } from "../water/waterMaterial";
+import type { DioramaScene } from "./scene";
 
 interface Props {
   diorama: DioramaRuntime;
+  scene: DioramaScene;
   actors: readonly MapActor[];
-  pitchDeg: number;
-  yawDeg: number;
+  /** El NPC que va a responder a la E (de selectInteractionPrompt, el mismo del aviso del HUD). */
+  highlightId: string | null;
+  /** El NPC de la charla en curso: no muestra etiqueta. */
+  sceneNpcId: string | null;
+  cut: boolean;
 }
 
-function Npc({ actor, index, pitchDeg, yawDeg }: { actor: MapActor; index: number; pitchDeg: number; yawDeg: number }) {
-  const sheet = useMemo(() => drawSpriteSheet(NPC_PALETTES[index % NPC_PALETTES.length] as SpritePalette), [index]);
-  const pose = useMemo((): (() => SpritePose) => {
-    const still = { x: actor.x, z: actor.z, vx: 0, vz: 0 };
-    return () => still;
+/** A menos de esto el NPC gira cabeza y cuerpo hacia el jugador (propuesta C §3). */
+const LOOK_AT_PLAYER_M = 6;
+
+function Npc({ actor, cut }: { actor: MapActor; cut: boolean }) {
+  const pose = useMemo((): (() => ActorPose) => {
+    return () => {
+      const near = followTarget.ready && Math.hypot(followTarget.x - actor.x, followTarget.z - actor.z) < LOOK_AT_PLAYER_M;
+      return { x: actor.x, z: actor.z, speed: 0, yaw: near ? Math.atan2(followTarget.x - actor.x, followTarget.z - actor.z) : null };
+    };
   }, [actor.x, actor.z]);
   const onSelect = (e: ThreeEvent<MouseEvent>): void => {
     e.stopPropagation(); // el suelo de atrás no recibe el mismo clic
     bridge.pointer({ kind: "interactable", id: actor.id }, e.nativeEvent.button);
   };
-  return <Billboard sheet={sheet} pitchDeg={pitchDeg} yawDeg={yawDeg} pose={pose} onSelect={onSelect} />;
+  return <Chibi id={actor.id} lookId={actor.id} pose={pose} cut={cut} onSelect={onSelect} />;
 }
 
-export function Diorama({ diorama, actors, pitchDeg, yawDeg }: Props) {
+function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
+  useFrame((_, delta) => tickWater(waterMaterial(), delta, reduceMotion));
+  return null;
+}
+
+export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, cut }: Props) {
   const { minX, maxX, minZ, maxZ } = diorama.bounds;
   const onGround = (e: ThreeEvent<MouseEvent>): void => {
     bridge.pointer({ kind: "ground", x: e.point.x, z: e.point.z }, e.nativeEvent.button);
   };
+  const labels = labelEntries(actors, highlightId, sceneNpcId);
   return (
     <group>
-      {/* Plano invisible para el raycast del suelo: más barato que hacer raycast contra cada chunk. */}
+      {/* Plano invisible para el raycast del suelo: dentro de los límites el terreno es plano en y = 0. */}
       <mesh position={[(minX + maxX) / 2, 0, (minZ + maxZ) / 2]} rotation={[-Math.PI / 2, 0, 0]} onClick={onGround}>
         <planeGeometry args={[maxX - minX, maxZ - minZ]} />
         <meshBasicMaterial visible={false} />
       </mesh>
-      <TileLayers layers={diorama.layers} />
-      <Boxes boxes={diorama.boxes} />
-      {actors.map((a, i) => <Npc key={a.id} actor={a} index={i} pitchDeg={pitchDeg} yawDeg={yawDeg} />)}
+      <primitive object={scene.root} />
+      <WaterClock reduceMotion={cut} />
+      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} />)}
+      {labels.map((l) => {
+        const a = actors.find((x) => x.id === l.id) as MapActor; // labelEntries sale de `actors`
+        return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={LABEL_HEIGHT} z={a.z} />;
+      })}
+      <BlobShadows anchors={scene.blobAnchors} />
     </group>
   );
 }

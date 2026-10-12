@@ -1,35 +1,43 @@
-// world/actors/Player.tsx — el jugador como billboard. Lee la pose lógica (30 Hz) de forma transitoria e interpola
-// entre el paso anterior y el actual (R7); publica la posición interpolada para que la cámara la siga.
-import { useMemo, useRef } from "react";
+// world/actors/Player.tsx — el jugador como chibi (plan estetica-c M1 ítem 13). Lee la pose lógica (30 Hz) de forma
+// transitoria e interpola entre el paso anterior y el actual (R7); un salto de la pose (el acomodo al empezar la charla)
+// se desliza desde la última posición dibujada (glide.ts). Publica la posición dibujada para la cámara y los NPCs. En
+// la charla mira al NPC; caminando, hacia donde va.
+import { useRef } from "react";
+import type { ConversationFrame } from "../../state/selectors";
 import { readGame, selectPlayerPose } from "../../state/selectors";
 import { followTarget } from "../runtime";
-import { Billboard, type SpritePose } from "../sprites/Billboard";
-import { drawSpriteSheet, PLAYER_PALETTE } from "../sprites/sheet";
-
-const STILL: SpritePose = { x: 0, z: 0, vx: 0, vz: 0 };
+import { Chibi, type ActorPose } from "./Chibi";
+import { stepGlide, type GlideState } from "./glide";
+import { PLAYER_LOOK_ID } from "./looks";
 
 /** Fracción [0, 1] del paso fijo que ya pasó desde que cambió el tick. */
 export function interpolationAlpha(elapsedSec: number, stepSec: number): number {
   return stepSec > 0 ? Math.min(1, Math.max(0, elapsedSec / stepSec)) : 1;
 }
 
-export function Player({ pitchDeg, yawDeg }: { pitchDeg: number; yawDeg: number }) {
-  const sheet = useMemo(() => drawSpriteSheet(PLAYER_PALETTE), []);
+export function Player({ conversation, cut }: { conversation: ConversationFrame | null; cut: boolean }) {
   const lastTick = useRef({ tick: -1, at: 0 });
+  const glide = useRef<GlideState | null>(null);
 
-  const pose = (): SpritePose => {
+  const pose = (dt: number): ActorPose => {
     const p = readGame(selectPlayerPose);
-    if (!p) return STILL;
+    if (!p) return { x: followTarget.x, z: followTarget.z, speed: 0, yaw: null };
     const now = performance.now() / 1000;
     if (p.tick !== lastTick.current.tick) lastTick.current = { tick: p.tick, at: now };
     const a = interpolationAlpha(now - lastTick.current.at, p.stepSec);
-    const x = p.prevX + (p.x - p.prevX) * a;
-    const z = p.prevZ + (p.z - p.prevZ) * a;
-    followTarget.x = x;
-    followTarget.z = z;
+    const logical = { x: p.prevX + (p.x - p.prevX) * a, z: p.prevZ + (p.z - p.prevZ) * a };
+    glide.current = glide.current ? stepGlide(glide.current, logical, dt, cut) : { shown: logical, glide: null };
+    const { shown } = glide.current;
+    followTarget.x = shown.x;
+    followTarget.z = shown.z;
     followTarget.ready = true;
-    return { x, z, vx: p.vx, vz: p.vz };
+    const gliding = glide.current.glide !== null;
+    const speed = gliding ? 3 : Math.hypot(p.vx, p.vz);
+    const yaw = conversation
+      ? Math.atan2(conversation.npc.x - shown.x, conversation.npc.z - shown.z)
+      : speed > 0.1 && !gliding ? Math.atan2(p.vx, p.vz) : null;
+    return { x: shown.x, z: shown.z, speed, yaw };
   };
 
-  return <Billboard sheet={sheet} pitchDeg={pitchDeg} yawDeg={yawDeg} pose={pose} />;
+  return <Chibi id={PLAYER_LOOK_ID} lookId={PLAYER_LOOK_ID} pose={pose} cut={cut} initialYaw={Math.PI * 0.25} />;
 }

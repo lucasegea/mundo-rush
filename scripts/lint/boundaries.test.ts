@@ -2,6 +2,7 @@
 // Corre la config REAL (eslint.config.js) por la API de ESLint con texto en memoria y un
 // filePath virtual dentro de la carpeta destino. Cada caso prohibido tiene que fallar con el
 // ruleId esperado (no con cualquier error) y cada import por ruta apunta a un archivo que existe.
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -542,4 +543,73 @@ describe("F4.1 A6: escrituras a disco del servidor", () => {
     const msgs = await lint(F.server, "import { readFileSync } from \"node:fs\";\nexport const p = () => readFileSync(\"x\", \"utf8\");\n");
     expect(msgs.filter((m) => m.message.includes(DISK)), describeMsgs(msgs)).toEqual([]);
   });
+});
+
+// ---------- estetica-c M1 A16 (D-207): las zonas nuevas de world/ y la regla `import * as THREE` ----------
+// revisión de arquitectura 2026-10-12: la regla nueva va en la MISMA lista de no-restricted-syntax que R10, R11 y R13 (un bloque posterior
+// la reemplazaría y borraría esas costuras en silencio): por eso cada zona prueba además que R10 y R13 siguen vivas.
+const M1_ZONES = ["materials", "terrain", "labels", "budget"] as const;
+const m1Probe = (zone: string): string => `${WEB}/world/${zone}/__probe__.ts`;
+const M1_FORBIDDEN: Case[] = [
+  ...M1_ZONES.flatMap((z): Case[] => [
+    { name: `D-207: import * as THREE en world/${z}/`, file: m1Probe(z), code: imp("three"), rule: SYNTAX, msg: "D-207" },
+    { name: `D-207: import * de three/addons en world/${z}/`, file: m1Probe(z), code: imp("three/addons/geometries/RoundedBoxGeometry.js"), rule: SYNTAX, msg: "D-207" },
+    { name: `R10: keydown en world/${z}/ (sigue vivo junto a D-207)`, file: m1Probe(z), code: expr('window.addEventListener("keydown", () => {})'), rule: SYNTAX, msg: "R10" },
+    { name: `R13: new AudioContext en world/${z}/`, file: m1Probe(z), code: expr("new AudioContext()"), rule: SYNTAX, msg: "R13" },
+    { name: `R11: PerspectiveCamera fuera de world/camera/ (world/${z}/)`, file: m1Probe(z), code: named("PerspectiveCamera", "three"), rule: IMP, msg: "R11" },
+    { name: `R11: new PerspectiveCamera() en world/${z}/`, file: m1Probe(z), code: expr("new PerspectiveCamera()"), rule: SYNTAX, msg: "R11" },
+    { name: `R3: world/${z}/ -> ui (alias @ui)`, file: m1Probe(z), code: imp("@ui/index"), rule: ZONE, msg: "R3" },
+    { name: `R3: ui -> world/${z}/ (alias @world)`, file: F.ui, code: imp(`@world/${z}/index`), rule: ZONE, msg: "R3" },
+  ]),
+  { name: "R11: drei PerspectiveCamera en world/dioramas/", file: `${WEB}/world/dioramas/__probe__.tsx`, code: named("PerspectiveCamera", "@react-three/drei"), rule: IMP, msg: "R11" },
+];
+const M1_ALLOWED: Omit<Case, "rule">[] = [
+  ...M1_ZONES.map((z) => ({ name: `world/${z}/ -> three por nombre`, file: m1Probe(z), code: named("Mesh", "three") })),
+  { name: "world/camera/ puede importar three como espacio de nombres", file: `${WEB}/world/camera/__probe__.ts`, code: imp("three") },
+  { name: "world/camera/ -> PerspectiveCamera", file: `${WEB}/world/camera/__probe__.ts`, code: named("PerspectiveCamera", "three") },
+];
+const REAL_M1 = [
+  `${WEB}/world/materials/registry.ts`, `${WEB}/world/materials/palette.ts`, `${WEB}/world/terrain/buildTerrain.ts`,
+  `${WEB}/world/labels/labelSprite.ts`, `${WEB}/world/labels/NameLabel.tsx`, `${WEB}/world/budget/estimate.ts`,
+  `${WEB}/world/actors/Chibi.tsx`, `${WEB}/world/dioramas/scene.ts`, `${WEB}/world/water/waterMaterial.ts`,
+  `${WEB}/world/props/builders.ts`, `${WEB}/world/lighting/Lighting.tsx`,
+];
+
+describe("estetica-c M1 A16: zonas nuevas de world/", () => {
+  test("cada zona tiene su marcador y los archivos reales existen (antes de mirar el ruleId)", () => {
+    for (const z of [...M1_ZONES, "water"]) expect(isFile(resolve(ROOT, WEB, "world", z, "index.ts")), `marcador de world/${z}`).toBe(true);
+    for (const f of REAL_M1) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of M1_FORBIDDEN) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(M1_FORBIDDEN.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test.each(M1_ALLOWED.map((c) => [c.name, c] as const))("%s pasa", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_M1)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test("eslint --stdin con un import ui -> world conocido sigue saliendo 1", () => {
+    const bin = resolve(ROOT, "node_modules/eslint/bin/eslint.js");
+    expect(isFile(bin)).toBe(true);
+    const run = (code: string) => spawnSync(process.execPath, [bin, "--stdin", "--stdin-filename", resolve(ROOT, F.ui)], { cwd: ROOT, input: code, encoding: "utf8" });
+    const bad = run('import "@world/materials/palette";\n');
+    expect(bad.status, bad.stdout + bad.stderr).toBe(1);
+    expect(bad.stdout).toContain("R3");
+    const ok = run("export const x = 1;\n");
+    expect(ok.status, ok.stdout + ok.stderr).toBe(0);
+  }, 60_000);
 });

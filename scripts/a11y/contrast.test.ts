@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { checkContrast, contrastRatio, NON_TEXT_PAIRS, parseThemes, run, TEXT_MIN, TEXT_PAIRS, TOKENS_PATH } from "./contrast";
+import { LABEL_CONTRAST_PAIRS, PALETTE } from "../../apps/web/src/world/materials/palette.ts";
+import { checkContrast, checkWorldLabels, contrastRatio, NON_TEXT_PAIRS, parseThemes, run, TEXT_MIN, TEXT_PAIRS, TOKENS_PATH } from "./contrast";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const css = readFileSync(TOKENS_PATH, "utf8");
@@ -59,4 +60,21 @@ test("D-030: todo color de los retratos SVG es un token definido en tokens.css",
   const names = [...lists.join(",").matchAll(/"([\w-]+)"/g), ...portrait.matchAll(/fill\("([\w-]+)"\)/g)].map((m) => m[1] ?? "");
   expect(names.length).toBeGreaterThan(10);
   for (const n of new Set(names)) expect(css, n).toContain(`--lg-color-${n}:`);
+});
+
+describe("A14 (estetica-c M1): etiquetas de nombre del mundo ≥ 7:1, leídas de palette.ts", () => {
+  test("tinta sobre papel y el texto del chip sobre ámbar llegan a 7:1", () => {
+    const r = checkWorldLabels();
+    expect(r).toHaveLength(2);
+    expect(r.every((x) => x.ok && x.min === 7)).toBe(true);
+    expect(LABEL_CONTRAST_PAIRS[0]).toMatchObject({ fg: PALETTE.tinta, bg: PALETTE.papel });
+    expect(run(TOKENS_PATH, () => {})).toBe(0);
+  });
+
+  test("dientes: tinta-suave sobre ámbar (4,x:1) falla y hace salir 1 al CLI", () => {
+    const weak = [{ name: "roto", fg: PALETTE["tinta-suave"], bg: PALETTE["ámbar"] }];
+    expect(checkWorldLabels(weak)[0]?.ok).toBe(false);
+    expect(run(TOKENS_PATH, () => {}, weak)).toBe(1);
+    expect(checkWorldLabels([{ name: "sin hex", fg: "tinta", bg: "#ffffff" }])[0]?.ok).toBe(false);
+  });
 });

@@ -1,11 +1,14 @@
 // check:contrast (F1.3 A4; GDD §5.4, §2.19): contraste WCAG de los tokens de color del HUD en
 // apps/web/src/styles/tokens.css, en el tema normal y en alto contraste. Pares de texto ≥ 4,5:1 (AA);
-// componentes no textuales (foco, bordes de controles) ≥ 3:1 (WCAG 1.4.11).
+// componentes no textuales (foco, bordes de controles) ≥ 3:1 (WCAG 1.4.11). Además, los pares de las etiquetas de
+// nombre del mundo (plan estetica-c M1 A14, D-207) ≥ 7:1 (AAA), leídos de la paleta del mundo (una sola fuente de hex,
+// sin copiarlos a tokens.css; en M2 el import pasa a @lg/art).
 //
 // Uso: node scripts/a11y/contrast.ts [--tokens <archivo.css>]   Sale con 1 si un par no llega.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS } from "../../apps/web/src/world/materials/palette.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const TOKENS_PATH = resolve(ROOT, "apps/web/src/styles/tokens.css");
@@ -82,8 +85,24 @@ export function checkContrast(css: string): PairResult[] {
   return out;
 }
 
-export function run(path = TOKENS_PATH, log: (s: string) => void = console.log): number {
-  const results = checkContrast(readFileSync(path, "utf8"));
+/** Un par de la paleta del mundo: hex directos, no tokens de tokens.css. */
+export interface WorldPair {
+  name: string;
+  fg: string;
+  bg: string;
+}
+
+/** Los pares de las etiquetas de nombre (A14) contra su mínimo (7:1). */
+export function checkWorldLabels(pairs: readonly WorldPair[] = LABEL_CONTRAST_PAIRS, min: number = LABEL_CONTRAST_MIN): PairResult[] {
+  return pairs.map((p) => {
+    const valid = /^#[0-9a-fA-F]{6}$/.test(p.fg) && /^#[0-9a-fA-F]{6}$/.test(p.bg);
+    const ratio = valid ? Math.round(contrastRatio(p.fg, p.bg) * 100) / 100 : 0;
+    return { theme: "mundo", fg: p.name, bg: `${p.fg} / ${p.bg}`, ratio, min, ok: ratio >= min };
+  });
+}
+
+export function run(path = TOKENS_PATH, log: (s: string) => void = console.log, worldPairs: readonly WorldPair[] = LABEL_CONTRAST_PAIRS): number {
+  const results = [...checkContrast(readFileSync(path, "utf8")), ...checkWorldLabels(worldPairs)];
   for (const r of results) log(`${r.ok ? "OK  " : "FAIL"} [${r.theme}] ${r.fg} sobre ${r.bg}: ${r.ratio}:1 (mínimo ${r.min}:1)`);
   const failed = results.filter((r) => !r.ok).length;
   log(failed === 0 ? `check:contrast OK: ${results.length} pares` : `check:contrast: ${failed} par(es) por debajo del mínimo`);

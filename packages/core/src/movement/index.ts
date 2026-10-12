@@ -4,3 +4,4 @@ export * from "./collision";
 export * from "./astar";
 export * from "./controller";
 export * from "./interaction";
+export * from "./standoff";

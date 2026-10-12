@@ -145,7 +145,7 @@
   "world.loading": "Cargando el mapa…",
   "world.failed": "No se pudo cargar el mapa. Podés seguir en modo solo diálogo.",
   "world.controls": "Caminá con WASD o las flechas, o hacé clic en el suelo. E para hablar. Rueda o + y − para el zoom.",
-  "world.prompt.talk": "E para hablar con {name}",
+  "world.prompt.key": "E",
   "world.talk": "Hablar con {name}",
   "world.zoomIn": "Acercar",
   "world.zoomOut": "Alejar",

@@ -1,7 +1,8 @@
 # content/dioramas/test.yaml — mapa de prueba de F2 (03 §6.4.3, §4.2.1): suelo, detalles, cajas por código,
 # dos vecinos de la Región 1 como NPC placeholder y un estanque no caminable. revisión de arquitectura placeholder generado por
 # código (apps/web/src/world/tiles/atlas.ts): 1 pasto, 2 pasto alto, 3 tierra, 4 agua, 5 piedra,
-# 6 flores, 7 mata, 8 piedritas. Arte descartable (D-137): F3 lo reemplaza con el pack.
+# 6 flores, 7 mata, 8 piedritas. Desde D-207 (plan estetica-c M1) los tiles se dibujan como terreno pintado por
+# vértice (world/terrain/); el formato de tiles sigue hasta M5.
 id: test
 bounds: { minX: -16, maxX: 16, minZ: -12, maxZ: 12 }
 atlas_tiles: test-tiles
@@ -70,10 +71,24 @@ props:
   - { asset: codigo/caja, pos: [-8.5, 0, 5.5], tam: [1, 1, 1] }
   - { asset: codigo/caja, pos: [-7.5, 0, 6.5], tam: [1, 1, 1] }
   - { asset: codigo/cerco, pos: [-12, 0, 0.5], tam: [0.2, 1, 9] }
+  # Plan estetica-c M1 ítem 11 (D-207): árboles y pinos por código. `tam` es la huella del tronco (bloquea la grilla)
+  # y el alto del árbol; ninguno corta un camino ni el acceso a un NPC.
+  - { asset: codigo/arbol, pos: [-14, 0, -10], tam: [0.6, 4.5, 0.6] }
+  - { asset: codigo/arbol, pos: [-4.5, 0, -9.5], tam: [0.6, 4.2, 0.6] }
+  - { asset: codigo/pino, pos: [3, 0, -10], tam: [0.6, 4.8, 0.6] }
+  - { asset: codigo/arbol, pos: [11, 0, -10.5], tam: [0.6, 4.6, 0.6] }
+  - { asset: codigo/pino, pos: [13.5, 0, -8.5], tam: [0.6, 5.2, 0.6] }
+  - { asset: codigo/arbol, pos: [13.5, 0, -2.5], tam: [0.6, 4.4, 0.6] }
+  - { asset: codigo/arbol, pos: [-14.5, 0, -1.5], tam: [0.6, 4.3, 0.6] }
+  - { asset: codigo/pino, pos: [-9.5, 0, 3.5], tam: [0.6, 4.6, 0.6] }
+  - { asset: codigo/pino, pos: [-14.5, 0, 9.5], tam: [0.6, 5.0, 0.6] }
+  - { asset: codigo/arbol, pos: [-6.5, 0, 10.5], tam: [0.6, 4.5, 0.6] }
+  - { asset: codigo/arbol, pos: [3.5, 0, 10], tam: [0.6, 4.4, 0.6] }
+  - { asset: codigo/pino, pos: [14.5, 0, 10.5], tam: [0.6, 5.0, 0.6] }
 npcs:
-  - { id: NPC-NELL, spawn: [-3, 0, 7] }
-  - { id: NPC-INES, spawn: [6, 0, -1.5] }
+  - { id: NPC-NELL, spawn: [-3, 0, 7], radio_interaccion: 3.0 }
+  - { id: NPC-INES, spawn: [6, 0, -1.5], radio_interaccion: 3.0 }
   # A2 (ADR-027): Harlan en su porche junto al galpón, para la conversación por medidores de M9.1.
-  - { id: NPC-HARLAN, spawn: [7.5, 0, 6] }
+  - { id: NPC-HARLAN, spawn: [7.5, 0, 6], radio_interaccion: 3.0 }
 no_caminable:
   - { poligono: [[6, -8], [10, -8], [10, -4], [6, -4]] }

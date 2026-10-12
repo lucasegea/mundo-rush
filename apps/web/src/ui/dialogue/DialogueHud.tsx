@@ -24,8 +24,9 @@ const PASS_OPTIONS: readonly PassChoice[] = ["hint", "repeat", "simpler", "conti
 
 const FRAME: Record<HudSurface, string> = {
   dialogOnly: "mx-auto flex max-w-3xl flex-col gap-4 p-4 md:p-6",
-  // Sobre el mapa: panel abajo, opaco, que recibe el puntero (el resto del shell lo deja pasar al canvas).
-  canvas: "pointer-events-auto fixed inset-x-0 bottom-0 flex max-h-[75dvh] flex-col gap-3 overflow-y-auto border-t-2 border-line bg-surface p-4 shadow-lg",
+  // Sobre el mapa: panel abajo, opaco, que recibe el puntero (el resto del shell lo deja pasar al canvas). Alto máximo
+  // ~45 % para no tapar el plano de a dos (plan estetica-c M1 ítem 16); lo que no entra scrollea adentro.
+  canvas: "pointer-events-auto fixed inset-x-0 bottom-0 flex max-h-[45dvh] flex-col gap-3 overflow-y-auto border-t-2 border-line bg-surface p-4 shadow-lg",
 };
 
 interface WordChoice {

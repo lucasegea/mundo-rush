@@ -3,7 +3,7 @@
 import {
   applySettingsPatch, applyWorldEffects, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom, IDLE,
   isWalkable, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, presetAngles, pushPanel, sameIds,
-  screenDirToWorld, stepBody, stepZoom, suggestTier,
+  screenDirToWorld, standoffPoint, stepBody, stepZoom, suggestTier,
   type Capabilities, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
   type SemanticAction, type SettingsPatch, type TextScale, type TierChoice, type WorldEffect,
 } from "@lg/core";
@@ -183,7 +183,31 @@ export function createActions(store: GameStore) {
     if (!item || (npcOnly && item.kind !== "npc")) return {};
     if (!nearby.includes(item.id)) return walkTo(s, item.x, item.z);
     if (item.kind !== "npc") return {}; // los objetos con glosario llegan con F3
-    return { player: { ...s.player, intent: IDLE, path: [], velocity: { x: 0, z: 0 } }, ...openScene(s, item.id, null) };
+    return { ...standoff(s, item), ...openScene(s, item.id, null) };
+  };
+
+  /**
+   * Al empezar la charla desde el mapa el jugador se acomoda a 2,6 m del NPC, de su lado y mirándolo (plan
+   * estetica-c M1 ítem 4): `position = previous` (sin interpolar un paso), celda, orientación y un tick nuevo. El
+   * desplazamiento visual lo suaviza world/actors/. Los interactuables cercanos se recalculan desde la pose nueva.
+   */
+  const standoff = (s: GameState, npc: { x: number; z: number }): Partial<GameState> => {
+    const { diorama } = s.world;
+    const from = s.player.position;
+    const still = { ...s.player, intent: IDLE, path: [], velocity: { x: 0, z: 0 } };
+    if (!diorama || !from) return { player: still };
+    const p = standoffPoint(from, npc, diorama.grid);
+    const position = { x: p.x, z: p.z };
+    const nearby = nearbyInteractables(position, diorama.interactables);
+    return {
+      player: {
+        ...still, position, previous: position,
+        cell: cellAt(diorama.grid, position.x, position.z) as [number, number],
+        facing: facingFrom(npc.x - position.x, npc.z - position.z, s.player.facing),
+        simTick: s.player.simTick + 1,
+      },
+      world: sameIds(nearby, s.world.nearbyInteractables) ? s.world : { ...s.world, nearbyInteractables: nearby, focusedInteractable: nearby[0] ?? null },
+    };
   };
 
   const zoom = (direction: 1 | -1) => (s: GameState): Partial<GameState> => {
