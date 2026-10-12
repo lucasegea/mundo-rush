@@ -86,6 +86,13 @@ describe("rapport: cómo se llena", () => {
     expect(state.factsLearned).toEqual(["name"]);
   });
 
+  test("una pregunta repetida (o una lista) anula los puntos de pregunta del mismo intercambio", () => {
+    expect(points(run([L({ acts: ["personal_question", "repeated_question"] })]).state)).toBe(0);
+    expect(points(run([L({ acts: ["follow_up_question", "repeated_question"] })]).state)).toBe(0);
+    // Lo demás del intercambio sigue contando: un hecho nuevo suma lo suyo.
+    expect(points(run([L({ acts: ["personal_question", "repeated_question"], npcFacts: ["name"] })]).state)).toBe(2);
+  });
+
   test("regla de reciprocidad: tras 2 preguntas seguidas sin contar nada el medidor se frena hasta que comparta", () => {
     const qs = run([
       L({ acts: ["personal_question"], npcFacts: ["name"] }),

@@ -46,6 +46,24 @@ describe("A4: el adaptador sale de la configuración", () => {
     expect(sel.reason).toContain(GEMINI_KEY_VAR);
   });
 
+  test("LG_FAKE_MODELS=1 con clave real presente: no hay fábrica de Live y la escena de voz cae a texto sin conectar", async () => {
+    live = await startFakeLiveServer();
+    const fake = live;
+    const env = { [GEMINI_KEY_VAR]: KEY, LG_FAKE_MODELS: "1", LG_OPERATOR_MODE: "1" };
+    for (const adapter of ["live", "cascade"] as const) {
+      const sel = voiceProviderFromConfig(withAdapter(adapter), env, { liveEndpoint: fake.url });
+      expect(sel.factory).toBeNull();
+      expect(sel.reason).toContain("LG_FAKE_MODELS");
+      expect(sel.reason).not.toContain(KEY);
+    }
+    const h = harness({ rules: M01_RULES, voice: voiceProviderFromConfig(withAdapter("live"), env, { liveEndpoint: fake.url }).factory });
+    await h.session.receive({ type: "scene.start", npcId: "NPC-INES", modality: "voice" });
+    expect(h.session.snapshot.ctx.modality).toBe("text");
+    expect(fake.connections).toHaveLength(0);
+    h.session.close();
+    await h.session.settled();
+  });
+
   test("el mismo runtime corre con live (servidor falso) y con cascade (cae a texto hasta F5.1b), solo cambiando la config", async () => {
     live = await startFakeLiveServer();
     const fake = live;

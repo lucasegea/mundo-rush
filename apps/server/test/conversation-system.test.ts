@@ -117,7 +117,7 @@ describe("nota del NPC (prompt)", () => {
     const scene = must(catalog.scene("M9.1", "M9.1-E1"));
     const built = buildNpcPrompt({ catalog, npc, scene, world: emptyWorldProgress(), introducedBy: null });
     const system = `${built.system}\n\n${conversationBrief(SHEET, start)}`;
-    for (const re of [/\bposts?\b/i, /\bfence\b/i]) expect(system).not.toMatch(re);
+    for (const re of ERRAND_MARKERS) expect(system).not.toMatch(re);
     expect(built.openingAsModelTurn).toBe("Morning.");
   });
   test("en la fase del pedido entran el recado, lo que quiere el NPC, las objeciones y el puente", () => {
@@ -147,6 +147,18 @@ describe("juez", () => {
     const r = parseJudgeOutput("```json\n" + L({ acts: ["greeting", "flirt"], npc_facts: ["granero", "secret_bank"], player_facts: ["nombre", "dni"], objections: [{ id: "nope", quality: "yes" }] }) + "\n```", SHEET);
     expect(r).toEqual({ ok: true, labels: { language: "L2", comprehensible: 2, acts: ["greeting"], npcFacts: ["granero"], playerFacts: ["nombre"], objections: [], safety: "none" } });
   });
+  test("los ejemplos calibrados son coherentes con la ayuda de actos: una lista de preguntas es repeated_question", () => {
+    for (const e of SHEET.ejemplos_juez) {
+      const r = parseJudgeOutput(e.etiquetas, SHEET);
+      if (!r.ok) throw new Error(`ejemplo no parsea: ${e.jugador} (${r.reason})`);
+      expect(r.labels.acts.length, e.jugador).toBe((JSON.parse(e.etiquetas) as { acts: unknown[] }).acts.length);
+      if ((e.jugador.match(/\?/g) ?? []).length >= 3) {
+        expect(r.labels.acts, e.jugador).toContain("repeated_question");
+        expect(r.labels.acts, e.jugador).not.toContain("personal_question");
+      }
+    }
+    expect(SHEET.ejemplos_juez.some((e) => (e.jugador.match(/\?/g) ?? []).length >= 3)).toBe(true);
+  });
   test("JSON roto o truncado: no ok", () => {
     expect(parseJudgeOutput('{"language": "L2", "acts": [', SHEET).ok).toBe(false);
     expect(parseJudgeOutput(L({ safety: "maybe" }), SHEET).ok).toBe(false);
@@ -172,7 +184,7 @@ describe("M9.1 por texto", () => {
     await r.say("Hello.");
     const sys = must(r.h.npc.calls[0]).system;
     expect(sys).toContain("=== FREE CONVERSATION ===");
-    for (const re of [/\bposts?\b/i, /\bfence\b/i]) expect(sys).not.toMatch(re);
+    for (const re of ERRAND_MARKERS) expect(sys).not.toMatch(re);
   });
 
   test("conocerse → se abre el pedido → el código cierra con éxito en el turno siguiente", async () => {
@@ -318,7 +330,7 @@ describe("M9.1 por voz: cambio de sesión de Live", () => {
     const { providers, r } = voiceRig();
     await r.h.session.receive({ type: "scene.start", npcId: "NPC-HARLAN", modality: "voice" });
     expect(providers.length).toBe(1);
-    for (const re of [/\bposts?\b/i, /\bfence\b/i]) expect(must(providers[0]?.setup).systemInstruction).not.toMatch(re);
+    for (const re of ERRAND_MARKERS) expect(must(providers[0]?.setup).systemInstruction).not.toMatch(re);
     await talk(r);
     expect(must(r.states().at(-1)).activeMeter).toBe("recado");
     expect(providers.length).toBe(2);

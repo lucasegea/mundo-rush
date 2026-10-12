@@ -3,6 +3,7 @@
 // Sin clave no hay sesión de voz: la escena de voz cae a texto con aviso (03 §5.8). Nunca se lee ni imprime la clave.
 import { GEMINI_KEY_VAR, hasGeminiKey, type ModelsConfig } from "../config/models.ts";
 import { createGeminiLiveProvider } from "./gemini-live/adapter.ts";
+import { FAKE_MODELS_VAR } from "./scripted.ts";
 import { ProviderError } from "./text.ts";
 import type { RealtimeVoiceProvider, VoiceProviderFactory } from "./types.ts";
 
@@ -36,6 +37,9 @@ export function voiceProviderFromConfig(
   test: { liveEndpoint?: string } = {},
 ): VoiceSelection {
   const adapter = models.voice.npc.adapter;
+  // Con modelos guionados nunca se abre una sesión paga, aunque haya clave: no hay voz guionada, así que la escena de
+  // voz cae a texto (03 §5.8) y sigue con el NPC guionado (D-027).
+  if (env[FAKE_MODELS_VAR] === "1") return { adapter, factory: null, reason: `${FAKE_MODELS_VAR}=1: sin voz guionada, la escena sigue por texto` };
   switch (adapter) {
     case "cascade":
       return { adapter, factory: pendingCascade, reason: null };

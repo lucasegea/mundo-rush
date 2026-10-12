@@ -64,8 +64,10 @@ export const rapportScorer: Scorer<RapportMeterDef> = {
     const stalled = state.stalled && !d.disclosure;
     if (!stalled) {
       for (const id of d.newFacts) pts += r.factPoints[(factTier(def, id) ?? 1) - 1] ?? 0;
-      if (has(l, "follow_up_question")) pts += r.followUp;
-      else if (has(l, "personal_question")) pts += r.newQuestion;
+      // Una repetida (o una lista de preguntas) anula los puntos de pregunta del mismo intercambio.
+      const repeated = has(l, "repeated_question");
+      if (!repeated && has(l, "follow_up_question")) pts += r.followUp;
+      else if (!repeated && has(l, "personal_question")) pts += r.newQuestion;
       if (has(l, "empathy_reaction")) pts += r.empathy;
     }
     if (d.disclosure) pts += state.npcJustRevealed ? r.disclosure + r.reciprocityBonus : r.disclosure;
