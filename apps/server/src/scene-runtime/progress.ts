@@ -13,6 +13,21 @@ export interface OperatorProgress {
   world: WorldProgress;
 }
 
+/** Reinicio de desarrollo de una misión (A2, scripts/dev/reset-encounter.ts): lo anterior a `at` no cuenta. */
+export interface MissionReset {
+  readonly missionId: string;
+  readonly at: string;
+}
+
+/**
+ * Saca la evidencia de las misiones reiniciadas fechada hasta su reinicio (incluido). El log de evidencia es append-only
+ * y no se toca: el reinicio es un filtro al leerlo. El resto del progreso real queda igual.
+ */
+export function withoutResets(events: readonly EvidenceEvent[], resets: readonly MissionReset[]): EvidenceEvent[] {
+  if (resets.length === 0) return [...events];
+  return events.filter((e) => !resets.some((r) => r.missionId === e.missionId && Date.parse(e.at) <= Date.parse(r.at)));
+}
+
 export function foldProgress(events: readonly EvidenceEvent[], catalog: Catalog): OperatorProgress {
   let story = emptyStoryProgress();
   let world = emptyWorldProgress();

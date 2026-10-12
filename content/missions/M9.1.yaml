@@ -1,0 +1,97 @@
+# M9.1 · Conocer a Harlan (A2, ADR-027). Prototipo del sistema de conversación por medidores: fuera de la numeración de
+# 02, sin requisitos, para jugarlo directo. No hay guion: Harlan trabaja con su ficha (content/conversaciones/CONV-HARLAN.yaml).
+# Medidor 1 "Conocer a Harlan" se llena con intercambio recíproco; medidor 2 "Conseguir lo que viniste a buscar" se abre
+# al llenarse el primero. El cierre lo dispara el código al llenarse el último medidor, nunca el modelo.
+# OJO (fuga): situacion, necesidad_npc, criterios_exito, ramas y la PRIMERA línea del NPC del cierre/salida entran al
+# prompt del NPC desde el primer turno. Nada de eso nombra el recado (los postes, Nell, la huerta).
+id: M9.1
+titulo: { es-AR: "Conocer a Harlan" }
+capitulo: 1
+region: R1
+mcer: A1
+tipo_tarea: social_con_meta
+can_do: { es-AR: "Puedo conocer a alguien preguntando y contando de mí, y después pedirle algo con amabilidad." }
+requiere: []
+meta: "Jugador: conocer a Harlan y conseguir los postes viejos para el cerco de la huerta de Nell. Harlan: saber quién es este forastero antes de hablar de nada."
+consigue: "Los postes viejos del padre de Harlan para el cerco de la huerta del Cruce."
+red:
+  altas: [{ npc: NPC-HARLAN, por: null }]
+  presenta: []
+  nombra: []
+fundacion: "La huerta del Cruce consigue su cerco (prototipo: solo flag)."
+saberes: []
+hechos_verificables: []
+resultado_mundo: "Harlan te saluda con la cabeza cuando pasás por el granero."
+contagio: null
+npcs: [NPC-HARLAN]
+lenguaje_objetivo:
+  funciones: ["preguntar por la vida de otro", "hacer preguntas de seguimiento", "contar de uno", "explicar para qué", "pedir con amabilidad"]
+  estructuras: ["Do you…? / How long…? / Is this…?", "I'm from… / I work…", "Could I…, please?"]
+  chunks: ["How long have you lived here?", "Is this your farm?", "And you?", "I'm from…", "They're for…", "Could I borrow…, please?"]
+  vocabulario: [farm, barn, corn, father, family, dog, morning, field, crew, garden, fence, posts, borrow, please]
+pre_tarea:
+  plantilla: LUMI-M9.1-PRE
+  piezas_utiles: ["How long have you lived here?", "And you?", "I'm from…"]
+beats:
+  - "Harlan está en su mecedora, en el porche junto al granero. Te mira y dice \"Morning.\""
+  - "Conversación libre: se conocen (medidor 1). Él responde corto al principio y se abre si hay ida y vuelta."
+  - "Lleno el medidor 1, Harlan pregunta qué te trae (puente) y se abre el medidor 2."
+  - "Le contás el recado, le explicás para qué y se lo pedís con amabilidad."
+  - "El juego cierra: Harlan te da los postes (cierre guionado)."
+escenas:
+  - escena_id: M9.1-E1
+    npc: NPC-HARLAN
+    lugar: campos.granero_harlan
+    hora: tarde
+    situacion: "A hot late-summer afternoon. Harlan sits in his rocking chair on the porch next to his red barn. A young newcomer from the harvest crew walks up to the porch. You have never met them."
+    necesidad_npc: "To find out who this newcomer is before you talk about anything else."
+    banda: A1
+    andamiaje_npc:
+      - "Ask back about the newcomer: \"And you?\""
+      - "Offer a tiny fact with a gesture: \"My barn. My father built it.\" (points at the barn)"
+      - "Lumi hint and phrases (HUD help ladder)"
+    vocabulario_nivel: [farm, barn, corn, field, father, family, dog, morning, sun, hot, water, porch, crew, work, valley, old, young, grandson]
+    max_palabras_nuevas_por_turno: 1
+    hechos_escena: []
+    apertura_guionada:
+      - { quien: NPC-HARLAN, en: "Morning.", es_glosa: "Buen día.", acotacion: "levanta la vista desde la mecedora" }
+    ramas:
+      no_aplica: "Conversación libre: el NPC trabaja con su ficha (CONV-HARLAN), no con ramas guionadas."
+    criterios_exito:
+      - { id: C1, texto: "The player and Harlan get to know each other (the game tracks this; you never decide it)." }
+    errores_de_objetivo: []
+    cierre_guionado:
+      - { quien: NPC-HARLAN, en: "Hm. All right.", es_glosa: "Mm. Está bien.", acotacion: "se levanta de la mecedora" }
+      - { quien: NPC-HARLAN, en: "The old posts are behind the barn. You can take them.", es_glosa: "Los postes viejos están atrás del granero. Te los podés llevar." }
+      - { quien: NPC-HARLAN, en: "My father cut those.", es_glosa: "Los cortó mi padre." }
+      - { quien: NPC-HARLAN, en: "Tell Nell... hello.", es_glosa: "Decile a Nell... hola." }
+      - { quien: LUMI, plantilla: LUMI-M9.1-CIERRE }
+    salida_si_no_converge:
+      disparador: "al tope duro de la escena (10 min)"
+      lineas:
+        - { quien: NPC-HARLAN, en: "Hm. The sun's going down. Another day.", es_glosa: "Mm. Se está poniendo el sol. Otro día." }
+        - { quien: LUMI, plantilla: LUMI-M9.1-NOCONV }
+      resultado: "Sin postes. Lo que se conocieron queda guardado: la próxima visita sigue desde ahí."
+    efectos:
+      - { flag: posts_received }
+      - { flag: harlan_cordial }
+    eventos: [posts_received, harlan_cordial, "net_add:NPC-HARLAN"]
+    resumen_para_siguiente: "El jugador conoció a Harlan, el granjero, y consiguió sus postes viejos para el cerco de la huerta de Nell."
+    temas_permitidos: ["the farm and the corn", "the barn and Harlan's father", "family", "the harvest crew", "where the newcomer comes from", "the valley", "the weather", "the dog"]
+    temas_vedados_extra: ["the player's real-life personal data", "romance"]
+    conversacion: CONV-HARLAN
+    topes: { suave_s: 540, duro_s: 600 }
+lumi_marca: "Marca si el jugador preguntó sin contar nada de sí (reciprocidad) o si pidió antes de conocerlo."
+pociones:
+  - { rama: ambar, evento: "pregunta de seguimiento con sentido", max: 1 }
+  - { rama: ambar, evento: "pedir con amabilidad (Could I… please?)", max: 1 }
+desbloqueos: []
+repaso:
+  resurfaces: []
+  planta: ["And you?", "How long have you…?", "Could I borrow…, please?"]
+  reaparece_en: []
+mundo: [posts_received, harlan_cordial, "net_add:NPC-HARLAN"]
+modo_texto: "Campo libre; el HUD muestra la pista y, si hace falta, frases sugeridas tocables."
+efectos: []
+duracion_objetivo_min: 8
+estado: draft

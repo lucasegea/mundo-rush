@@ -15,6 +15,7 @@ import { PedidoTablero } from "../schemas/pedido.ts";
 import { ArchivoPistas, ArchivoPresentaciones, ArchivoSobres } from "../schemas/red.ts";
 import type { Pista, Presentacion, Sobre } from "../schemas/red.ts";
 import { Saber } from "../schemas/saber.ts";
+import { FichaConversacion } from "../schemas/conversacion.ts";
 import type { ArchivoFuente, Entrada, Hallazgo } from "./tipos.ts";
 import { clave } from "./tipos.ts";
 
@@ -38,6 +39,8 @@ export interface Conjunto {
   lugares: Entrada<Lugar>[];
   niveles: Entrada<Infer<typeof TarjetaNivel>>[];
   dioramas: Entrada<Infer<typeof Diorama>>[];
+  /** Fichas de conversación por medidores (ADR-027), solo servidor. */
+  conversaciones: Entrada<Infer<typeof FichaConversacion>>[];
   bloqueos: Entrada<Infer<typeof ListaBloqueo>>[];
   temas: Infer<typeof TemasGlobales> | null;
   /** Contención y línea segura (F4.2, D-112). */
@@ -52,14 +55,14 @@ export interface Conjunto {
 
 export const conjuntoVacio = (): Conjunto => ({
   misiones: [], npcs: [], pedidos: [], fundaciones: [], saberes: [], presentaciones: [], sobres: [], pistas: [],
-  plantillas: [], glosario: [], habilidades: [], ramas: [], regiones: [], lugares: [], niveles: [], dioramas: [],
+  plantillas: [], glosario: [], habilidades: [], ramas: [], regiones: [], lugares: [], niveles: [], dioramas: [], conversaciones: [],
   bloqueos: [], temas: null, contencion: null, retirados: null, allowlist: null, prompts: {}, idsPorArchivo: new Map(),
 });
 
 type Tipo =
   | "mision" | "npc" | "pedido" | "fundacion" | "saber" | "presentaciones" | "sobres" | "pistas" | "lumi"
   | "glosario" | "habilidades" | "lugares" | "nivel" | "diorama" | "bloqueo" | "temas" | "contencion" | "retirados"
-  | "allowlist" | "prompt" | "ignorado";
+  | "allowlist" | "prompt" | "conversacion" | "ignorado";
 
 /** Ruta canónica → tipo (03 §4.2.1). Lo que no matchea es un error: nada se ignora en silencio. */
 const RUTAS: [RegExp, Tipo][] = [
@@ -83,6 +86,7 @@ const RUTAS: [RegExp, Tipo][] = [
   [/^content\/retired-ids\.yaml$/, "retirados"],
   [/^content\/lint-allowlist\.yaml$/, "allowlist"],
   [/^content\/prompts\/[^/]+\.txt$/, "prompt"],
+  [/^content\/conversaciones\/[^/]+\.yaml$/, "conversacion"],
   // Fuera del compilador: prompt offline de Lumi (02 §2.6) y archivos versionados a mano (D-159).
   [/^content\/authoring\//, "ignorado"],
   [/^content\/audio-lines\.manifest\.json$/, "ignorado"],
@@ -164,6 +168,7 @@ export const agregarArchivo = (c: Conjunto, f: ArchivoFuente, h: Hallazgo[]): vo
     case "fundacion": uno(c.fundaciones, validar(Fundacion, f.ruta, raw, h)); break;
     case "saber": uno(c.saberes, validar(Saber, f.ruta, raw, h)); break;
     case "diorama": uno(c.dioramas, validar(Diorama, f.ruta, raw, h)); break;
+    case "conversacion": uno(c.conversaciones, validar(FichaConversacion, f.ruta, raw, h)); break;
     case "presentaciones": {
       const d = validar(ArchivoPresentaciones, f.ruta, raw, h);
       if (d) varios(c.presentaciones, d.presentaciones, "presentaciones", (p) => p.id);

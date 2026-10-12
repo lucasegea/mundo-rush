@@ -6,6 +6,8 @@
 // F5.2: en una escena de voz, en lugar de la caja de texto: "Hablar" (mantener apretado = pulsar-para-hablar; tocar
 // una vez abre el turno y "Terminé" lo cierra), indicador "te escucho / pensando", lo que se va oyendo y el medidor
 // del micrófono. Sin micrófono o sin permiso la escena va por texto y se dice por qué.
+// A2 (ADR-027): en una conversación libre por medidores, el panel de medidores, "Lo que sabés de…" y la escalera de
+// ayuda (ConversationPanel), en voz y en texto.
 // Lee view-models de state/selectors y despacha state/actions: no conoce la red ni el protocolo.
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { t, type MessageKey } from "../../i18n";
@@ -14,6 +16,7 @@ import { selectDialogueHudView, useGameView, type DialogueHudView, type HudLine,
 import { Portrait } from "../dialog-only/Portrait";
 import { useFocusOnMount } from "../a11y/hooks";
 import { Button } from "../primitives";
+import { ConversationPanel } from "./ConversationPanel";
 
 export type HudSurface = "dialogOnly" | "canvas";
 
@@ -242,6 +245,16 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
       {view.notice && view.notice !== "containment" ? <p className="text-sm text-ink-muted">{t(`scene.notice.${view.notice}` as MessageKey)}</p> : null}
       {view.micProblem ? <p role="alert" className="rounded-lg border-2 border-line bg-paper p-2" data-testid="mic-problem">{t(`scene.mic.${view.micProblem}`)}</p> : null}
       {view.micLost ? <p role="alert" className="rounded-lg border-2 border-line bg-paper p-2" data-testid="mic-problem">{t("scene.mic.lost")}</p> : null}
+
+      {view.conversation && !view.containment ? (
+        <ConversationPanel
+          conv={view.conversation} waiting={view.waiting} idleMs={view.conversationHelpIdleMs} resetKey={`${view.lines.length}`}
+          onPhrase={view.voice ? null : (phrase) => {
+            setDraft(phrase);
+            input.current?.focus();
+          }}
+        />
+      ) : null}
 
       {view.lines.length > 0 ? (
         <>

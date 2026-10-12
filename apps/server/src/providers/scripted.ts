@@ -39,3 +39,57 @@ export function scriptedObserverProvider(): TextModelProvider {
     },
   };
 }
+
+/**
+ * A2 (ADR-027): juez guionado de la conversación por medidores, para recorrer el flujo sin clave. Lee del pedido (formato
+ * de conversation/judge.ts) el intercambio y la lista de hechos, y etiqueta con reglas de palabras: una pregunta revela el
+ * primer hecho todavía no sabido de cada nivel (el motor descarta los de niveles cerrados), "I'm/I work/I like/from"
+ * cuenta como dato propio, y en la fase del objetivo reconoce el recado, el pedido amable y las objeciones por palabras.
+ * No evalúa nada de verdad: es para ver las barras moverse y la fase cambiar.
+ */
+export function scriptedJudgeProvider(): TextModelProvider {
+  return {
+    id: "scripted-judge",
+    generate(req) {
+      const data = req.turns[req.turns.length - 1]?.text ?? "";
+      const player = /PLAYER: (.*)\nNPC: /.exec(data.slice(data.lastIndexOf("<<<")))?.[1] ?? "";
+      const known = new Set((/Facts the player already learned[^:]*: (.*)\.$/m.exec(req.system)?.[1] ?? "").split(", "));
+      const facts = [...req.system.matchAll(/^- ([a-z0-9_]+) \(tier (\d)\): /gm)].map((m) => ({ id: m[1] ?? "", tier: m[2] ?? "1" }));
+      const goalPhase = /^- [a-z0-9_]+: .* Resolved when: /m.test(req.system);
+      const p = player.toLowerCase();
+      const acts: string[] = [];
+      const playerFacts: string[] = [];
+      const npcFacts: string[] = [];
+      const objections: { id: string; quality: "yes" }[] = [];
+      if (/\b(hola|gracias|como|qué|buen día)\b/.test(p)) {
+        return Promise.resolve({ text: JSON.stringify({ language: "L1", comprehensible: 1, acts: [], npc_facts: [], player_facts: [], objections: [], safety: "none" }) });
+      }
+      if (/\b(hello|hi|morning)\b/.test(p)) acts.push("greeting");
+      if (p.includes("?")) {
+        acts.push(/\b(really|alone|why|how)\b/.test(p) ? "follow_up_question" : "personal_question");
+        for (const tier of ["1", "2", "3"]) {
+          const next = facts.find((f) => f.tier === tier && !known.has(f.id));
+          if (next) npcFacts.push(next.id);
+        }
+      }
+      if (/\b(i'm|i am|my name)\b/.test(p)) playerFacts.push("nombre");
+      if (/\bfrom\b/.test(p)) playerFacts.push("origen");
+      if (/\b(work|crew)\b/.test(p)) playerFacts.push("cuadrilla");
+      if (/\b(like|love)\b/.test(p)) playerFacts.push("gustos");
+      if (/\b(mother|father|sister|brother|grandma|grandmother|family)\b/.test(p)) playerFacts.push("familia");
+      if (playerFacts.length) acts.push("self_disclosure");
+      if (/\b(wow|nice|beautiful|cool|great)\b/.test(p)) acts.push("empathy_reaction");
+      if (/\b(posts?|need|sent me)\b/.test(p)) acts.push("states_errand");
+      if (/\b(please|could|can i|would you)\b/.test(p)) acts.push("polite_request");
+      if (/\b(for the|because|garden|fence)\b/.test(p)) acts.push("gives_reason");
+      if (goalPhase) {
+        if (/\b(garden|fence)\b/.test(p)) objections.push({ id: "para_que", quality: "yes" });
+        if (/\bnell\b/.test(p)) objections.push({ id: "quien", quality: "yes" });
+        if (/\b(care|bring back|help you)\b/.test(p)) objections.push({ id: "cuidado", quality: "yes" });
+      }
+      return Promise.resolve({
+        text: JSON.stringify({ language: "L2", comprehensible: 2, acts, npc_facts: npcFacts, player_facts: playerFacts, objections, safety: "none" }),
+      });
+    },
+  };
+}

@@ -4,6 +4,7 @@
 // F2: movimiento (grilla, A*, colisión, controlador), input semántico (R10), cámara (R11) y diorama.
 // F4.2: glosario por build y palabras tocables del HUD de diálogo (dialogue/).
 // F4.1: máquina de escena, criterios de éxito y efectos de misión (también por la subruta @lg/core/scene).
+// A2: medidores de conversación (ADR-027; también por la subruta @lg/core/conversation).
 export const PACKAGE_NAME = "@lg/core";
 
 export * from "./ids";
@@ -17,3 +18,4 @@ export * from "./camera";
 export * from "./world";
 export * from "./scene";
 export * from "./dialogue";
+export * from "./conversation";

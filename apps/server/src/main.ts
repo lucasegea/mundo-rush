@@ -13,8 +13,10 @@ import { createContentLoader, type ContentLoader } from "./content/loader.ts";
 import { listenOptions, SERVICE_NAME } from "./http.ts";
 import { FAKE_MODELS_VAR } from "./providers/scripted.ts";
 import { voiceProviderFromConfig } from "./providers/voice.ts";
+import { installProcessGuards } from "./process-guards.ts";
 
 const env = process.env;
+installProcessGuards(process, (m) => console.error(m), SERVICE_NAME);
 const { host, port } = listenOptions(env);
 assertOperatorHost(host, env);
 const models = loadModelsConfig();
@@ -24,7 +26,8 @@ const stores = storesFromEnv(env, {}, models);
 const voice = voiceProviderFromConfig(models, env);
 const game = createGameServer({
   env, models, content: () => (loader ??= createContentLoader({ env })).forNextScene(), evidence: stores.evidence, ...textProvidersFromEnv(models, env),
-  moderation: moderationProviderFromConfig(models), safety: stores.safety,
+  moderation: moderationProviderFromConfig(models), safety: stores.safety, encounters: stores.encounters,
+  onConversationLog: (m) => console.warn(`${SERVICE_NAME}: ${m}`),
   voice: voice.factory, ...(stores.ledger ? { ledger: stores.ledger } : {}),
   onCostAlert: (a) => console.warn(`${SERVICE_NAME}: ALERTA de costo de voz: promedio US$${a.usdPerMin.toFixed(4)}/min en ${a.scenes} escenas (umbral US$${a.thresholdUsdPerMin}/min). No corta el juego (D-027).`),
   onCostError: (m) => console.error(`${SERVICE_NAME}: el libro de costos no registró un uso de voz: ${m}`),

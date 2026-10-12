@@ -16,6 +16,11 @@ export const NPC_SAMPLE_RATE = 24000;
 export const TALK_TAIL_MS = 250;
 /** Si el servidor no saca la escena de tu turno en este tiempo tras "Terminé" (rechazó el turno), se vuelve a listo. */
 export const TURN_ACK_TIMEOUT_MS = 5000;
+/**
+ * Vigía de reproducción: si la cola no avisa que se vació en (lo encolado desde el último vaciado + este margen), se da
+ * por terminada. Sin esto, un AudioContext que no avanza dejaba el HUD en "sonando" y el jugador sin poder hablar.
+ */
+export const PLAYBACK_STUCK_GRACE_MS = 4000;
 /** Cada cuánto se publica el nivel del micrófono en el store (ms) y con qué paso (evita re-renders por ruido). */
 export const LEVEL_INTERVAL_MS = 100;
 const LEVEL_STEP = 0.05;
@@ -63,6 +68,9 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
   let levelAt = 0;
   let levelPeak = 0;
   let stopped = false;
+  /** Segundos de voz del NPC encolados desde el último vaciado y la cancelación del vigía. */
+  let queuedSeconds = 0;
+  let cancelStuck: (() => void) | null = null;
   /** Último `estado.subestado` de la escena visto (para reaccionar a cambios, no a cada render del store). */
   let sceneKey = "";
 
@@ -73,11 +81,18 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
     actions.audioChanged({ audio: state });
   };
 
+  const clearStuck = (): void => {
+    cancelStuck?.();
+    cancelStuck = null;
+    queuedSeconds = 0;
+  };
+
   const clearTimers = (): void => {
     cancelTail?.();
     cancelTail = null;
     cancelAck?.();
     cancelAck = null;
+    clearStuck();
   };
 
   const onFrame = (frame: CaptureFrame): void => {
@@ -143,6 +158,14 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
     if (!engine || state === "off" || state === "asking" || state === "noPermission") return;
     engine.play(pcm16, NPC_SAMPLE_RATE);
     go("npcAudio");
+    // Vigía: se reprograma con cada pedazo según cuánto audio hay encolado.
+    queuedSeconds += pcm16.length / NPC_SAMPLE_RATE;
+    cancelStuck?.();
+    cancelStuck = schedule(Math.ceil(queuedSeconds * 1000) + PLAYBACK_STUCK_GRACE_MS, () => {
+      cancelStuck = null;
+      queuedSeconds = 0;
+      if (state === "playing") go("drained");
+    });
   });
 
   const unsubTalk = store.subscribe((s) => s.dialogue.voice.talk, onTalk);
@@ -190,7 +213,11 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
       return "text";
     }
     engine = e;
-    e.onDrained(() => { if (engine === e) go("drained"); });
+    e.onDrained(() => {
+      if (engine !== e) return;
+      clearStuck();
+      go("drained");
+    });
     e.onMicLost(() => {
       if (engine !== e) return;
       if (capturing) closeTurn(true);

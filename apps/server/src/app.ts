@@ -9,7 +9,7 @@ import { attachSceneGateway, createTokenRegistry, sceneRoutes } from "./gateway/
 import { createHttpServer } from "./http.ts";
 import { createGeminiTextProvider } from "./providers/gemini-text.ts";
 import { unavailableProvider, type TextModelProvider } from "./providers/text.ts";
-import { FAKE_MODELS_VAR, scriptedNpcProvider, scriptedObserverProvider } from "./providers/scripted.ts";
+import { FAKE_MODELS_VAR, scriptedJudgeProvider, scriptedNpcProvider, scriptedObserverProvider } from "./providers/scripted.ts";
 import { createSceneSession, type Scheduler } from "./scene-runtime/runtime.ts";
 import { createFileEvidenceStore, createMemoryEvidenceStore, DEFAULT_EVIDENCE_PATH, type EvidenceStore } from "./store/evidence.ts";
 import type { ModerationProvider } from "./providers/moderation.ts";
@@ -17,6 +17,8 @@ import { createFileSafetyStore, createMemorySafetyStore, DEFAULT_SAFETY_PATH, ty
 import { costPolicyFromConfig, createFileCostLedger, createMemoryCostLedger, DEFAULT_COST_LEDGER_PATH, type CostAlert, type CostLedger } from "./cost/ledger.ts";
 import type { VoiceProviderFactory } from "./providers/types.ts";
 import type { ConversationHooks } from "./scene-runtime/hooks.ts";
+import { createConversationSystem } from "./conversation/system.ts";
+import { createFileEncounterStore, createMemoryEncounterStore, DEFAULT_ENCOUNTERS_PATH, type EncounterStore } from "./store/encounters.ts";
 
 /** Reloj del proceso (el núcleo nunca lee la hora; la inyecta la app, R4). */
 export const systemClock: Clock = { now: () => Date.now() };
@@ -40,6 +42,14 @@ export interface GameServerOptions {
   onCostError?: (message: string) => void;
   /** F5.2: ganchos de conversación de cada escena (scene-runtime/hooks.ts). */
   conversation?: ConversationHooks;
+  /**
+   * A2 (ADR-027): con el juez y el almacén de encuentros, el servidor enchufa el sistema de conversación por medidores
+   * (si no se pasaron otros ganchos) y aplica los reinicios de desarrollo de misiones al leer el progreso.
+   */
+  judgeModel?: TextModelProvider;
+  encounters?: EncounterStore;
+  /** Diagnóstico del sistema de conversación (sin texto de la conversación). */
+  onConversationLog?: (message: string) => void;
 }
 
 export interface GameServer {
@@ -55,6 +65,11 @@ export function createGameServer(opts: GameServerOptions): GameServer {
   // Un libro de costos por proceso (el promedio móvil cruza escenas y conexiones).
   const ledger = opts.ledger ?? createMemoryCostLedger(costPolicyFromConfig(opts.models));
   const server = createHttpServer(sceneRoutes(tokens, operatorMode));
+  const encounters = opts.encounters;
+  const conversation = opts.conversation ?? (opts.judgeModel && encounters ? createConversationSystem({
+    judge: opts.judgeModel, role: opts.models.roles.judge, store: encounters,
+    ...(opts.onConversationLog ? { log: opts.onConversationLog } : {}),
+  }) : undefined);
   const gateway = attachSceneGateway(server, {
     tokens, operatorMode,
     openSession: (send, sendAudio) => createSceneSession({
@@ -64,7 +79,8 @@ export function createGameServer(opts: GameServerOptions): GameServer {
       ...(opts.moderation !== undefined ? { moderation: opts.moderation } : {}), ...(opts.safety ? { safety: opts.safety } : {}),
       ...(opts.voice !== undefined ? { voice: opts.voice } : {}), ledger,
       ...(opts.onCostAlert ? { onCostAlert: opts.onCostAlert } : {}), ...(opts.onCostError ? { onCostError: opts.onCostError } : {}),
-      ...(opts.conversation ? { conversation: opts.conversation } : {}),
+      ...(conversation ? { conversation } : {}),
+      ...(encounters ? { resets: () => encounters.resets(OPERATOR_ACCOUNT) } : {}),
     }, send, sendAudio),
   });
   return { server, operatorMode, close: () => gateway.close() };
@@ -75,17 +91,20 @@ export function createGameServer(opts: GameServerOptions): GameServer {
  * (la escena sigue y el cliente recibe `model_unavailable`). Nunca se lee ni se imprime el valor de la clave.
  */
 export function textProvidersFromEnv(models: ModelsConfig, env: Record<string, string | undefined>):
-  { npcModel: TextModelProvider; observerModel: TextModelProvider } {
+  { npcModel: TextModelProvider; observerModel: TextModelProvider; judgeModel: TextModelProvider } {
   // F4.2: modelos guionados para recorrer el flujo sin clave (LG_FAKE_MODELS=1), solo en modo operador.
-  if (env[FAKE_MODELS_VAR] === "1" && operatorModeOn(env)) return { npcModel: scriptedNpcProvider(), observerModel: scriptedObserverProvider() };
+  if (env[FAKE_MODELS_VAR] === "1" && operatorModeOn(env)) {
+    return { npcModel: scriptedNpcProvider(), observerModel: scriptedObserverProvider(), judgeModel: scriptedJudgeProvider() };
+  }
   if (!hasGeminiKey(env)) {
     const none = unavailableProvider(`sin ${GEMINI_KEY_VAR}: el modelo de texto no está configurado`);
-    return { npcModel: none, observerModel: none };
+    return { npcModel: none, observerModel: none, judgeModel: none };
   }
   const key = env[GEMINI_KEY_VAR] ?? "";
   return {
     npcModel: createGeminiTextProvider(key, models.roles.textNpc.model),
     observerModel: createGeminiTextProvider(key, models.roles.observer.model),
+    judgeModel: createGeminiTextProvider(key, models.roles.judge.model),
   };
 }
 
@@ -96,17 +115,21 @@ export function textProvidersFromEnv(models: ModelsConfig, env: Record<string, s
  */
 export function storesFromEnv(
   env: Record<string, string | undefined>,
-  paths: { evidence?: string; safety?: string; costLedger?: string } = {},
+  paths: { evidence?: string; safety?: string; costLedger?: string; encounters?: string } = {},
   models?: ModelsConfig,
-): { evidence: EvidenceStore; safety: SafetyEventStore; ledger: CostLedger | null; persistent: boolean } {
+): { evidence: EvidenceStore; safety: SafetyEventStore; ledger: CostLedger | null; encounters: EncounterStore; persistent: boolean } {
   const policy = models ? costPolicyFromConfig(models) : null;
   if (env[FAKE_MODELS_VAR] === "1") {
-    return { evidence: createMemoryEvidenceStore(), safety: createMemorySafetyStore(), ledger: policy ? createMemoryCostLedger(policy) : null, persistent: false };
+    return {
+      evidence: createMemoryEvidenceStore(), safety: createMemorySafetyStore(), ledger: policy ? createMemoryCostLedger(policy) : null,
+      encounters: createMemoryEncounterStore(), persistent: false,
+    };
   }
   return {
     evidence: createFileEvidenceStore(paths.evidence ?? DEFAULT_EVIDENCE_PATH),
     safety: createFileSafetyStore(paths.safety ?? DEFAULT_SAFETY_PATH),
     ledger: policy ? createFileCostLedger(policy, paths.costLedger ?? DEFAULT_COST_LEDGER_PATH) : null,
+    encounters: createFileEncounterStore(paths.encounters ?? DEFAULT_ENCOUNTERS_PATH),
     persistent: true,
   };
 }

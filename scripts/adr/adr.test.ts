@@ -1,4 +1,4 @@
-// docs/adr/ (F1.1b A5): exactamente 26 archivos ADR-001..ADR-026 sin huecos, con el estado que
+// docs/adr/ (F1.1b A5; A2 suma ADR-027): exactamente 27 archivos ADR-001..ADR-027 sin huecos, con el estado que
 // piden 04/05 (Aceptado si hay fila `decidida`) y la marca "enmendado (P0)" de la lista de 03 §11.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -27,13 +27,13 @@ const AMENDED = [...new Set([...amendParagraph.matchAll(/ADR-(\d{3})/g)].map((m)
 const ACCEPTED = [1, 2, 3, 22, 23, 26];
 
 describe("A5 docs/adr/", () => {
-  test("exactamente 26 archivos, todos con la forma ADR-NNN-<slug>.md", () => {
-    expect(files).toHaveLength(26);
+  test("exactamente 27 archivos, todos con la forma ADR-NNN-<slug>.md", () => {
+    expect(files).toHaveLength(27);
     for (const name of files) expect(name, name).toMatch(FILE);
   });
 
-  test("numerados 001-026 sin huecos ni repetidos", () => {
-    expect(adrs.map((a) => a.num)).toEqual(Array.from({ length: 26 }, (_, i) => i + 1));
+  test("numerados 001-027 sin huecos ni repetidos", () => {
+    expect(adrs.map((a) => a.num)).toEqual(Array.from({ length: 27 }, (_, i) => i + 1));
   });
 
   test("cada archivo abre con su número y tiene estado, decisión, alternativas y qué se resigna", () => {

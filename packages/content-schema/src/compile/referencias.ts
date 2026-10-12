@@ -115,8 +115,15 @@ export const chequearReferencias = (c: Conjunto, h: Hallazgo[]): void => {
         if (vedados.has(t.toLowerCase())) err(archivo, `${b}.temas_permitidos[${i}]`, "seguridad", `"${t}" está en la lista global de temas vedados (content/safety/topics.global.yaml)`);
       });
       efectos(b, e.efectos);
+      if (e.conversacion !== undefined) {
+        const ficha = c.conversaciones.find((x) => x.data.id === e.conversacion);
+        if (!ficha) err(archivo, `${b}.conversacion`, "referencia", `ficha de conversación "${e.conversacion}" no existe (content/conversaciones/)`);
+        else if (ficha.data.npc !== e.npc) err(archivo, `${b}.conversacion`, "referencia", `la ficha ${e.conversacion} es de ${ficha.data.npc}, no de ${e.npc ?? "una escena sin NPC"}`);
+      }
     });
   }
+
+  for (const { archivo, data: f } of c.conversaciones) npcConFicha(archivo, "npc", f.npc);
 
   for (const { archivo, data: n } of c.npcs) {
     lugar(archivo, "lugar", n.lugar);

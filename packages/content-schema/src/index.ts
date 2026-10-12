@@ -13,6 +13,7 @@ export * from "./schemas/lumi.ts";
 export * from "./schemas/aprendizaje.ts";
 export * from "./schemas/control.ts";
 export * from "./schemas/pedido.ts";
+export * from "./schemas/conversacion.ts";
 
 export { compilarContenido, compilarIncremental } from "./compile/compilar.ts";
 export type { Resultado, ResultadoIncremental } from "./compile/compilar.ts";

@@ -3,7 +3,7 @@
 // voice.turnEnd; la voz del NPC suena y bloquea el turno hasta terminar; sin micrófono, texto con el motivo.
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import type { ServerMessage } from "@lg/protocol";
-import { startAudioService, TALK_TAIL_MS, TURN_ACK_TIMEOUT_MS, type AudioService, type Schedule, type VoiceTransport } from "../src/services/audio";
+import { NPC_SAMPLE_RATE, PLAYBACK_STUCK_GRACE_MS, startAudioService, TALK_TAIL_MS, TURN_ACK_TIMEOUT_MS, type AudioService, type Schedule, type VoiceTransport } from "../src/services/audio";
 import { actions } from "../src/state/actions";
 import { gameStore } from "../src/state/store";
 import { fakeEngineFactory } from "./fake-audio";
@@ -164,6 +164,36 @@ describe("un turno hablado", () => {
     expect(s.voice().audio).toBe("ready");
     actions.voiceTalkStart();
     expect(s.outbox()).toEqual(["voice.turnStart", "voice.turnEnd", "voice.turnStart"]);
+  });
+
+  test("A2 vigía: si la cola nunca avisa que terminó (contexto trabado), vuelve a listo tras lo encolado + margen", async () => {
+    const s = await setup();
+    actions.voiceTalkStart();
+    actions.voiceTalkEnd();
+    s.timers.advance(TALK_TAIL_MS);
+    actions.sceneMessage(voiceState("npcTurn", null, 1));
+    s.transport.npc(new Int16Array(NPC_SAMPLE_RATE)); // 1 s de voz
+    s.timers.advance(500);
+    s.transport.npc(new Int16Array(NPC_SAMPLE_RATE)); // otro segundo: el vigía se reprograma (2 s + margen)
+    actions.sceneMessage(voiceState("playerTurn", "waiting", 1));
+    s.timers.advance(2000 + PLAYBACK_STUCK_GRACE_MS - 1);
+    expect(s.voice().audio).toBe("playing");
+    s.timers.advance(1);
+    expect(s.voice().audio).toBe("ready");
+    actions.voiceTalkStart();
+    expect(s.outbox()).toEqual(["voice.turnStart", "voice.turnEnd", "voice.turnStart"]);
+  });
+
+  test("A2 vigía: con el aviso normal de la cola, el vigía no dispara después", async () => {
+    const s = await setup();
+    actions.sceneMessage(voiceState("npcTurn", null, 1));
+    s.transport.npc(Int16Array.from([1, 2, 3]));
+    s.engines.last?.drain();
+    expect(s.voice().audio).toBe("ready");
+    actions.sceneMessage(voiceState("playerTurn", "waiting", 1));
+    actions.voiceTalkStart();
+    s.timers.advance(60_000);
+    expect(s.voice().audio).toBe("listening");
   });
 
   test("respuesta sin audio: al volver tu turno, de pensando a listo", async () => {

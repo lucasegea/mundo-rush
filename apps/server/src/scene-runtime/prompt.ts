@@ -110,7 +110,8 @@ export function placeholderValues(input: PromptInput): Record<string, string> {
     pass_turn_event: "a [DIRECTOR] note, never to be said aloud",
     npc_scaffold_moves: moves.length ? moves.join(" | ") : "the four moves of L7",
     npc_need: applies(scene.necesidad_npc) ?? "to have a friendly chat",
-    closing_line: firstNpc(scene.cierre_guionado) ?? "a short, kind goodbye",
+    // A2: en una conversación por medidores la línea de cierre nombra el objetivo: no entra al prompt (ADR-027).
+    closing_line: scene.conversacion ? "a short, kind goodbye (the game says the scripted closing)" : firstNpc(scene.cierre_guionado) ?? "a short, kind goodbye",
     exit_line: firstNpc(exitLines(scene)) ?? "a short, kind goodbye",
     mystery_clues_for_you: clues.length ? clues.join(" / ") : "none",
     due_review_items: "none",

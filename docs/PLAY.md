@@ -59,6 +59,48 @@ Lo que vas a ver:
 Hablá en inglés. En M0.1 la escena se cumple cuando saludás **y** decís tu nombre ("Hello! I'm Nico."); si querés
 charlar más, demorá el nombre.
 
+## 3b. Charlar con Harlan, el granjero (conversación libre, A2)
+
+Una escena **sin guion**: Harlan Moss tiene su propia vida (una ficha con hechos, secretos y lo que quiere), vos
+tenés la tuya (la de tu personaje), y ninguno sabe qué quiere el otro. Diseño: `docs/adr/ADR-027-conversacion-por-medidores.md`.
+
+**Cómo llegar.** En el mapa, Harlan está **a la derecha y hacia abajo** de donde aparecés, junto al galpón (el bloque
+grande). Acercate y **T** / **E** / click, igual que con Inés. En **Modo solo diálogo**: lugar **Granero de Harlan** →
+**Hablar con Harlan Moss**. No necesita presentación ni misiones previas.
+
+**Qué vas a ver.** Arriba del historial, el panel de la charla:
+
+- **"Conocer a Harlan"**: la barra se llena solo si hay **ida y vuelta**. Preguntale por su vida, repreguntá sobre lo
+  que te cuenta (una repregunta vale más que cambiar de tema) y **contale cosas de tu personaje** (inventadas: nombre
+  de juego, de dónde viene, la cuadrilla, qué le gusta). Si hacés dos preguntas seguidas sin contar nada tuyo, la
+  barra se frena y Harlan te pregunta a vos.
+- **"Lo que sabés de Harlan"**: se va llenando con lo que él te cuenta. Las cosas más personales las cuenta recién
+  cuando le tiene confianza.
+- **Ayuda**: si te trabás (o pasan 20 s en silencio), aparece una pista de Lumi; si seguís trabado (40 s), frases
+  sugeridas en inglés. En texto, tocá una frase y queda en la caja; en voz, leela en voz alta.
+- Cuando se llena la primera barra, se abre **"Conseguir lo que viniste a buscar"** y Harlan te pregunta qué te trae.
+  Ahí recién se puede hablar del recado. Contale a qué viniste, explicale para qué es y pedíselo con amabilidad.
+- Cuando lo logres: **"¡Harlan aceptó! Despedite o dale las gracias."** Tu próxima frase cierra la escena con la
+  línea guionada (los números nunca se muestran).
+
+**Qué probar.** Pedirle algo de entrada (no habla de negocios con un desconocido). Preguntar sin parar sin contar
+nada tuyo (frena). Hablarle en español (te pide inglés y salta la ayuda). Preguntarle por las semillas (desvía).
+Contarle algo tuyo justo después de que él te cuenta algo (suma más). A los 9 minutos Harlan se despide en su próxima respuesta (10 como tope duro). Si
+se corta antes de lograrlo, **lo que ya sabés de él queda guardado**: la próxima vez seguís desde ahí.
+
+**Reiniciar la charla con Harlan** (para jugarla de nuevo desde cero):
+
+```bash
+npm run dev:reset-farmer
+```
+
+Borra solo lo de Harlan (lo que sabías de él, las barras y que la misión estaba cumplida). El resto de tu progreso
+no se toca, y se puede correr con el juego andando: la próxima escena ya arranca de cero. Para otro NPC con ficha:
+`npm run dev:reset-encounter -- --npc NPC-X`.
+
+Sin clave (`LG_FAKE_MODELS=1`) la charla anda con un juez guionado por palabras: sirve para ver las barras y el cambio
+de fase, no para evaluar. El juez real es Gemini (rol `judge` de `apps/server/config/models.yaml`).
+
 ## 4. Si algo no anda
 
 | Síntoma | Qué pasa / qué hacer |
@@ -71,6 +113,8 @@ charlar más, demorá el nombre.
 | "No hay conexión con el servidor de escenas" | El servidor no está arriba o se cayó: mirá la terminal y volvé a correr `npm run dev:play` |
 | Puerto 5173 u 8787 ocupado | Otro proceso los usa. Para el servidor, agregá `LG_PORT=8788` al `.env` (el proxy de Vite lo sigue). 5173 es fijo: cerrá el otro Vite |
 | Inés dice que "ahora no hay nada para hacer acá" | Ya completaste M0.1: el progreso real vive en `apps/server/data/evidence.jsonl`. Para repetir la escena, **mové** ese archivo a otro nombre (no lo borres: es tu progreso) y reiniciá el servidor. Salir de una escena a la mitad no guarda nada |
+| Harlan dice que "ahora no hay nada para hacer acá" | Ya conseguiste lo que buscabas: `npm run dev:reset-farmer` y volvé a hablarle |
+| Las barras no se mueven con Harlan | El juez no respondió: mirá la terminal del servidor (dice "juez de conversación sin resultado" con el motivo, nunca tu texto). Ese intercambio no cuenta; la charla sigue |
 | Querés forzar texto | Abrí `http://127.0.0.1:5173/?voz=0` |
 | No se oye al NPC | Subí el volumen del sistema/pestaña. El audio arranca con tu primer toque a "Hablar" (política de autoplay) |
 
@@ -96,4 +140,7 @@ charlar más, demorá el nombre.
 
 `scene-runtime` expone ganchos de conversación (`apps/server/src/scene-runtime/hooks.ts`): `onSceneStart`, `onTurn`
 (cada turno del jugador y del NPC, por texto o por voz; en voz también lo que se va oyendo con `final: false`) y
-`onSceneEnd`. Se pasan a `createGameServer({ conversation })`. Un gancho que tira no corta la escena.
+`onSceneEnd`. Se pasan a `createGameServer({ conversation })`. Un gancho que tira (o un gancho async cuya promesa
+rechaza) no corta la escena. A2: `onSceneStart` recibe además la ficha de conversación de la escena y un `control`
+(`setNpcBrief`, `sendState`, `complete`); el sistema de medidores (`apps/server/src/conversation/`) es un sistema de
+estos, enchufado por defecto cuando el servidor tiene juez y almacén de encuentros.

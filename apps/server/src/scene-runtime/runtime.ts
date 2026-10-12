@@ -10,6 +10,9 @@
 // jugador, lo pasa de solo lectura al observador y lo libera al terminar o a los 10 s); modera la salida (no el
 // adaptador); cierra la sesión al entrar a `closing` (hardCap incluido: la línea de cierre es la guionada) y registra el
 // costo de cada `usage` en el CostLedger. Si la voz no abre o se pierde, la misma escena sigue por texto.
+// A2 (ADR-027): una escena con `conversacion` la mide un sistema de medidores enchufado por los ganchos (hooks.ts). Ese
+// sistema cambia la nota del NPC (en voz, reabre la sesión con la instrucción nueva y el historial en un punto seguro),
+// manda su estado al HUD y pide el cierre; los criterios del observador no cierran esas escenas (seguridad y evidencia sí).
 import { randomUUID } from "node:crypto";
 import {
   applyCriteriaReports, criteriaSatisfied, emptyCriteria, initialSceneSnapshot, metCriteriaIds, resolveScene,
@@ -21,7 +24,7 @@ import {
   ClientMessageSchema, ServerMessageSchema,
   type ClientMessage, type EvidenceEvent, type ServerMessage,
 } from "@lg/protocol";
-import type { Escena, LineaGuionada, Mision, Npc } from "@lg/content-schema";
+import type { Escena, FichaConversacion, LineaGuionada, Mision, Npc } from "@lg/content-schema";
 import type { ServerContent } from "../content/loader.ts";
 import type { ModelsConfig } from "../config/models.ts";
 import { runObserver } from "../observer/observer.ts";
@@ -33,10 +36,10 @@ import { createMemorySafetyStore, type SafetyEventStore } from "../store/safety.
 import { costPolicyFromConfig, createMemoryCostLedger, type CostAlert, type CostLedger } from "../cost/ledger.ts";
 import type { CloseReason, RealtimeVoiceProvider, SceneVoiceSetup, VoiceEvent, VoiceProviderFactory } from "../providers/types.ts";
 import { applies, exitLines, isNpcLine, openingLines, readCatalog, renderScriptedText, type Catalog } from "./catalog.ts";
-import { foldProgress, type OperatorProgress } from "./progress.ts";
+import { foldProgress, withoutResets, type MissionReset, type OperatorProgress } from "./progress.ts";
 import { buildNpcPrompt } from "./prompt.ts";
 import { createTurnClip, readOnly, type TurnClip, type TurnClipView } from "./turn-clip.ts";
-import { callHook, type ConversationHooks } from "./hooks.ts";
+import { callHook, type ConversationHooks, type ConversationSceneControl } from "./hooks.ts";
 
 /** Línea guionada de un NPC que pide presentación y nadie lo presentó (02 §1.7). */
 export const NOT_INTRODUCED_LINE = "Hi! Do I know you?";
@@ -47,6 +50,10 @@ const DIRECTOR_NOTES = {
   continue: "[DIRECTOR] Continue the conversation without waiting for an answer; give the player an easy yes/no question.",
 } as const;
 const SCENE_START_NOTE = "[DIRECTOR] The scene starts now.";
+/** A2: si la sesión de voz nueva no abre, la nota del NPC actualizada entra a la sesión vigente como contexto. */
+const BRIEF_UPDATE_NOTE = "[DIRECTOR] Updated scene notes. Follow them from now on and never say them aloud:";
+/** Turno del modelo que cierra el historial inyectado: con el modelo al final, la sesión no genera nada. */
+const QUIET_MODEL_TURN = "Hm.";
 
 export interface Scheduler {
   /** Programa `fn` en `ms`; devuelve la cancelación. */
@@ -87,6 +94,8 @@ export interface SceneDeps {
   onTurnClip?: (clip: TurnClipView) => void;
   /** F5.2: ganchos de conversación (hooks.ts): arranque, cada turno de jugador y NPC, y fin de la escena. */
   conversation?: ConversationHooks;
+  /** A2: reinicios de desarrollo de misiones de la cuenta (store/encounters.ts); su evidencia previa no cuenta. */
+  resets?: () => readonly MissionReset[];
 }
 
 export interface SceneSession {
@@ -131,6 +140,20 @@ interface Run {
   moderator: Moderator;
   /** Sesión de voz de la escena (null en texto, o después de cerrarla o perderla). */
   voice: VoiceRun | null;
+  /** A2: ficha de conversación por medidores de la escena (o null). */
+  conversation: FichaConversacion | null;
+  /** Prompt del NPC sin la nota del sistema de conversación; `system` = base + nota. */
+  baseSystem: string | null;
+  brief: string | null;
+  /** El sistema de conversación pidió el cierre: el próximo `npcTurn` decide criteriaMet (03 §3.5.1). */
+  completePending: boolean;
+  /** Sesión de voz nueva abriéndose con la instrucción actualizada (se cambia en el próximo punto seguro). */
+  voiceSwap: VoiceSwap | null;
+}
+
+interface VoiceSwap {
+  run: VoiceRun;
+  state: "opening" | "ready" | "failed";
 }
 
 interface Deferred<T> {
@@ -167,6 +190,8 @@ interface VoiceRun {
   provider: RealtimeVoiceProvider;
   opened: boolean;
   openedAt: number;
+  /** Instrucción de sistema con la que se abrió (o que se le inyectó como nota). */
+  system: string;
   /** Turno del jugador abierto (entre voice.turnStart y el commit). */
   speaking: VoiceTurn | null;
   turns: Map<string, VoiceTurn>;
@@ -314,6 +339,8 @@ export function createSceneSession(
       if (input.action !== "allow") return safetyStop(r, input);
       addTranscript(r, "player", playerText);
     }
+    // A2: el objetivo ya se cumplió: este turno del jugador (la despedida) cierra la escena con la línea guionada.
+    if (r.completePending) return dispatch({ type: "criteriaMet" });
     // El observador corre mientras el NPC responde (03 §5.6); la decisión se toma con los dos resultados.
     const observing = playerText === null ? Promise.resolve(null) : runObserver(deps.observerModel, {
       turnId: `${r.sceneRunId}:${turn}`, playerText, lastNpcLine: r.lastNpcLine,
@@ -344,7 +371,7 @@ export function createSceneSession(
     } else if (reply) {
       send({ type: "scene.notice", code: "model_unavailable", message: "El NPC no pudo responder (modelo no disponible)." });
     }
-    dispatch({ type: "npcDone" });
+    dispatch(r.completePending ? { type: "criteriaMet" } : { type: "npcDone" });
   }
 
   /**
@@ -361,7 +388,8 @@ export function createSceneSession(
       for (const ev of obs.result.evidence) {
         if (structures.includes(ev.structureId)) appendEvidence(r, { kind: ev.kind, structureId: ev.structureId, branch: ev.branch, quote: ev.quote });
       }
-      if (criteriaSatisfied(r.criteriaDefs, r.criteria)) return "criteria";
+      // A2: una escena de conversación por medidores la cierra el sistema de medidores, no los criterios del observador.
+      if (!r.conversation && criteriaSatisfied(r.criteriaDefs, r.criteria)) return "criteria";
     } else if (obs) {
       send({ type: "scene.notice", code: "observer_invalid", message: "El observador no devolvió un resultado válido; el turno sigue sin evaluar." });
     }
@@ -411,12 +439,15 @@ export function createSceneSession(
   /** Abre la sesión de voz durante la pretarea; si no abre, la escena sigue por texto (sceneFailed). */
   function openVoice(r: Run, v: VoiceRun): void {
     const gen = r.generation;
-    track(v.provider.open(voiceSetup(r)).then(() => {
+    const setup = voiceSetup(r);
+    v.system = setup.systemInstruction;
+    track(v.provider.open(setup).then(() => {
       if (run !== r || r.generation !== gen || r.voice !== v) return void v.provider.close("abort");
       v.opened = true;
       v.openedAt = deps.clock.now();
       // La apertura guionada ya dicha entra como turno previo del modelo: no dispara una respuesta (P0 §4.2).
       if (r.openingTurn) v.provider.injectContext([{ role: "user", text: SCENE_START_NOTE }, { role: "model", text: r.openingTurn }]);
+      if (v.system !== (r.system ?? "")) refreshVoice(r); // la nota cambió mientras abría
       dispatch({ type: "sceneReady" });
     }, () => {
       if (run !== r || r.voice !== v) return;
@@ -428,6 +459,7 @@ export function createSceneSession(
 
   /** Cierra la sesión de voz: libera los clips, cierra el adaptador y escribe la fila de costo de la escena. */
   function closeVoice(r: Run, reason: CloseReason): void {
+    dropVoiceSwap(r);
     const v = r.voice;
     if (!v) return;
     r.voice = null;
@@ -449,6 +481,80 @@ export function createSceneSession(
     } catch (err) {
       deps.onCostError?.(err instanceof Error ? err.message : "error del libro de costos");
     }
+  }
+
+  // ---------- A2: nota del NPC actualizada en voz (ADR-027 "Cambio de fase en Live") ----------
+  // Live no deja cambiar la instrucción de sistema de una sesión abierta. Se abre una sesión NUEVA con la instrucción
+  // actualizada mientras la escena sigue en la vieja; en el próximo punto seguro (turno del jugador esperando, nadie
+  // hablando) se le inyecta el historial de la escena terminado en un turno del modelo (no genera nada) y se cambia.
+  // El reloj de costo sigue el de la primera sesión: la escena tiene UNA fila de costo. Si la nueva no abre, la nota
+  // entra a la sesión vigente como contexto [DIRECTOR] (también terminado en un turno del modelo).
+
+  function dropVoiceSwap(r: Run): void {
+    const swap = r.voiceSwap;
+    r.voiceSwap = null;
+    if (swap) track(swap.run.provider.close("abort").catch(() => {}));
+  }
+
+  function refreshVoice(r: Run): void {
+    const v = r.voice;
+    const factory = deps.voice;
+    if (!v?.opened || !factory || snap.ctx.modality !== "voice") return;
+    const system = r.system ?? "";
+    if (r.voiceSwap) {
+      if (r.voiceSwap.run.system === system) return;
+      dropVoiceSwap(r); // una nota más nueva: la sesión que abría ya quedó vieja
+    }
+    if (v.system === system) return;
+    const provider = factory();
+    const next: VoiceRun = { provider, opened: false, openedAt: v.openedAt, system, speaking: null, turns: new Map() };
+    provider.on((ev) => onVoiceEvent(r, next, ev));
+    const swap: VoiceSwap = { run: next, state: "opening" };
+    r.voiceSwap = swap;
+    const gen = r.generation;
+    track(provider.open(voiceSetup(r)).then(() => {
+      if (run !== r || r.generation !== gen || r.voiceSwap !== swap) return void provider.close("abort").catch(() => {});
+      swap.state = "ready";
+      trySwapVoice(r);
+    }, () => {
+      if (r.voiceSwap !== swap) return;
+      swap.state = "failed";
+      trySwapVoice(r);
+    }));
+  }
+
+  /** Historial de la escena para la sesión nueva, terminado en un turno del modelo (así no genera una respuesta). */
+  const historyForSwap = (r: Run): TextTurn[] => {
+    const turns = modelTurns(r, null);
+    if (turns[turns.length - 1]?.role !== "model") turns.push({ role: "model", text: QUIET_MODEL_TURN });
+    return turns;
+  };
+
+  function trySwapVoice(r: Run): void {
+    const swap = r.voiceSwap;
+    const old = r.voice;
+    if (!swap || swap.state === "opening" || !old) return;
+    if (snap.state !== "playerTurn" || snap.sub !== "waiting" || old.speaking) return; // punto seguro
+    r.voiceSwap = null;
+    if (swap.state === "failed") {
+      old.provider.injectContext([{ role: "user", text: `${BRIEF_UPDATE_NOTE}\n${r.brief ?? ""}` }, { role: "model", text: QUIET_MODEL_TURN }]);
+      old.system = r.system ?? "";
+      return;
+    }
+    if (swap.run.system !== (r.system ?? "")) {
+      track(swap.run.provider.close("abort").catch(() => {}));
+      return refreshVoice(r);
+    }
+    swap.run.provider.injectContext(historyForSwap(r));
+    swap.run.opened = true;
+    r.voice = swap.run;
+    for (const t of old.turns.values()) {
+      releaseClip(t);
+      t.transcript.resolve("");
+      t.npcDone.resolve(false);
+    }
+    // Sin ledger.closeScene: la fila de costo de la escena la escribe closeVoice al final, con el reloj de la primera.
+    track(old.provider.close("done").catch(() => {}));
   }
 
   function onVoiceEvent(r: Run, v: VoiceRun, ev: VoiceEvent): void {
@@ -523,6 +629,11 @@ export function createSceneSession(
           addTranscript(r, "player", playerText);
         }
         sendHeard(t, playerText, true); // "" = no se oyó nada (el cliente lo dice)
+        // A2: el objetivo ya se cumplió: la despedida del jugador cierra la escena (el audio del NPC ya está cortado).
+        if (r.completePending) {
+          t.cut = true;
+          return dispatch({ type: "criteriaMet" });
+        }
         const obs = await runObserver(deps.observerModel, {
           turnId: t.turnId, playerText, lastNpcLine: r.lastNpcLine, criteria: r.scene.criterios_exito, structures,
           cefrBand: r.scene.banda, audio: readOnly(t.clip),
@@ -540,7 +651,7 @@ export function createSceneSession(
       if (verdict === "inappropriate") return safetyStop(r, { action: "cut", layer: "observer", category: "observador" });
       const text = (t.npcFinal ?? t.npcText.join("")).trim();
       if (spoke && text !== "" && !t.cut && !(await speakModerated(r, text, still))) return;
-      dispatch(verdict === "criteria" ? { type: "criteriaMet" } : { type: "npcDone" });
+      dispatch(verdict === "criteria" || r.completePending ? { type: "criteriaMet" } : { type: "npcDone" });
     } finally {
       releaseClip(t);
     }
@@ -568,6 +679,7 @@ export function createSceneSession(
       return releaseClip(t);
     }
     t.cancelClipTimer = scheduler.schedule(deps.models.voice.clipTtlMs, () => releaseClip(t));
+    if (r.completePending) t.cut = true; // A2: la respuesta del modelo no se oye; sigue el cierre guionado
     v.provider.endTurn(t.turnId);
     track(processVoiceTurn(r, t));
   }
@@ -575,6 +687,7 @@ export function createSceneSession(
   /** Pase con nota [DIRECTOR] en voz: el modelo responde a la nota, sin turno hablado. */
   function directorReply(r: Run, v: VoiceRun, note: "simpler" | "continue"): void {
     const t = newVoiceTurn(r, snap.ctx.turnIndex, false);
+    if (r.completePending) t.cut = true;
     v.turns.set(t.turnId, t);
     v.provider.injectContext([{ role: "user", text: DIRECTOR_NOTES[note] }], t.turnId);
     track(processVoiceTurn(r, t));
@@ -584,7 +697,10 @@ export function createSceneSession(
 
   const finish = (r: Run, outcome: "success" | "partial" | "hardCap" | "containment"): void => {
     const criteriaMet = metCriteriaIds(r.criteriaDefs, r.criteria);
-    if (outcome !== "containment") {
+    // A2: una conversación por medidores sin éxito no cierra la misión: queda abierta y lo conocido se conserva (el
+    // estado del encuentro lo guarda su sistema), así la próxima visita sigue desde ahí.
+    const keepOpen = r.conversation !== null && outcome !== "success";
+    if (outcome !== "containment" && !keepOpen) {
       // Cerrar sin criterios (no converge / tope duro) igual deja el mundo como dice la ficha (salida_si_no_converge):
       // el jugador nunca "pierde" la escena (02 §3.2 G3; invariante d).
       const effects = sceneCloseEffects(r.mission, r.scene.escena_id, r.progress.story);
@@ -608,7 +724,10 @@ export function createSceneSession(
         return;
       }
       case "startClock": {
-        const { softCapMs, hardCapMs } = deps.models.scene;
+        // Topes propios de la escena (una conversación libre necesita más aire) o los de models.yaml.
+        const topes = r.scene.topes;
+        const softCapMs = topes ? topes.suave_s * 1000 : deps.models.scene.softCapMs;
+        const hardCapMs = topes ? topes.duro_s * 1000 : deps.models.scene.hardCapMs;
         r.cancelCaps = [
           scheduler.schedule(softCapMs, () => dispatch({ type: "softCap" })),
           scheduler.schedule(hardCapMs, () => dispatch({ type: "hardCap" })),
@@ -701,6 +820,7 @@ export function createSceneSession(
         snap = t.snapshot;
         sendState();
         for (const eff of t.effects) runEffect(r, eff);
+        if (r.voiceSwap && snap.state === "playerTurn" && snap.sub === "waiting") trySwapVoice(r);
         const auto = AUTO_DONE[snap.state];
         if (auto && snap.state !== prev) queue.push(auto);
       }
@@ -716,7 +836,7 @@ export function createSceneSession(
     const catalog = readCatalog(deps.content());
     const npc = npcId === null ? null : catalog.npc(npcId) ?? null;
     if (npcId !== null && !npc) return fail("unknown_npc", "No existe ese NPC.");
-    const progress = foldProgress(deps.evidence.list(deps.accountId), catalog);
+    const progress = foldProgress(withoutResets(deps.evidence.list(deps.accountId), deps.resets?.() ?? []), catalog);
     const res = resolveScene(catalog.missions, npc, progress.story);
     if (res.kind === "notIntroduced") {
       send({ type: "npc.line", line: { lineId: newId(), speaker: res.npcId, kind: "notIntroduced", text: NOT_INTRODUCED_LINE, template: null } });
@@ -730,9 +850,11 @@ export function createSceneSession(
       catalog, npc, scene, world: progress.world,
       introducedBy: intro && progress.story.intros.includes(npc.id) ? intro.presentado_por : null,
     }) : null;
+    const conversation = scene.conversacion ? catalog.conversation(scene.conversacion) ?? null : null;
     run = {
       catalog, mission, scene, npc, sceneRunId: newId(), progress,
       system: built?.system ?? null, openingTurn: built?.openingAsModelTurn ?? null,
+      conversation, baseSystem: built?.system ?? null, brief: null, completePending: false, voiceSwap: null,
       criteriaDefs: scene.criterios_exito.map((c) => ({ id: c.id, optional: c.opcional })),
       criteria: emptyCriteria(), transcript: [], evidence: [], lastNpcLine: null, pendingText: null,
       generation: 0, cancelCaps: [], cancelTurnTimer: null,
@@ -745,7 +867,7 @@ export function createSceneSession(
     if (wanted === "voice" && npc) {
       if (deps.voice) {
         const provider = deps.voice();
-        const v: VoiceRun = { provider, opened: false, openedAt: 0, speaking: null, turns: new Map() };
+        const v: VoiceRun = { provider, opened: false, openedAt: 0, system: "", speaking: null, turns: new Map() };
         const r = run;
         provider.on((ev) => onVoiceEvent(r, v, ev));
         run.voice = v;
@@ -756,7 +878,25 @@ export function createSceneSession(
     }
     snap = initialSceneSnapshot();
     send({ type: "scene.opened", sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality });
-    callHook(deps.conversation, deps.conversation?.onSceneStart, { sceneRunId: run.sceneRunId, missionId: mission.id, sceneId: scene.escena_id, npcId, modality });
+    const r = run;
+    const live = (): boolean => run === r && (snap.state === "idle" || ACTIVE_RUN.includes(snap.state));
+    const control: ConversationSceneControl = {
+      setNpcBrief(block) {
+        if (!live()) return;
+        r.brief = block;
+        r.system = r.baseSystem === null ? null : block ? `${r.baseSystem}\n\n${block}` : r.baseSystem;
+        refreshVoice(r);
+      },
+      complete() {
+        if (live()) r.completePending = true;
+      },
+      sendState(view) {
+        if (run === r) send({ type: "conversation.state", ...view });
+      },
+    };
+    callHook(deps.conversation, deps.conversation?.onSceneStart, {
+      sceneRunId: run.sceneRunId, accountId: deps.accountId, missionId: mission.id, sceneId: scene.escena_id, npcId, npcName: npc?.nombre ?? null, modality, conversation,
+    }, control);
     dispatch({ type: "interact", npcId, sceneId: scene.escena_id, modality });
   }
 

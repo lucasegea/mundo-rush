@@ -130,7 +130,38 @@ export const NOTICE_CODES = ["observer_invalid", "model_unavailable", "containme
 /** `not_voice`: un mensaje o frame de voz en una escena que no está en modo voz. */
 export const ERROR_CODES = ["bad_message", "not_implemented", "scene_busy", "no_scene", "unknown_npc", "not_your_turn", "not_voice"] as const;
 
+/**
+ * A2 (ADR-027): estado de la conversación por medidores para el HUD. Sin números: cada barra es un ancho 0..1 y su
+ * estado; los hechos son las etiquetas en español de "Lo que sabés de…"; la ayuda es el escalón que decidió el servidor
+ * (el cliente puede subirlo con su reloj de silencio) y su contenido. `completed`: el objetivo se cumplió y la escena
+ * cierra en el próximo turno del jugador.
+ */
+export const CONVERSATION_NOTICES = ["early_errand", "real_data", "l1"] as const;
+export const ConversationStateSchema = z.strictObject({
+  type: z.literal("conversation.state"),
+  npcName: z.string().min(1).max(80),
+  activeMeter: z.string().min(1).nullable(),
+  meters: z.array(z.strictObject({
+    id: z.string().min(1),
+    kind: z.enum(["rapport", "request", "persuasion", "negotiation"]),
+    label: z.string().min(1).max(80),
+    fill: z.number().min(0).max(1),
+    status: z.enum(["active", "locked", "full"]),
+  })).max(6),
+  facts: z.array(z.strictObject({ id: z.string().min(1), label: z.string().min(1).max(120) })).max(40),
+  stalled: z.boolean(),
+  notice: z.enum(CONVERSATION_NOTICES).nullable(),
+  help: z.strictObject({
+    level: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+    hint: z.string().max(300).nullable(),
+    phrases: z.array(z.string().min(1).max(120)).max(4),
+  }),
+  completed: z.boolean(),
+});
+export type ConversationStateMessage = z.infer<typeof ConversationStateSchema>;
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
+  ConversationStateSchema,
   z.strictObject({
     type: z.literal("scene.opened"),
     sceneRunId: z.string().min(1), missionId: MissionId, sceneId: SceneId, npcId: NpcId.nullable(),

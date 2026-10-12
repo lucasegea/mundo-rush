@@ -5,6 +5,10 @@
 roles:
   textNpc:  { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 256, timeoutMs: 8000 }
   observer: { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 1024, timeoutMs: 4000 }
+  # A2 (ADR-027): juez de la conversación por medidores. Solo ETIQUETA el intercambio (JSON de listas cerradas). Corre
+  # después de que el NPC respondió (no frena la respuesta): por eso tiene más tiempo. 2048 tokens: 2.5 Flash piensa y el
+  # pensamiento cuenta contra el tope (un tope chico trunca el JSON).
+  judge:    { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 2048, timeoutMs: 10000 }
   # F5.1a: voz del NPC por Gemini Live (D-093: el modelo de un prototipo de voz anterior, listado según P0 §4.1). Id sin validar contra
   # el proveedor al arrancar (sin clave no se puede; ADR-018 enmendado por P0).
   npcVoice: { provider: gemini-live, model: "gemini-3.1-flash-live-preview", openTimeoutMs: 10000, maxReconnects: 2 }
@@ -17,7 +21,7 @@ voice:
   # inputAudioTranscription). El observador recibe además, siempre, el clip de audio del turno (D-095).
   observer: { source: adapter }
   # Voces prebuilt por NPC (nombre del proveedor); sin entrada, la de `default`. Se eligen por oído (Sección D).
-  voices: { default: "Aoede", byNpc: {} }
+  voices: { default: "Aoede", byNpc: { NPC-HARLAN: "Charon" } }
   languageCode: "en-US"
   # El clip del turno se libera al terminar el observador o a los 10 s (P0 §4.3).
   clipTtlMs: 10000

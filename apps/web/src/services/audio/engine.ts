@@ -5,7 +5,7 @@
 // de playback.ts. Se carga por import() diferido con la primera escena de voz: nada de esto entra al chunk inicial.
 import type { MicProblem } from "../../state/slices";
 import { createCaptureFramer, type CaptureFrame } from "./dsp";
-import { createPlaybackQueue, type PlaybackContext } from "./playback";
+import { createPlaybackQueue, resumeIfSuspended, type PlaybackContext } from "./playback";
 import type { AudioEngine, MicResult } from "./types";
 import captureWorkletUrl from "./capture.worklet.ts?worker&url";
 
@@ -84,7 +84,11 @@ export async function createBrowserAudioEngine(): Promise<AudioEngine> {
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
     },
     play(pcm16, sampleRate) {
-      if (!closed) queue.push(pcm16, sampleRate);
+      if (closed) return;
+      // Un AudioContext suspendido (sin gesto todavía, o suspendido por el navegador) no avanza: la cola nunca se vacía
+      // y el cliente quedaría "sonando" para siempre. Se intenta reanudar acá; el servicio tiene además un vigía.
+      resumeIfSuspended(ctx);
+      queue.push(pcm16, sampleRate);
     },
     stopPlayback() {
       queue.stop();

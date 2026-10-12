@@ -32,6 +32,20 @@ export interface PlaybackQueue {
   readonly playing: boolean;
 }
 
+/** Lo que hace falta de un AudioContext para reanudarlo. */
+export interface ResumableContext {
+  readonly state: string;
+  resume(): Promise<void>;
+}
+
+/**
+ * A2: un AudioContext suspendido no avanza su reloj: lo encolado nunca suena ni avisa que terminó. Se reanuda al
+ * reproducir (además de en el gesto de "Hablar"); si el navegador lo rechaza, el vigía del servicio libera el turno.
+ */
+export function resumeIfSuspended(ctx: ResumableContext): void {
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+}
+
 /** Margen antes del primer bloque de una tirada (s). */
 export const PLAYBACK_LEAD_S = 0.08;
 

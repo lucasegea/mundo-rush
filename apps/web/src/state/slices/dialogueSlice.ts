@@ -2,7 +2,7 @@
 // (F4.2) necesita para mostrarla. Lo llena el servicio de escena (services/scene) con los mensajes del protocolo; la UI
 // pide cosas con acciones, que dejan comandos en `outbox` para que el servicio los mande (R5: la red vive en services/).
 import type { NpcSpeed } from "@lg/core";
-import type { ClientMessage } from "@lg/protocol";
+import type { ClientMessage, ConversationStateMessage } from "@lg/protocol";
 
 /** Una línea del historial. `template`: id de plantilla de Lumi (su texto sale del contenido, nunca del modelo). */
 export interface DialogueLine {
@@ -61,6 +61,9 @@ export interface Lexicon {
   lumi: Record<string, string>;
 }
 
+/** A2 (ADR-027): estado de la conversación por medidores tal como lo manda el servidor (sin números: anchos 0..1). */
+export type ConversationUi = Omit<ConversationStateMessage, "type">;
+
 export interface DialogueState {
   /** Pedido de escena de la UI (`seq` cambia en cada pedido); null = sin escena pedida. */
   request: { seq: number; npcId: string | null } | null;
@@ -94,6 +97,8 @@ export interface DialogueState {
   lexicon: Lexicon;
   /** F5.2: voz del jugador (micrófono, turno hablado, medidor). */
   voice: VoiceUi;
+  /** A2: medidores de la escena de conversación libre (null en las escenas guionadas). */
+  conversation: ConversationUi | null;
 }
 
 /** No se persiste: la escena se reanuda desde su inicio (GDD §2.16). */
@@ -132,4 +137,5 @@ export const initialDialogue = (): DialogueState => ({
   notice: null,
   lexicon: initialLexicon(),
   voice: initialVoiceUi(),
+  conversation: null,
 });

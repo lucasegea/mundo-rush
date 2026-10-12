@@ -11,6 +11,10 @@
     "./scene": {
       "types": "./src/scene/index.ts",
       "default": "./src/scene/index.ts"
+    },
+    "./conversation": {
+      "types": "./src/conversation/index.ts",
+      "default": "./src/conversation/index.ts"
     }
   },
   "types": "./src/index.ts"

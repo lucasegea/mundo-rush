@@ -3,7 +3,7 @@
 // (03 §8.3, D-131). Una palabra sin entrada visible no tiene traducción (D-068): la UI ofrece marcarla.
 import { glossaryKey, glossaryVisibility, HINT_CHIP_DELAY_MS, isGlossaryDisplay, plainTemplateText, tokenizeLine, type LineToken } from "@lg/core";
 import type { GameState } from "../store";
-import type { DialogueLine, Lexicon, MicProblem } from "../slices";
+import type { ConversationUi, DialogueLine, Lexicon, MicProblem } from "../slices";
 import { createViewSelector } from "./view";
 
 export interface DialogueView {
@@ -86,7 +86,14 @@ export interface DialogueHudView {
   micProblem: MicProblem | null;
   /** F5.2: el micrófono se perdió con la escena en voz (hay que salir y volver a entrar). */
   micLost: boolean;
+  /** A2 (ADR-027): medidores de la conversación libre (null en escenas guionadas). */
+  conversation: ConversationUi | null;
+  /** Silencio en `waiting` para subir la escalera de ayuda del lado del cliente: [pista, frases] en ms. */
+  conversationHelpIdleMs: readonly [number, number];
 }
+
+/** A2: el cliente sube la ayuda sola si el jugador no dice nada (el servidor la sube por turnos sin progreso). */
+export const CONVERSATION_HELP_IDLE_MS = [20000, 40000] as const;
 
 const glossaryCache = new WeakMap<Lexicon, Record<string, GlossaryView>>();
 
@@ -189,6 +196,8 @@ export const selectDialogueHudView = createViewSelector(
       voice: voiceView(d),
       micProblem: d.modality === "text" ? d.voice.micProblem : null,
       micLost: d.modality === "voice" && d.sceneId !== null && d.voice.audio === "noPermission",
+      conversation: d.conversation,
+      conversationHelpIdleMs: CONVERSATION_HELP_IDLE_MS,
     };
   },
 );

@@ -20,7 +20,9 @@ export default defineConfig({
         // F4.1: máquina de escena, criterios y efectos de misión.
         "src/scene/**/*.ts",
         // F4.2: reglas del HUD de diálogo (glosario por build, palabras tocables).
-        "src/dialogue/**/*.ts"],
+        "src/dialogue/**/*.ts",
+        // A2: medidores de conversación (ADR-027).
+        "src/conversation/**/*.ts"],
       reporter: ["text", "json-summary"],
       reportsDirectory: "./coverage/core",
       thresholds: { lines: 90 },

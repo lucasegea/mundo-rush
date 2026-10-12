@@ -73,5 +73,7 @@ props:
 npcs:
   - { id: NPC-NELL, spawn: [-3, 0, 7] }
   - { id: NPC-INES, spawn: [6, 0, -1.5] }
+  # A2 (ADR-027): Harlan en su porche junto al galpón, para la conversación por medidores de M9.1.
+  - { id: NPC-HARLAN, spawn: [7.5, 0, 6] }
 no_caminable:
   - { poligono: [[6, -8], [10, -8], [10, -4], [6, -4]] }

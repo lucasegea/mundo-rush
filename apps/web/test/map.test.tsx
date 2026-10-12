@@ -87,7 +87,7 @@ describe("carga del diorama de prueba", () => {
     expect(view.diorama?.id).toBe("test");
     expect(view.diorama?.layers.map((l) => l.name)).toEqual(["suelo", "detalle"]);
     expect(view.diorama?.boxes.length).toBeGreaterThan(4);
-    expect(view.actors.map((a) => a.id).sort()).toEqual(["NPC-INES", "NPC-NELL"]);
+    expect(view.actors.map((a) => a.id).sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-NELL"]);
     // Los NPCs llevan el nombre del catálogo (no el id).
     expect(view.actors.every((a) => a.name !== a.id)).toBe(true);
     expect(pos()).toEqual({ x: 0.5, z: 3 });

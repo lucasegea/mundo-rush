@@ -21,7 +21,7 @@ describe("catálogo de solo-diálogo sobre la salida real de F1.2", () => {
     expect(c.regionName).toBe("Región 1: Los Campos y El Cruce");
     expect(c.places.length).toBeGreaterThan(10);
     expect(c.places.find((p) => p.id === "campos.parada")).toMatchObject({ name: "Parada del colectivo", en: "Welcome to Kestrel Valley", diorama: "muelle" });
-    expect(c.npcs.map((n) => n.id).sort()).toEqual(["NPC-INES", "NPC-KOFI", "NPC-MAYA", "NPC-NELL", "NPC-OLLIE"]);
+    expect(c.npcs.map((n) => n.id).sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-KOFI", "NPC-MAYA", "NPC-NELL", "NPC-OLLIE"]);
     const ids = new Set(c.places.map((p) => p.id));
     for (const n of c.npcs) expect(ids.has(n.placeId), n.id).toBe(true);
   });

@@ -1,7 +1,7 @@
 // F5.2: máquina de estados del audio del cliente (sin permiso / listo / escuchando / pensando / reproduciendo) y la cola
 // de reproducción de la voz del NPC con un AudioContext falso (sin Web Audio).
 import { describe, expect, test } from "vitest";
-import { audioTransition, canTalk, createPlaybackQueue, type AudioEvent, type AudioState, type PlaybackContext } from "../src/services/audio";
+import { audioTransition, canTalk, createPlaybackQueue, resumeIfSuspended, type AudioEvent, type AudioState, type PlaybackContext } from "../src/services/audio";
 
 const run = (events: AudioEvent[], from: AudioState = "off"): AudioState[] => {
   const out: AudioState[] = [];
@@ -122,5 +122,16 @@ describe("cola de reproducción", () => {
     ctx.end(0);
     expect(drained).toBe(0);
     expect(q.playing).toBe(false);
+  });
+});
+
+describe("A2: reanudar el AudioContext al reproducir", () => {
+  test("suspendido: se reanuda; corriendo: no; un rechazo del navegador no sale", async () => {
+    let resumes = 0;
+    const suspended = { state: "suspended", resume: () => { resumes++; return Promise.reject(new Error("sin gesto")); } };
+    resumeIfSuspended(suspended);
+    resumeIfSuspended({ state: "running", resume: () => { resumes += 10; return Promise.resolve(); } });
+    await Promise.resolve();
+    expect(resumes).toBe(1);
   });
 });

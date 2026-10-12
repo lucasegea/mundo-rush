@@ -15,3 +15,9 @@ export type { EvidenceStore } from "./store/evidence.ts";
 export { loadModelsConfig, MODELS_CONFIG_PATH } from "./config/models.ts";
 export type { ModelsConfig } from "./config/models.ts";
 export type { TextModelProvider, TextRequest, TextResponse } from "./providers/text.ts";
+// A2 (ADR-027): conversación por medidores (juez + motor puro de @lg/core/conversation) y su almacén de encuentros.
+export type { ConversationSceneControl } from "./scene-runtime/hooks.ts";
+export { createConversationSystem } from "./conversation/system.ts";
+export type { ConversationSystem, ConversationSystemDeps } from "./conversation/system.ts";
+export { createFileEncounterStore, createMemoryEncounterStore, DEFAULT_ENCOUNTERS_PATH } from "./store/encounters.ts";
+export type { EncounterStore, MissionResetRecord } from "./store/encounters.ts";

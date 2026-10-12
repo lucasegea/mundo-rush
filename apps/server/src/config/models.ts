@@ -35,7 +35,8 @@ export const PricesSchema = z.strictObject({
 export type Prices = z.infer<typeof PricesSchema>;
 
 export const ModelsConfigSchema = z.strictObject({
-  roles: z.strictObject({ textNpc: Role, observer: Role, npcVoice: VoiceRole }),
+  /** A2 (ADR-027): `judge` etiqueta cada intercambio de una conversación por medidores (JSON; el código suma). */
+  roles: z.strictObject({ textNpc: Role, observer: Role, judge: Role, npcVoice: VoiceRole }),
   voice: z.strictObject({
     npc: z.strictObject({ adapter: z.enum(["live", "cascade"]) }),
     observer: z.strictObject({ source: z.enum(["adapter"]) }),

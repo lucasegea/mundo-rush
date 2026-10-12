@@ -59,6 +59,8 @@ export const vistaServidor = (c: Conjunto, modo: Modo): Salida => ({
   "niveles.json": c.niveles.map((n) => n.data),
   "dioramas.json": c.dioramas.map((d) => d.data),
   "prompts.json": c.prompts,
+  // ADR-027: fichas de conversación (persona, hechos, objetivo): solo servidor; el HUD recibe las etiquetas por el protocolo.
+  "conversaciones.json": c.conversaciones.map((f) => f.data),
   // F4.2: las listas también moderan en runtime (entrada del jugador y salida del NPC) y la contención (D-112).
   "seguridad.json": { temas: c.temas, listas: c.bloqueos.map((b) => b.data), contencion: c.contencion },
 });

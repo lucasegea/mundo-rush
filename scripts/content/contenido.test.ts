@@ -88,8 +88,8 @@ const filasDe02 = () => {
 
 describe("A3: conjuntos exactos y lo retirado", () => {
   test("misiones y NPCs exactos", () => {
-    expect(base.conjunto.misiones.map((m) => m.data.id).sort()).toEqual(["M0.1", "M0.2", "M0.3", "M1.1", "M1.2"]);
-    expect(base.conjunto.npcs.map((n) => n.data.id).sort()).toEqual(["NPC-INES", "NPC-KOFI", "NPC-MAYA", "NPC-NELL", "NPC-OLLIE"]);
+    expect(base.conjunto.misiones.map((m) => m.data.id).sort()).toEqual(["M0.1", "M0.2", "M0.3", "M1.1", "M1.2", "M9.1"]);
+    expect(base.conjunto.npcs.map((n) => n.data.id).sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-KOFI", "NPC-MAYA", "NPC-NELL", "NPC-OLLIE"]);
   });
   test("content/retired-ids.yaml = las filas de 02 §0.5.1", () => {
     const filas = filasDe02();

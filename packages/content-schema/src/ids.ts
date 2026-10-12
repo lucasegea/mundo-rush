@@ -19,6 +19,8 @@ export const ID_PATTERNS = {
   region: /^R\d+$/,
   lugar: /^(?:campos|cruce)\.[a-z0-9_]+$/,
   pronunciacion: /^M\d+\.\d+-E\d+-PRON-\d+$/,
+  /** Ficha de conversación por medidores (ADR-027). */
+  conversacion: /^CONV-[A-Z]+$/,
 } as const;
 
 export type IdKind = keyof typeof ID_PATTERNS;
@@ -41,3 +43,4 @@ export const PresentacionId = idOf("presentacion");
 export const GlosarioId = idOf("glosario");
 export const RegionId = idOf("region");
 export const LugarId = idOf("lugar");
+export const ConversacionId = idOf("conversacion");

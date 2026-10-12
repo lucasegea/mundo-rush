@@ -1,7 +1,7 @@
 // Misión y escenas (02 §4.3, §6.2.2, §6.2.3; 01 §2.5.3; 03 §6.1, §6.4.8).
 import { z } from "zod";
 import {
-  EscenaId, HabilidadId, HechoId, idOf, LugarId, LumiId, MisionId, NpcId, SaberId, SitioId,
+  ConversacionId, EscenaId, HabilidadId, HechoId, idOf, LugarId, LumiId, MisionId, NpcId, SaberId, SitioId,
 } from "../ids.ts";
 import { Banda, EstadoRevision, LineaGuionada, oNoAplica, RamaPocion, TextoL1 } from "./common.ts";
 
@@ -92,6 +92,14 @@ export const Escena = z.strictObject({
   /** Cantidades de objetos permitidas por el lint de cifras (02 §6.6 #15), p. ej. "3 bags of seeds". */
   cifras_permitidas: z.array(z.string().min(1)).default([]),
   pronunciacion: z.array(MomentoPronunciacion).default([]),
+  /**
+   * ADR-027: escena de conversación libre por medidores. La cierra el sistema de conversación (una acción del juego
+   * cuando se llena el último medidor), no los criterios del observador; sin éxito no se da por cumplida.
+   */
+  conversacion: ConversacionId.optional(),
+  /** Topes propios de la escena en segundos (si no, los de models.yaml): una conversación libre necesita más aire. */
+  topes: z.strictObject({ suave_s: z.number().int().positive(), duro_s: z.number().int().positive() })
+    .refine((t) => t.suave_s < t.duro_s, { message: "suave_s tiene que ser menor que duro_s" }).optional(),
 });
 export type Escena = z.infer<typeof Escena>;
 

@@ -2,7 +2,7 @@
 // scene-runtime ven cada turno de jugador y NPC (texto y voz), el arranque y el fin de la escena. Un gancho que tira
 // no corta la escena. Sin red: adaptador de voz de referencia y modelos falsos.
 import { describe, expect, test } from "vitest";
-import type { ConversationHooks, ConversationSceneEnd, ConversationSceneInfo, ConversationTurn } from "../src/scene-runtime/hooks.ts";
+import { callHook, type ConversationHooks, type ConversationSceneEnd, type ConversationSceneInfo, type ConversationTurn } from "../src/scene-runtime/hooks.ts";
 import { createReferenceVoice } from "./fakes/reference-voice.ts";
 import { M01_RULES } from "./fakes/text-model.ts";
 import { harness, play } from "./helpers.ts";
@@ -71,7 +71,10 @@ describe("ganchos de conversación", () => {
     const h = harness({ rules: M01_RULES, conversation: rec });
     await play(h, "NPC-INES", ["Okay.", "Hello, I'm Nico."]);
     const runId = h.of("scene.opened")[0]?.sceneRunId ?? "";
-    expect(rec.starts).toEqual([{ sceneRunId: runId, missionId: "M0.1", sceneId: "M0.1-E1", npcId: "NPC-INES", modality: "text" }]);
+    expect(rec.starts).toEqual([{
+      sceneRunId: runId, accountId: "op-local", missionId: "M0.1", sceneId: "M0.1-E1", npcId: "NPC-INES", npcName: "Inés Calder",
+      modality: "text", conversation: null,
+    }]);
     expect(rec.turns.map((t) => [t.speaker, t.text, t.turnId, t.final, t.kind])).toEqual([
       ["player", "Okay.", `${runId}:1`, true, "turn"],
       ["npc", "Good, good. Your turn!", `${runId}:1`, true, "turn"],
@@ -121,6 +124,35 @@ describe("ganchos de conversación", () => {
     expect(h.session.snapshot).toMatchObject({ state: "playerTurn", sub: "waiting" });
     expect(h.of("npc.line").some((m) => m.line.kind === "reply")).toBe(true);
     expect(errors).toEqual(["boom start", "boom turn", "boom turn"]);
+  });
+
+  test("A2: un gancho async cuya promesa rechaza se reporta igual (nunca queda una promesa rechazada suelta)", async () => {
+    const errors: string[] = [];
+    const h = harness({
+      rules: [],
+      conversation: {
+        onSceneStart: () => Promise.reject(new Error("async start")),
+        onTurn: async () => { await Promise.resolve(); throw new Error("async turn"); },
+        onHookError: (m) => { errors.push(m); },
+      },
+    });
+    await play(h, "NPC-INES", ["Hi there."]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(h.session.snapshot).toMatchObject({ state: "playerTurn", sub: "waiting" });
+    expect(errors).toEqual(["async start", "async turn", "async turn"]);
+  });
+
+  test("A2: callHook atrapa el rechazo de un gancho async aunque onHookError también tire", async () => {
+    const seen: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => { seen.push(reason); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      callHook({ onHookError: () => { throw new Error("y"); } }, () => Promise.reject(new Error("x")));
+      await new Promise((r) => setTimeout(r, 10));
+      expect(seen).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
   });
 
   test("un onHookError que también tira no sale del runtime", async () => {

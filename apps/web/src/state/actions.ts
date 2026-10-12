@@ -82,6 +82,13 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
       return { ...d, containment: { line: msg.line, resource: msg.resource, provisional: msg.provisional } };
     case "scene.notice":
       return { ...d, notice: msg.code };
+    case "conversation.state": {
+      // A2: medidores, lo que sabés del NPC y la escalera de ayuda (el servidor decide; el cliente solo muestra).
+      return {
+        ...d,
+        conversation: { npcName: msg.npcName, activeMeter: msg.activeMeter, meters: msg.meters, facts: msg.facts, stalled: msg.stalled, notice: msg.notice, help: msg.help, completed: msg.completed },
+      };
+    }
     case "scene.effects":
     case "error":
       return d;

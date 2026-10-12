@@ -1006,3 +1006,43 @@ plantillas:
     saber: null
     nota: null
     estado: draft
+  # A2 (ADR-027): M9.1, la conversación libre con Harlan por medidores. Prototipo fuera de la numeración de 02.
+  - id: LUMI-M9.1-PRE
+    funcion: pre_tarea
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Harlan es de pocas palabras: antes de pedirle nada, conocelo un poco. Preguntale por su vida y contale de la tuya."
+    slots: []
+    audio: fijo
+    mision: M9.1
+    saber: null
+    nota: "No dice qué venís a buscar: eso se abre con el segundo medidor."
+    estado: draft
+  - id: LUMI-M9.1-CIERRE
+    funcion: cierre_mision
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Primero lo conociste y después le pediste los postes con amabilidad. Así se habla con alguien de verdad."
+    slots: []
+    audio: fijo
+    mision: M9.1
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-M9.1-NOCONV
+    funcion: no_converge
+    escalon: null
+    modos: [accompanied, flagOnly, moreHelp]
+    bandas: [A0, A1]
+    tipo_error: null
+    texto: "Harlan necesita su tiempo. Lo que ya sabés de él queda guardado: la próxima seguís desde ahí."
+    slots: []
+    audio: fijo
+    mision: M9.1
+    saber: null
+    nota: null
+    estado: draft

@@ -1,7 +1,7 @@
 // Vista tipada del contenido compilado del servidor (apps/server/generated/content/, D-159). El compilador de F1.2 ya
 // validó todo contra @lg/content-schema; acá solo se indexa. Los tipos vienen del esquema (import de tipos: en runtime
 // el servidor no carga el compilador).
-import type { ArchivoContencion, Escena, LineaGuionada, ListaBloqueo, Mision, Npc, Pista, Presentacion, Saber, TarjetaNivel } from "@lg/content-schema";
+import type { ArchivoContencion, Escena, FichaConversacion, LineaGuionada, ListaBloqueo, Mision, Npc, Pista, Presentacion, Saber, TarjetaNivel } from "@lg/content-schema";
 import type { ServerContent } from "../content/loader.ts";
 
 export type ServerSaber = Saber & { visible_en_modo: boolean };
@@ -16,6 +16,8 @@ export interface Catalog {
   clue(id: string): Pista | undefined;
   /** Arista de la red que presenta a `npcId` (la primera; D-168). */
   introOf(npcId: string): Presentacion | undefined;
+  /** A2 (ADR-027): ficha de conversación por medidores (`escena.conversacion`). */
+  conversation(id: string): FichaConversacion | undefined;
   npcBase: string;
   /** Listas de bloqueo (moderación en runtime, F4.2) y contención + línea segura (D-112). */
   safety: { lists: ListaBloqueo[]; containment: ArchivoContencion };
@@ -34,6 +36,8 @@ export function readCatalog(content: ServerContent): Catalog {
   const niveles = arr<TarjetaNivel>(content, "niveles.json");
   const pistas = arr<Pista>(content, "pistas.json");
   const red = arr<Presentacion>(content, "red.json");
+  // Opcional: un contenido compilado antes de A2 no lo trae (y ninguna escena lo pide).
+  const conversaciones = Array.isArray(content["conversaciones.json"]) ? content["conversaciones.json"] as FichaConversacion[] : [];
   const prompts = content["prompts.json"] as Record<string, string> | undefined;
   const npcBase = prompts?.["npc-base"];
   if (typeof npcBase !== "string") throw new Error("contenido compilado sin prompts.json › npc-base");
@@ -48,6 +52,7 @@ export function readCatalog(content: ServerContent): Catalog {
     levelCard: (band) => niveles.find((n) => n.banda === band),
     clue: (id) => pistas.find((p) => p.id === id),
     introOf: (npcId) => red.find((r) => r.npc === npcId),
+    conversation: (id) => conversaciones.find((c) => c.id === id),
     npcBase,
     safety: { lists: seguridad.listas, containment: seguridad.contencion },
   };
