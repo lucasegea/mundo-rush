@@ -1,4 +1,4 @@
-// Reglas de cámara que no dependen del render (R11, D-053, D-154, D-197): ids de presets, ángulos, pasos de
+// Reglas de cámara que no dependen del render (R11, D-053, D-154, D-197, D-208): ids de presets, ángulos, pasos de
 // zoom y la dirección "arriba en pantalla" en el mundo. La cámara misma vive en apps/web/src/world/camera/.
 
 /** Presets de R11. Los dos últimos están declarados para el futuro y no se implementan todavía. */
@@ -32,14 +32,31 @@ export function presetAngles(preset: CameraPresetId): CameraAngles {
   return { pitchDeg: TOPDOWN_PITCH_DEG, yawDeg: 0 };
 }
 
-/** 3 pasos de zoom (D-053, D-197): 0 = más lejos, 2 = más cerca (con perspective3D, 40 / 30 / 22 m). */
-export const ZOOM_STEPS = 3;
-export type ZoomStep = 0 | 1 | 2;
-export const DEFAULT_ZOOM_STEP: ZoomStep = 1;
+/**
+ * Escalera de zoom de `perspective3D` (D-208, que extiende los 3 pasos de D-053/D-197): distancia de la cámara al
+ * jugador en metros, del paso más lejano (0) al más cercano. La cantidad de pasos sale de este arreglo. Cada paso es
+ * ~1,3x el siguiente, así cada muesca de la rueda se siente parecida; 30 m sigue siendo el paso de inicio.
+ */
+export const ZOOM_DISTANCES = [160, 120, 90, 65, 48, 38, 30, 22] as const;
+export const ZOOM_STEPS = ZOOM_DISTANCES.length;
+/** Índice en ZOOM_DISTANCES: 0 = más lejos, ZOOM_STEPS - 1 = más cerca. */
+export type ZoomStep = number;
+export const DEFAULT_ZOOM_STEP: ZoomStep = ZOOM_DISTANCES.indexOf(30);
 
-/** Un paso más cerca (+1) o más lejos (-1), sin salir de los 3 pasos. */
+/** Un paso válido: entero dentro de la escalera (lo que no es número cae al de inicio). */
+export function clampZoomStep(step: number): ZoomStep {
+  if (!Number.isFinite(step)) return DEFAULT_ZOOM_STEP;
+  return Math.min(ZOOM_STEPS - 1, Math.max(0, Math.round(step)));
+}
+
+/** Un paso más cerca (+1) o más lejos (-1), acotado a los dos extremos de la escalera. */
 export function stepZoom(current: ZoomStep, direction: 1 | -1): ZoomStep {
-  return Math.min(ZOOM_STEPS - 1, Math.max(0, current + direction)) as ZoomStep;
+  return clampZoomStep(clampZoomStep(current) + direction);
+}
+
+/** Distancia (m) de la cámara al jugador en un paso de zoom. */
+export function zoomDistance(step: ZoomStep): number {
+  return ZOOM_DISTANCES[clampZoomStep(step)] as number;
 }
 
 /**

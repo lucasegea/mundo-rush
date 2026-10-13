@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   CAMERA_PRESET_IDS, DEFAULT_ZOOM_STEP, dirFromHeld, downgradeTier, isWalkable, parseTileRows, pointerAction,
   prepareDiorama, presetAngles, screenDirToWorld, SEMANTIC_ACTIONS, stepZoom, wheelAction, ZOOM_STEPS,
+  clampZoomStep, WHEEL_NOTCH_PX, wheelZoom, zoomDistance, ZOOM_DISTANCES,
   type DioramaLayout, type HeldDirection,
 } from "../src/index";
 
@@ -60,6 +61,25 @@ describe("acciones semánticas (R10)", () => {
     expect(wheelAction(0)).toBeNull();
     expect(wheelAction(Number.NaN)).toBeNull();
   });
+  test("rueda acumulada (D-208): una muesca de mouse es un paso; un trackpad necesita sumar una muesca", () => {
+    expect(wheelZoom(0, 100)).toEqual({ acc: 0, action: { type: "zoomOut" } });
+    expect(wheelZoom(0, -120)).toEqual({ acc: 0, action: { type: "zoomIn" } });
+    // Trackpad: eventos chicos se suman hasta WHEEL_NOTCH_PX y dan UN paso.
+    let acc = 0;
+    const actions: string[] = [];
+    for (let i = 0; i < 24; i++) {
+      const r = wheelZoom(acc, 4);
+      acc = r.acc;
+      if (r.action) actions.push(r.action.type);
+    }
+    expect(actions).toEqual(Array(Math.floor((24 * 4) / WHEEL_NOTCH_PX)).fill("zoomOut"));
+    // Cambio de sentido: lo acumulado se descarta.
+    expect(wheelZoom(40, -10)).toEqual({ acc: -10, action: null });
+    // En líneas (Firefox) cada evento es una muesca.
+    expect(wheelZoom(0, 3, 1)).toEqual({ acc: 0, action: { type: "zoomOut" } });
+    expect(wheelZoom(7, 0)).toEqual({ acc: 7, action: null });
+    expect(wheelZoom(7, Number.NaN)).toEqual({ acc: 7, action: null });
+  });
   test("teclas mantenidas → dirección normalizada; opuestas se anulan", () => {
     const d = (...h: HeldDirection[]) => dirFromHeld(new Set(h));
     expect(d("up")).toEqual({ x: 0, y: 1 });
@@ -69,7 +89,7 @@ describe("acciones semánticas (R10)", () => {
   });
 });
 
-describe("cámara: presets (R11) y zoom (D-197)", () => {
+describe("cámara: presets (R11) y zoom (D-197, D-208)", () => {
   test("los 5 presets de R11; ángulos de D-053/D-154", () => {
     expect([...CAMERA_PRESET_IDS]).toEqual(["topdownOrtho", "isoOrtho", "dialogueFrame", "perspective3D", "xrTabletop"]);
     const top = presetAngles("topdownOrtho");
@@ -78,13 +98,36 @@ describe("cámara: presets (R11) y zoom (D-197)", () => {
     expect(top.pitchDeg).toBeLessThanOrEqual(60);
     expect(presetAngles("isoOrtho").yawDeg).toBe(45);
   });
-  test("3 pasos, con tope en los dos extremos", () => {
-    expect(ZOOM_STEPS).toBe(3);
-    expect(DEFAULT_ZOOM_STEP).toBe(1);
-    expect(stepZoom(1, 1)).toBe(2);
-    expect(stepZoom(2, 1)).toBe(2);
-    expect(stepZoom(1, -1)).toBe(0);
-    expect(stepZoom(0, -1)).toBe(0);
+  test("escalera de D-208: de 160 a 22 m, el inicio en 30 m, la cantidad sale del arreglo", () => {
+    expect([...ZOOM_DISTANCES]).toEqual([160, 120, 90, 65, 48, 38, 30, 22]);
+    expect(ZOOM_STEPS).toBe(ZOOM_DISTANCES.length);
+    expect(zoomDistance(DEFAULT_ZOOM_STEP)).toBe(30);
+    expect(zoomDistance(ZOOM_STEPS - 1)).toBe(22);
+    expect(zoomDistance(0)).toBeGreaterThanOrEqual(150);
+    // Del más lejos al más cerca, siempre baja, y cada paso es parecido (entre 1,2x y 1,45x el siguiente).
+    for (let i = 1; i < ZOOM_STEPS; i++) {
+      const ratio = zoomDistance(i - 1) / zoomDistance(i);
+      expect(ratio).toBeGreaterThan(1.2);
+      expect(ratio).toBeLessThan(1.45);
+    }
+  });
+  test("los botones, las teclas y la rueda recorren toda la escalera de a un paso, con tope en los dos extremos", () => {
+    let s = DEFAULT_ZOOM_STEP;
+    const seen = [s];
+    for (let i = 0; i < ZOOM_STEPS + 3; i++) seen.push((s = stepZoom(s, -1)));
+    expect(s).toBe(0);
+    for (let i = 0; i < ZOOM_STEPS + 3; i++) seen.push((s = stepZoom(s, 1)));
+    expect(s).toBe(ZOOM_STEPS - 1);
+    for (let i = 1; i < seen.length; i++) expect(Math.abs((seen[i] as number) - (seen[i - 1] as number))).toBeLessThanOrEqual(1);
+    expect(new Set(seen).size).toBe(ZOOM_STEPS);
+  });
+  test("un paso fuera de rango o no entero cae dentro de la escalera", () => {
+    expect(clampZoomStep(-4)).toBe(0);
+    expect(clampZoomStep(99)).toBe(ZOOM_STEPS - 1);
+    expect(clampZoomStep(2.4)).toBe(2);
+    expect(clampZoomStep(Number.NaN)).toBe(DEFAULT_ZOOM_STEP);
+    expect(stepZoom(99, -1)).toBe(ZOOM_STEPS - 2);
+    expect(zoomDistance(-1)).toBe(160);
   });
   test("arriba en pantalla es -z con yaw 0; con yaw 45 rota", () => {
     expect(screenDirToWorld({ x: 0, y: 1 }, 0)).toEqual({ x: 0, z: -1 });

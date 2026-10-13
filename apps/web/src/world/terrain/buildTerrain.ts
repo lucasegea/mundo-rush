@@ -3,14 +3,24 @@
 // layout de tiles actual, sin cambiar su forma. Adaptador tile → pintura: 1 pasto, 2 pasto-luz, 3 camino con borde
 // ruidoso de tierra, 4 agua (el terreno se hunde y lleva orilla), 5 empedrado. Dentro de los límites caminables el
 // suelo es plano en y = 0 (el raycast del suelo sigue siendo el plano invisible); afuera sube en lomas de hasta ~5,5 m,
-// lo bastante lejos como para que ninguna cámara de juego vea el borde (A2). Determinístico con la misma semilla.
+// lo bastante lejos como para que ninguna cámara de juego vea el borde (A2). Desde D-208 la falda llega a 160 m para
+// cubrir el zoom más lejano (160 m) en cualquier aspecto: pasados ~35 m las celdas crecen rápido (poco detalle, la misma
+// pintura), así la vista lejana cuesta unos pocos cientos de triángulos. Determinístico con la misma semilla.
 import type { Bounds, TileLayerData } from "@lg/core";
 import { mixRgb, scaleRgb } from "./color";
 import { noise2, tokenRgb, type Rgb } from "../materials/paint";
 import { rng } from "../materials/rng";
 
-/** Metros de terreno más allá de los límites caminables, de cada lado (cubre el frustum en 21:9 al zoom más lejano). */
-export const TERRAIN_SKIRT = 48;
+/** Metros de terreno más allá de los límites caminables, de cada lado (cubre el frustum en 21:9 al zoom más lejano, D-208). */
+export const TERRAIN_SKIRT = 160;
+/**
+ * La textura de pincel se repite sobre las UV del terreno: su escala en metros se fija con la falda de M1 (48 m), así
+ * alargar la falda no agranda la pincelada.
+ */
+const BRUSH_UV_SKIRT = 48;
+/** Paso máximo de la grilla cerca del diorama; más allá, cada celda es FAR_GROWTH veces la anterior. */
+const NEAR_MAX_STEP = 8;
+const FAR_GROWTH = 2.2;
 /** Separación de vértices cerca y dentro de los límites (la mitad de un tile). */
 export const FINE_STEP = 0.5;
 const FINE_MARGIN = 0.5;
@@ -86,7 +96,10 @@ export function outsideDistance(b: Bounds, x: number, z: number): number {
   return Math.hypot(dx, dz);
 }
 
-/** Líneas de grilla: finas (0,5 m) entre fineMin y fineMax, y cada vez más gruesas hacia min y max. */
+/**
+ * Líneas de grilla: finas (0,5 m) entre fineMin y fineMax, y cada vez más gruesas hacia min y max (de 2 a 8 m de a
+ * un metro, y después geométricas: 35, ~53, ~91 y el borde, a 160 m del diorama).
+ */
 function gridLines(min: number, max: number, fineMin: number, fineMax: number): Float64Array {
   const fine: number[] = [];
   for (let v = fineMin; v <= fineMax + 1e-9; v += FINE_STEP) fine.push(Math.round(v * 2) / 2);
@@ -97,7 +110,7 @@ function gridLines(min: number, max: number, fineMin: number, fineMax: number): 
     while (dir > 0 ? v < to - 1e-9 : v > to + 1e-9) {
       v = dir > 0 ? Math.min(to, v + step) : Math.max(to, v - step);
       out.push(v);
-      step = Math.min(8, step + 1);
+      step = step < NEAR_MAX_STEP ? step + 1 : step * FAR_GROWTH;
     }
     return out;
   };
@@ -182,8 +195,10 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
   const colors = new Float32Array(nx * nz * 3);
   const uvs = new Float32Array(nx * nz * 2);
   const heights = new Float64Array(nx * nz);
-  const w = extent.maxX - extent.minX;
-  const d = extent.maxZ - extent.minZ;
+  const u0 = bounds.minX - BRUSH_UV_SKIRT;
+  const v0 = bounds.minZ - BRUSH_UV_SKIRT;
+  const w = bounds.maxX - bounds.minX + 2 * BRUSH_UV_SKIRT;
+  const d = bounds.maxZ - bounds.minZ + 2 * BRUSH_UV_SKIRT;
   for (let j = 0; j < nz; j++) {
     for (let i = 0; i < nx; i++) {
       const x = xs[i] as number;
@@ -193,7 +208,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
       heights[k] = h;
       positions.set([x, h, z], k * 3);
       colors.set(groundColor(p, spec, suelo, x, z, h, seed), k * 3);
-      uvs.set([(x - extent.minX) / w, (z - extent.minZ) / d], k * 2);
+      uvs.set([(x - u0) / w, (z - v0) / d], k * 2);
     }
   }
   // Dos triángulos por celda, antihorarios vistos desde arriba (normal +y).

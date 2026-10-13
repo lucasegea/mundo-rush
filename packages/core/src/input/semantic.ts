@@ -33,6 +33,21 @@ export function wheelAction(deltaY: number): SemanticAction | null {
   return { type: deltaY < 0 ? "zoomIn" : "zoomOut" };
 }
 
+/** Píxeles de rueda que valen una muesca (una rueda de mouse da ~100 por muesca; un trackpad, muchos eventos chicos). */
+export const WHEEL_NOTCH_PX = 50;
+
+/**
+ * Rueda acumulada (D-208): un paso de zoom por muesca, también con trackpad. En píxeles (`deltaMode` 0) suma hasta
+ * WHEEL_NOTCH_PX y ahí da un paso y vuelve a cero; un cambio de sentido descarta lo acumulado. En líneas o páginas
+ * (`deltaMode` 1 o 2) cada evento es una muesca.
+ */
+export function wheelZoom(acc: number, deltaY: number, deltaMode = 0): { acc: number; action: SemanticAction | null } {
+  if (!Number.isFinite(deltaY) || deltaY === 0) return { acc, action: null };
+  if (deltaMode !== 0) return { acc: 0, action: wheelAction(deltaY) };
+  const sum = Math.sign(acc) === Math.sign(deltaY) ? acc + deltaY : deltaY;
+  return Math.abs(sum) >= WHEEL_NOTCH_PX ? { acc: 0, action: wheelAction(sum) } : { acc: sum, action: null };
+}
+
 export type HeldDirection = "up" | "down" | "left" | "right";
 
 /** Dirección de pantalla a partir de las teclas mantenidas; opuestas se anulan; diagonal normalizada. */

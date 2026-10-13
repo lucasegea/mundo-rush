@@ -1,5 +1,6 @@
-// Matemática pura de CameraRig (R11, D-053, D-197, D-207): offset por pitch/yaw, el lente largo `perspective3D` de la
-// propuesta C §4 (FOV, distancias por paso de zoom, huella del frustum sobre el suelo), el plano de a dos en 3/4 de la
+// Matemática pura de CameraRig (R11, D-053, D-197, D-207, D-208): offset por pitch/yaw, el lente largo `perspective3D`
+// de la propuesta C §4 (FOV, huella del frustum sobre el suelo y su alcance, planos de recorte y escala de lo que
+// depende de la distancia; la escalera de zoom vive en el núcleo y llega como distancia), el plano de a dos en 3/4 de la
 // charla con test de oclusión, suavizado y "corte" para "reducir movimiento". Lo ortográfico de HD-2D (frustum, escala
 // entera de píxel, snap) queda sin uso hasta M7.
 import { TILE_PX } from "../tiles/buildTileChunk";
@@ -90,11 +91,15 @@ export const PERSPECTIVE = {
   followRate: 5,
 } as const;
 
-/** Distancia por paso de zoom (0 = más lejos): 40 / 30 / 22 m. */
-export const ZOOM_DISTANCES = [40, 30, 22] as const;
+/**
+ * Distancia de referencia (m): la del paso de inicio, donde valen los números de la propuesta C §5 (niebla 34 a 78 m,
+ * caja de sombra de 44 m). Más lejos, lo que depende de la distancia escala con `viewScale` (D-208); más cerca, no.
+ */
+export const VIEW_REFERENCE_DISTANCE = 30;
 
-export function zoomDistance(step: number): number {
-  return ZOOM_DISTANCES[Math.min(2, Math.max(0, Math.round(step)))] as number;
+/** Factor de escala de niebla, sombra y recorte para una distancia de cámara: 1 hasta la de referencia, lineal después. */
+export function viewScale(distance: number): number {
+  return Math.max(1, distance / VIEW_REFERENCE_DISTANCE);
 }
 
 /** FOV vertical según el aspecto del canvas (más abierto en vertical, así entra lo mismo de ancho). */
@@ -129,6 +134,34 @@ export function frustumGroundFootprint(target: Vec3, pitchDeg: number, yawDeg: n
     out.push([cam[0] + dir[0] * t, cam[2] + dir[2] * t]);
   }
   return out;
+}
+
+/**
+ * Alcance de la huella sobre el suelo: cuánto se aleja del objetivo (en x y en z, el mayor) lo que entra en pantalla.
+ * Infinity si se ve el horizonte. El terreno tiene que extenderse al menos esto más allá de los límites caminables.
+ */
+export function groundReach(distance: number, pitchDeg: number, yawDeg: number, fovDeg: number, aspect: number): number {
+  const fp = frustumGroundFootprint([0, PERSPECTIVE.targetHeight, 0], pitchDeg, yawDeg, distance, fovDeg, aspect);
+  if (!fp) return Infinity;
+  return Math.max(...fp.map(([x, z]) => Math.max(Math.abs(x), Math.abs(z))));
+}
+
+/** Margen del plano lejano sobre el rayo de pantalla más largo hasta el suelo. */
+export const FAR_MARGIN = 1.2;
+
+/**
+ * Planos de recorte para una distancia de cámara (D-208). `far` cubre con margen el rayo más largo de las esquinas de
+ * la pantalla hasta el suelo (nunca menos que PERSPECTIVE.far; si se ve el horizonte, PERSPECTIVE.far). `near` crece
+ * con la distancia para no gastar precisión de profundidad: 0,5 m hasta la referencia, con tope de 4 m.
+ */
+export function cameraClip(distance: number, pitchDeg: number, fovDeg: number, aspect: number): { near: number; far: number } {
+  const near = Math.min(4, PERSPECTIVE.near * viewScale(distance));
+  const off = cameraOffset(pitchDeg, 0, distance);
+  const cam: Vec3 = [off[0], PERSPECTIVE.targetHeight + off[1], off[2]];
+  const fp = frustumGroundFootprint([0, PERSPECTIVE.targetHeight, 0], pitchDeg, 0, distance, fovDeg, aspect);
+  if (!fp) return { near, far: PERSPECTIVE.far };
+  const longest = Math.max(...fp.map(([x, z]) => Math.hypot(x - cam[0], cam[1], z - cam[2])));
+  return { near, far: Math.max(PERSPECTIVE.far, Math.ceil(longest * FAR_MARGIN)) };
 }
 
 // ---------- dialogueFrame: plano de a dos en 3/4 (propuesta C §4, plan estetica-c M1 ítem 3) ----------

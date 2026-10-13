@@ -3,6 +3,8 @@
 // re-renderiza cuando cambian el diorama, los parámetros de render, la charla o el NPC resaltado; lo que cambia por
 // cuadro vive en useFrame. Tiers (R12): los parámetros llegan de services/quality (TIER_PARAMS) por props desde la raíz
 // de composición. Look C (D-207, plan estetica-c M1): bruma de fondo y niebla, ACES con exposición 1,05, sombras por tier.
+// Desde D-208 la distancia del paso de zoom llega del selector y de ella dependen recorte, niebla, sombra, tilt-shift y
+// etiquetas (la niebla arranca con los valores de la propuesta y Lighting la ajusta cada cuadro).
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { lazy, Suspense, useEffect, useMemo } from "react";
@@ -12,6 +14,7 @@ import { bridge } from "../state/bridge";
 import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectWorldRender, useGameView } from "../state/selectors";
 import { Player } from "./actors/Player";
 import { CameraRig } from "./camera/CameraRig";
+import { TWO_SHOT, viewScale } from "./camera/rig";
 import { Diorama } from "./dioramas/Diorama";
 import { buildDioramaScene } from "./dioramas/scene";
 import { Lighting, type ShadowMode } from "./lighting/Lighting";
@@ -39,6 +42,8 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const params = tierParams[render.tier];
   const post: PostLevel = render.post ? params.post : "none";
   const cut = render.cameraMotion === "cut";
+  // Distancia pedida de la cámara: la del plano de a dos durante la charla, la del paso de zoom en el mapa.
+  const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : render.zoomDistance;
   const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama) : null), [map.diorama]);
   useEffect(() => () => scene?.dispose(), [scene]);
 
@@ -70,6 +75,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             actors={map.actors}
             highlightId={highlightId}
             sceneNpcId={conversation?.npcId ?? null}
+            viewDistance={viewDistance}
             cut={cut}
           />
         ) : null}
@@ -79,7 +85,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           preset={render.preset}
           pitchDeg={render.pitchDeg}
           yawDeg={render.yawDeg}
-          zoomStep={render.zoomStep}
+          distance={render.zoomDistance}
           motion={render.cameraMotion}
           conversation={conversation}
           obstacles={scene?.obstacles ?? []}
@@ -87,7 +93,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         />
         {post !== "none" ? (
           <Suspense fallback={null}>
-            <Post level={post} />
+            <Post level={post} viewScale={viewScale(viewDistance)} />
           </Suspense>
         ) : null}
       </Canvas>

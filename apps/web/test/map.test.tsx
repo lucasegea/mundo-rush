@@ -4,7 +4,7 @@
 // un EventTarget; el clic de R3F entra por state/bridge.ts. Ambos tienen que producir las MISMAS acciones (R10).
 // El lazo de simulación corre con un planificador falso: el tiempo lo avanza el test.
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { circleBlocked, facingFrom, planPath, SIM_DT, type DioramaLayout } from "@lg/core";
+import { circleBlocked, DEFAULT_ZOOM_STEP, facingFrom, planPath, SIM_DT, ZOOM_STEPS, type DioramaLayout } from "@lg/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { loadDiorama, pickDiorama } from "../src/services/content";
 import { startInput, WORLD_SURFACE_ATTR } from "../src/services/input";
@@ -322,19 +322,42 @@ describe("A8 aviso de interacción en el HUD (del store, no del canvas)", () => 
   });
 });
 
-describe("A9 zoom: 3 pasos acotados, con teclas, rueda o botones", () => {
-  test("acercar y alejar se acotan en [0, 2]; el HUD dice el nivel y los botones hacen lo mismo", async () => {
+describe("A9 zoom: la escalera de D-208 acotada, con teclas, rueda o botones", () => {
+  test("acercar y alejar recorren toda la escalera de a un paso y se acotan; el HUD dice el nivel y los botones hacen lo mismo", async () => {
     await startMap();
-    expect(gameStore.getState().ui.zoomStep).toBe(1);
-    act(() => { key("keydown", "Equal"); key("keydown", "NumpadAdd"); key("keydown", "Equal"); });
-    expect(gameStore.getState().ui.zoomStep).toBe(2);
-    act(() => { for (let i = 0; i < 5; i++) key("keydown", "Minus"); });
-    expect(gameStore.getState().ui.zoomStep).toBe(0);
+    const step = () => gameStore.getState().ui.zoomStep;
+    expect(step()).toBe(DEFAULT_ZOOM_STEP);
+    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(30);
+    act(() => { for (let i = 0; i < ZOOM_STEPS + 2; i++) key("keydown", i % 2 ? "NumpadAdd" : "Equal"); });
+    expect(step()).toBe(ZOOM_STEPS - 1);
+    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(22);
+    const walked: number[] = [];
+    act(() => { for (let i = 0; i < ZOOM_STEPS + 2; i++) { key("keydown", "Minus"); walked.push(step()); } });
+    expect(walked.slice(0, ZOOM_STEPS - 1)).toEqual(Array.from({ length: ZOOM_STEPS - 1 }, (_, i) => ZOOM_STEPS - 2 - i));
+    expect(step()).toBe(0);
+    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(160);
     render(<WorldHud />);
-    expect(screen.getByText("Zoom 1 de 3")).toBeTruthy();
+    expect(screen.getByText(`Zoom 1 de ${ZOOM_STEPS}`)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Alejar" }).getAttribute("aria-disabled")).toBe("true");
     act(() => { screen.getByRole("button", { name: "Acercar" }).click(); });
     expect(selectWorldHudView(gameStore.getState()).zoomStep).toBe(1);
     expect(selectWorldRender(gameStore.getState()).zoomStep).toBe(1);
+    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(120);
+  });
+
+  test("rueda de trackpad: muchos eventos chicos suman una muesca, no recorren la escalera", async () => {
+    await startMap();
+    const surface = document.createElement("div");
+    surface.setAttribute(WORLD_SURFACE_ATTR, "");
+    document.body.append(surface);
+    stop();
+    stop = startInput({ target: document, dispatch: actions.dispatch, isActive: () => selectMapActive(gameStore.getState()) });
+    const start = gameStore.getState().ui.zoomStep;
+    act(() => { for (let i = 0; i < 12; i++) surface.dispatchEvent(new WheelEvent("wheel", { deltaY: 5, bubbles: true, cancelable: true })); });
+    expect(gameStore.getState().ui.zoomStep).toBe(start - 1);
+    act(() => { for (let i = 0; i < 3; i++) surface.dispatchEvent(new WheelEvent("wheel", { deltaY: 100, bubbles: true, cancelable: true })); });
+    expect(gameStore.getState().ui.zoomStep).toBe(start - 4);
+    surface.remove();
   });
 });
 

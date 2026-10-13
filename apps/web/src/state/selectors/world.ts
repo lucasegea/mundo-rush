@@ -1,6 +1,6 @@
 // Selectores del slice `world`: view-model del modo solo-diálogo (lugares de la región y quién está en cada uno)
 // y, desde F2, lo que world/ dibuja, el aviso de interacción del HUD y los parámetros de render del mapa.
-import { presetAngles, ZOOM_STEPS, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier, type ZoomStep } from "@lg/core";
+import { presetAngles, zoomDistance, ZOOM_STEPS, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier, type ZoomStep } from "@lg/core";
 import type { GameState } from "../store";
 import { selectEffectiveTier } from "./settings";
 import { createViewSelector } from "./view";
@@ -145,6 +145,8 @@ export interface WorldRenderView {
   pitchDeg: number;
   yawDeg: number;
   zoomStep: ZoomStep;
+  /** Distancia (m) de la cámara del mapa en ese paso (D-208); world/ no lee valores del núcleo, la recibe acá. */
+  zoomDistance: number;
   /** "Reducir movimiento" (D-053, F2 A7): la cámara corta en vez de seguir con suavizado. */
   cameraMotion: "follow" | "cut";
   /** Postprocesado permitido (el nivel por tier lo fija TIER_PARAMS); apagado con "reducir movimiento" (§2.9). */
@@ -162,7 +164,7 @@ export const selectWorldRender = createViewSelector(
     const { pitchDeg, yawDeg } = presetAngles(camera);
     const top = topPanel(panels);
     return {
-      tier, preset: talking ? "dialogueFrame" : camera, pitchDeg, yawDeg, zoomStep,
+      tier, preset: talking ? "dialogueFrame" : camera, pitchDeg, yawDeg, zoomStep, zoomDistance: zoomDistance(zoomStep),
       cameraMotion: reduceMotion ? "cut" : "follow",
       post: !reduceMotion && tier !== "low" && tier !== "dialog-only",
       paused: top !== undefined && top.kind !== "scene",

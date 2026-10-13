@@ -24,6 +24,8 @@ interface Props {
   highlightId: string | null;
   /** El NPC de la charla en curso: no muestra etiqueta. */
   sceneNpcId: string | null;
+  /** Distancia pedida de la cámara (m): de lejos solo queda la etiqueta resaltada (D-208). */
+  viewDistance: number;
   cut: boolean;
 }
 
@@ -49,12 +51,12 @@ function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
   return null;
 }
 
-export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, cut }: Props) {
+export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewDistance, cut }: Props) {
   const { minX, maxX, minZ, maxZ } = diorama.bounds;
   const onGround = (e: ThreeEvent<MouseEvent>): void => {
     bridge.pointer({ kind: "ground", x: e.point.x, z: e.point.z }, e.nativeEvent.button);
   };
-  const labels = labelEntries(actors, highlightId, sceneNpcId);
+  const labels = labelEntries(actors, highlightId, sceneNpcId, viewDistance);
   return (
     <group>
       {/* Plano invisible para el raycast del suelo: dentro de los límites el terreno es plano en y = 0. */}

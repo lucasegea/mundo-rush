@@ -73,3 +73,11 @@ export function tickWater(m: ShaderMaterial, dtSec: number, reduceMotion: boolea
   const u = m.uniforms["uTime"];
   if (u) u.value = (u.value as number) + dtSec;
 }
+
+/** La niebla propia del agua sigue a la de la escena (D-208: escala con la distancia de la cámara). */
+export function setWaterFog(m: ShaderMaterial, near: number, far: number): void {
+  const n = m.uniforms["uFogNear"];
+  const f = m.uniforms["uFogFar"];
+  if (n) n.value = near;
+  if (f) f.value = far;
+}

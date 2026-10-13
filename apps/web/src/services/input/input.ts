@@ -2,7 +2,7 @@
 // escucha teclado, rueda o gamepad (lint). Nadie más ve una tecla: el store recibe `move`, `interact`, `talk`,
 // `cancel`, `openNotebook`, `zoomIn`/`zoomOut`. El clic sobre una malla lo resuelve el raycast de R3F en world/ y
 // entra por state/bridge.ts con el mismo traductor del núcleo (`pointerAction`).
-import { dirFromHeld, wheelAction, type HeldDirection, type SemanticAction } from "@lg/core";
+import { dirFromHeld, wheelZoom, type HeldDirection, type SemanticAction } from "@lg/core";
 import { CHARACTER_KEYMAP, DEFAULT_KEYMAP, type KeyBinding } from "./keymap";
 
 export interface InputDeps {
@@ -67,13 +67,16 @@ export function startInput(deps: InputDeps): () => void {
     emitDir();
   };
 
+  // Rueda acumulada (D-208): un paso por muesca, también con los muchos eventos chicos de un trackpad.
+  let wheelAcc = 0;
   const onWheel = (event: Event): void => {
     const e = event as WheelEvent;
     if (!overWorld(e.target) || !deps.isActive()) return;
-    const action = wheelAction(e.deltaY);
-    if (!action) return;
+    if (!Number.isFinite(e.deltaY) || e.deltaY === 0) return;
     e.preventDefault();
-    deps.dispatch(action);
+    const { acc, action } = wheelZoom(wheelAcc, e.deltaY, e.deltaMode);
+    wheelAcc = acc;
+    if (action) deps.dispatch(action);
   };
 
   const { target } = deps;

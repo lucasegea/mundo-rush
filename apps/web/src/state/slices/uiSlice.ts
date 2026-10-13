@@ -26,7 +26,7 @@ export interface UiState {
   announcement: Announcement | null;
   /** Lugar elegido en el modo solo-diálogo. */
   dialogOnlyPlaceId: string | null;
-  /** Paso de zoom de la cámara del mapa (D-197): 0 lejos, 1 medio, 2 cerca. */
+  /** Paso de zoom de la cámara del mapa (D-197, D-208): índice de ZOOM_DISTANCES, 0 = más lejos. No se persiste. */
   zoomStep: ZoomStep;
 }
 
