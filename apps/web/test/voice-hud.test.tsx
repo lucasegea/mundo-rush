@@ -191,3 +191,18 @@ describe("sin micrófono: modo texto con un mensaje claro", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });
+
+describe("M4 (estetica-c): indicador y barra en voz", () => {
+  test("tu turno: punto verde que late (quieto con reducir movimiento); Terminé a la derecha de la barra, después de Hablar", async () => {
+    const server = fakeSceneServer();
+    await startVoice(server);
+    const dot = () => within(screen.getByTestId("voice-controls")).getByTestId("turn-dot");
+    expect(dot().getAttribute("data-dot")).toBe("turn");
+    expect(dot().getAttribute("data-pulse")).toBe("true");
+    act(() => { actions.setReduceMotion(true); });
+    expect(dot().getAttribute("data-pulse")).toBe("false");
+    expect(dot().className).not.toContain("lg-pulse");
+    const bar = screen.getByRole("group", { name: "Ayudas para tu turno" });
+    expect(within(bar).getAllByRole("button").map((b) => b.id)).toEqual(["scene-talk", "scene-pass", "scene-done"]);
+  });
+});

@@ -1,7 +1,8 @@
 // scripts/assets/inspect-budgets.ts: triángulos, tamaño y materiales por pieza y por diorama (plan estetica-c M2,
 // 03 §6.4.1 y §2.7.3). Lo corre check:budgets: el primer diorama (muelle) entra en `assets_muelle_mb` y muelle + plaza
 // en `assets_muelle_plaza_mb` (scripts/budgets/budgets.json, copia de la tabla de 03 §2.7.3; ningún umbral cambia acá).
-// Los demás dioramas (hoy `test`) se informan sin tope, porque la tabla no les da uno. Además, toda pieza servida en
+// Los demás dioramas se informan sin tope, porque la tabla no les da uno; el de prueba (`test`) además se mide contra
+// `assets_muelle_mb` y falla si se pasa (plan estetica-c M4, nota de QA M3). Además, toda pieza servida en
 // apps/web/public/models tiene que haber salido del pipeline: sin texturas y con color por vértice. Desde M3 la descarga de
 // cada diorama suma los archivos de personaje (los cuerpos base y el de clips, filas con bloque `personaje` del
 // registro): todo diorama muestra al jugador y a sus vecinos, así que se cuentan enteros (cota de arriba).
@@ -110,8 +111,13 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
   tope("descarga inicial del vertical slice", ["muelle", "plaza"], b.assets_muelle_plaza_mb, "assets_muelle_plaza_mb");
   for (const d of dioramas.filter((x) => x.id !== "muelle" && x.id !== "plaza")) {
     lineas.push(`info diorama ${d.id}: ${d.modelos.length} modelo(s), ${mb(d.bytes)} MB, ${d.triangulos} triángulos de modelos (sin tope en 03 §2.7.3)`);
-    // Referencia: el diorama de prueba contra el tope del primer diorama (plan estetica-c M3, con los personajes).
-    if (d.id === "test") lineas.push(`${d.bytes / MB <= b.assets_muelle_mb ? "ref " : "WARN"} diorama test contra assets_muelle_mb: ${mb(d.bytes)} de ${b.assets_muelle_mb} MB`);
+    // El diorama de prueba contra el tope del primer diorama (plan estetica-c M3, con los personajes). Desde M4 (nota de
+    // QA M3) pasarse FALLA el build: antes solo avisaba, y un aviso no frena a nadie.
+    if (d.id === "test") {
+      const pasa = d.bytes / MB <= b.assets_muelle_mb;
+      if (!pasa) ok = false;
+      lineas.push(`${pasa ? "OK  " : "FAIL"} diorama test contra assets_muelle_mb: ${mb(d.bytes)} de ${b.assets_muelle_mb} MB`);
+    }
   }
   return { ok, lineas };
 }
@@ -139,7 +145,7 @@ export function listarModelos(root = ROOT): string[] {
   return out.sort();
 }
 
-export async function run(root = ROOT, log: (s: string) => void = console.log): Promise<number> {
+export async function run(root = ROOT, log: (s: string) => void = console.log, budgets: Budgets = loadBudgets()): Promise<number> {
   const piezas = await Promise.all(listarModelos(root).map((a) => medirPieza(a, new Uint8Array(readFileSync(join(root, a))))));
   const contenido = compilarContenido(leerContenido(root));
   if (contenido.errores.length > 0) {
@@ -148,7 +154,7 @@ export async function run(root = ROOT, log: (s: string) => void = console.log): 
   }
   const personajes = (contenido.conjunto.registroAssets?.data.assets ?? []).filter((a) => a.personaje).map((a) => a.archivo).sort();
   const dioramas = medirDioramas(contenido.conjunto.dioramas.map((d) => d.data), new Map(piezas.map((p) => [p.archivo, p])), personajes);
-  const r = chequearDescarga(piezas, dioramas, loadBudgets());
+  const r = chequearDescarga(piezas, dioramas, budgets);
   for (const l of r.lineas) log(l);
   return r.ok ? 0 : 1;
 }

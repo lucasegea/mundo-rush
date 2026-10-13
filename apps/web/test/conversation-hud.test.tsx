@@ -75,7 +75,9 @@ describe("panel de medidores", () => {
     expect(within(panel).getByRole("img", { name: "Conseguir lo que viniste a buscar: se abre después" })).toBeTruthy();
     expect(within(panel).getByText("Lo que sabés de Harlan")).toBeTruthy();
     expect(within(panel).getByText("Su padre construyó el granero rojo")).toBeTruthy();
-    expect(panel.textContent ?? "").not.toMatch(/\d/); // nada de números a la vista
+    // Nada de números de XP: el único número es "N de M" (medidores logrados), que es un conteo.
+    expect(within(panel).getByTestId("conv-count").textContent).toBe("0 de 2");
+    expect((panel.textContent ?? "").replace("0 de 2", "")).not.toMatch(/\d/);
     expect((screen.getByTestId("meter-fill-conocer") as HTMLElement).style.width).toBe("35%");
     // Se abre la segunda fase.
     await act(async () => {
@@ -89,6 +91,7 @@ describe("panel de medidores", () => {
     });
     expect(screen.getByTestId("conv-phase").textContent).toBe("Ahora: Conseguir lo que viniste a buscar");
     expect(screen.getByRole("img", { name: "Conocer a Harlan: lleno" })).toBeTruthy();
+    expect(screen.getByTestId("conv-count").textContent).toBe("1 de 2");
   });
 
   test("ayuda del servidor: escalón 1 pista, escalón 2 frases; tocar una frase la pone en la caja", async () => {
@@ -134,5 +137,58 @@ describe("panel de medidores", () => {
     expect(screen.getByText("Harlan quiere saber de vos.")).toBeTruthy();
     await act(async () => { server.push(conv({ completed: true })); });
     expect(screen.getByTestId("conv-completed").textContent).toBe("¡Harlan aceptó! Despedite o dale las gracias.");
+  });
+});
+
+describe("M4 (estetica-c): el medidor como tarjeta de segmentos", () => {
+  const three = conv({
+    activeMeter: "recado",
+    meters: [
+      { id: "conocer", kind: "rapport", label: "Conocer a Harlan", fill: 1, status: "full" },
+      { id: "recado", kind: "request", label: "Conseguir lo que viniste a buscar", fill: 0.4, status: "active" },
+      { id: "trato", kind: "negotiation", label: "Cerrar el trato", fill: 0, status: "locked" },
+    ],
+  });
+  const view = () => {
+    const v = reduceSceneMessage(initialDialogue(), three).conversation;
+    if (!v) throw new Error("sin conversación");
+    return v;
+  };
+  const seg = (id: string) => document.querySelector(`[data-meter="${id}"]`) as HTMLElement;
+
+  test("cada segmento dice su estado por atributo y por texto accesible, no solo por color", () => {
+    render(<ConversationPanel conv={view()} waiting={false} idleMs={[20_000, 40_000]} resetKey="0" onPhrase={null} />);
+    expect(screen.getByRole("heading", { level: 2, name: "Conocer a Harlan" })).toBeTruthy();
+    expect(screen.getByTestId("conv-count").textContent).toBe("1 de 3");
+    expect(["conocer", "recado", "trato"].map((id) => seg(id).getAttribute("data-state"))).toEqual(["logrado", "actual", "pendiente"]);
+    expect(seg("conocer").textContent).toBe("Conocer a Harlan · logrado");
+    expect(seg("recado").textContent).toBe("Conseguir lo que viniste a buscar · actual");
+    expect(seg("trato").textContent).toBe("Cerrar el trato · pendiente");
+    // El texto del estado es para lectores de pantalla (la forma lo dice a la vista).
+    expect(within(seg("conocer")).getByText(/logrado/).className).toContain("sr-only");
+  });
+
+  test("logrado: ámbar con borde oscuro y etiqueta en negrita; actual: rayado; pendiente: vacío", () => {
+    render(<ConversationPanel conv={view()} waiting={false} idleMs={[20_000, 40_000]} resetKey="0" onPhrase={null} />);
+    const bar = (id: string) => within(seg(id)).getByRole("img");
+    const label = (id: string) => seg(id).querySelector("span") as HTMLElement;
+    expect(bar("conocer").className).toContain("bg-amber");
+    expect(bar("conocer").className).toContain("border-amber-strong");
+    expect(label("conocer").className).toContain("font-bold");
+    expect(bar("recado").className).toContain("lg-stripes");
+    expect(bar("recado").className).not.toContain("bg-amber");
+    expect(label("recado").className).not.toContain("font-bold");
+    expect(bar("trato").className).not.toContain("lg-stripes");
+    expect(bar("trato").className).not.toContain("bg-amber");
+    expect((screen.getByTestId("meter-fill-recado") as HTMLElement).style.width).toBe("40%");
+  });
+
+  test("sobre el mapa la tarjeta flota arriba a la izquierda solo desde pantallas medianas (en angostas baja)", () => {
+    const { rerender } = render(<ConversationPanel conv={view()} waiting={false} idleMs={[20_000, 40_000]} resetKey="0" onPhrase={null} floating />);
+    const classes = () => screen.getByTestId("conv-meter").className.split(" ");
+    expect(classes()).toEqual(expect.arrayContaining(["md:fixed", "md:left-4", "md:top-4"]));
+    expect(classes()).not.toContain("fixed");
+    rerender(<ConversationPanel conv={view()} waiting={false} idleMs={[20_000, 40_000]} resetKey="0" onPhrase={null} />);
+    expect(classes().some((c) => c.includes("fixed"))).toBe(false);
   });
 });

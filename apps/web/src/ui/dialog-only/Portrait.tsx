@@ -60,11 +60,12 @@ export function portraitLook(id: string): PortraitLook {
 const fill = (token: string) => ({ fill: `var(--lg-color-${token})` });
 
 export function Portrait({ id, name, size = 96, available = RENDERED_PORTRAITS }: { id: string; name: string; size?: number; available?: ReadonlySet<string> }) {
-  const [failed, setFailed] = useState(false);
-  const src = failed ? null : portraitImageUrl(id, available);
+  // El fallo de carga se recuerda POR id (QA M3): si el mismo componente pasa a otro NPC, su PNG se vuelve a probar.
+  const [failedId, setFailedId] = useState<string | null>(null);
+  const src = failedId === id ? null : portraitImageUrl(id, available);
   if (src) {
     return (
-      <img src={src} alt={t("dialogOnly.portrait", { name })} width={size} height={size} className="shrink-0 rounded-lg" onError={() => setFailed(true)} />
+      <img src={src} alt={t("dialogOnly.portrait", { name })} width={size} height={size} className="shrink-0 rounded-lg" onError={() => setFailedId(id)} />
     );
   }
   const look = portraitLook(id);

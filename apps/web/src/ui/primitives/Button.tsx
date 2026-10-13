@@ -1,11 +1,12 @@
 // Botón nativo con los tokens del HUD. Objetivo táctil ≥ 44 px (D-047): min-h-11 = 2,75rem, que además crece
-// con el tamaño de texto. Nada depende de hover.
+// con el tamaño de texto. Nada depende de hover. Plan estetica-c M4 ("papel y tinta", propuesta C §8): el primario es
+// el botón oscuro (papel sobre tinta, ≥ 7:1 en check:contrast) y las esquinas son las de las tarjetas.
 import type { ComponentPropsWithRef } from "react";
 
 type Variant = "primary" | "secondary" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-accent text-on-accent border-accent",
+  primary: "bg-ink text-paper border-ink",
   secondary: "bg-surface text-ink border-line",
   ghost: "bg-transparent text-ink border-transparent underline-offset-4 hover:underline",
 };
@@ -18,7 +19,7 @@ export function Button({ variant = "secondary", className = "", type = "button",
   return (
     <button
       type={type}
-      className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg border-2 px-4 py-2 text-left text-base font-semibold aria-disabled:opacity-70 ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-card border-2 px-4 py-2 text-left text-base font-semibold aria-disabled:opacity-70 ${VARIANTS[variant]} ${className}`}
       {...rest}
     />
   );

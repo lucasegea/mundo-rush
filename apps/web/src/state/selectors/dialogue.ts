@@ -90,6 +90,8 @@ export interface DialogueHudView {
   conversation: ConversationUi | null;
   /** Silencio en `waiting` para subir la escalera de ayuda del lado del cliente: [pista, frases] en ms. */
   conversationHelpIdleMs: readonly [number, number];
+  /** "Reducir movimiento": el punto de "tu turno" no late (plan estetica-c M4). */
+  reduceMotion: boolean;
 }
 
 /** A2: el cliente sube la ayuda sola si el jugador no dice nada (el servidor la sube por turnos sin progreso). */
@@ -170,8 +172,8 @@ const phaseOf = (d: GameState["dialogue"]): HudPhase => {
 };
 
 export const selectDialogueHudView = createViewSelector(
-  (s: GameState) => [s.dialogue, s.world.npcs, s.settings.input.hintChip, s.ui.panels] as const,
-  (d, npcs, hintChip, panels): DialogueHudView => {
+  (s: GameState) => [s.dialogue, s.world.npcs, s.settings.input.hintChip, s.ui.panels, s.settings.accessibility.reduceMotion] as const,
+  (d, npcs, hintChip, panels, reduceMotion): DialogueHudView => {
     const top = panels[panels.length - 1];
     const npcId = d.npcId ?? (top?.kind === "scene" ? top.npcId : null);
     const name = (id: string): string | null => npcs.find((n) => n.id === id)?.name ?? null;
@@ -198,6 +200,7 @@ export const selectDialogueHudView = createViewSelector(
       micLost: d.modality === "voice" && d.sceneId !== null && d.voice.audio === "noPermission",
       conversation: d.conversation,
       conversationHelpIdleMs: CONVERSATION_HELP_IDLE_MS,
+      reduceMotion,
     };
   },
 );

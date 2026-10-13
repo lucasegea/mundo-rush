@@ -135,6 +135,23 @@ describe("A1: Terminé cierra el turno", () => {
     expect(server.sent.at(-1)).toEqual({ type: "turn.text", text: "Hi!\nI'm Nico." });
   });
 
+  test("M4: Terminé responde a Enter y a Espacio sobre el botón (botón nativo) y anuncia sus teclas", async () => {
+    const server = fakeSceneServer();
+    const user = await startScene(server);
+    const done = screen.getByRole("button", { name: "Terminé" });
+    expect(done.getAttribute("aria-keyshortcuts")).toBe("Space Enter");
+    await user.type(input(), "Hello!");
+    done.focus();
+    await user.keyboard("{Enter}");
+    expect(server.sent.at(-1)).toEqual({ type: "turn.text", text: "Hello!" });
+    // Vuelve el turno: Espacio sobre Terminé también lo cierra.
+    await act(async () => { server.push(stateMsg("playerTurn", "waiting", 2)); });
+    await user.type(input(), "I'm Nico.");
+    screen.getByRole("button", { name: "Terminé" }).focus();
+    await user.keyboard(" ");
+    expect(server.sent.filter((m) => m.type === "turn.text")).toEqual([{ type: "turn.text", text: "Hello!" }, { type: "turn.text", text: "I'm Nico." }]);
+  });
+
   test("vacío no manda nada y lo dice; fuera de turno tampoco", async () => {
     const server = fakeSceneServer();
     const user = await startScene(server);
@@ -155,7 +172,8 @@ describe("A1: Terminé cierra el turno", () => {
     expect(server.sent.at(-1)).toEqual({ type: "turn.pass" });
     await act(async () => { server.push(stateMsg("playerTurn", "passMenu")); });
     const menu = screen.getByRole("group", { name: "Pasar el turno" });
-    expect(within(menu).getAllByRole("button").map((b) => b.textContent)).toEqual(["Pista", "Repetir", "Más simple", "Seguí vos"]);
+    // Plan estetica-c M4: el orden de la barra de andamiaje de la propuesta C §8 (Repetir · Más despacio · Pista).
+    expect(within(menu).getAllByRole("button").map((b) => b.textContent)).toEqual(["Repetir", "Más simple", "Pista", "Seguí vos"]);
     await user.click(within(menu).getByRole("button", { name: "Repetir" }));
     expect(server.sent.at(-1)).toEqual({ type: "turn.choose", option: "repeat" });
     expect(screen.getByRole("status").textContent).toBe("Hello! Welcome to Kestrel Valley.");
@@ -372,5 +390,64 @@ describe("A3: el mismo HUD en solo-diálogo y sobre el canvas", () => {
     // Encima del mapa: el shell es transparente al puntero y el panel del HUD lo recibe.
     expect((container.firstElementChild as HTMLElement).className).toContain("pointer-events-none");
     expect(screen.getByTestId("dialogue-hud").className).toContain("pointer-events-auto");
+  });
+});
+
+describe("M4 (estetica-c): HUD papel y tinta", () => {
+  test("barra de andamiaje: Pasar el turno y Terminé (oscuro) a la derecha, al final; la palabra nueva sigue siendo un botón con Tab", async () => {
+    const server = fakeSceneServer();
+    const user = await startScene(server);
+    const bar = screen.getByRole("group", { name: "Ayudas para tu turno" });
+    const names = within(bar).getAllByRole("button").map((b) => b.getAttribute("id"));
+    expect(names).toEqual(["scene-pass", "scene-done"]);
+    const done = within(bar).getByRole("button", { name: "Terminé" });
+    expect(done.className).toContain("bg-ink");
+    expect(done.className).toContain("text-paper");
+    expect(done.className).toContain("ml-auto");
+    // La palabra nueva: subrayada con puntos y alcanzable por teclado.
+    const word = within(screen.getByRole("log")).getAllByRole("button")[0] as HTMLElement;
+    expect(word.className).toContain("decoration-dotted");
+    expect(word.tabIndex).toBe(0);
+    await user.click(word);
+    expect(screen.getByRole("complementary")).toBeTruthy();
+  });
+
+  test("chip ámbar del nombre y la línea del NPC más grande (en rem)", async () => {
+    const server = fakeSceneServer();
+    await startScene(server);
+    const chip = screen.getByRole("heading", { level: 1, name: "Con Inés Calder" });
+    expect(chip.className).toContain("bg-amber");
+    expect(chip.className).toContain("text-on-amber");
+    expect(chip.className).toContain("border-amber-strong");
+    const npc = document.querySelector('[data-line="npc"]') as HTMLElement;
+    expect(npc.className).toContain("text-[1.375rem]");
+  });
+
+  test("indicador de turno: punto verde que late en tu turno, gris cuando habla el NPC; quieto con reducir movimiento", async () => {
+    const server = fakeSceneServer();
+    await startScene(server);
+    const dot = () => screen.getByTestId("turn-dot");
+    expect(dot().getAttribute("data-dot")).toBe("turn");
+    expect(dot().getAttribute("data-pulse")).toBe("true");
+    expect(dot().className).toContain("lg-pulse");
+    expect(dot().className).toContain("bg-turn");
+    act(() => { actions.setReduceMotion(true); });
+    expect(dot().getAttribute("data-pulse")).toBe("false");
+    expect(dot().className).not.toContain("lg-pulse");
+    await act(async () => { server.push(stateMsg("npcTurn", null, 1)); });
+    expect(dot().getAttribute("data-dot")).toBe("speaking");
+    expect(dot().getAttribute("data-pulse")).toBe("false");
+    act(() => { actions.setReduceMotion(false); });
+    expect(dot().getAttribute("data-pulse")).toBe("false"); // gris: nunca late
+  });
+
+  test("sobre el mapa: tarjeta de papel abajo al centro de hasta 47,5rem, alto 45dvh", async () => {
+    const server = fakeSceneServer();
+    await act(async () => { stop = await bootApp({ webgl2: true, scene: { connector: server.connector } }); });
+    render(<Shell />);
+    act(() => { actions.enterWorld(); });
+    await act(async () => { actions.enterScene("NPC-INES", null); await server.waitOpen(); });
+    const hud = screen.getByTestId("dialogue-hud");
+    for (const c of ["fixed", "bottom-3", "mx-auto", "max-w-[47.5rem]", "max-h-[45dvh]", "rounded-card", "bg-paper", "shadow-card"]) expect(hud.className.split(" ")).toContain(c);
   });
 });

@@ -31,6 +31,18 @@ describe("retrato de solo-diálogo", () => {
     expect(container.querySelector("img")).toBeNull();
     expect(container.querySelector("svg")).not.toBeNull();
   });
+
+  test("QA M3: un PNG que no cargó para un id no se hereda al cambiar de id (y al volver, sigue cayendo al SVG)", () => {
+    const available = new Set(["NPC-NELL", "NPC-INES"]);
+    const { container, rerender } = render(<Portrait id="NPC-NELL" name="Nell" available={available} />);
+    act(() => { fireEvent.error(container.querySelector("img") as HTMLImageElement); });
+    expect(container.querySelector("img")).toBeNull();
+    // El mismo componente pasa a Inés: su PNG se prueba (antes quedaba en SVG para siempre).
+    rerender(<Portrait id="NPC-INES" name="Inés" available={available} />);
+    expect(container.querySelector("img")?.getAttribute("src")).toMatch(/portraits\/NPC-INES\.png$/);
+    act(() => { fireEvent.error(container.querySelector("img") as HTMLImageElement); });
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
 });
 
 describe("panel de retratos (modo director)", () => {

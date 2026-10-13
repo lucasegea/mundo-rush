@@ -27,7 +27,7 @@ describe("inspect-budgets sobre el árbol real", () => {
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
     // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los 4 archivos de personaje, dentro del tope de muelle.
     expect(lineas.join("\n")).toMatch(/info diorama test: 6 modelo\(s\)/);
-    expect(lineas.join("\n")).toMatch(/ref {2}diorama test contra assets_muelle_mb/);
+    expect(lineas.join("\n")).toMatch(/OK {3}diorama test contra assets_muelle_mb/);
   });
 });
 
@@ -69,9 +69,26 @@ describe("presupuestos de descarga (03 §2.7.3)", () => {
   });
 
   test("un diorama sin tope en la tabla se informa y no falla", () => {
-    const r = chequearDescarga(piezas, medirDioramas([{ id: "test", props: [{ asset: modelo("c") }] }], mapa), B);
+    const r = chequearDescarga(piezas, medirDioramas([{ id: "granja", props: [{ asset: modelo("c") }] }], mapa), B);
     expect(r.ok).toBe(true);
     expect(r.lineas.join("\n")).toMatch(/n\/a  assets del primer diorama: muelle todavía no existe/);
+    expect(r.lineas.join("\n")).toMatch(/info diorama granja: 1 modelo\(s\), 9\.000 MB/);
+  });
+
+  test("teeth (M4, nota de QA M3): el diorama de prueba por encima de assets_muelle_mb falla el chequeo, no solo avisa", () => {
+    expect(9).toBeGreaterThan(B.assets_muelle_mb);
+    const pesado = chequearDescarga(piezas, medirDioramas([{ id: "test", props: [{ asset: modelo("c") }] }], mapa), B);
+    expect(pesado.ok).toBe(false);
+    expect(pesado.lineas.join("\n")).toContain(`FAIL diorama test contra assets_muelle_mb: 9.000 de ${B.assets_muelle_mb} MB`);
+    const liviano = chequearDescarga(piezas, medirDioramas([{ id: "test", props: [{ asset: modelo("b") }] }], mapa), B);
+    expect(liviano.ok).toBe(true);
+    expect(liviano.lineas.join("\n")).toContain(`OK   diorama test contra assets_muelle_mb: 3.000 de ${B.assets_muelle_mb} MB`);
+  });
+
+  test("teeth (M4): run() sale con 1 si el diorama de prueba real se pasa del tope (check:budgets frena el build)", async () => {
+    const lineas: string[] = [];
+    expect(await run(ROOT, (l) => lineas.push(l), { ...B, assets_muelle_mb: 0.001 })).toBe(1);
+    expect(lineas.join("\n")).toMatch(/FAIL diorama test contra assets_muelle_mb/);
   });
 
   test("teeth: una pieza con textura o sin color por vértice no salió del pipeline", () => {

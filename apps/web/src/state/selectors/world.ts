@@ -108,11 +108,13 @@ export interface WorldHudView {
   prompt: InteractionPrompt | null;
   zoomStep: ZoomStep;
   zoomSteps: number;
+  /** Tier efectivo: el chip de calidad de abajo a la derecha (solo en desarrollo, plan estetica-c M4). */
+  tier: SelectableTier;
 }
 
 export const selectWorldHudView = createViewSelector(
-  (s: GameState) => [s.world.dioramaStatus, selectInteractionPrompt(s), s.ui.zoomStep] as const,
-  (mapStatus, prompt, zoomStep): WorldHudView => ({ mapStatus, prompt, zoomStep, zoomSteps: ZOOM_STEPS }),
+  (s: GameState) => [s.world.dioramaStatus, selectInteractionPrompt(s), s.ui.zoomStep, selectEffectiveTier(s)] as const,
+  (mapStatus, prompt, zoomStep, tier): WorldHudView => ({ mapStatus, prompt, zoomStep, zoomSteps: ZOOM_STEPS, tier }),
 );
 
 /**
