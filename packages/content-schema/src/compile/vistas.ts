@@ -91,4 +91,6 @@ export const vistaCliente = (c: Conjunto, modo: Modo): Salida => ({
   "manifiesto.json": { glossaryDisplay: modo },
   // F2: el mapa necesita el layout entero (tiles, volúmenes, NPCs, zonas no caminables); no trae nada de diseño.
   "dioramas.json": c.dioramas.map((d) => d.data),
+  // Plan estetica-c M2 (03 §6.4.2): lo que muestra la pantalla de créditos (las atribuciones obligatorias del registro).
+  "creditos.json": { atribuciones: c.creditos?.data.atribuciones ?? [] },
 });

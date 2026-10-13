@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { LABEL_CONTRAST_PAIRS, PALETTE } from "../../apps/web/src/world/materials/palette.ts";
+import { LABEL_CONTRAST_PAIRS, PALETTE } from "@lg/art";
 import { checkContrast, checkWorldLabels, contrastRatio, NON_TEXT_PAIRS, parseThemes, run, TEXT_MIN, TEXT_PAIRS, TOKENS_PATH } from "./contrast";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");

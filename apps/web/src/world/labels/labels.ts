@@ -3,7 +3,7 @@
 // el NPC de la charla en curso (el panel ya lo nombra). La resaltada es la del NPC que eligió `selectInteractionPrompt`
 // (el mismo selector que el aviso del HUD: no pueden diferir, A13): chip `ámbar` con borde `ámbar-osc` y la tecla E.
 // De lejos (D-208) los chips amontonan: pasado LABEL_HIDE_DISTANCE solo queda el resaltado, el que va a responder a la E.
-import { PALETTE } from "../materials/palette";
+import { PALETTE } from "@lg/art";
 
 export interface LabelActor {
   id: string;

@@ -1,0 +1,5 @@
+# content/creditos.yaml: créditos de los assets (03 §6.4.2; plan estetica-c M2). La pantalla de créditos se genera de
+# acá (`creditos.json` del cliente). Todo pack del registro (content/assets-registry.yaml) con una fila
+# `atribucion_requerida: true` necesita una entrada con su id; validate:content falla si falta. Hoy todo lo usado es
+# CC0 (sin atribución obligatoria): la lista arranca vacía y se agradece igual en la pantalla cuando exista.
+atribuciones: []

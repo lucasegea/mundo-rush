@@ -11,6 +11,8 @@ import type { Obstacle } from "../camera/rig";
 import { toonMaterial } from "../materials/registry";
 import { blob, mergeParts, painted, sphere } from "../props/geometry";
 import { buildProp, isTreeAsset, TREE_CANOPY_RADIUS, TREE_HEIGHT } from "../props/builders";
+import { isModelAsset } from "../props/gltf";
+import type { ModelSlot } from "../props/ModelProps";
 import { borderPines, buildTerrain, detailScatter, TILE, type Scatter, type Terrain } from "../terrain/buildTerrain";
 import { waterMaterial } from "../water/waterMaterial";
 import { rng } from "../materials/rng";
@@ -31,6 +33,8 @@ export interface DioramaScene {
   obstacles: Obstacle[];
   /** Sombras blob fijas (troncos), además de las de los personajes. */
   blobAnchors: BlobAnchor[];
+  /** Props `modelo/*` (glTF del pipeline de M2): se cargan aparte y entran en su caja `tam`. */
+  models: ModelSlot[];
   dispose(): void;
 }
 
@@ -113,6 +117,7 @@ export function buildDioramaScene(diorama: DioramaRuntime): DioramaScene {
 
   const obstacles: Obstacle[] = [];
   const blobAnchors: BlobAnchor[] = [];
+  const models: ModelSlot[] = [];
   const geometries: BufferGeometry[] = [];
 
   // Props sólidos: agrupados por asset y tamaño (los iguales comparten geometría y van instanciados).
@@ -127,6 +132,12 @@ export function buildDioramaScene(diorama: DioramaRuntime): DioramaScene {
       trees.set(b.asset, list);
       obstacles.push({ kind: "circle", x: b.x, z: b.z, r: TREE_CANOPY_RADIUS[b.asset] * scale, height: b.h });
       blobAnchors.push({ x: b.x, z: b.z, size: 1.6 * scale });
+      continue;
+    }
+    if (isModelAsset(b.asset)) {
+      // M2 SEAM: giro (`rotY`) y tinte por instancia llegan con el formato de diorama de M5.
+      models.push({ asset: b.asset, x: b.x, y: b.y, z: b.z, w: b.w, h: b.h, d: b.d });
+      obstacles.push({ kind: "rect", minX: b.x - b.w / 2, maxX: b.x + b.w / 2, minZ: b.z - b.d / 2, maxZ: b.z + b.d / 2, height: b.h });
       continue;
     }
     const k = sizeKey(b);
@@ -172,6 +183,7 @@ export function buildDioramaScene(diorama: DioramaRuntime): DioramaScene {
     terrain,
     obstacles,
     blobAnchors,
+    models,
     dispose() {
       root.traverse((o) => { if (o instanceof Mesh) o.geometry.dispose(); });
       for (const g of geometries) g.dispose();

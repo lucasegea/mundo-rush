@@ -1,7 +1,8 @@
-// world/props/bevel.ts — la regla del bisel como función pura (propuesta C §7, plan estetica-c M1 A5): el mayor ángulo
+// @lg/art bevel.ts: la regla del bisel como función pura (propuesta C §7, plan estetica-c M1 A5): el mayor ángulo
 // diedro entre triángulos vecinos de una malla (el ángulo entre sus normales; 0 = coplanares, 90 = arista de caja).
 // Los vértices se sueldan por posición (las costuras de UV duplican vértices) y los triángulos degenerados se saltean.
-// En M2 lo usa también el script de assets para rechazar piezas con aristas duras.
+// Movida desde world/props/ en M2 tal cual: la usan los tests de los props por código y scripts/assets/optimize.ts
+// para rechazar piezas con aristas duras.
 
 /** Mayor ángulo diedro (grados) entre triángulos que comparten una arista. `index` opcional (malla indexada). */
 export function maxDihedralDeg(positions: ArrayLike<number>, index?: ArrayLike<number> | null): number {

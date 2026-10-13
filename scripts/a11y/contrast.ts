@@ -2,13 +2,13 @@
 // apps/web/src/styles/tokens.css, en el tema normal y en alto contraste. Pares de texto ≥ 4,5:1 (AA);
 // componentes no textuales (foco, bordes de controles) ≥ 3:1 (WCAG 1.4.11). Además, los pares de las etiquetas de
 // nombre del mundo (plan estetica-c M1 A14, D-207) ≥ 7:1 (AAA), leídos de la paleta del mundo (una sola fuente de hex,
-// sin copiarlos a tokens.css; en M2 el import pasa a @lg/art).
+// sin copiarlos a tokens.css; desde M2 vienen de @lg/art).
 //
 // Uso: node scripts/a11y/contrast.ts [--tokens <archivo.css>]   Sale con 1 si un par no llega.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS } from "../../apps/web/src/world/materials/palette.ts";
+import { LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS } from "@lg/art";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const TOKENS_PATH = resolve(ROOT, "apps/web/src/styles/tokens.css");

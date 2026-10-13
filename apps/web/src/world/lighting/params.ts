@@ -1,7 +1,7 @@
 // world/lighting/params.ts — los valores de luz, niebla y tono de la propuesta C §5 (plan estetica-c M1 ítem 12), como
 // dato puro para testearlos sin GPU. Lighting.tsx y GameCanvas los aplican; niebla y sombra siguen a la distancia de la
 // cámara (D-208).
-import { PALETTE } from "../materials/palette";
+import { PALETTE } from "@lg/art";
 
 export const SUN = { color: PALETTE.sol, intensity: 2.3, elevationDeg: 48, azimuthDeg: -30 } as const;
 export const HEMI = { sky: PALETTE["luz-cielo"], ground: PALETTE["luz-suelo"], intensity: 1.15 } as const;

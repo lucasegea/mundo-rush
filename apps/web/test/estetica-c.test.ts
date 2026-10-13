@@ -23,11 +23,9 @@ import { LABEL_HIDE_DISTANCE, labelEntries, LABEL_STYLES, labelVisibleAt } from 
 import { createNameLabel } from "../src/world/labels/labelSprite";
 import { SUN, HEMI, FOG, TONE, BACKGROUND, fogFor, SUN_SHADOW, sunShadowFor } from "../src/world/lighting/params";
 import { TILT_SHIFT_BASE, tiltShiftFor } from "../src/world/post/tiltShift";
-import { hexToLinear, paintColors, PAINT_DEFAULTS, tokenRgb } from "../src/world/materials/paint";
-import { LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS, PALETTE } from "../src/world/materials/palette";
+import { hexToLinear, LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS, maxDihedralDeg, MAX_DIHEDRAL_DEG, paintColors, PAINT_DEFAULTS, PALETTE, tokenRgb } from "@lg/art";
 import { auditMaterials, materialKind, tagMaterial, toonMaterial, WORLD_MATERIAL_KINDS } from "../src/world/materials/registry";
 import { BRUSH_MAX, BRUSH_MIN, BRUSH_SIZE, brushPixels, brushTexture, toonRamp, toonRampData, TOON_BANDS } from "../src/world/materials/toon";
-import { maxDihedralDeg, MAX_DIHEDRAL_DEG } from "../src/world/props/bevel";
 import { buildProp, PROP_BUILDERS } from "../src/world/props/builders";
 import { buildTerrain, TERRAIN_SKIRT, TILE, tileAt } from "../src/world/terrain/buildTerrain";
 import { setWaterFog, tickWater, waterMaterial } from "../src/world/water/waterMaterial";
@@ -274,7 +272,8 @@ describe("A5 regla del bisel", () => {
   });
 
   test("los props del diorama de prueba, con sus tamaños reales, también", () => {
-    for (const b of testDiorama().boxes) {
+    // Los `modelo/*` (glTF de M2) pasan la regla en scripts/assets/optimize.ts o la registran (bisel) en el registro.
+    for (const b of testDiorama().boxes.filter((x) => x.asset.startsWith("codigo/"))) {
       const g = buildProp(b.asset, { w: b.w, h: b.h, d: b.d }, 0);
       expect(maxDihedralDeg(g.getAttribute("position").array, g.index?.array ?? null), `${b.asset} ${b.w}×${b.h}×${b.d}`).toBeLessThan(MAX_DIHEDRAL_DEG);
     }
@@ -294,8 +293,11 @@ describe("A5 regla del bisel", () => {
 });
 
 describe("A6 props por código", () => {
-  test("todo asset de test.yaml tiene constructor; uno inexistente falla nombrándolo", () => {
-    for (const p of layout().props ?? []) expect(PROP_BUILDERS[p.asset], p.asset).toBeTypeOf("function");
+  test("todo asset codigo/* de test.yaml tiene constructor; uno inexistente falla nombrándolo", () => {
+    const props = layout().props ?? [];
+    // Desde M2 un prop es `codigo/*` (constructor) o `modelo/*` (glTF con registro; lo chequea validate:content).
+    expect(props.every((p) => p.asset.startsWith("codigo/") || p.asset.startsWith("modelo/")), props.map((p) => p.asset).join(", ")).toBe(true);
+    for (const p of props.filter((x) => x.asset.startsWith("codigo/"))) expect(PROP_BUILDERS[p.asset], p.asset).toBeTypeOf("function");
     expect(() => buildProp("codigo/inexistente", { w: 1, h: 1, d: 1 })).toThrow(/codigo\/inexistente/);
   });
 
@@ -404,7 +406,7 @@ describe("A13/A14 paleta: una sola fuente de los hex", () => {
     const legacy = new Set(["props/Boxes.tsx"]);
     const files = Object.entries(src)
       .map(([path, text]) => [path.replace(/^.*\/src\/world\//, ""), text] as const)
-      .filter(([rel]) => new RegExp(`^(${zones})/`).test(rel) && rel !== "materials/palette.ts" && !legacy.has(rel));
+      .filter(([rel]) => new RegExp(`^(${zones})/`).test(rel) && !legacy.has(rel));
     expect(files.length).toBeGreaterThan(25);
     expect(files.filter(([, text]) => /#[0-9a-fA-F]{6}/.test(text)).map(([rel]) => rel)).toEqual([]);
   });

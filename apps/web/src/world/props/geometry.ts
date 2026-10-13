@@ -8,8 +8,7 @@ import {
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { paintGeometry } from "../materials/paintGeometry";
-import type { PaletteToken } from "../materials/palette";
-import type { PaintOptions } from "../materials/paint";
+import type { PaintOptions, PaletteToken } from "@lg/art";
 
 export type Paint = PaletteToken | `#${string}`;
 

@@ -14,9 +14,11 @@ export * from "./schemas/aprendizaje.ts";
 export * from "./schemas/control.ts";
 export * from "./schemas/pedido.ts";
 export * from "./schemas/conversacion.ts";
+export * from "./schemas/assets.ts";
 
 export { compilarContenido, compilarIncremental } from "./compile/compilar.ts";
 export type { Resultado, ResultadoIncremental } from "./compile/compilar.ts";
+export { necesitaRegistro } from "./compile/assets.ts";
 export { filtrarGlosario, filtrarSaberes } from "./compile/vistas.ts";
 export type { Salida } from "./compile/vistas.ts";
 export { buscarRetirados, RUTA_RETIRADOS } from "./compile/retirados.ts";

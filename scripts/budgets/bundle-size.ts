@@ -7,9 +7,12 @@
 // archivo de chunk → módulos que contiene) y falla si algún chunk del grafo estático de index.html trae módulos de
 // three o @react-three/*. La firma de texto de F1.3 queda como segunda red.
 //
+// Plan estetica-c M2: el decodificador meshopt autoalojado (public/decoders/, 03 §4.2) se baja junto con el mundo 3D, así
+// que su gzip se suma al chunk 3D (los archivos de dist/decoders/ entran como extras de cada entrada del mundo).
+//
 // Uso: node scripts/budgets/bundle-size.ts [--dist <dir>]   (por defecto apps/web/dist)
 // Sale con 1 si un presupuesto se pasa o si falta el manifiesto; con 0 si todo entra.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -82,6 +85,8 @@ export const BUDGETS_PATH = join(SCRIPT_DIR, "budgets.json");
 export const DEFAULT_DIST = join(ROOT, "apps/web/dist");
 export const MANIFEST_RELATIVE = ".vite/manifest.json";
 export const CHUNK_MODULES_RELATIVE = ".vite/chunk-modules.json";
+/** Carpeta del dist con los decodificadores autoalojados (copia de apps/web/public/decoders/). */
+export const DECODERS_RELATIVE = "decoders";
 
 const SHELL_ENTRY = "index.html";
 const DOCENTE_ENTRY = "docente.html";
@@ -152,6 +157,8 @@ export function checkBundle(
   gzipSize: (file: string) => number,
   fileText?: (file: string) => string,
   chunkModules?: ChunkModules,
+  /** Archivos del dist que se bajan con el mundo 3D sin ser chunks de Vite (el decodificador meshopt). */
+  worldExtras: readonly string[] = [],
 ): CheckReport {
   if (!manifest[SHELL_ENTRY]) {
     throw new Error(`manifiesto: falta la entrada "${SHELL_ENTRY}" (¿build.manifest: true en apps/web/vite.config.ts?)`);
@@ -193,8 +200,9 @@ export function checkBundle(
   if (worldEntries.length === 0) skipped.push("chunk_3d_gzip_kb: sin chunk 3D todavía (llega con F2)");
   for (const entry of worldEntries) {
     const own = staticClosure(manifest, entry).filter((key) => !shellSet.has(key));
+    const extras = worldExtras.map((file): ChunkSize => ({ key: "public/decoders", file, gzipBytes: gzipSize(file) }));
     results.push(result(`chunk 3D (${entry})`, "chunk_3d_gzip_kb", budgets.chunk_3d_gzip_kb,
-      measure(manifest, own, gzipSize)));
+      [...measure(manifest, own, gzipSize), ...extras].sort((a, b) => b.gzipBytes - a.gzipBytes)));
   }
 
   if (manifest[DOCENTE_ENTRY]) {
@@ -203,7 +211,7 @@ export function checkBundle(
   } else {
     skipped.push("docente_gzip_kb: sin docente.html (F11.2, postergada)");
   }
-  skipped.push("assets_muelle_mb, assets_muelle_plaza_mb: sin assets todavía (F3)");
+  skipped.push("assets_muelle_mb, assets_muelle_plaza_mb: los mide scripts/assets/inspect-budgets.ts (plan estetica-c M2)");
   skipped.push("audio_lineas_por_mision_mb: sin audio guionado todavía (F8)");
 
   return { ok: results.every((r) => r.ok) && violations.length === 0, results, skipped, violations };
@@ -241,7 +249,11 @@ export function run(distDir = DEFAULT_DIST, budgetsPath = BUDGETS_PATH, log: (li
   const chunkModules = JSON.parse(readFileSync(modulesPath, "utf8")) as ChunkModules;
   const gzipSize = (file: string): number => gzipSync(readFileSync(join(distDir, file))).length;
   const fileText = (file: string): string => readFileSync(join(distDir, file), "utf8");
-  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText, chunkModules);
+  const decodersDir = join(distDir, DECODERS_RELATIVE);
+  const worldExtras = existsSync(decodersDir)
+    ? readdirSync(decodersDir).filter((f) => f.endsWith(".js")).sort().map((f) => `${DECODERS_RELATIVE}/${f}`)
+    : [];
+  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText, chunkModules, worldExtras);
   log(formatReport(report));
   return report.ok ? 0 : 1;
 }

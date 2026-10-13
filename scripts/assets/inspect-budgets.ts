@@ -1,0 +1,147 @@
+// scripts/assets/inspect-budgets.ts: triángulos, tamaño y materiales por pieza y por diorama (plan estetica-c M2,
+// 03 §6.4.1 y §2.7.3). Lo corre check:budgets: el primer diorama (muelle) entra en `assets_muelle_mb` y muelle + plaza
+// en `assets_muelle_plaza_mb` (scripts/budgets/budgets.json, copia de la tabla de 03 §2.7.3; ningún umbral cambia acá).
+// Los demás dioramas (hoy `test`) se informan sin tope, porque la tabla no les da uno. Además, toda pieza servida en
+// apps/web/public/models tiene que haber salido del pipeline: sin texturas y con color por vértice.
+//
+// Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { archivoDeModelo, compilarContenido, PREFIJO_MODELO } from "@lg/content-schema";
+import { loadBudgets, type Budgets } from "../budgets/bundle-size.ts";
+import { leerContenido } from "../content/build.ts";
+import { crearIO } from "./optimize.ts";
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+export const MODELOS = "apps/web/public/models";
+const MB = 1_000_000;
+
+export interface PiezaMedida {
+  /** Ruta desde la raíz del repo. */
+  archivo: string;
+  bytes: number;
+  triangulos: number;
+  primitivas: number;
+  materiales: number;
+  texturas: number;
+  conColor: boolean;
+}
+
+export interface DioramaMedido {
+  id: string;
+  /** Archivos .glb distintos que usa (se bajan una vez). */
+  modelos: string[];
+  bytes: number;
+  /** Triángulos de los modelos por cada vez que aparecen. */
+  triangulos: number;
+}
+
+/** Mide un .glb (ya optimizado o no). */
+export async function medirPieza(archivo: string, bytes: Uint8Array): Promise<PiezaMedida> {
+  const doc = await (await crearIO()).readBinary(bytes);
+  const root = doc.getRoot();
+  let triangulos = 0;
+  let primitivas = 0;
+  let conColor = true;
+  for (const mesh of root.listMeshes()) {
+    for (const prim of mesh.listPrimitives()) {
+      primitivas += 1;
+      triangulos += (prim.getIndices()?.getCount() ?? prim.getAttribute("POSITION")?.getCount() ?? 0) / 3;
+      if (!prim.getAttribute("COLOR_0")) conColor = false;
+    }
+  }
+  return { archivo, bytes: bytes.byteLength, triangulos, primitivas, materiales: root.listMaterials().length, texturas: root.listTextures().length, conColor };
+}
+
+/** Los props `modelo/*` de cada diorama → archivos y peso de descarga. */
+export function medirDioramas(dioramas: readonly { id: string; props?: readonly { asset: string }[] | undefined }[], piezas: ReadonlyMap<string, PiezaMedida>): DioramaMedido[] {
+  return dioramas.map((d) => {
+    const usos = (d.props ?? []).filter((p) => p.asset.startsWith(PREFIJO_MODELO)).map((p) => archivoDeModelo(p.asset));
+    const modelos = [...new Set(usos)].sort();
+    return {
+      id: d.id,
+      modelos,
+      bytes: modelos.reduce((n, m) => n + (piezas.get(m)?.bytes ?? 0), 0),
+      triangulos: usos.reduce((n, m) => n + (piezas.get(m)?.triangulos ?? 0), 0),
+    };
+  });
+}
+
+export interface ChequeoDescarga {
+  ok: boolean;
+  lineas: string[];
+}
+
+const mb = (bytes: number): string => (bytes / MB).toFixed(3);
+
+/** Presupuestos de 03 §2.7.3 sobre los dioramas medidos y las reglas del pipeline sobre cada pieza. */
+export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: readonly DioramaMedido[], b: Budgets): ChequeoDescarga {
+  const lineas: string[] = [];
+  let ok = true;
+  for (const p of piezas) {
+    const malas = [p.texturas > 0 ? `${p.texturas} textura(s)` : "", p.conColor ? "" : "sin COLOR_0", p.materiales > 0 ? `${p.materiales} material(es) de origen` : ""].filter(Boolean);
+    if (malas.length > 0) ok = false;
+    lineas.push(`${malas.length > 0 ? "FAIL" : "OK  "} pieza ${p.archivo}: ${p.bytes} bytes, ${p.triangulos} triángulos, ${p.primitivas} primitiva(s)${malas.length > 0 ? `; no salió de scripts/assets/optimize.ts (${malas.join(", ")})` : ""}`);
+  }
+  const porId = new Map(dioramas.map((d) => [d.id, d]));
+  const tope = (nombre: string, ids: readonly string[], capMb: number, clave: keyof Budgets): void => {
+    const presentes = ids.filter((id) => porId.has(id));
+    if (presentes.length === 0) {
+      lineas.push(`n/a  ${nombre}: ${ids.join(" + ")} todavía no existe (${clave} = ${capMb} MB)`);
+      return;
+    }
+    const archivos = new Set(presentes.flatMap((id) => porId.get(id)?.modelos ?? []));
+    const bytes = [...archivos].reduce((n, a) => n + (piezas.find((p) => p.archivo === a)?.bytes ?? 0), 0);
+    const pasa = bytes / MB <= capMb;
+    if (!pasa) ok = false;
+    lineas.push(`${pasa ? "OK  " : "FAIL"} ${nombre}: ${mb(bytes)} MB de modelos (tope ${capMb} MB, ${clave})`);
+  };
+  tope("assets del primer diorama", ["muelle"], b.assets_muelle_mb, "assets_muelle_mb");
+  tope("descarga inicial del vertical slice", ["muelle", "plaza"], b.assets_muelle_plaza_mb, "assets_muelle_plaza_mb");
+  for (const d of dioramas.filter((x) => x.id !== "muelle" && x.id !== "plaza")) {
+    lineas.push(`info diorama ${d.id}: ${d.modelos.length} modelo(s), ${mb(d.bytes)} MB, ${d.triangulos} triángulos de modelos (sin tope en 03 §2.7.3)`);
+  }
+  return { ok, lineas };
+}
+
+const aPosix = (p: string): string => p.split(sep).join("/");
+
+/** Los .glb servidos, con su ruta desde root. */
+export function listarModelos(root = ROOT): string[] {
+  const out: string[] = [];
+  const recorrer = (dir: string): void => {
+    let entradas;
+    try {
+      entradas = readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw e;
+    }
+    for (const e of entradas) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) recorrer(p);
+      else if (e.name.endsWith(".glb")) out.push(aPosix(relative(root, p)));
+    }
+  };
+  recorrer(join(root, MODELOS));
+  return out.sort();
+}
+
+export async function run(root = ROOT, log: (s: string) => void = console.log): Promise<number> {
+  const piezas = await Promise.all(listarModelos(root).map((a) => medirPieza(a, new Uint8Array(readFileSync(join(root, a))))));
+  const contenido = compilarContenido(leerContenido(root));
+  if (contenido.errores.length > 0) {
+    log(`inspect-budgets: el contenido no compila (${contenido.errores.length} error(es)); corré validate:content`);
+    return 1;
+  }
+  const dioramas = medirDioramas(contenido.conjunto.dioramas.map((d) => d.data), new Map(piezas.map((p) => [p.archivo, p])));
+  const r = chequearDescarga(piezas, dioramas, loadBudgets());
+  for (const l of r.lineas) log(l);
+  return r.ok ? 0 : 1;
+}
+
+const invocado = process.argv[1];
+if (invocado && import.meta.url === pathToFileURL(invocado).href) {
+  process.exitCode = await run();
+}

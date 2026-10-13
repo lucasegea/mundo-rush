@@ -1,5 +1,5 @@
 // world/dioramas/Diorama.tsx — dibuja el diorama que el store cargó en el look C (plan estetica-c M1): el grafo
-// estático de scene.ts (terreno, agua, props, árboles, detalle), los NPCs como chibis con su etiqueta de nombre y las
+// estático de scene.ts (terreno, agua, props, árboles, detalle), los modelos glTF del pipeline (M2), los NPCs como chibis con su etiqueta de nombre y las
 // sombras blob. Recibe los clics: el suelo → `moveTo`, un NPC → `interact`. Los clics entran como acciones semánticas
 // por state/bridge.ts (R3: nada de eventos del DOM; R10: el mismo traductor del núcleo que usa services/input).
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
@@ -12,6 +12,7 @@ import { Chibi, type ActorPose } from "../actors/Chibi";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
 import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
+import { ModelProps } from "../props/ModelProps";
 import { followTarget } from "../runtime";
 import { tickWater, waterMaterial } from "../water/waterMaterial";
 import type { DioramaScene } from "./scene";
@@ -65,6 +66,7 @@ export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewD
         <meshBasicMaterial visible={false} />
       </mesh>
       <primitive object={scene.root} />
+      <ModelProps slots={scene.models} />
       <WaterClock reduceMotion={cut} />
       {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} />)}
       {labels.map((l) => {

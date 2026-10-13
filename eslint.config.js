@@ -96,6 +96,11 @@ export default tseslint.config(
         { target: "./packages",    from: "./apps", message: "§4.3: los paquetes no importan apps/." },
         { target: "./packages/protocol", from: ["./packages/core", "./packages/content-schema"], message: "§4.3: protocol solo depende de zod." },
         { target: "./packages/core", from: "./packages/content-schema", message: "§4.3: core no depende de content-schema." },
+        // plan estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art es dato de arte puro y no depende de otro paquete; el
+        // script de assets pinta con @lg/art, nunca con el árbol del cliente (una sola implementación, sin copia).
+        { target: "./packages/art", from: ["./packages/core", "./packages/content-schema", "./packages/protocol"],
+          message: "M2: @lg/art no depende de otros paquetes." },
+        { target: "./scripts/assets", from: "./apps", message: "M2: scripts/assets/ usa @lg/art, no importa apps/." },
       ]}],
     },
   },
@@ -115,6 +120,22 @@ export default tseslint.config(
         { object: "Math", property: "random", message: "R4: inyectá el Rng." }],
       "no-restricted-syntax": ["error",
         { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: "R4: inyectá el Clock." }],
+    },
+  },
+  // @lg/art (plan estetica-c M2, revisión de arquitectura 2026-10-12 §10.3): paleta, pintura y regla del bisel en TS puro, como R4: sin
+  // three, react, Node ni globals del DOM, y determinístico (el arte por código sale de una semilla).
+  {
+    files: ["packages/art/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [
+        { group: ["react", "react-*", "three", "three/*", "@react-three/*", "zustand", "zustand/*", "node:*", "@lg/*", "@gltf-transform/*"],
+          message: "M2: @lg/art es TS puro (sin three, react, Node ni otros paquetes)." } ] }],
+      "no-restricted-globals": ["error", "window", "document", "navigator", "localStorage", "sessionStorage",
+        "indexedDB", "fetch", "WebSocket", "AudioContext", "Image", "ImageData", "OffscreenCanvas", "HTMLCanvasElement",
+        "performance", "crypto", "process", "Buffer", "require", "__dirname"],
+      "no-restricted-properties": ["error",
+        { object: "Date", property: "now", message: "M2: @lg/art es determinístico." },
+        { object: "Math", property: "random", message: "M2: @lg/art es determinístico (usá una semilla)." }],
     },
   },
   // protocol: solo zod

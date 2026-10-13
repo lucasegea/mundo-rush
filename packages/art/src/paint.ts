@@ -1,8 +1,9 @@
-// world/materials/paint.ts — el color por vértice "pintado" de la propuesta C §7, sin three (plan estetica-c M1 ítem 7,
-// revisión de arquitectura 2026-10-12): núcleo puro sobre arreglos para que M2 lo mude a @lg/art tal cual. Degradé vertical (más claro
+// @lg/art paint.ts: el color por vértice "pintado" de la propuesta C §7, sin three (plan estetica-c M1 ítem 7,
+// revisión de arquitectura 2026-10-12): núcleo puro sobre arreglos, movido desde world/materials/ en M2 tal cual. Lo usan el adaptador
+// world/materials/paintGeometry.ts y scripts/assets/optimize.ts (una sola implementación). Degradé vertical (más claro
 // arriba, de 15 a 35 % más oscuro abajo) y temblor de pincel por posición. Los colores van en espacio lineal (el que
 // three usa en los atributos de color).
-import { PALETTE, type PaletteToken } from "./palette";
+import { PALETTE, type PaletteToken } from "./palette.ts";
 
 export type Rgb = readonly [number, number, number];
 

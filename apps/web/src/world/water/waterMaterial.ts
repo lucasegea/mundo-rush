@@ -2,7 +2,7 @@
 // `agua` y `agua-honda` y brillos que corren, con la niebla y el tono incluidos (el shader no usa los de three). Una sola
 // instancia (clase `agua` del registro). Con "reducir movimiento" el tiempo no avanza y los brillos quedan quietos.
 import { Color, ShaderMaterial } from "three";
-import { PALETTE } from "../materials/palette";
+import { PALETTE } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
 import { FOG } from "../lighting/params";
 

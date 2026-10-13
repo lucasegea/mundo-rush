@@ -1,0 +1,265 @@
+# content/assets-registry.yaml: registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2, D-207).
+# Todo archivo servido en apps/web/public/{models,textures,audio,sprites} tiene una fila en `assets`; validate:content
+# falla si falta, si la licencia es no comercial o de uso personal, o si una fila con atribucion_requerida no está en
+# content/creditos.yaml. `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
+# diferido al operador o pendiente para un hito posterior). Fuente de todas las verificaciones: investigación de assets
+# del 2026-10-13 (documento interno), con fuente y fecha de acceso por pack.
+# `pintura` es la tabla del pack de material de origen a token de la paleta (@lg/art) que usa scripts/assets/optimize.ts.
+# El decodificador meshopt de apps/web/public/decoders/ es código de three (MIT, igual que three), no un asset: no va acá.
+packs:
+  # ---------- usados en M2 ----------
+  - id: quaternius-farm-buildings
+    nombre: Quaternius Farm Buildings Pack (2018), GLB sueltos en poly.pizza
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/farmbuildings.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: usado
+    razon: >-
+      Cubre granero, gallinero, silo, molino y cercos sin texturas (color por material), CC0 en la página del pack y en
+      cada modelo de poly.pizza (Licence "CC0 1.0", autor Quaternius). En poly.pizza están 10 de las 13 piezas (subidas
+      el 2021-08-15: Barn, BigBarn, SmallBarn, OpenBarn, Silo, Silo_House, TowerWindmill, ChickenCoop, Fence x2); Well,
+      WaterTower y Windmill solo están en FBX/OBJ en el Drive del pack, así que el pozo y el tanque de M2 quedan para
+      cuando el pipeline lea FBX o el operador los exporte. Low-poly de aristas duras: cada pieza va con bisel registrado.
+    fuente_investigacion: investigación 2026-10-13, V3 (Quaternius Farm Buildings Pack) y tabla de descargas
+    pintura:
+      White: muro
+      LightRed: techo
+      DarkRed: cumbrera
+      Brown: madera
+      RoofBlack: tinta-suave
+      Grey: piedra
+  # ---------- descartados ----------
+  - id: quaternius-medieval-village-megakit
+    nombre: Quaternius Medieval Village MegaKit (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/medievalvillagemegakit.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: descartado
+    razon: >-
+      Texturas PBR de trim sheet (BaseColor, Normal, ORM) que el pipeline sin texturas pierde, y estética medieval
+      europea que no es el rural moderno de la biblia. Sin granero ni pozo.
+    fuente_investigacion: investigación 2026-10-13, V3 (Medieval Village MegaKit)
+  - id: quaternius-stylized-nature-megakit
+    nombre: Quaternius Stylized Nature MegaKit (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/stylizednaturemegakit.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: descartado
+    razon: >-
+      Todo texturizado y los árboles y arbustos usan hojas como tarjetas con máscara alfa (alphaMode MASK): al quitar la
+      textura quedan cuadrados verdes. Árboles y pinos ya son por código (M1); piedras y troncos se reconsideran solo si
+      el operador quiere esas formas.
+    fuente_investigacion: investigación 2026-10-13, V3 (Stylized Nature MegaKit)
+  - id: mixamo
+    nombre: Mixamo (Adobe)
+    autor: Adobe
+    licencia: Términos de Adobe Mixamo (no CC0)
+    url: https://www.mixamo.com/
+    fecha_acceso: 2026-10-13
+    verificacion: [V4]
+    estado: descartado
+    razon: >-
+      Adobe prohíbe redistribuir los archivos crudos de personaje y animación, y en un juego web el GLB queda
+      descargable desde el navegador; además pide cuenta Adobe (no se baja por script). Quaternius UAL 1 y 2 (CC0)
+      cubren lo mismo.
+    fuente_investigacion: investigación 2026-10-13, V4 (Mixamo, FAQ citado desde Adobe Community)
+  # ---------- diferidos al operador (login, compra o descarga por navegador) ----------
+  - id: kaykit-adventurers
+    nombre: KayKit Character Pack Adventurers 2.0 (Free)
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url: https://kaylousberg.itch.io/kaykit-adventurers
+    fecha_acceso: 2026-10-13
+    verificacion: [V1]
+    estado: diferido
+    razon: >-
+      Cuerpos base chibi para M3 (esqueleto de destino recomendado Rig_Medium). La 2.0 solo está en itch.io (botón de
+      "name your own price", no scriptable): la baja el operador. La 1.0 de GitHub se puede bajar por script pero no
+      está verificado que sus huesos coincidan con Rig_Medium 2.0. Ropa de fantasía: se repinta y se viste con accesorios.
+    fuente_investigacion: investigación 2026-10-13, V1
+  - id: kaykit-character-animations
+    nombre: KayKit Character Animations (Free)
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url: https://kaylousberg.itch.io/kaykit-character-animations
+    fecha_acceso: 2026-10-13
+    verificacion: [V1]
+    estado: diferido
+    razon: >-
+      Más de 150 clips CC0 para Rig_Medium (sentarse, interactuar, levantar, herramientas). Solo en itch.io: la baja el
+      operador para M3. Faltan hablar, asentir, negar, cargar caminando y dar (se resuelven por código o desde UAL).
+    fuente_investigacion: investigación 2026-10-13, V1
+  - id: kaykit-series-6
+    nombre: KayKit Mystery Monthly Series 6 (The Farmers)
+    autor: Kay Lousberg
+    licencia: CC0-1.0 (acceso pago, mínimo 19,99 USD)
+    url: https://kaylousberg.itch.io/kaykit-series-6
+    fecha_acceso: 2026-10-13
+    verificacion: [V1]
+    estado: diferido
+    razon: >-
+      Los únicos granjeros de KayKit (dos personajes, mismo rig). Pregunta para el operador: si paga 19,99 USD; la
+      licencia de uso sigue siendo CC0.
+    fuente_investigacion: investigación 2026-10-13, V1 y preguntas para el operador
+  - id: quaternius-ual-1
+    nombre: Quaternius Universal Animation Library 1 (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/universalanimationlibrary.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V4]
+    estado: diferido
+    razon: >-
+      Clips para retargetear en M3 (Idle_Talking_Loop, Sitting_Talking_Loop). El espejo de OpenGameArt trae huesos
+      Rigify viejos; la versión actual con huesos renombrados está solo en itch.io: la baja el operador.
+    fuente_investigacion: investigación 2026-10-13, V4
+  - id: synty-polygon
+    nombre: Synty POLYGON Farm, POLYGON Nature y Sidekick
+    autor: Synty Studios
+    licencia: EULA de compra única de Synty (pago)
+    url: https://syntystore.com/pages/end-user-licence-agreement
+    fecha_acceso: 2026-10-13
+    verificacion: [V5]
+    estado: diferido
+    razon: >-
+      No hace falta ahora: los packs CC0 alcanzan para M2 y M3. Queda como pregunta para el operador (Farm 49,99 USD,
+      6 granjeros con rig y sin animaciones; zona gris del GLB descargable frente a la cláusula de source files; estilo
+      facetado con texturas de atlas). Nada se compra sin su decisión.
+    fuente_investigacion: investigación 2026-10-13, V5
+  # ---------- pendientes (se bajan por script cuando un hito los use) ----------
+  - id: quaternius-ultimate-animated-animals
+    nombre: Quaternius Ultimate Animated Animal Pack
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/ultimateanimatedanimals.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V2]
+    estado: pendiente
+    razon: >-
+      Caballo, vaca, burro y alpaca con esqueleto y 13 clips, sin texturas (color por material). No hay gallina ni
+      cabra: la gallina se decide entre una de poly.pizza y una por código, y la cabra de Clover (D-174) es una
+      pregunta para el operador (por código o cambio de especie). Va con M3 y M5.
+    fuente_investigacion: investigación 2026-10-13, V2
+  - id: quaternius-farm-animal-pack
+    nombre: Quaternius Farm Animal Pack (2018)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/farmanimal.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V2]
+    estado: pendiente
+    razon: Única fuente de oveja y cerdo de Quaternius; solo FBX, OBJ y Blend (sin glTF). Clips no verificados.
+    fuente_investigacion: investigación 2026-10-13, V2
+  - id: quaternius-ual-2
+    nombre: Quaternius Universal Animation Library 2 (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/universalanimationlibrary2.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V4]
+    estado: pendiente
+    razon: >-
+      Hablar, sí, no, cargar caminando, cosechar, sembrar y regar para retargetear a Rig_Medium en M3. Esqueleto
+      estilo UE Mannequin, proporciones realistas. El espejo de OpenGameArt se baja por script.
+    fuente_investigacion: investigación 2026-10-13, V4
+  - id: kenney-nature-kit
+    nombre: Kenney Nature Kit
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/nature-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: >-
+      Cultivos con surcos, rocas, cercos y troncos sin texturas; el más fácil de repintar. Low-poly facetado: cada
+      pieza pasa por la regla del bisel. Para M5.
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-fantasy-town-kit
+    nombre: Kenney Fantasy Town Kit 2.0
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/fantasy-town-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: >-
+      Carro (cart, cart-high). Usa una textura colormap de paleta: el pipeline tiene que muestrear el color por UV antes
+      de descartarla (hoy asigna por nombre de material, y Kenney trae un solo material). M2 SEAM para M5.
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-survival-kit
+    nombre: Kenney Survival Kit 2.0
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/survival-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: Barriles, baldes, cajas y herramientas con colormap de paleta. Sin granero, pozo, buzón, carro ni tanque.
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-car-kit
+    nombre: Kenney Car Kit
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/car-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: Tractor y camioneta, con colormap de paleta (mismo seam de muestreo por UV que Fantasy Town).
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-city-kits
+    nombre: Kenney City Kit (Suburban, Industrial y Roads)
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/category:3D
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: >-
+      Casas suburbanas, tanque de agua (water-tower, detail-tank) y postes y carteles para armar la parada de colectivo.
+      Buzón y parada no están en ningún pack: se hacen por código.
+    fuente_investigacion: investigación 2026-10-13, V3
+assets:
+  - id: quaternius-farm-buildings/gallinero
+    archivo: apps/web/public/models/quaternius-farm-buildings/gallinero.glb
+    fuente: assets-src/quaternius-farm-buildings/ChickenCoop/ChickenCoop.glb
+    pack: quaternius-farm-buildings
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://poly.pizza/m/DM0F8siLam
+    fecha_descarga: 2026-10-13
+    sha256_original: "138f37ba14648259e8fa841d3501ebc05ad7b997babadc6cd5572785de9e158a"
+    modificaciones: >-
+      scripts/assets/optimize.ts: sin materiales ni texturas, repintado por vértice a la paleta (White muro, LightRed
+      techo, Brown madera, DarkRed cumbrera, RoofBlack tinta-suave), primitivas unidas en una, meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Low-poly de 2018 con aristas de 90° a 125°. Se acepta para validar el pipeline de punta a punta en el diorama de
+      prueba; si el operador ve que desentona con los props por código de M1, se rehace por código o se reemplaza.
+    notas: Original ChickenCoop.glb de static.poly.pizza (948 triángulos, 5 materiales de color plano, sin texturas).
+  - id: quaternius-farm-buildings/cerco
+    archivo: apps/web/public/models/quaternius-farm-buildings/cerco.glb
+    fuente: assets-src/quaternius-farm-buildings/Fence/Fence.glb
+    pack: quaternius-farm-buildings
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://poly.pizza/m/e02PFKKhbr
+    fecha_descarga: 2026-10-13
+    sha256_original: "0c35f9fb6b9ff69501463834e3f6cf7d565979aa4caae19445344d87400c70c8"
+    modificaciones: >-
+      scripts/assets/optimize.ts: sin material ni texturas, repintado por vértice a la paleta (Brown madera), meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Postes y tablas de caja con aristas de 90° a 104°. Se acepta para validar el pipeline en el diorama de prueba
+      junto al gallinero; el cerco por código de M1 (codigo/cerco) sigue siendo el de referencia.
+    notas: >-
+      Original Fence.glb de static.poly.pizza (188 triángulos, 1 material, 5,9 m de largo). Reemplaza al silo
+      (Silo, 5GhLrv5Ce3, 1592 triángulos) que se probó primero: con el silo el diorama de prueba estimaba 50.676
+      triángulos en medium, por encima del tope de 50k (03 §2.7.1).

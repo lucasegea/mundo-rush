@@ -8,7 +8,7 @@
 // pintura), así la vista lejana cuesta unos pocos cientos de triángulos. Determinístico con la misma semilla.
 import type { Bounds, TileLayerData } from "@lg/core";
 import { mixRgb, scaleRgb } from "./color";
-import { noise2, tokenRgb, type Rgb } from "../materials/paint";
+import { noise2, tokenRgb, type Rgb } from "@lg/art";
 import { rng } from "../materials/rng";
 
 /** Metros de terreno más allá de los límites caminables, de cada lado (cubre el frustum en 21:9 al zoom más lejano, D-208). */

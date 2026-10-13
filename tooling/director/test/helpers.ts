@@ -10,7 +10,11 @@ export const AT = "2026-10-07T12:00:00.000Z";
 
 export const tempRoot = (withContent = false): string => {
   const dir = mkdtempSync(join(tmpdir(), "lg-director-"));
-  if (withContent) cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
+  if (withContent) {
+    cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
+    // Plan estetica-c M2: el registro de assets nombra archivos servidos; sin ellos el contenido real no compila.
+    cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
+  }
   return dir;
 };
 

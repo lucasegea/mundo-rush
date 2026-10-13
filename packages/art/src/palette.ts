@@ -1,6 +1,7 @@
-// world/materials/palette.ts — la paleta del mundo de la propuesta C §6 (D-207), única fuente de los hex. Dato puro:
-// sin three, sin DOM. La importan world/ (materiales, pintura, etiquetas) y scripts/a11y/contrast.ts (pares de las
-// etiquetas de nombre, A14). En M2 se muda a @lg/art sin reescribirse (plan estetica-c §10, pregunta 3).
+// @lg/art palette.ts: la paleta del mundo de la propuesta C §6 (D-207), única fuente de los hex. Dato puro:
+// sin three, sin DOM. La importan world/ (materiales, pintura, etiquetas), scripts/a11y/contrast.ts (pares de las
+// etiquetas de nombre, A14) y scripts/assets/ (repintado de glTF). Movida desde world/materials/ en M2 sin reescribirse
+// (plan estetica-c §10, pregunta 3).
 
 export const PALETTE = {
   pasto: "#93C25B",

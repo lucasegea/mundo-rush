@@ -7,7 +7,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compilarContenido, compilarIncremental, formatearHallazgo } from "@lg/content-schema";
+import { compilarContenido, compilarIncremental, formatearHallazgo, necesitaRegistro } from "@lg/content-schema";
 import type { ArchivoFuente, Hallazgo, Modo, Resultado } from "@lg/content-schema";
 
 export const SALIDA_CLIENTE = "apps/web/public/content";
@@ -27,6 +27,30 @@ export const leerContenido = (root: string): ArchivoFuente[] => {
   };
   recorrer(join(root, "content"));
   return out;
+};
+
+/**
+ * Archivos servidos en apps/web/public que exigen registro de licencia (models, textures, audio, sprites; 03 §6.4.2),
+ * con su ruta desde root. El contenido generado (public/content/) no entra.
+ */
+export const leerPublicos = (root: string): string[] => {
+  const out: string[] = [];
+  const recorrer = (dir: string): void => {
+    let entradas;
+    try {
+      entradas = readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw e;
+    }
+    for (const e of entradas) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) recorrer(p);
+      else out.push(aPosix(relative(root, p)));
+    }
+  };
+  recorrer(join(root, "apps/web/public"));
+  return out.filter(necesitaRegistro).sort();
 };
 
 /** Escribe las dos salidas desde cero (borra lo viejo para no dejar JSON huérfano). Solo se llama sin errores. */
@@ -55,7 +79,7 @@ export interface Opciones {
 
 /** Compilación completa. Devuelve el código de salida. */
 export const construir = ({ root, modo, log }: Opciones): number => {
-  const r = compilarContenido(leerContenido(root), modo);
+  const r = compilarContenido(leerContenido(root), modo, leerPublicos(root));
   imprimir(r.hallazgos, log);
   const avisos = r.hallazgos.length - r.errores.length;
   if (!r.salida) {
@@ -85,7 +109,7 @@ export const crearCompiladorIncremental = (root: string, modo: Modo = "dev") => 
           throw e;
         }
       });
-      const r = compilarIncremental(base, cambios, modo);
+      const r = compilarIncremental(base, cambios, modo, leerPublicos(root));
       if (!r.salida) return { tocados: r.tocados, errores: r.errores, escrito: false };
       escribirSalida(root, r, modo);
       base = r.archivos;

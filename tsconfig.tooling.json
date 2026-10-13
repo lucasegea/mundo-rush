@@ -7,7 +7,7 @@
     "types": ["node"],
     "allowImportingTsExtensions": true
   },
-  "include": ["vitest.config.ts", "scripts/**/*.ts", "apps/web/src/world/materials/palette.ts"],
+  "include": ["vitest.config.ts", "scripts/**/*.ts"],
   "exclude": ["scripts/eval/**", "scripts/integration/**"],
-  "references": [{ "path": "./packages/content-schema" }]
+  "references": [{ "path": "./packages/content-schema" }, { "path": "./packages/art" }]
 }

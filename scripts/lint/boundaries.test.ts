@@ -569,7 +569,7 @@ const M1_ALLOWED: Omit<Case, "rule">[] = [
   { name: "world/camera/ -> PerspectiveCamera", file: `${WEB}/world/camera/__probe__.ts`, code: named("PerspectiveCamera", "three") },
 ];
 const REAL_M1 = [
-  `${WEB}/world/materials/registry.ts`, `${WEB}/world/materials/palette.ts`, `${WEB}/world/terrain/buildTerrain.ts`,
+  `${WEB}/world/materials/registry.ts`, `${WEB}/world/materials/paintGeometry.ts`, `${WEB}/world/terrain/buildTerrain.ts`,
   `${WEB}/world/labels/labelSprite.ts`, `${WEB}/world/labels/NameLabel.tsx`, `${WEB}/world/budget/estimate.ts`,
   `${WEB}/world/actors/Chibi.tsx`, `${WEB}/world/dioramas/scene.ts`, `${WEB}/world/water/waterMaterial.ts`,
   `${WEB}/world/props/builders.ts`, `${WEB}/world/lighting/Lighting.tsx`,
@@ -606,10 +606,77 @@ describe("estetica-c M1 A16: zonas nuevas de world/", () => {
     const bin = resolve(ROOT, "node_modules/eslint/bin/eslint.js");
     expect(isFile(bin)).toBe(true);
     const run = (code: string) => spawnSync(process.execPath, [bin, "--stdin", "--stdin-filename", resolve(ROOT, F.ui)], { cwd: ROOT, input: code, encoding: "utf8" });
-    const bad = run('import "@world/materials/palette";\n');
+    // La paleta se mudó a @lg/art en M2: el import conocido apunta al marcador de world/materials/, que existe.
+    expect(isFile(resolve(ROOT, WEB, "world/materials/index.ts"))).toBe(true);
+    const bad = run('import "@world/materials/index";\n');
     expect(bad.status, bad.stdout + bad.stderr).toBe(1);
     expect(bad.stdout).toContain("R3");
     const ok = run("export const x = 1;\n");
     expect(ok.status, ok.stdout + ok.stderr).toBe(0);
   }, 60_000);
+});
+
+// ---------- estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art puro y la zona scripts/assets/ ----------
+// Cada zona nueva nace con su marcador y su fixture: el marcador se comprueba antes de mirar el ruleId.
+const ART = "packages/art/src/__probe__.ts";
+const ASSETS = "scripts/assets/__probe__.ts";
+const M2_FORBIDDEN: Case[] = [
+  { name: "@lg/art -> three", file: ART, code: imp("three"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> three/addons", file: ART, code: imp("three/addons/utils/BufferGeometryUtils.js"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> react", file: ART, code: imp("react"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> node:fs", file: ART, code: imp("node:fs"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> @gltf-transform/core", file: ART, code: imp("@gltf-transform/core"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> @lg/core (paquete)", file: ART, code: imp("@lg/core"), rule: [IMP, ZONE], msg: "M2" },
+  { name: "@lg/art -> core (relativo)", file: ART, code: imp("../../core/src/index"), rule: ZONE, msg: "M2: @lg/art no depende de otros paquetes" },
+  { name: "@lg/art -> apps/web (relativo)", file: ART, code: imp("../../../apps/web/src/world/materials/registry"), rule: ZONE, msg: "los paquetes no importan apps/" },
+  { name: "@lg/art: window", file: ART, code: expr("window"), rule: GLOBALS },
+  { name: "@lg/art: document", file: ART, code: expr("document.body"), rule: GLOBALS },
+  { name: "@lg/art: OffscreenCanvas", file: ART, code: expr("new OffscreenCanvas(1, 1)"), rule: GLOBALS },
+  { name: "@lg/art: process", file: ART, code: expr("process.env.X"), rule: GLOBALS },
+  { name: "@lg/art: Math.random()", file: ART, code: expr("Math.random()"), rule: PROPS, msg: "determinístico" },
+  { name: "@lg/art: Date.now()", file: ART, code: expr("Date.now()"), rule: PROPS, msg: "determinístico" },
+  { name: "scripts/assets -> world/materials (relativo)", file: ASSETS, code: imp("../../apps/web/src/world/materials/paintGeometry"), rule: ZONE, msg: "M2" },
+  { name: "scripts/assets -> world/props (relativo)", file: ASSETS, code: imp("../../apps/web/src/world/props/gltf"), rule: ZONE, msg: "M2" },
+];
+const M2_ALLOWED: Omit<Case, "rule">[] = [
+  { name: "@lg/art -> su propio módulo (relativo, con extensión)", file: ART, code: named("PALETTE", "./palette.ts") },
+  { name: "world/materials -> @lg/art (import por nombre)", file: m1Probe("materials"), code: named("PALETTE", "@lg/art") },
+  { name: "world/props -> @lg/art", file: `${WEB}/world/props/__probe__.ts`, code: named("paintColors", "@lg/art") },
+  { name: "scripts/assets -> @lg/art", file: ASSETS, code: named("paintColors", "@lg/art") },
+  { name: "scripts/assets -> @gltf-transform/core", file: ASSETS, code: named("NodeIO", "@gltf-transform/core") },
+  { name: "scripts/a11y -> @lg/art", file: "scripts/a11y/__probe__.ts", code: named("PALETTE", "@lg/art") },
+];
+const REAL_M2 = [
+  "packages/art/src/index.ts", "packages/art/src/palette.ts", "packages/art/src/paint.ts", "packages/art/src/bevel.ts",
+  "packages/art/src/tolerance.ts", "scripts/assets/index.ts", "scripts/assets/optimize.ts", "scripts/assets/inspect-budgets.ts",
+  `${WEB}/world/props/gltf.ts`, `${WEB}/world/props/ModelProps.tsx`, `${WEB}/world/dioramas/scene.ts`, "scripts/a11y/contrast.ts",
+];
+
+describe("estetica-c M2: @lg/art puro y scripts/assets/", () => {
+  test("cada zona tiene su marcador y los archivos reales existen (antes de mirar el ruleId)", () => {
+    expect(isFile(resolve(ROOT, "packages/art/src/index.ts")), "marcador de @lg/art").toBe(true);
+    expect(isFile(resolve(ROOT, "scripts/assets/index.ts")), "marcador de scripts/assets/").toBe(true);
+    for (const f of REAL_M2) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of [...M2_FORBIDDEN, ...M2_ALLOWED]) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(M2_FORBIDDEN.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test.each(M2_ALLOWED.map((c) => [c.name, c] as const))("%s pasa", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_M2)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
 });

@@ -35,6 +35,8 @@ const copiaTemporal = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "lg-f12-"));
   temporales.push(dir);
   cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
+  // Plan estetica-c M2: el registro de licencias se cruza con los modelos servidos; la copia los lleva.
+  cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
   return dir;
 };
 afterAll(() => { for (const d of temporales) rmSync(d, { recursive: true, force: true }); });

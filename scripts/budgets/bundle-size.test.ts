@@ -143,6 +143,18 @@ describe("A2 check:budgets sobre el manifiesto de Vite", () => {
     expect(text).toContain("chunk más pesado: assets/vendor-big.js (_vendor-b2.js)");
   });
 
+  test("estetica-c M2: el decodificador meshopt autoalojado suma al chunk 3D, no al shell", () => {
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({ "decoders/meshopt_decoder.module.js": 15 * KB }), undefined, undefined,
+      ["decoders/meshopt_decoder.module.js"]);
+    const [shell, world] = report.results;
+    expect(shell?.totalKb).toBe(110);
+    expect(world?.totalKb).toBe(245);
+    expect(world?.chunks.some((c) => c.file === "decoders/meshopt_decoder.module.js" && c.key === "public/decoders")).toBe(true);
+    const over = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({ "decoders/meshopt_decoder.module.js": 230 * KB }), undefined, undefined,
+      ["decoders/meshopt_decoder.module.js"]);
+    expect(over.results[1]?.ok).toBe(false);
+  });
+
   test("el chunk 3D tiene su propio tope", () => {
     const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({ "assets/three-e5.js": 500 * KB }));
     expect(report.ok).toBe(false);

@@ -4,6 +4,9 @@ import viteConfig from "./vite.config.ts";
 export default mergeConfig(
   viteConfig,
   defineProject({
+    // Plan estetica-c M2: los tests leen los .glb servidos como data URL (`?inline`) sin node:fs. Solo en tests: el
+    // build del cliente no importa modelos (los carga por URL desde public/models).
+    assetsInclude: ["**/*.glb"],
     test: {
       name: "@lg/web",
       include: ["test/**/*.test.{ts,tsx}"],

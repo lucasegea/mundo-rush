@@ -85,6 +85,10 @@ props:
   - { asset: codigo/arbol, pos: [-6.5, 0, 10.5], tam: [0.6, 4.5, 0.6] }
   - { asset: codigo/arbol, pos: [3.5, 0, 10], tam: [0.6, 4.4, 0.6] }
   - { asset: codigo/pino, pos: [14.5, 0, 10.5], tam: [0.6, 5.0, 0.6] }
+  # Plan estetica-c M2 (D-207): dos props CC0 repintados por scripts/assets/optimize.ts (content/assets-registry.yaml).
+  # `tam` es la huella que bloquea la grilla y la caja donde el modelo entra con escala uniforme, apoyado en el suelo.
+  - { asset: modelo/quaternius-farm-buildings/gallinero, pos: [-12.5, 0, 8], tam: [3, 2.3, 2.7] }
+  - { asset: modelo/quaternius-farm-buildings/cerco, pos: [-12.5, 0, 10.6], tam: [5.9, 1.1, 0.2] }
 npcs:
   - { id: NPC-NELL, spawn: [-3, 0, 7], radio_interaccion: 3.0 }
   - { id: NPC-INES, spawn: [6, 0, -1.5], radio_interaccion: 3.0 }

@@ -1,6 +1,6 @@
 // world/actors/looks.ts — apariencia placeholder de los personajes por id (plan estetica-c M1 ítem 13): silueta por
 // accesorio y color de remera de `casa-1..5`. Tabla en código hasta que M5 la pase al contenido (bloque `apariencia`).
-import { HOUSE_TOKENS, type PaletteToken } from "../materials/palette";
+import { HOUSE_TOKENS, type PaletteToken } from "@lg/art";
 
 export type Accessory = "gorra" | "paja" | "panuelo" | "rodete" | null;
 
