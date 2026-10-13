@@ -5,24 +5,36 @@
 // de composición. Look C (D-207, plan estetica-c M1): bruma de fondo y niebla, ACES con exposición 1,05, sombras por tier.
 // Desde D-208 la distancia del paso de zoom llega del selector y de ella dependen recorte, niebla, sombra, tilt-shift y
 // etiquetas (la niebla arranca con los valores de la propuesta y Lighting la ajusta cada cuadro).
+// Plan estetica-c M6 (03 §2.7.1, §2.7.4): la escena se arma con la densidad del tier (`low` reducida); el canvas tiene
+// tope de cuadros (30 con una escena de conversación arriba, el `targetFps` del tier fuera de ella); durante la charla se
+// congela lo no esencial (agua, NPCs de fondo) y PerformanceMonitor no mide. En desarrollo con el modo director, una
+// sonda deja los contadores de renderer.info para la instantánea (en build no existe).
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import { ACESFilmicToneMapping } from "three";
+import { DENSITY, type SceneDensity } from "@lg/art";
 import type { SelectableTier } from "@lg/core";
 import { bridge } from "../state/bridge";
 import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectRequestBubbles, selectSceneActivity, selectWorldRender, useGameView } from "../state/selectors";
+import { sceneAnimated } from "./actors/animState";
+import { PLAYER_LOOK_ID } from "./actors/looks";
 import { Player } from "./actors/Player";
 import { CameraRig } from "./camera/CameraRig";
 import { TWO_SHOT, viewScale } from "./camera/rig";
 import { Diorama } from "./dioramas/Diorama";
 import { buildDioramaScene } from "./dioramas/scene";
+import { FrameRegulator } from "./FrameRegulator";
+import { frameCap, monitorActive } from "./frameRate";
 import { Lighting, type ShadowMode } from "./lighting/Lighting";
-import { BACKGROUND, FOG, TONE } from "./lighting/params";
-import type { PostLevel } from "./post/Post";
+import { BACKGROUND, FOG, fogFor, TONE } from "./lighting/params";
+import { postLevel, type PostLevel } from "./post/level";
 
 // El postprocesado va en su propio chunk: `low` y `dialog-only` nunca lo descargan (03 §2.9, D-160).
 const Post = lazy(() => import("./post/Post"));
+// Contadores de renderer.info para la instantánea del modo director (M6): solo bajo la doble llave del modo director; en
+// `vite build` la condición es falsa, el import() se elimina y el módulo no se emite (check:dev-only).
+const RenderStatsProbe = import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1" ? lazy(() => import("./budget/renderStats")) : null;
 
 /** Lo que el mapa necesita de cada tier (la forma de TIER_PARAMS de services/quality, sin importarlo). */
 export interface WorldTierParams {
@@ -31,6 +43,10 @@ export interface WorldTierParams {
   shadows: ShadowMode;
   /** Tope de personajes animados a la vez (plan estetica-c M3); los demás quedan congelados. */
   maxAnimatedCharacters: number;
+  /** FPS objetivo del tier: también su tope de cuadros fuera de la charla (plan estetica-c M6). */
+  targetFps: number | null;
+  /** Densidad de la escena (plan estetica-c M6): la reducida en `low`. */
+  density: SceneDensity;
 }
 
 /** Atributo del contenedor: services/input solo hace zoom con la rueda sobre el mapa. */
@@ -44,17 +60,22 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const activity = useGameView(selectSceneActivity);
   const requestIds = useGameView(selectRequestBubbles);
   const params = tierParams[render.tier];
-  const post: PostLevel = render.post ? params.post : "none";
+  const density = params.density;
+  const post = postLevel(render.post, params.post);
   const cut = render.cameraMotion === "cut";
+  const maxFps = frameCap(render.conversationFps, params.targetFps);
+  const inScene = render.conversationFps !== null;
+  const animatedOnly = useMemo(() => sceneAnimated(inScene, [PLAYER_LOOK_ID, conversation?.npcId ?? null]), [inScene, conversation?.npcId]);
+  const fog = fogFor(1, DENSITY[density].fogScale);
   // Distancia pedida de la cámara: la del plano de a dos durante la charla, la del paso de zoom en el mapa.
   const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : render.zoomDistance;
-  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama) : null), [map.diorama]);
+  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density) : null), [map.diorama, density]);
   useEffect(() => () => scene?.dispose(), [scene]);
 
   return (
     <div {...WORLD_SURFACE} className="fixed inset-0 z-0" aria-hidden="true">
       <Canvas
-        frameloop={render.paused ? "demand" : "always"}
+        frameloop={render.paused || maxFps !== null ? "demand" : "always"}
         dpr={[1, params.maxDpr ?? 1]}
         shadows={params.shadows === "directional"}
         gl={{ antialias: false }}
@@ -69,9 +90,11 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         }}
       >
         <color attach="background" args={[BACKGROUND]} />
-        <fog attach="fog" args={[FOG.color, FOG.near, FOG.far]} />
-        <PerformanceMonitor onDecline={() => bridge.performanceDeclined()} />
-        <Lighting shadows={params.shadows} />
+        <fog attach="fog" args={[FOG.color, fog.near, fog.far]} />
+        {!render.paused && maxFps !== null ? <FrameRegulator maxFps={maxFps} /> : null}
+        {/* Fuera de la charla mide y puede bajar el tier; durante la charla se desmonta (al volver arranca de cero). */}
+        {monitorActive(render.conversationFps) ? <PerformanceMonitor onDecline={() => bridge.performanceDeclined()} /> : null}
+        <Lighting shadows={params.shadows} fogScale={DENSITY[density].fogScale} />
         {map.diorama && scene ? (
           <Diorama
             diorama={map.diorama}
@@ -83,11 +106,14 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             cut={cut}
             activity={activity}
             maxAnimated={params.maxAnimatedCharacters}
+            animatedOnly={animatedOnly}
+            frozen={inScene}
+            density={density}
             requestIds={requestIds}
           />
         ) : null}
         {/* Player antes que CameraRig: en cada cuadro la cámara sigue la posición ya dibujada. */}
-        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} /> : null}
+        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} /> : null}
         <CameraRig
           preset={render.preset}
           pitchDeg={render.pitchDeg}
@@ -101,6 +127,11 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         {post !== "none" ? (
           <Suspense fallback={null}>
             <Post level={post} viewScale={viewScale(viewDistance)} />
+          </Suspense>
+        ) : null}
+        {RenderStatsProbe ? (
+          <Suspense fallback={null}>
+            <RenderStatsProbe />
           </Suspense>
         ) : null}
       </Canvas>

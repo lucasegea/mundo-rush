@@ -276,7 +276,16 @@ describe("personajes reales del registro", () => {
   const personajes = assets.filter((a) => a.personaje);
 
   test("hay tres cuerpos y un archivo de clips servidos, CC0, y cada uno salió del pipeline", async () => {
-    expect(personajes.filter((a) => a.personaje?.tipo === "cuerpo")).toHaveLength(3);
+    const cuerpos = personajes.filter((a) => a.personaje?.tipo === "cuerpo");
+    // Plan estetica-c M6: cada cuerpo tiene su versión reducida para `low` (`-bajo`, el mismo esqueleto, menos triángulos).
+    expect(cuerpos).toHaveLength(6);
+    for (const base of cuerpos.filter((a) => !a.id.endsWith("-bajo"))) {
+      const bajo = cuerpos.find((a) => a.id === `${base.id}-bajo`);
+      expect(bajo, base.id).toBeDefined();
+      expect(bajo?.personaje?.tipo === "cuerpo" && bajo.personaje.simplificar, base.id).toBeGreaterThan(0);
+      expect(bajo?.triangulos ?? Infinity, base.id).toBeLessThan((base.triangulos ?? 0) * 0.5);
+      expect(bajo?.sha256_original, base.id).toBe(base.sha256_original);
+    }
     expect(personajes.filter((a) => a.personaje?.tipo === "animaciones")).toHaveLength(1);
     for (const a of personajes) {
       expect(a.licencia, a.id).toBe("CC0-1.0");

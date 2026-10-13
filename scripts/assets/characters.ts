@@ -10,11 +10,14 @@
 //     `remera` o `pantalon`: se pinta con un token por defecto y queda en el atributo `_ROPA` para que world/ lo
 //     repinte con el color de cada vecino (casa-1..6) sin un .glb por color
 //   · la regla del bisel igual que los props; texturas y materiales afuera; meshopt
+//   · con `simplificar` (plan estetica-c M6, el cuerpo de `low`): la misma pieza con meshopt simplify hasta esa fracción
+//     de los triángulos, sobre el mismo esqueleto y la misma pintura (simplificar solo quita índices: colores, `_ROPA` y
+//     pesos de los vértices que quedan son los del cuerpo completo)
 // Los CLIPS (`tipo: animaciones`) salen de un glTF del mismo esqueleto: quedan los clips que nombra `clips` (falta uno:
 // se rechaza nombrándolo), sin mallas ni texturas; se remuestrean y se comprimen con meshopt.
 import { Document, Primitive, type Accessor, type Animation, type Node, type Skin, type TypedArray } from "@gltf-transform/core";
-import { dedup, dequantize, meshopt, prune, resample } from "@gltf-transform/functions";
-import { MeshoptEncoder } from "meshoptimizer";
+import { dedup, dequantize, meshopt, prune, resample, simplify, weld } from "@gltf-transform/functions";
+import { MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
 import { MAX_DIHEDRAL_DEG, maxDihedralDeg, paintColors, PALETTE, tokenRgb, type PaletteToken } from "@lg/art";
 import { decodificarPng, muestrear, type Imagen } from "./png.ts";
 
@@ -44,7 +47,12 @@ export interface OpcionesCuerpo {
   pintura: readonly ReglaPintura[];
   bisel?: "rehecho_por_codigo" | "aceptado" | undefined;
   semilla?: number;
+  /** Fracción de triángulos que deja meshopt simplify (0 a 1); sin esto el cuerpo queda completo. */
+  simplificar?: number | undefined;
 }
+
+/** Error máximo de la simplificación, como fracción del radio de la malla (deja llegar a la fracción pedida). */
+export const ERROR_SIMPLIFICAR = 0.02;
 
 export interface ReporteCuerpo {
   triangulos: number;
@@ -257,11 +265,16 @@ export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise
   const animacionesDescartadas = root.listAnimations().length;
   for (const a of root.listAnimations()) descartarClip(a);
   const { texturas } = limpiar(doc);
+  if (o.simplificar !== undefined) {
+    await MeshoptSimplifier.ready;
+    await doc.transform(weld(), simplify({ simplifier: MeshoptSimplifier, ratio: o.simplificar, error: ERROR_SIMPLIFICAR }));
+  }
   await doc.transform(prune({ keepLeaves: false }), dedup(), meshopt({ encoder: MeshoptEncoder }));
 
+  const final = cuerpo.getMesh()?.listPrimitives()[0];
   return {
-    triangulos: indices.length / 3, vertices: base, huesos, tokens, ropa, diedroMax,
-    texturasDescartadas: texturas, animacionesDescartadas,
+    triangulos: (final?.getIndices()?.getCount() ?? indices.length) / 3, vertices: final?.getAttribute("POSITION")?.getCount() ?? base,
+    huesos, tokens, ropa, diedroMax, texturasDescartadas: texturas, animacionesDescartadas,
   };
 }
 

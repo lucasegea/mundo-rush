@@ -13,7 +13,7 @@ import type { Bounds, DioramaGround, TileLayerData, WalkGrid } from "@lg/core";
 import {
   FINE_STEP as ART_FINE_STEP, HILL_MAX as ART_HILL_MAX, insidePolygon, noise2, pavingStoneCount, polygonEdgeDistance,
   polylineDistance, TERRAIN_SEED as ART_TERRAIN_SEED, TERRAIN_SKIRT as ART_TERRAIN_SKIRT, terrainExtent, terrainLines,
-  tokenRgb, type PaletteToken, type Rgb, type TerrainPaletteRole,
+  tokenRgb, type PaletteToken, type Rgb, type SceneDensity, type TerrainPaletteRole,
 } from "@lg/art";
 import { mixRgb, scaleRgb } from "./color";
 import { rng } from "../materials/rng";
@@ -41,6 +41,8 @@ export interface TerrainSpec {
   /** El suelo del formato de la maqueta (plan estetica-c M5). */
   ground?: DioramaGround;
   seed?: number;
+  /** Plan estetica-c M6: resolución de la malla por tier (la reducida de `low`: paso fino de 1 m y falda más gruesa). */
+  density?: SceneDensity;
 }
 
 export interface Terrain {
@@ -261,7 +263,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
   const skirt = t?.extension ?? TERRAIN_SKIRT;
   const src = groundSource(spec);
   const extent: Bounds = terrainExtent(bounds, skirt);
-  const { xs, zs } = terrainLines(bounds, skirt);
+  const { xs, zs } = terrainLines(bounds, skirt, spec.density ?? "full");
   const nx = xs.length;
   const nz = zs.length;
   const p = palette(spec.ground?.palette);

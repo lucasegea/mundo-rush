@@ -2,6 +2,7 @@
 // snake_case (D-090). Todo archivo servido en apps/web/public/{models,textures,audio,sprites} tiene una fila acá; el
 // compilador lo cruza con la lista real de archivos que le pasa scripts/content/build.ts (el compilador sigue puro).
 import { z } from "zod";
+import { TokenPaleta } from "./mundo.ts";
 
 const Fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fecha AAAA-MM-DD");
 const Url = z.string().regex(/^https:\/\//, "url https://");
@@ -54,9 +55,8 @@ export const PackAssets = z.strictObject({
   estado: z.enum(["usado", "descartado", "diferido", "pendiente"]),
   razon: z.string().min(1),
   fuente_investigacion: z.string().min(1),
-  // M2 SEAM: en M5 content-schema importa @lg/art y valida que cada token de `pintura` exista en la paleta; hoy lo
-  // valida scripts/assets/optimize.ts al repintar (falla nombrando el material y el token).
-  pintura: z.record(z.string().min(1), z.string().min(1)).optional(),
+  /** Cada valor es un token de la paleta de @lg/art (plan estetica-c M6, el M2 SEAM cerrado): falla al validar, no al repintar. */
+  pintura: z.record(z.string().min(1), TokenPaleta).optional(),
 });
 export type PackAssets = z.infer<typeof PackAssets>;
 
@@ -71,7 +71,7 @@ export const ReglaPinturaPersonaje = z.strictObject({
   huesos: z.array(z.string().min(1)).min(1).optional(),
   color: HexColor.optional(),
   radio: z.number().positive().max(1).optional(),
-  token: z.string().min(1).optional(),
+  token: TokenPaleta.optional(),
   ropa: z.enum(["remera", "pantalon"]).optional(),
 }).refine((r) => (r.token === undefined) !== (r.ropa === undefined), { message: "una regla lleva token o ropa (una de las dos)" })
   .refine((r) => r.radio === undefined || r.color !== undefined, { message: "radio sin color", path: ["radio"] });
@@ -80,9 +80,13 @@ export type ReglaPinturaPersonaje = z.infer<typeof ReglaPinturaPersonaje>;
 /**
  * Una pieza de personaje (plan estetica-c M3): un cuerpo con esqueleto (las mallas que quedan y sus reglas de pintura) o
  * el archivo de clips del esqueleto (los clips que quedan). Las cabezas, el pelo y los accesorios son código hasta M5.
+ * Plan estetica-c M6: `simplificar` (fracción de triángulos que quedan) hace el cuerpo de la densidad reducida de `low`.
  */
 export const PiezaPersonaje = z.discriminatedUnion("tipo", [
-  z.strictObject({ tipo: z.literal("cuerpo"), nodos: z.array(z.string().min(1)).min(1), pintura: z.array(ReglaPinturaPersonaje).min(1) }),
+  z.strictObject({
+    tipo: z.literal("cuerpo"), nodos: z.array(z.string().min(1)).min(1), pintura: z.array(ReglaPinturaPersonaje).min(1),
+    simplificar: z.number().gt(0).lt(1).optional(),
+  }),
   z.strictObject({ tipo: z.literal("animaciones"), clips: z.array(z.string().min(1)).min(1) }),
 ]);
 export type PiezaPersonaje = z.infer<typeof PiezaPersonaje>;

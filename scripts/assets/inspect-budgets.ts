@@ -7,7 +7,8 @@
 // cada diorama suma los archivos de personaje (los cuerpos base y el de clips, filas con bloque `personaje` del
 // registro): todo diorama muestra al jugador y a sus vecinos, así que se cuentan enteros (cota de arriba). Desde M5 el
 // estimador de presupuesto de validate:content usa los `triangulos` y `primitivas` de cada fila del registro (el
-// compilador no lee .glb): acá se comparan con la pieza medida y una fila sin medida o con otra medida falla.
+// compilador no lee .glb): acá se comparan con la pieza medida y una fila sin medida o con otra medida falla. Desde M6
+// los cuerpos reducidos de `low` (`-bajo`) también son filas `personaje`: entran en la cota de arriba de cada diorama.
 //
 // Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
 import { readdirSync, readFileSync } from "node:fs";

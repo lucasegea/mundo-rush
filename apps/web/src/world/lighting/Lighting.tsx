@@ -3,6 +3,7 @@
 // proyecta (mapa de 1024 en una caja de 44 × 44 m, solo los personajes la proyectan; terreno y props la reciben); en
 // todos los tiers hay sombras blob (actors/BlobShadows). El fondo y el tono los fija GameCanvas. Desde D-208 la caja de
 // sombra y la niebla (la de la escena y la propia del agua) siguen cada cuadro a la distancia ya suavizada de la cámara.
+// Plan estetica-c M6: `fogScale` acorta la niebla por tier (la "distancia de dibujo" corta de `low`).
 import { useFrame, useThree } from "@react-three/fiber";
 import { useRef } from "react";
 import { Fog, type DirectionalLight } from "three";
@@ -15,9 +16,10 @@ export type ShadowMode = "none" | "blob" | "directional";
 
 const DIR = sunDirection();
 
-export function Lighting({ shadows }: { shadows: ShadowMode }) {
+export function Lighting({ shadows, fogScale = 1 }: { shadows: ShadowMode; fogScale?: number }) {
   const sun = useRef<DirectionalLight>(null);
   const lastScale = useRef(0);
+  const lastFogScale = useRef(fogScale);
   const scene = useThree((s) => s.scene);
   const cast = shadows === "directional";
   useFrame(() => {
@@ -28,8 +30,9 @@ export function Lighting({ shadows }: { shadows: ShadowMode }) {
     l.position.set(cameraLook.x + DIR[0] * box.distance, cameraLook.y + DIR[1] * box.distance, cameraLook.z + DIR[2] * box.distance);
     l.target.position.set(cameraLook.x, cameraLook.y, cameraLook.z);
     l.target.updateMatrixWorld();
-    if (k === lastScale.current) return;
+    if (k === lastScale.current && fogScale === lastFogScale.current) return;
     lastScale.current = k;
+    lastFogScale.current = fogScale;
     const sc = l.shadow.camera;
     sc.left = -box.half;
     sc.right = box.half;
@@ -38,7 +41,7 @@ export function Lighting({ shadows }: { shadows: ShadowMode }) {
     sc.near = box.near;
     sc.far = box.far;
     sc.updateProjectionMatrix();
-    const fog = fogFor(k);
+    const fog = fogFor(k, fogScale);
     if (scene.fog instanceof Fog) {
       scene.fog.near = fog.near;
       scene.fog.far = fog.far;

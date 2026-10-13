@@ -275,7 +275,17 @@ describe("A5 regla del bisel", () => {
     expect(maxDihedralDeg(pos.array, g.index?.array ?? null)).toBeLessThan(MAX_DIHEDRAL_DEG);
   });
 
-  test("los props del diorama de prueba, con sus tamaños reales, también", () => {
+  test.each(Object.keys(PROP_BUILDERS))("%s en la densidad reducida de low (plan estetica-c M6): tampoco", (asset) => {
+    const g = buildProp(asset, { w: 2, h: 2.4, d: 1.6 }, 1, undefined, "reduced");
+    expect(maxDihedralDeg(g.getAttribute("position").array, g.index?.array ?? null)).toBeLessThan(MAX_DIHEDRAL_DEG);
+  });
+
+  test("los props del diorama de prueba, con sus tamaños reales, también (en las dos densidades)", () => {
+    for (const b of testDiorama().boxes.filter((x) => x.asset.startsWith("codigo/"))) {
+      const g = buildProp(b.asset, { w: b.w, h: b.h, d: b.d }, 0, undefined, "reduced");
+      expect(maxDihedralDeg(g.getAttribute("position").array, g.index?.array ?? null), `reducido ${b.asset} ${b.w}×${b.h}×${b.d}`).toBeLessThan(MAX_DIHEDRAL_DEG);
+    }
+
     // Los `modelo/*` (glTF de M2) pasan la regla en scripts/assets/optimize.ts o la registran (bisel) en el registro.
     for (const b of testDiorama().boxes.filter((x) => x.asset.startsWith("codigo/"))) {
       const g = buildProp(b.asset, { w: b.w, h: b.h, d: b.d }, 0);

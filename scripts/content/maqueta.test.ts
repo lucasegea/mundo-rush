@@ -140,6 +140,19 @@ describe("presupuesto de medium en validate:content", () => {
     expect(m).toMatch(/estimado 124 llamadas/);
   });
 
+  test("plan estetica-c M6 teeth: el mismo chequeo corre por tier; un detalle pesado pasa los 25k de low con su densidad", () => {
+    // 200 matas: low conserva una de cada tres (67 × 100 triángulos), más que su margen de 2698 sobre test.yaml.
+    const hs = errores(mut(TEST, "detalle:\n", "detalle:\n  - { tipo: matas, centro: [0, -8], radio: 3, cantidad: 200 }\n"));
+    const low = conError(hs, TEST, "", /presupuesto de low pasado/);
+    expect(low).toContain("60 llamadas, 25000 triángulos");
+    expect(low).toMatch(/estimado 29 llamadas, 2[89]\d{3} triángulos/);
+    conError(hs, TEST, "", /presupuesto de medium pasado/);
+  });
+
+  test("plan estetica-c M6: test.yaml entra en los tres tiers (sin errores de presupuesto)", () => {
+    expect(errores(REAL).filter((h) => /presupuesto/.test(h.mensaje))).toEqual([]);
+  });
+
   test("teeth: un modelo sin triángulos medidos en el registro deja el estimado incompleto y falla", () => {
     const hs = errores(mut(REGISTRO, "    triangulos: 948\n", ""));
     conError(hs, TEST, "", /presupuesto sin estimar: modelo\/quaternius-farm-buildings\/gallinero sin triangulos\/primitivas/);

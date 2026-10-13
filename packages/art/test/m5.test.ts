@@ -75,7 +75,7 @@ describe("tabla de costos", () => {
   test("addEstimates suma; los topes de tier son los de 03 §2.7.1", () => {
     expect(addEstimates({ drawCalls: 1, triangles: 2 }, { drawCalls: 3, triangles: 4 })).toEqual({ drawCalls: 4, triangles: 6 });
     expect(addEstimates()).toEqual({ drawCalls: 0, triangles: 0 });
-    expect(TIER_BUDGETS.medium).toEqual({ maxDrawCalls: 120, maxTriangles: 50_000 });
+    expect(TIER_BUDGETS.medium).toEqual({ maxDrawCalls: 120, maxTriangles: 50_000, maxTextureMb: 48 });
   });
 });
 

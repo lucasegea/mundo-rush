@@ -3,6 +3,7 @@
 // se desliza desde la última posición dibujada (glide.ts). Publica la posición dibujada para la cámara y los NPCs. En
 // la charla mira al NPC; caminando, hacia donde va.
 import { useRef } from "react";
+import type { SceneDensity } from "@lg/art";
 import type { ConversationFrame } from "../../state/selectors";
 import { readGame, selectPlayerPose } from "../../state/selectors";
 import { followTarget } from "../runtime";
@@ -16,7 +17,7 @@ export function interpolationAlpha(elapsedSec: number, stepSec: number): number 
   return stepSec > 0 ? Math.min(1, Math.max(0, elapsedSec / stepSec)) : 1;
 }
 
-export function Player({ conversation, cut, scene = null }: { conversation: ConversationFrame | null; cut: boolean; scene?: SceneRole }) {
+export function Player({ conversation, cut, scene = null, lod = "full" }: { conversation: ConversationFrame | null; cut: boolean; scene?: SceneRole; lod?: SceneDensity }) {
   const lastTick = useRef({ tick: -1, at: 0 });
   const glide = useRef<GlideState | null>(null);
 
@@ -40,5 +41,5 @@ export function Player({ conversation, cut, scene = null }: { conversation: Conv
     return { x: shown.x, z: shown.z, speed, yaw };
   };
 
-  return <Character id={PLAYER_LOOK_ID} look={PLAYER_LOOK} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} />;
+  return <Character id={PLAYER_LOOK_ID} look={PLAYER_LOOK} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} lod={lod} />;
 }

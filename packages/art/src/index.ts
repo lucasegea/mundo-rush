@@ -13,3 +13,5 @@ export * from "./looks.ts";
 export * from "./terrain.ts";
 export * from "./costs.ts";
 export * from "./shapes.ts";
+// Plan estetica-c M6: la densidad de la escena por tier (cómo entra `low` en su presupuesto).
+export * from "./density.ts";

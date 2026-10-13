@@ -2,7 +2,8 @@
 // `import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1"`. En `vite build` `import.meta.env.DEV` es false:
 // la rama se elimina y sus chunks no se emiten (check:dev-only lo comprueba sobre el dist, con y sin la variable).
 // Plan estetica-c M3 (D-030): con `?retratos` en la url, además, el panel de retratos (dev/portraits/) con el estudio
-// de world/portraits/ inyectado (dev/ no conoce three ni world/; boot es la raíz de composición).
+// de world/portraits/ inyectado (dev/ no conoce three ni world/; boot es la raíz de composición). Plan estetica-c M6: el
+// lector de los contadores del renderer (world/budget/renderStats) se inyecta igual en el modo director.
 import type { GameActions } from "../state/actions";
 import type { GameStore } from "../state/store";
 import type { FetchJson } from "../services/content";
@@ -39,7 +40,10 @@ export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null
     import("../dev/director"),
     import("../services/content/hotReload"),
   ]);
-  const stopDirector = startDirector({ hot, store: deps.store, ...(deps.pageEvents ? { pageEvents: deps.pageEvents } : {}) });
+  // Plan estetica-c M6: los contadores del renderer los lee la sonda de world/ (boot es la raíz de composición; dev/ no
+  // conoce world/). El módulo es de solo-desarrollo y GameCanvas monta la sonda bajo la misma doble llave.
+  const { readRenderStats } = await import("../world/budget/renderStats");
+  const stopDirector = startDirector({ hot, store: deps.store, render: readRenderStats, ...(deps.pageEvents ? { pageEvents: deps.pageEvents } : {}) });
   const stopReload = startContentHotReload({
     hot, store: deps.store, actions: deps.actions, baseUrl: deps.baseUrl, ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}),
   });

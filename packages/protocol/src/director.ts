@@ -26,6 +26,20 @@ const FoundationState = z.enum(["idea", "en_marcha", "fundado", "crece"]);
 
 export const ContentErrorSchema = z.strictObject({ file: z.string(), key: z.string(), message: z.string() });
 
+/**
+ * Contadores reales del renderer (plan estetica-c M6): llamadas y triángulos del último cuadro completo (todas sus
+ * pasadas), texturas y geometrías vivas y los FPS medidos. Los manda solo el cliente del modo director; null si el canvas
+ * no dibujó todavía (o no hay mapa).
+ */
+export const RenderStatsSchema = z.strictObject({
+  drawCalls: z.number().int().nonnegative(),
+  triangles: z.number().int().nonnegative(),
+  textures: z.number().int().nonnegative(),
+  geometries: z.number().int().nonnegative(),
+  fps: z.number().nonnegative(),
+});
+export type RenderStats = z.infer<typeof RenderStatsSchema>;
+
 export const DirectorSnapshotSchema = z.strictObject({
   v: z.literal(1),
   sessionId: SessionIdSchema,
@@ -55,6 +69,8 @@ export const DirectorSnapshotSchema = z.strictObject({
   network: z.array(z.string().regex(/^intro:NPC-/)),
   lastPick: z.strictObject({ x: z.number(), z: z.number() }).nullable(),
   contentErrors: z.array(ContentErrorSchema),
+  /** Plan estetica-c M6: opcional (un snapshot sin contadores sigue valiendo). */
+  render: RenderStatsSchema.nullable().optional(),
 });
 export type DirectorSnapshot = z.infer<typeof DirectorSnapshotSchema>;
 

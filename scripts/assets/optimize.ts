@@ -188,7 +188,7 @@ export async function optimizarPersonajeGlb(entrada: Uint8Array, id: string, pie
   doc.setLogger(new Logger(Logger.Verbosity.WARN));
   try {
     if (pieza.tipo === "cuerpo") {
-      const r = await optimizarCuerpo(doc, { id, nodos: pieza.nodos, pintura: pieza.pintura, bisel });
+      const r = await optimizarCuerpo(doc, { id, nodos: pieza.nodos, pintura: pieza.pintura, bisel, simplificar: pieza.simplificar });
       const glb = await io.writeBinary(doc);
       return {
         glb,

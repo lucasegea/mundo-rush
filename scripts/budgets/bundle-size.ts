@@ -10,6 +10,12 @@
 // Plan estetica-c M2: el decodificador meshopt autoalojado (public/decoders/, 03 §4.2) se baja junto con el mundo 3D, así
 // que su gzip se suma al chunk 3D (los archivos de dist/decoders/ entran como extras de cada entrada del mundo).
 //
+// Plan estetica-c M6 (03 §2.9, D-160): el postprocesado es un chunk aparte que `low` y `dialog-only` nunca descargan. Si
+// el manifiesto tiene el canvas del mundo, falla cuando Post no es una entrada dinámica propia o cuando el grafo estático
+// del canvas (o del shell) trae la entrada de Post o módulos de postprocessing / @react-three/postprocessing.
+// M6 SEAM: M7 exige que el chunk 3D no crezca respecto de M6; el número de referencia es el que imprime este chequeo al
+// cerrar M6 (está en el registro de construcción de M6).
+//
 // Uso: node scripts/budgets/bundle-size.ts [--dist <dir>]   (por defecto apps/web/dist)
 // Sale con 1 si un presupuesto se pasa o si falta el manifiesto; con 0 si todo entra.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -91,6 +97,11 @@ export const DECODERS_RELATIVE = "decoders";
 const SHELL_ENTRY = "index.html";
 const DOCENTE_ENTRY = "docente.html";
 const WORLD_PREFIX = "src/world/";
+/** El canvas del mundo y el postprocesado (plan estetica-c M6): Post se baja solo si el tier lo usa. */
+export const WORLD_CANVAS_ENTRY = "src/world/GameCanvas.tsx";
+export const POST_ENTRY = "src/world/post/Post.tsx";
+/** Un módulo del postprocesado (la librería y su envoltorio de R3F). */
+export const POST_MODULE = /(^|\/)node_modules\/(postprocessing|@react-three\/postprocessing)\//;
 
 /** Lee y valida budgets.json: exactamente las claves de 03 §2.7.3, todas números positivos. */
 export function loadBudgets(path = BUDGETS_PATH): Budgets {
@@ -205,6 +216,8 @@ export function checkBundle(
       [...measure(manifest, own, gzipSize), ...extras].sort((a, b) => b.gzipBytes - a.gzipBytes)));
   }
 
+  violations.push(...checkPostChunk(manifest, shellKeys, chunkModules));
+
   if (manifest[DOCENTE_ENTRY]) {
     results.push(result(`panel docente (${DOCENTE_ENTRY})`, "docente_gzip_kb", budgets.docente_gzip_kb,
       measure(manifest, staticClosure(manifest, DOCENTE_ENTRY), gzipSize)));
@@ -215,6 +228,29 @@ export function checkBundle(
   skipped.push("audio_lineas_por_mision_mb: sin audio guionado todavía (F8)");
 
   return { ok: results.every((r) => r.ok) && violations.length === 0, results, skipped, violations };
+}
+
+/**
+ * Plan estetica-c M6: el postprocesado en su propio chunk. Con el canvas del mundo en el manifiesto, Post tiene que ser
+ * una entrada dinámica y ni el grafo estático del canvas ni el del shell pueden traerla (ni a sus módulos): así `low` y
+ * `dialog-only`, que montan el canvas sin Post, nunca la descargan. Sin el canvas no hay nada que chequear.
+ */
+export function checkPostChunk(manifest: Manifest, shellKeys: readonly string[], chunkModules?: ChunkModules): string[] {
+  if (!manifest[WORLD_CANVAS_ENTRY]) return [];
+  const violations: string[] = [];
+  const post = manifest[POST_ENTRY];
+  if (!post || post.isDynamicEntry !== true) violations.push(`postprocesado sin chunk propio: falta la entrada dinámica ${POST_ENTRY}`);
+  const loadedWithoutPost = new Set([...shellKeys, ...staticClosure(manifest, WORLD_CANVAS_ENTRY)]);
+  if (loadedWithoutPost.has(POST_ENTRY)) violations.push(`postprocesado en el grafo estático del canvas: ${POST_ENTRY}`);
+  if (chunkModules) {
+    for (const key of loadedWithoutPost) {
+      const file = (manifest[key] as ManifestChunk).file;
+      if (!file.endsWith(".js")) continue;
+      const hit = (chunkModules[file] ?? []).find((m) => POST_MODULE.test(m));
+      if (hit) violations.push(`postprocesado en el grafo estático del canvas: ${file} (${key}) trae ${hit}`);
+    }
+  }
+  return violations;
 }
 
 /** Texto del reporte. Si un presupuesto se pasa, nombra cada chunk de ese grafo con su tamaño. */

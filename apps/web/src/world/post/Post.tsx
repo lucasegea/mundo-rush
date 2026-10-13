@@ -3,9 +3,10 @@
 // (import() desde GameCanvas): `low` y `dialog-only` nunca lo descargan (propuesta de D-160 como implementación). El
 // tilt-shift enfoca al jugador y se ajusta a la distancia de la cámara (tiltShift.ts, D-208).
 import { Bloom, EffectComposer, TiltShift2, Vignette } from "@react-three/postprocessing";
+import type { PostLevel } from "./level";
 import { tiltShiftFor } from "./tiltShift";
 
-export type PostLevel = "none" | "bloom" | "full";
+export type { PostLevel } from "./level";
 
 /** `viewScale` es el de la distancia pedida de la cámara (world/camera/rig.ts). */
 export default function Post({ level, viewScale }: { level: PostLevel; viewScale: number }) {

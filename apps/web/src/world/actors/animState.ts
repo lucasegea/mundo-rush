@@ -69,9 +69,20 @@ export interface AnimCandidate {
 
 /**
  * Los ids que se animan este cuadro: solo los que están en pantalla, los más cercanos primero, hasta `max`
- * (`maxAnimatedCharacters` del tier). El resto queda congelado en su última pose. Empates por id (estable).
+ * (`maxAnimatedCharacters` del tier). El resto queda congelado en su última pose. Empates por id (estable). Con `only`
+ * (plan estetica-c M6, 03 §2.7.4: durante la charla) solo pueden animarse esos ids (el jugador y el NPC de la escena);
+ * los de fondo quedan quietos.
  */
-export function pickAnimated(entries: readonly AnimCandidate[], max: number): Set<string> {
-  const visible = entries.filter((e) => e.onScreen).sort((a, b) => a.distance - b.distance || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+export function pickAnimated(entries: readonly AnimCandidate[], max: number, only: ReadonlySet<string> | null = null): Set<string> {
+  const visible = entries.filter((e) => e.onScreen && (only === null || only.has(e.id))).sort((a, b) => a.distance - b.distance || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return new Set(visible.slice(0, Math.max(0, max)).map((e) => e.id));
+}
+
+/**
+ * El filtro `only` de pickAnimated para el cuadro (plan estetica-c M6, 03 §2.7.4): fuera de la charla null (todos
+ * compiten por el tope del tier); durante la charla, solo los ids presentes (el jugador y el NPC de la escena).
+ */
+export function sceneAnimated(inScene: boolean, ids: readonly (string | null)[]): ReadonlySet<string> | null {
+  if (!inScene) return null;
+  return new Set(ids.filter((id): id is string => id !== null));
 }

@@ -4,9 +4,11 @@
 // R7): la pose (posición, giro suave hacia donde mira), la elección de animState.ts (velocidad, papel en la escena,
 // gesto pedido, "reducir movimiento") y, si el gobernador lo deja, el avance de la animación. Deja su lugar en
 // `actorSpots` para la sombra blob y el gobernador. Con `onSelect`, el clic sobre el cuerpo llega como en el billboard.
-// Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido).
+// Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido). Plan estetica-c M6:
+// `lod` elige el cuerpo completo o el simplificado de `low`.
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { SceneDensity } from "@lg/art";
 import { actorSpots, animatedActors } from "../runtime";
 import { chooseAnimation, type GestureId, type SceneRole } from "./animState";
 import { loadCharacterAssets } from "./characterAssets";
@@ -37,6 +39,8 @@ interface Props {
   gesture?: GestureId | null;
   onSelect?: (e: ThreeEvent<MouseEvent>) => void;
   initialYaw?: number;
+  /** Densidad del tier: el cuerpo completo o el simplificado de `low` (plan estetica-c M6). */
+  lod?: SceneDensity;
 }
 
 /** Velocidad de referencia del cuerpo de cápsulas (la del jugador del núcleo). */
@@ -52,7 +56,7 @@ const seedOf = (id: string): number => {
 
 const isProcedural = (g: string): g is ProceduralGesture => (PROCEDURAL_GESTURES as readonly string[]).includes(g);
 
-export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4 }: Props) {
+export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4, lod = "full" }: Props) {
   const seed = useMemo(() => seedOf(id), [id]);
   const chibi = useMemo(() => buildChibi(look, seed), [look, seed]);
   const [skinned, setSkinned] = useState<SkinnedCharacter | null>(null);
@@ -64,7 +68,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     let alive = true;
     let built: SkinnedCharacter | null = null;
     setSkinned(null);
-    loadCharacterAssets(look.body)
+    loadCharacterAssets(look.body, lod)
       .then((a) => {
         if (!alive) return;
         built = buildSkinnedCharacter(a.body, a.clips, look, seed);
@@ -78,7 +82,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
       alive = false;
       if (built) disposeSkinnedCharacter(built);
     };
-  }, [look, seed, id]);
+  }, [look, seed, id, lod]);
 
   const phase = useRef(0);
   const yaw = useRef(initialYaw);

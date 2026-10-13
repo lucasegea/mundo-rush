@@ -19,7 +19,7 @@ export * from "./schemas/assets.ts";
 export { compilarContenido, compilarIncremental } from "./compile/compilar.ts";
 export type { Resultado, ResultadoIncremental } from "./compile/compilar.ts";
 export { necesitaRegistro } from "./compile/assets.ts";
-export { desplegarProps, estimarPresupuestoDiorama } from "./compile/dioramas.ts";
+export { desplegarProps, estimarPresupuestoDiorama, PARTE_SOMBRA } from "./compile/dioramas.ts";
 export type { ContextoPresupuesto, EstimadoDiorama, InstanciaDesplegada } from "./compile/dioramas.ts";
 export { filtrarGlosario, filtrarSaberes } from "./compile/vistas.ts";
 export type { Salida } from "./compile/vistas.ts";

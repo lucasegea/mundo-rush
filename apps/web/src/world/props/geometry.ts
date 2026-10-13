@@ -82,7 +82,7 @@ export function roundedShape(points: readonly (readonly [number, number])[], rad
 }
 
 /** Extrusión biselada de un perfil (en el plano x/y) a lo largo de z, centrada en z = 0. */
-export function extrudeRounded(shape: Shape, depth: number, bevel = 0.12): BufferGeometry {
-  const g = new ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 5 });
+export function extrudeRounded(shape: Shape, depth: number, bevel = 0.12, bevelSegments = 3, curveSegments = 5): BufferGeometry {
+  const g = new ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments, curveSegments });
   return g.translate(0, 0, -depth / 2);
 }

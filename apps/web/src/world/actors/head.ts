@@ -3,7 +3,8 @@
 // malla (una llamada). La usan el cuerpo con esqueleto (colgada del hueso `head`) y el cuerpo de cápsulas de reserva. La
 // boca va aparte (aparece solo al hablar, sin boca dibujada en reposo). Todo pintado por vértice con la paleta.
 // Segmentos medidos (plan estetica-c M3): con la cabeza y el cuerpo con esqueleto, el diorama de prueba entra en `medium`.
-// M5 SEAM: peinados, sombreros y pañuelos pasan a estar descritos en el contenido (`apariencia`) en M5.
+// Desde M5 peinados, sombreros y pañuelos llegan descritos en el contenido (`apariencia` de cada ficha, vía CharacterLook);
+// acá solo se arman. En M6 la cabeza no tiene versión reducida: `low` entra en presupuesto sin tocarla (medido).
 import { SphereGeometry, type BufferGeometry } from "three";
 import { capsule, mergeParts, painted, sphere, torus } from "../props/geometry";
 import type { CharacterLook } from "./looks";

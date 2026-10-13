@@ -310,8 +310,8 @@ assets:
       redondeado que se lee bien a la distancia de juego. Se revisa en el gate del operador de M3.
     personaje:
       tipo: cuerpo
-      nodos: [Mage_Body, Mage_ArmLeft, Mage_ArmRight, Mage_LegLeft, Mage_LegRight]
-      pintura:
+      nodos: &nodos_saco [Mage_Body, Mage_ArmLeft, Mage_ArmRight, Mage_LegLeft, Mage_LegRight]
+      pintura: &pintura_saco
         - { huesos: [hand.l, hand.r], token: piel }
         - { color: "#838d92", radio: 0.16, token: muro }
         - { color: "#aab8be", radio: 0.2, token: piedra }
@@ -344,8 +344,8 @@ assets:
       gate del operador de M3.
     personaje:
       tipo: cuerpo
-      nodos: [Rogue_Body, Rogue_ArmLeft, Rogue_ArmRight, Rogue_LegLeft, Rogue_LegRight]
-      pintura:
+      nodos: &nodos_tunica [Rogue_Body, Rogue_ArmLeft, Rogue_ArmRight, Rogue_LegLeft, Rogue_LegRight]
+      pintura: &pintura_tunica
         - { huesos: [hand.l, hand.r], token: piel }
         - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
         - { color: "#8d989e", radio: 0.2, token: piedra }
@@ -377,14 +377,89 @@ assets:
       el gate del operador de M3.
     personaje:
       tipo: cuerpo
-      nodos: [Barbarian_Body, Barbarian_ArmLeft, Barbarian_ArmRight, Barbarian_LegLeft, Barbarian_LegRight]
-      pintura:
+      nodos: &nodos_ancho [Barbarian_Body, Barbarian_ArmLeft, Barbarian_ArmRight, Barbarian_LegLeft, Barbarian_LegRight]
+      pintura: &pintura_ancho
         - { huesos: [hand.l, hand.r], token: piel }
         - { color: "#e3e8ea", radio: 0.3, token: muro }
         - { color: "#844432", radio: 0.12, token: madera }
         - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
         - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
         - { ropa: remera }
+  - id: kaykit-adventurers-1/cuerpo-saco-bajo
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco-bajo.glb
+    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    triangulos: 1200
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cf898585da33fab50c724d31605fb931eb2912e6d2280092141e98ca81ad507d"
+    modificaciones: >-
+      Lo mismo que cuerpo-saco (las mismas mallas, reglas de pintura y esqueleto) y además meshopt simplify hasta el 40 %
+      de los triángulos (scripts/assets/characters.ts, plan estetica-c M6): el cuerpo del tier low.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El mismo cuerpo que cuerpo-saco, simplificado; las aristas duras son las de sus costuras y ribetes, más chicas
+      todavía a la distancia de juego de low.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_saco
+      pintura: *pintura_saco
+      simplificar: 0.4
+  - id: kaykit-adventurers-1/cuerpo-tunica-bajo
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica-bajo.glb
+    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    triangulos: 1258
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d"
+    modificaciones: >-
+      Lo mismo que cuerpo-tunica (las mismas mallas, reglas de pintura y esqueleto) y además meshopt simplify hasta el 40 %
+      de los triángulos (scripts/assets/characters.ts, plan estetica-c M6): el cuerpo del tier low.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El mismo cuerpo que cuerpo-tunica, simplificado; las aristas duras son las de sus costuras y ribetes, más chicas
+      todavía a la distancia de juego de low.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_tunica
+      pintura: *pintura_tunica
+      simplificar: 0.4
+  - id: kaykit-adventurers-1/cuerpo-ancho-bajo
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho-bajo.glb
+    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    triangulos: 1204
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6"
+    modificaciones: >-
+      Lo mismo que cuerpo-ancho (las mismas mallas, reglas de pintura y esqueleto) y además meshopt simplify hasta el 40 %
+      de los triángulos (scripts/assets/characters.ts, plan estetica-c M6): el cuerpo del tier low.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El mismo cuerpo que cuerpo-ancho, simplificado; las aristas duras son las de sus costuras y ribetes, más chicas
+      todavía a la distancia de juego de low.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_ancho
+      pintura: *pintura_ancho
+      simplificar: 0.4
   - id: kaykit-adventurers-1/animaciones
     archivo: apps/web/public/models/kaykit-adventurers-1/animaciones.glb
     # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).

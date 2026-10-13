@@ -7,11 +7,13 @@
 // - la tabla de costos contra los constructores (props, cerco, árboles, cabezas, detalle);
 // - la burbuja ámbar de pedido: sale de `selectRequestBubbles` (vacía hoy: M5 SEAM) y es un Sprite de la clase etiqueta;
 // - la apariencia llega del contenido (catálogo) y una mal formada falla clara.
+// Plan estetica-c M6: el estimador por tier (densidad reducida en `low`, pasada de sombra en `high`) contra el grafo real
+// de esa densidad; `low` dentro de 60 llamadas y 25k triángulos con todo a la vista (el zoom más lejano, 160 m).
 import {
   BODY_IDS, CODE_PROP_ASSETS, codePropTriangles, DETAIL_TRIANGLES, HAIR_STYLES, HATS, headTriangles, insidePolygon, isCodeProp,
-  PLAYER_LOOK, polylineDistance, SCARVES, tokenRgb, type CodePropAsset,
+  PLAYER_LOOK, polylineDistance, SCARVES, TIER_BUDGETS, tokenRgb, WORLD_TIERS, type CodePropAsset, type SceneDensity,
 } from "@lg/art";
-import { Diorama as DioramaSchema, estimarPresupuestoDiorama, type Diorama as DioramaSource } from "@lg/content-schema";
+import { Diorama as DioramaSchema, estimarPresupuestoDiorama, PARTE_SOMBRA, type Diorama as DioramaSource } from "@lg/content-schema";
 import {
   cellAt, cellCenter, isWalkable, prepareDiorama, type DioramaLayout, type DioramaRuntime, type WalkGrid,
 } from "@lg/core";
@@ -247,19 +249,20 @@ const contexto = () => {
 
 const clipsScene = parseCharacterGlb(served(CLIPS_ASSET), MeshoptDecoder);
 const bodies = new Map<string, ReturnType<typeof parseCharacterGlb>>();
-async function actor(look: CharacterLook): Promise<Object3D> {
-  let b = bodies.get(look.body);
-  if (!b) bodies.set(look.body, (b = parseCharacterGlb(served(bodyAsset(look.body)), MeshoptDecoder)));
+async function actor(look: CharacterLook, density: SceneDensity = "full"): Promise<Object3D> {
+  const asset = bodyAsset(look.body, density);
+  let b = bodies.get(asset);
+  if (!b) bodies.set(asset, (b = parseCharacterGlb(served(asset), MeshoptDecoder)));
   const [body, clips] = await Promise.all([b, clipsScene]);
   return buildSkinnedCharacter(body.scene, clips.clips, look, 7).root;
 }
 
 /** El grafo real de un diorama con todo a la vista: escena, modelos, personajes, etiqueta y burbuja por NPC, sombras. */
-async function realGraph(d: DioramaRuntime): Promise<Group> {
-  const scene = buildDioramaScene(d);
+async function realGraph(d: DioramaRuntime, density: SceneDensity = "full"): Promise<Group> {
+  const scene = buildDioramaScene(d, density);
   const models = new Group();
   for (const slot of scene.models) models.add(fitToBox(await parseModel(served(slot.asset.slice("modelo/".length)), slot.asset, MeshoptDecoder), slot));
-  const actors = await Promise.all([PLAYER_LOOK_ID, ...d.npcs.map((n) => n.id)].map((id) => actor(lookOf(id))));
+  const actors = await Promise.all([PLAYER_LOOK_ID, ...d.npcs.map((n) => n.id)].map((id) => actor(lookOf(id), density)));
   const labels = d.npcs.map((n) => createNameLabel(n.id, false));
   const bubbles = d.npcs.map(() => createRequestBubble());
   const blobs = buildBlobShadows(scene.blobAnchors);
@@ -299,6 +302,54 @@ describe("el estimador de validate:content es el grafo que dibuja world/", () =>
   });
 });
 
+/** Lo que dibuja la escena (sin la pasada de sombra, que no es un objeto del grafo). */
+const sinSombra = (partes: Record<string, { drawCalls: number; triangles: number }>) =>
+  Object.entries(partes).filter(([k]) => k !== PARTE_SOMBRA).reduce((a, [, e]) => ({ drawCalls: a.drawCalls + e.drawCalls, triangles: a.triangles + e.triangles }), { drawCalls: 0, triangles: 0 });
+
+describe("estetica-c M6: el estimador por tier es el grafo que dibuja world/ con la densidad del tier", () => {
+  test("test.yaml en low: el grafo reducido real coincide y entra en 60 llamadas / 25k triángulos (todo a la vista = 160 m)", async () => {
+    const { source, ctx } = contexto();
+    const e = estimarPresupuestoDiorama(source("test"), ctx, "low");
+    const real = estimateBudget([await realGraph(testDiorama(), "reduced")]);
+    expect(e.faltan).toEqual([]);
+    expect(e.total, JSON.stringify(e.partes)).toEqual(real);
+    expect(real).toEqual({ drawCalls: 29, triangles: 22302 });
+    expect(real.drawCalls).toBeLessThanOrEqual(TIER_BUDGETS.low.maxDrawCalls);
+    expect(real.triangles).toBeLessThanOrEqual(TIER_BUDGETS.low.maxTriangles);
+  });
+
+  test("test.yaml en high: el grafo completo más la pasada de sombra (una llamada y el cuerpo por personaje)", async () => {
+    const { source, ctx } = contexto();
+    const e = estimarPresupuestoDiorama(source("test"), ctx, "high");
+    const medium = estimarPresupuestoDiorama(source("test"), ctx, "medium");
+    expect(sinSombra(e.partes)).toEqual(medium.total);
+    expect(e.partes[PARTE_SOMBRA]).toEqual({ drawCalls: 4, triangles: 12310 });
+    expect(e.total).toEqual({ drawCalls: 33, triangles: 61474 });
+    expect(e.total.triangles).toBeLessThanOrEqual(TIER_BUDGETS.high.maxTriangles);
+  });
+
+  test("cada tier de test.yaml entra en su presupuesto (la regla de validate:content)", () => {
+    const { source, ctx } = contexto();
+    for (const tier of WORLD_TIERS) {
+      const { total } = estimarPresupuestoDiorama(source("test"), ctx, tier);
+      expect(total.drawCalls, tier).toBeLessThanOrEqual(TIER_BUDGETS[tier].maxDrawCalls);
+      expect(total.triangles, tier).toBeLessThanOrEqual(TIER_BUDGETS[tier].maxTriangles);
+    }
+  });
+
+  test("teeth: un diorama sintético pesado se pasa de low en el estimador y en el grafo reducido real", async () => {
+    const { ctx } = contexto();
+    const src = DioramaSchema.parse({
+      ...(TILES_FIXTURE as object), tiles: undefined,
+      detalle: [{ tipo: "matas", centro: [-12, -8], radio: 3, cantidad: 200 }, { tipo: "matas", centro: [12, 8], radio: 3, cantidad: 200 }],
+    });
+    const e = estimarPresupuestoDiorama(src, ctx, "low");
+    const real = estimateBudget([await realGraph(prepareDiorama(src as unknown as DioramaLayout), "reduced")]);
+    expect(e.total).toEqual(real);
+    expect(real.triangles).toBeGreaterThan(TIER_BUDGETS.low.maxTriangles);
+  });
+});
+
 describe("tabla de costos de @lg/art contra los constructores", () => {
   test("los props por código de la tabla son exactamente los constructores", () => {
     expect(Object.keys(PROP_BUILDERS).sort()).toEqual([...CODE_PROP_ASSETS].sort());
@@ -315,6 +366,21 @@ describe("tabla de costos de @lg/art contra los constructores", () => {
     }
     for (const asset of ["codigo/arbol", "codigo/pino"] as const) {
       expect(tris(buildProp(asset, { w: 0.6, h: TREE_HEIGHT[asset], d: 0.6 }, 1))).toBe(codePropTriangles(asset, { w: 0.6, h: 1, d: 0.6 }));
+    }
+  });
+
+  test("plan estetica-c M6: la densidad reducida de la tabla es exactamente la de los constructores", () => {
+    const sizes = [[1, 1, 1], [4, 3, 3], [5, 2.5, 3], [0.6, 4.5, 0.6], [2, 6, 2]] as const;
+    for (const asset of CODE_PROP_ASSETS.filter((a) => a !== "codigo/cerco")) {
+      for (const [w, h, d] of sizes) {
+        const full = codePropTriangles(asset, { w, h, d });
+        const low = codePropTriangles(asset, { w, h, d }, "reduced");
+        expect(tris(buildProp(asset, { w, h, d }, 0, "casa-2", "reduced")), `${asset} ${w}x${h}x${d}`).toBe(low);
+        expect(low, `${asset} reduce`).toBeLessThan(full);
+      }
+    }
+    for (let len = 0.5; len <= 12; len += 0.5) {
+      expect(tris(buildProp("codigo/cerco", { w: 0.2, h: 1, d: len }, 0, undefined, "reduced")), `${len}`).toBe(codePropTriangles("codigo/cerco", { w: 0.2, h: 1, d: len }, "reduced"));
     }
   });
 

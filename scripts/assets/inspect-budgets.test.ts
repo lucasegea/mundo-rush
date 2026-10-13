@@ -25,8 +25,9 @@ describe("inspect-budgets sobre el árbol real", () => {
     expect(p.conColor).toBe(true);
     const lineas: string[] = [];
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
-    // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los 4 archivos de personaje, dentro del tope de muelle.
-    expect(lineas.join("\n")).toMatch(/info diorama test: 6 modelo\(s\)/);
+    // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los archivos de personaje, dentro del tope de muelle.
+    // M6: 3 cuerpos, 3 cuerpos reducidos de `low` y el de clips (cota de arriba: un tier baja unos u otros).
+    expect(lineas.join("\n")).toMatch(/info diorama test: 9 modelo\(s\)/);
     expect(lineas.join("\n")).toMatch(/OK {3}diorama test contra assets_muelle_mb/);
     // Plan estetica-c M5: cada fila del registro con pieza servida trae la medida que usa el estimador, y coincide.
     expect(lineas.filter((l) => /^OK {3}registro /.test(l)).length).toBe(modelos.length);

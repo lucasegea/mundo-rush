@@ -157,6 +157,9 @@ export const selectConversationFrame = createViewSelector(
   },
 );
 
+/** Tope de cuadros con una escena de conversación arriba (03 §2.7.4): libera CPU para el audio y el WebSocket. */
+export const CONVERSATION_MAX_FPS = 30;
+
 export interface WorldRenderView {
   tier: SelectableTier;
   /** `dialogueFrame` mientras dura una charla con un NPC del diorama; si no, la cámara de los ajustes. */
@@ -173,9 +176,15 @@ export interface WorldRenderView {
   post: boolean;
   /**
    * Un panel tapa el mapa: el canvas pasa a frameloop "demand" (§2.7.4). Con la escena arriba sigue vivo (la
-   * transición de cámara y el idle de los personajes, plan estetica-c M1 ítem 5); el tope de 30 FPS llega en M6.
+   * transición de cámara y el idle de los personajes, plan estetica-c M1 ítem 5), con el tope de `conversationFps`.
    */
   paused: boolean;
+  /**
+   * Plan estetica-c M6 (03 §2.7.4): con una escena de conversación arriba, el tope de cuadros (30); si no, null y manda
+   * el `targetFps` del tier. world/ además congela lo no esencial (agua, NPCs de fondo) y no mide rendimiento mientras
+   * dura (PerformanceMonitor nunca baja ni sube el tier por el tope propio de la charla).
+   */
+  conversationFps: number | null;
 }
 
 export const selectWorldRender = createViewSelector(
@@ -188,6 +197,7 @@ export const selectWorldRender = createViewSelector(
       cameraMotion: reduceMotion ? "cut" : "follow",
       post: !reduceMotion && tier !== "low" && tier !== "dialog-only",
       paused: top !== undefined && top.kind !== "scene",
+      conversationFps: top?.kind === "scene" ? CONVERSATION_MAX_FPS : null,
     };
   },
 );

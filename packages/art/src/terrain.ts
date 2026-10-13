@@ -1,7 +1,9 @@
 // @lg/art terrain.ts: la forma de la malla del terreno (plan estetica-c M1 ítem 8 y M5), en dato y geometría pura. Las
 // líneas de la grilla salen de acá para que world/terrain/ (que arma la malla) y el estimador de presupuesto de
 // validate:content (que cuenta sus triángulos sin three) usen la misma cuenta: lo estimado es lo dibujado. Movida desde
-// world/terrain/buildTerrain.ts en M5 sin cambiar valores.
+// world/terrain/buildTerrain.ts en M5 sin cambiar valores. Plan estetica-c M6: la resolución depende de la densidad del
+// tier (density.ts); la completa es la de siempre.
+import { DENSITY, type SceneDensity, type TerrainLod } from "./density.ts";
 
 export interface TerrainBounds {
   minX: number;
@@ -20,21 +22,20 @@ export const TERRAIN_SKIRT = 160;
 export const HILL_MAX = 5.5;
 export const HILL_LIMIT = 12;
 export const TERRAIN_SEED = 11;
-/** Separación de vértices cerca y dentro de los límites (la mitad de un metro). */
-export const FINE_STEP = 0.5;
+/** Separación de vértices cerca y dentro de los límites en la densidad completa (la mitad de un metro). */
+export const FINE_STEP = DENSITY.full.terrain.fineStep;
 export const FINE_MARGIN = 0.5;
-/** Paso máximo de la grilla cerca del diorama; más allá, cada celda es FAR_GROWTH veces la anterior. */
-const NEAR_MAX_STEP = 3;
-const FAR_GROWTH = 4;
 
 /**
- * Líneas de grilla: finas (0,5 m) entre fineMin y fineMax, y cada vez más gruesas hacia min y max (de 2 a 3 m de a un
- * metro, y después geométricas por 4: 2, 3, 12, 48 y el borde). Plan estetica-c M3: la falda lejana bajó de resolución
- * para que entren los personajes con esqueleto en `medium`; lo de cerca (paso fino de 0,5 m) no cambió.
+ * Líneas de grilla: finas (`fineStep`) entre fineMin y fineMax, y cada vez más gruesas hacia min y max (de 2 a
+ * `nearMaxStep` m de a un metro, y después geométricas por `farGrowth`; en la densidad completa: 2, 3, 12, 48 y el borde).
+ * Plan estetica-c M3: la falda lejana bajó de resolución para que entren los personajes con esqueleto en `medium`; lo de
+ * cerca (paso fino de 0,5 m) no cambió. Plan estetica-c M6: `low` usa paso fino de 1 m y una falda más gruesa.
  */
-export function terrainGridLines(min: number, max: number, fineMin: number, fineMax: number): Float64Array {
+export function terrainGridLines(min: number, max: number, fineMin: number, fineMax: number, lod: TerrainLod = DENSITY.full.terrain): Float64Array {
   const fine: number[] = [];
-  for (let v = fineMin; v <= fineMax + 1e-9; v += FINE_STEP) fine.push(Math.round(v * 2) / 2);
+  const snap = 1 / lod.fineStep;
+  for (let v = fineMin; v <= fineMax + 1e-9; v += lod.fineStep) fine.push(Math.round(v * snap) / snap);
   const grow = (from: number, to: number, dir: 1 | -1): number[] => {
     const out: number[] = [];
     let v = from;
@@ -42,7 +43,7 @@ export function terrainGridLines(min: number, max: number, fineMin: number, fine
     while (dir > 0 ? v < to - 1e-9 : v > to + 1e-9) {
       v = dir > 0 ? Math.min(to, v + step) : Math.max(to, v - step);
       out.push(v);
-      step = step < NEAR_MAX_STEP ? step + 1 : step * FAR_GROWTH;
+      step = step < lod.nearMaxStep ? step + 1 : step * lod.farGrowth;
     }
     return out;
   };
@@ -55,18 +56,19 @@ export function terrainGridLines(min: number, max: number, fineMin: number, fine
 export const terrainExtent = (b: TerrainBounds, skirt = TERRAIN_SKIRT): TerrainBounds =>
   ({ minX: b.minX - skirt, maxX: b.maxX + skirt, minZ: b.minZ - skirt, maxZ: b.maxZ + skirt });
 
-/** Las líneas en x y en z de la malla del terreno de un diorama. */
-export function terrainLines(b: TerrainBounds, skirt = TERRAIN_SKIRT): { xs: Float64Array; zs: Float64Array } {
+/** Las líneas en x y en z de la malla del terreno de un diorama, con la resolución de la densidad dada. */
+export function terrainLines(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: SceneDensity = "full"): { xs: Float64Array; zs: Float64Array } {
   const e = terrainExtent(b, skirt);
+  const lod = DENSITY[density].terrain;
   return {
-    xs: terrainGridLines(e.minX, e.maxX, Math.floor(b.minX - FINE_MARGIN), Math.ceil(b.maxX + FINE_MARGIN)),
-    zs: terrainGridLines(e.minZ, e.maxZ, Math.floor(b.minZ - FINE_MARGIN), Math.ceil(b.maxZ + FINE_MARGIN)),
+    xs: terrainGridLines(e.minX, e.maxX, Math.floor(b.minX - FINE_MARGIN), Math.ceil(b.maxX + FINE_MARGIN), lod),
+    zs: terrainGridLines(e.minZ, e.maxZ, Math.floor(b.minZ - FINE_MARGIN), Math.ceil(b.maxZ + FINE_MARGIN), lod),
   };
 }
 
 /** Triángulos de la malla del terreno (dos por celda). */
-export function terrainTriangles(b: TerrainBounds, skirt = TERRAIN_SKIRT): number {
-  const { xs, zs } = terrainLines(b, skirt);
+export function terrainTriangles(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: SceneDensity = "full"): number {
+  const { xs, zs } = terrainLines(b, skirt, density);
   return 2 * (xs.length - 1) * (zs.length - 1);
 }
 

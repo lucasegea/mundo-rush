@@ -15,10 +15,11 @@ export const SUN_SHADOW = { mapSize: 1024, half: 22, near: 1, far: 90, bias: -0.
 /**
  * Niebla para una distancia de cámara (D-208): los 34 a 78 m de la propuesta valen hasta la distancia de referencia
  * (30 m, el paso de inicio) y más lejos escalan con ella, así de lejos la vista no queda lavada y de cerca no hay bruma
- * nueva. `scale` es `viewScale(distance)` de world/camera/rig.ts.
+ * nueva. `scale` es `viewScale(distance)` de world/camera/rig.ts. Plan estetica-c M6: `tierScale` es la "distancia de
+ * dibujo / niebla" del tier (`fogScale` de la densidad de @lg/art: 1 en `medium` y `high`, más corta en `low`).
  */
-export function fogFor(scale: number): { near: number; far: number } {
-  const k = Math.max(1, scale);
+export function fogFor(scale: number, tierScale = 1): { near: number; far: number } {
+  const k = Math.max(1, scale) * tierScale;
   return { near: FOG.near * k, far: FOG.far * k };
 }
 

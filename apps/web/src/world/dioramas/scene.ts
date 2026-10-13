@@ -4,11 +4,14 @@
 // troncos. Diorama.tsx lo monta tal cual; el estimador de presupuesto (A15) y el auditor de materiales (A4) miden ESTE
 // mismo grafo, así lo medido es lo dibujado. Plan estetica-c M5: lee el formato de la maqueta (caminos y ríos por
 // curvas, agua por polígonos, detalle por zonas, props con giro y tinte) y sigue leyendo el de tiles de M1 hasta M7.
+// Plan estetica-c M6: se arma con la densidad del tier (DENSITY de @lg/art): en `low`, terreno más grueso, props y
+// árboles de geometría reducida, menos pinos en la falda y una de cada tres instancias de detalle; el estimador de
+// validate:content cuenta con la misma tabla.
 import {
   BufferAttribute, BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, Quaternion, Vector3,
 } from "three";
 import type { DioramaRuntime, PropBox } from "@lg/core";
-import { BORDER_PINES, TERRAIN_SEED as ART_SEED, type PaletteToken } from "@lg/art";
+import { DENSITY, keepDetail, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity } from "@lg/art";
 import type { Obstacle } from "../camera/rig";
 import { toonMaterial } from "../materials/registry";
 import { blob, mergeParts, painted, sphere } from "../props/geometry";
@@ -142,10 +145,11 @@ export function dioramaDetail(diorama: DioramaRuntime): DetailScatter {
     : detailScatter(diorama.layers);
 }
 
-export function buildDioramaScene(diorama: DioramaRuntime): DioramaScene {
+export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity = "full"): DioramaScene {
   const root = new Group();
   root.name = `diorama:${diorama.id}`;
-  const terrain = buildTerrain({ bounds: diorama.bounds, layers: diorama.layers, ground: diorama.ground });
+  const spec = DENSITY[density];
+  const terrain = buildTerrain({ bounds: diorama.bounds, layers: diorama.layers, ground: diorama.ground, density });
   root.add(terrainMesh(terrain));
   const water = waterMesh(diorama);
   if (water) root.add(water);
@@ -183,7 +187,7 @@ export function buildDioramaScene(diorama: DioramaRuntime): DioramaScene {
   }
   for (const list of groups.values()) {
     const first = list[0] as PropBox;
-    const geo = buildProp(first.asset, { w: first.w, h: first.h, d: first.d }, 0, tintOf(first));
+    const geo = buildProp(first.asset, { w: first.w, h: first.h, d: first.d }, 0, tintOf(first), spec.lod);
     geometries.push(geo);
     if (list.length === 1) {
       const m = new Mesh(geo, toonMaterial());
@@ -200,22 +204,22 @@ export function buildDioramaScene(diorama: DioramaRuntime): DioramaScene {
 
   // Árboles del layout y pinos del borde (fuera de los límites): una llamada por tipo y tinte.
   const seed = diorama.ground.terrain.seed ?? ART_SEED;
-  const border = borderPines(diorama.bounds, seed, BORDER_PINES).map((p) => ({ ...p, y: terrain.heightAt(p.x, p.z) - 0.1 }));
+  const border = borderPines(diorama.bounds, seed, spec.borderPines).map((p) => ({ ...p, y: terrain.heightAt(p.x, p.z) - 0.1 }));
   const pines = trees.get("codigo/pino|") ?? { asset: "codigo/pino" as const, tint: undefined, items: [] };
   pines.items.push(...border);
   trees.set("codigo/pino|", pines);
   for (const t of trees.values()) {
     if (t.items.length === 0) continue;
-    const geo = buildProp(t.asset, { w: 0.6, h: TREE_HEIGHT[t.asset], d: 0.6 }, 1, t.tint);
+    const geo = buildProp(t.asset, { w: 0.6, h: TREE_HEIGHT[t.asset], d: 0.6 }, 1, t.tint, spec.lod);
     geometries.push(geo);
     root.add(instanced(t.asset, geo, t.items));
   }
 
-  // Detalle del suelo.
+  // Detalle del suelo (el empedrado es el suelo de la placita: queda entero en toda densidad).
   const detail = dioramaDetail(diorama);
   const dg = detailGeometries();
   for (const kind of ["flores", "matas", "piedritas", "empedrado"] as const) {
-    const items = detail[kind];
+    const items = kind === "empedrado" ? detail[kind] : keepDetail(detail[kind], density);
     if (items.length === 0) continue;
     geometries.push(dg[kind]);
     root.add(instanced(`detalle:${kind}`, dg[kind], items.map((s) => ({ ...s, y: terrain.heightAt(s.x, s.z) }))));
