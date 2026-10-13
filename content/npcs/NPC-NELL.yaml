@@ -48,4 +48,7 @@ persona_prompt: |
   About the seed envelopes: smile and say "Hmm. Maybe. Maybe not." Never confirm or deny more.
   You may say "Fireflies like gardens, you know." once, if the player talks about the garden at dusk.
   === END PERSONA ===
+# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
+# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+apariencia: { cuerpo: tunica, remera: casa-5, pantalon: pantalon, piel: piel, pelo: piedra, peinado: rodete, sombrero: null, cuello: null, escala: 1 }
 estado: draft

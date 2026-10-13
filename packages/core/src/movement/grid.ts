@@ -72,6 +72,30 @@ export interface WalkGridSpec {
   polygons?: readonly (readonly (readonly [number, number])[])[];
   /** Huellas de volúmenes: bloquean toda celda que se superpone con área positiva. */
   rects?: readonly Rect[];
+  /**
+   * Franjas a lo largo de una polilínea (ríos, plan estetica-c M5): bloquean las celdas cuyo centro queda a menos de
+   * `halfWidth` de la línea.
+   */
+  bands?: readonly { line: readonly Point[]; halfWidth: number }[];
+}
+
+/** Distancia de (x, z) a una polilínea (a su único punto si tiene uno; Infinity si está vacía). */
+export function distanceToPolyline(x: number, z: number, line: readonly Point[]): number {
+  if (line.length === 1) {
+    const p = line[0] as Point;
+    return Math.hypot(x - p.x, z - p.z);
+  }
+  let best = Infinity;
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1] as Point;
+    const b = line[i] as Point;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len2 = dx * dx + dz * dz;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / len2));
+    best = Math.min(best, Math.hypot(x - (a.x + t * dx), z - (a.z + t * dz)));
+  }
+  return best;
 }
 
 /** Arma la grilla de un diorama (en build o al cargar). */
@@ -87,7 +111,8 @@ export function buildWalkGrid(spec: WalkGridSpec, cellSize = CELL_SIZE): WalkGri
       const { x, z } = cellCenter(g, col, row);
       const inPolygon = (spec.polygons ?? []).some((p) => pointInPolygon(x, z, p));
       const inRect = (spec.rects ?? []).some((r) => r.minX < x0 + cellSize && r.maxX > x0 && r.minZ < z0 + cellSize && r.maxZ > z0);
-      g.walkable[row * cols + col] = inPolygon || inRect ? 0 : 1;
+      const inBand = (spec.bands ?? []).some((b) => distanceToPolyline(x, z, b.line) < b.halfWidth);
+      g.walkable[row * cols + col] = inPolygon || inRect || inBand ? 0 : 1;
     }
   }
   return g;

@@ -244,6 +244,9 @@ packs:
 assets:
   - id: quaternius-farm-buildings/gallinero
     archivo: apps/web/public/models/quaternius-farm-buildings/gallinero.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 948
+    primitivas: 1
     fuente: assets-src/quaternius-farm-buildings/ChickenCoop/ChickenCoop.glb
     pack: quaternius-farm-buildings
     autor: Quaternius
@@ -262,6 +265,9 @@ assets:
     notas: Original ChickenCoop.glb de static.poly.pizza (948 triángulos, 5 materiales de color plano, sin texturas).
   - id: quaternius-farm-buildings/cerco
     archivo: apps/web/public/models/quaternius-farm-buildings/cerco.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 188
+    primitivas: 1
     fuente: assets-src/quaternius-farm-buildings/Fence/Fence.glb
     pack: quaternius-farm-buildings
     autor: Quaternius
@@ -283,6 +289,9 @@ assets:
   # ---------- personajes (plan estetica-c M3) ----------
   - id: kaykit-adventurers-1/cuerpo-saco
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 3002
+    primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
     pack: kaykit-adventurers-1
     autor: Kay Lousberg
@@ -314,6 +323,9 @@ assets:
         - { ropa: remera }
   - id: kaykit-adventurers-1/cuerpo-tunica
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 3148
+    primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
     pack: kaykit-adventurers-1
     autor: Kay Lousberg
@@ -344,6 +356,9 @@ assets:
         - { ropa: remera }
   - id: kaykit-adventurers-1/cuerpo-ancho
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 3012
+    primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
     pack: kaykit-adventurers-1
     autor: Kay Lousberg
@@ -372,6 +387,9 @@ assets:
         - { ropa: remera }
   - id: kaykit-adventurers-1/animaciones
     archivo: apps/web/public/models/kaykit-adventurers-1/animaciones.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 0
+    primitivas: 0
     fuente: assets-src/kaykit-adventurers-1/Knight/Knight.glb
     pack: kaykit-adventurers-1
     autor: Kay Lousberg

@@ -8,3 +8,8 @@ export * from "./palette.ts";
 export * from "./paint.ts";
 export * from "./bevel.ts";
 export * from "./tolerance.ts";
+// Plan estetica-c M5: vocabulario de apariencia, forma del terreno y costos de dibujo (estimador de validate:content).
+export * from "./looks.ts";
+export * from "./terrain.ts";
+export * from "./costs.ts";
+export * from "./shapes.ts";

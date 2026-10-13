@@ -24,7 +24,7 @@ describe("diorama", () => {
     expect(d.spawn).toEqual({ x: -3, z: 0 });
     expect(d.layers[0]).toMatchObject({ name: "suelo", originX: -4, originZ: -2, width: 8, height: 4 });
     expect(d.layers[0]?.tiles.slice(8, 11)).toEqual([1, 0, 0]);
-    expect(d.boxes).toEqual([{ asset: "codigo/caja", x: 2, y: 0, z: 0, w: 1, h: 1, d: 1 }]); // sin `tam` no hay caja
+    expect(d.boxes).toEqual([{ asset: "codigo/caja", x: 2, y: 0, z: 0, w: 1, h: 1, d: 1, rotY: null, tint: null }]); // sin `tam` no hay caja
     expect(d.interactables.map((i) => [i.id, i.kind, i.radius])).toEqual([["NPC-NELL", "npc", 1.5], ["OBJ-CARTEL", "object", 1]]);
     const g = d.grid;
     expect([g.cols, g.rows]).toEqual([16, 8]);

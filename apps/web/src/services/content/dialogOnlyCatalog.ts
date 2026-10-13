@@ -2,6 +2,7 @@
 // solo-diálogo: lugares de la región y dónde está cada NPC. Efecto de red en services/ (R5); el resultado
 // entra al store por acciones. Validación mínima a mano (sin zod en el shell): si la forma no es la esperada,
 // falla claro, sin datos inventados.
+import { parseApariencia, type CharacterLook } from "@lg/art";
 import type { DialogOnlyCatalog } from "../../state/actions";
 import type { NpcInfo, PlaceInfo } from "../../state/slices";
 
@@ -28,6 +29,18 @@ const localized = (file: string, o: Json, key: string): string => {
   return v[LOCALE];
 };
 
+/**
+ * Plan estetica-c M5: la apariencia de la ficha (`apariencia`, ya validada por el compilador). Ausente o null: null (el
+ * mundo dibuja la de reserva). Presente pero mal formada: falla claro, sin datos inventados.
+ */
+const lookOf = (file: string, n: Json): CharacterLook | null => {
+  const v = n["apariencia"];
+  if (v === undefined || v === null) return null;
+  const r = parseApariencia(v);
+  if (!r.ok) throw new ContentShapeError(file, `${String(n["id"])}: apariencia inválida (${r.error})`);
+  return r.look;
+};
+
 /** Arma el catálogo desde los dos JSON del cliente. Toma la primera región (la Región 1 en v0.2). */
 export function parseDialogOnlyCatalog(placesJson: unknown, npcsJson: unknown): DialogOnlyCatalog {
   const pf = CONTENT_FILES.places;
@@ -50,7 +63,7 @@ export function parseDialogOnlyCatalog(placesJson: unknown, npcsJson: unknown): 
   if (!Array.isArray(npcsJson)) throw new ContentShapeError(nf, "se esperaba una lista");
   const placeIds = new Set(places.map((p) => p.id));
   const npcs: NpcInfo[] = npcsJson.filter(isObj)
-    .map((n) => ({ id: str(nf, n, "id"), name: str(nf, n, "nombre"), placeId: str(nf, n, "lugar") }))
+    .map((n) => ({ id: str(nf, n, "id"), name: str(nf, n, "nombre"), placeId: str(nf, n, "lugar"), look: lookOf(nf, n) }))
     .filter((n) => placeIds.has(n.placeId));
 
   return { regionName: localized(pf, region, "nombre"), places, npcs };

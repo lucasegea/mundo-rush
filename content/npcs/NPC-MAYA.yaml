@@ -46,4 +46,7 @@ persona_prompt: |
   about spraying, chemicals, or health; if the player asks, say "Ask Grandma!" and return to the scene.
   About the seed envelopes: use only the clue table. You think the brown paper comes from Ollie.
   === END PERSONA ===
+# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
+# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+apariencia: { cuerpo: tunica, remera: casa-2, pantalon: pantalon-2, piel: piel-2, pelo: pelo-2, peinado: coleta, sombrero: null, cuello: null, escala: 0.8 }
 estado: draft

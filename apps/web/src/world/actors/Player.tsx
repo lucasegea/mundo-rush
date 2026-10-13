@@ -9,7 +9,7 @@ import { followTarget } from "../runtime";
 import type { SceneRole } from "./animState";
 import { Character, type ActorPose } from "./Character";
 import { stepGlide, type GlideState } from "./glide";
-import { PLAYER_LOOK_ID } from "./looks";
+import { PLAYER_LOOK, PLAYER_LOOK_ID } from "./looks";
 
 /** Fracción [0, 1] del paso fijo que ya pasó desde que cambió el tick. */
 export function interpolationAlpha(elapsedSec: number, stepSec: number): number {
@@ -40,5 +40,5 @@ export function Player({ conversation, cut, scene = null }: { conversation: Conv
     return { x: shown.x, z: shown.z, speed, yaw };
   };
 
-  return <Character id={PLAYER_LOOK_ID} lookId={PLAYER_LOOK_ID} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} />;
+  return <Character id={PLAYER_LOOK_ID} look={PLAYER_LOOK} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} />;
 }

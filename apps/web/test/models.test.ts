@@ -12,13 +12,12 @@ import { describe, expect, test } from "vitest";
 import { pickDiorama } from "../src/services/content";
 import { buildBlobShadows } from "../src/world/actors/BlobShadows";
 import { buildChibi } from "../src/world/actors/chibiModel";
-import { chibiLook } from "../src/world/actors/looks";
 import { estimateBudget, withinBudget } from "../src/world/budget/estimate";
 import { buildDioramaScene } from "../src/world/dioramas/scene";
 import { createNameLabel } from "../src/world/labels/labelSprite";
 import { auditMaterials, toonMaterial } from "../src/world/materials/registry";
 import { fitToBox, isModelAsset, modelUrl, meshoptDecoderUrl, parseModel } from "../src/world/props/gltf";
-import { compiledClientContent } from "./helpers";
+import { compiledClientContent, lookOf } from "./helpers";
 
 // Sin node:fs (el tsconfig del cliente no trae tipos de Node): los bytes servidos entran por Vite. Los .glb como data URL
 // (`?inline`, con assetsInclude solo en el proyecto de test) y el decodificador como texto (`?raw`).
@@ -131,7 +130,7 @@ describe("M2 modelos reales del pipeline en el diorama de prueba", () => {
     const scene = buildDioramaScene(d);
     const models = new Group();
     for (const { model } of await loadedModels(d)) models.add(model);
-    const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(chibiLook(id)).root);
+    const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(lookOf(id)).root);
     const labels = d.npcs.map((n) => createNameLabel(n.id, false));
     const blobs = buildBlobShadows(scene.blobAnchors);
     blobs.count = scene.blobAnchors.length + actors.length;

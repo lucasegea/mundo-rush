@@ -11,8 +11,10 @@ import { AnimationGovernor } from "../actors/AnimationGovernor";
 import { BlobShadows } from "../actors/BlobShadows";
 import { Character, type ActorPose } from "../actors/Character";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
+import { fallbackLook } from "../actors/looks";
 import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
+import { RequestBubble } from "../labels/RequestBubble";
 import { ModelProps } from "../props/ModelProps";
 import { followTarget } from "../runtime";
 import { tickWater, waterMaterial } from "../water/waterMaterial";
@@ -33,6 +35,8 @@ interface Props {
   activity: SceneActivityView;
   /** Tope de personajes animados del tier (`maxAnimatedCharacters`). */
   maxAnimated: number;
+  /** Plan estetica-c M5: los NPCs con burbuja ámbar de pedido (de selectRequestBubbles). */
+  requestIds?: readonly string[];
 }
 
 /** A menos de esto el NPC gira cabeza y cuerpo hacia el jugador (propuesta C §3). */
@@ -53,7 +57,7 @@ function Npc({ actor, cut, activity }: { actor: MapActor; cut: boolean; activity
   return (
     <Character
       id={actor.id}
-      lookId={actor.id}
+      look={actor.look ?? fallbackLook(actor.id)}
       pose={pose}
       cut={cut}
       scene={mine ? activity.npc : null}
@@ -68,7 +72,7 @@ function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
   return null;
 }
 
-export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewDistance, cut, activity, maxAnimated }: Props) {
+export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewDistance, cut, activity, maxAnimated, requestIds = [] }: Props) {
   const { minX, maxX, minZ, maxZ } = diorama.bounds;
   const onGround = (e: ThreeEvent<MouseEvent>): void => {
     bridge.pointer({ kind: "ground", x: e.point.x, z: e.point.z }, e.nativeEvent.button);
@@ -89,6 +93,10 @@ export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewD
       {labels.map((l) => {
         const a = actors.find((x) => x.id === l.id) as MapActor; // labelEntries sale de `actors`
         return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={LABEL_HEIGHT} z={a.z} />;
+      })}
+      {requestIds.map((id) => {
+        const a = actors.find((x) => x.id === id);
+        return a ? <RequestBubble key={`pedido-${id}`} x={a.x} y={LABEL_HEIGHT} z={a.z} still={cut} /> : null;
       })}
       <BlobShadows anchors={scene.blobAnchors} />
     </group>

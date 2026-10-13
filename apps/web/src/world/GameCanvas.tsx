@@ -11,7 +11,7 @@ import { lazy, Suspense, useEffect, useMemo } from "react";
 import { ACESFilmicToneMapping } from "three";
 import type { SelectableTier } from "@lg/core";
 import { bridge } from "../state/bridge";
-import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectSceneActivity, selectWorldRender, useGameView } from "../state/selectors";
+import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectRequestBubbles, selectSceneActivity, selectWorldRender, useGameView } from "../state/selectors";
 import { Player } from "./actors/Player";
 import { CameraRig } from "./camera/CameraRig";
 import { TWO_SHOT, viewScale } from "./camera/rig";
@@ -42,6 +42,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const conversation = useGameView(selectConversationFrame);
   const highlightId = useGameView(selectHighlightedNpc);
   const activity = useGameView(selectSceneActivity);
+  const requestIds = useGameView(selectRequestBubbles);
   const params = tierParams[render.tier];
   const post: PostLevel = render.post ? params.post : "none";
   const cut = render.cameraMotion === "cut";
@@ -82,6 +83,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             cut={cut}
             activity={activity}
             maxAnimated={params.maxAnimatedCharacters}
+            requestIds={requestIds}
           />
         ) : null}
         {/* Player antes que CameraRig: en cada cuadro la cámara sigue la posición ya dibujada. */}

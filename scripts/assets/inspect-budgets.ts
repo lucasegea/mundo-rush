@@ -5,7 +5,9 @@
 // `assets_muelle_mb` y falla si se pasa (plan estetica-c M4, nota de QA M3). Además, toda pieza servida en
 // apps/web/public/models tiene que haber salido del pipeline: sin texturas y con color por vértice. Desde M3 la descarga de
 // cada diorama suma los archivos de personaje (los cuerpos base y el de clips, filas con bloque `personaje` del
-// registro): todo diorama muestra al jugador y a sus vecinos, así que se cuentan enteros (cota de arriba).
+// registro): todo diorama muestra al jugador y a sus vecinos, así que se cuentan enteros (cota de arriba). Desde M5 el
+// estimador de presupuesto de validate:content usa los `triangulos` y `primitivas` de cada fila del registro (el
+// compilador no lee .glb): acá se comparan con la pieza medida y una fila sin medida o con otra medida falla.
 //
 // Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
 import { readdirSync, readFileSync } from "node:fs";
@@ -122,6 +124,38 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
   return { ok, lineas };
 }
 
+/** Lo que el registro dice de una pieza (plan estetica-c M5). */
+export interface FilaMedida {
+  id: string;
+  archivo: string;
+  triangulos?: number | undefined;
+  primitivas?: number | undefined;
+}
+
+/**
+ * Cada pieza servida contra su fila del registro: `triangulos` y `primitivas` tienen que estar y coincidir con lo medido,
+ * porque el estimador de validate:content cuenta con ellos. Una pieza sin fila la informa el registro de licencias.
+ */
+export function chequearMedidasRegistro(piezas: readonly PiezaMedida[], filas: readonly FilaMedida[]): ChequeoDescarga {
+  const lineas: string[] = [];
+  let ok = true;
+  const porArchivo = new Map(filas.map((f) => [f.archivo, f]));
+  for (const p of piezas) {
+    const f = porArchivo.get(p.archivo);
+    if (!f) continue;
+    if (f.triangulos === undefined || f.primitivas === undefined) {
+      ok = false;
+      lineas.push(`FAIL registro ${f.id}: sin triangulos/primitivas; medido ${p.triangulos} triángulos, ${p.primitivas} primitiva(s) en ${p.archivo}`);
+    } else if (f.triangulos !== p.triangulos || f.primitivas !== p.primitivas) {
+      ok = false;
+      lineas.push(`FAIL registro ${f.id}: dice ${f.triangulos} triángulos, ${f.primitivas} primitiva(s); medido ${p.triangulos}, ${p.primitivas} en ${p.archivo}`);
+    } else {
+      lineas.push(`OK   registro ${f.id}: ${f.triangulos} triángulos, ${f.primitivas} primitiva(s) (medido)`);
+    }
+  }
+  return { ok, lineas };
+}
+
 const aPosix = (p: string): string => p.split(sep).join("/");
 
 /** Los .glb servidos, con su ruta desde root. */
@@ -155,8 +189,9 @@ export async function run(root = ROOT, log: (s: string) => void = console.log, b
   const personajes = (contenido.conjunto.registroAssets?.data.assets ?? []).filter((a) => a.personaje).map((a) => a.archivo).sort();
   const dioramas = medirDioramas(contenido.conjunto.dioramas.map((d) => d.data), new Map(piezas.map((p) => [p.archivo, p])), personajes);
   const r = chequearDescarga(piezas, dioramas, budgets);
-  for (const l of r.lineas) log(l);
-  return r.ok ? 0 : 1;
+  const m = chequearMedidasRegistro(piezas, contenido.conjunto.registroAssets?.data.assets ?? []);
+  for (const l of [...r.lineas, ...m.lineas]) log(l);
+  return r.ok && m.ok ? 0 : 1;
 }
 
 const invocado = process.argv[1];

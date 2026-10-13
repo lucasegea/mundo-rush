@@ -15,7 +15,7 @@ import { buildBlobShadows } from "../src/world/actors/BlobShadows";
 import { parseCharacterGlb } from "../src/world/actors/characterAssets";
 import { bodyAsset, CLIP_MANIFEST, CLIPS_ASSET, FILE_CLIPS, MIN_CLIP_SET, RIG_BONES } from "../src/world/actors/clips";
 import { GESTURES, gesturePose, gestureWeight, PROCEDURAL_GESTURES } from "../src/world/actors/gestures";
-import { BODY_IDS, CHARACTER_LOOKS, characterLook, PLAYER_LOOK_ID, silhouetteKey, type CharacterLook } from "../src/world/actors/looks";
+import { BODY_IDS, fallbackLook, PLAYER_LOOK_ID, silhouetteKey, type CharacterLook } from "../src/world/actors/looks";
 import { boneKey, buildSkinnedCharacter, driveCharacter, repaintClothes, ROPA, ROPA_ATTRIBUTE, type SkinnedCharacter } from "../src/world/actors/skinned";
 import { estimateBudget, withinBudget } from "../src/world/budget/estimate";
 import { buildDioramaScene } from "../src/world/dioramas/scene";
@@ -24,7 +24,7 @@ import { auditMaterials } from "../src/world/materials/registry";
 import { fitToBox, modelUrl, parseModel } from "../src/world/props/gltf";
 import { selectSceneActivity } from "../src/state/selectors";
 import { initialGameState, type GameState } from "../src/state/store";
-import { compiledClientContent } from "./helpers";
+import { compiledClientContent, contentLooks, lookOf } from "./helpers";
 
 const SERVED = import.meta.glob("../public/models/**/*.glb", { query: "?inline", import: "default", eager: true }) as Record<string, string>;
 const NPC_FILES = import.meta.glob("../../../content/npcs/*.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
@@ -45,39 +45,40 @@ const testDiorama = (): DioramaRuntime => prepareDiorama(pickDiorama(compiledCli
 const NPCS = Object.values(NPC_FILES).map((t) => ({ id: /^id:\s*(\S+)/m.exec(t)?.[1] ?? "", lugar: /^lugar:\s*(\S+)/m.exec(t)?.[1] ?? "" }));
 
 describe("M3 apariencias: cada vecino se lee por silueta y por color", () => {
-  test("cada ficha de content/npcs/ y el jugador tiene combinación propia (sin caer al hash)", () => {
+  test("cada ficha de content/npcs/ trae su `apariencia` (M5) y el jugador la suya (sin caer a la de reserva)", () => {
     expect(NPCS.length).toBeGreaterThanOrEqual(6);
+    const looks = contentLooks();
     for (const n of NPCS) {
       expect(n.id).toMatch(/^NPC-/);
-      expect(CHARACTER_LOOKS[n.id], `${n.id} no tiene fila en looks.ts`).toBeDefined();
+      expect(looks[n.id], `${n.id} no tiene apariencia en su ficha`).toBeDefined();
     }
-    expect(CHARACTER_LOOKS[PLAYER_LOOK_ID]).toBeDefined();
-    for (const l of Object.values(CHARACTER_LOOKS)) expect(BODY_IDS).toContain(l.body);
+    expect(looks[PLAYER_LOOK_ID]).toBeDefined();
+    for (const l of Object.values(looks)) expect(BODY_IDS).toContain(l.body);
   });
 
   test("no hay dos siluetas iguales; en una misma zona (y en el diorama de prueba) no se repite la remera", () => {
     const all = [PLAYER_LOOK_ID, ...NPCS.map((n) => n.id)];
-    const keys = all.map((id) => silhouetteKey(characterLook(id)));
+    const keys = all.map((id) => silhouetteKey(lookOf(id)));
     expect(new Set(keys).size, keys.join(" / ")).toBe(all.length);
     const zones = new Map<string, string[]>();
     for (const n of NPCS) zones.set(n.lugar.split(".")[0] ?? "", [...(zones.get(n.lugar.split(".")[0] ?? "") ?? []), n.id]);
     zones.set("test", testDiorama().npcs.map((n) => n.id));
     for (const [zone, ids] of zones) {
-      const shirts = [PLAYER_LOOK_ID, ...ids].map((id) => characterLook(id).shirt);
+      const shirts = [PLAYER_LOOK_ID, ...ids].map((id) => lookOf(id).shirt);
       expect(new Set(shirts).size, `${zone}: ${shirts.join(", ")}`).toBe(shirts.length);
     }
   });
 
   test("teeth: dos NPCs con la misma apariencia en una zona fallan la regla", () => {
-    const a = characterLook("NPC-INES");
+    const a = lookOf("NPC-INES");
     const twin: CharacterLook = { ...a };
     expect(silhouetteKey(twin)).toBe(silhouetteKey(a));
     expect(new Set([a.shirt, twin.shirt]).size).toBe(1);
   });
 
-  test("un id sin fila toma una apariencia estable y válida", () => {
-    expect(characterLook("NPC-OTRO")).toEqual(characterLook("NPC-OTRO"));
-    expect(BODY_IDS).toContain(characterLook("NPC-OTRO").body);
+  test("un id sin apariencia toma una de reserva estable y válida", () => {
+    expect(fallbackLook("NPC-OTRO")).toEqual(fallbackLook("NPC-OTRO"));
+    expect(BODY_IDS).toContain(fallbackLook("NPC-OTRO").body);
   });
 });
 
@@ -209,7 +210,7 @@ const load = (asset: string) => {
   return p;
 };
 async function character(id: string): Promise<SkinnedCharacter> {
-  const look = characterLook(id);
+  const look = lookOf(id);
   const [body, clips] = await Promise.all([load(bodyAsset(look.body)), load(CLIPS_ASSET)]);
   return buildSkinnedCharacter(body.scene, clips.clips, look, 7);
 }
@@ -217,7 +218,7 @@ async function character(id: string): Promise<SkinnedCharacter> {
 describe("M3 personaje con esqueleto (sin GPU)", () => {
   test("las prendas marcadas se repintan con la remera y el pantalón de cada uno; lo demás queda como vino", async () => {
     for (const id of ["NPC-INES", "NPC-HARLAN", PLAYER_LOOK_ID]) {
-      const look = characterLook(id);
+      const look = lookOf(id);
       const c = await character(id);
       const g = c.body.geometry;
       const ropa = g.getAttribute(ROPA_ATTRIBUTE);
@@ -240,7 +241,7 @@ describe("M3 personaje con esqueleto (sin GPU)", () => {
     const c = await character("NPC-INES");
     const g = c.body.geometry.clone();
     g.deleteAttribute(ROPA_ATTRIBUTE);
-    expect(() => repaintClothes(g, characterLook("NPC-INES"))).toThrow(/cuerpo saco: sin "_ROPA"/);
+    expect(() => repaintClothes(g, lookOf("NPC-INES"))).toThrow(/cuerpo saco: sin "_ROPA"/);
   });
 
   test("la cabeza por código cuelga del hueso head, derecha, y el personaje mide ~2,3 m (Maya, menos)", async () => {

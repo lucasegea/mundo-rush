@@ -7,7 +7,7 @@ import { ACESFilmicToneMapping, Color, DirectionalLight, HemisphereLight, Scene,
 import { chooseAnimation } from "../actors/animState";
 import { loadCharacterAssets } from "../actors/characterAssets";
 import { HEAD_RADIUS } from "../actors/head";
-import { CHARACTER_LOOKS, characterLook } from "../actors/looks";
+import type { CharacterLook } from "../actors/looks";
 import { buildSkinnedCharacter, disposeSkinnedCharacter, driveCharacter } from "../actors/skinned";
 import { createPortraitCamera, portraitFraming } from "../camera/portrait";
 import { HEMI, SUN, TONE } from "../lighting/params";
@@ -15,8 +15,11 @@ import { HEMI, SUN, TONE } from "../lighting/params";
 /** Marcador de solo-desarrollo (scripts/budgets/dev-only.ts busca "__lg_director"). */
 export const STUDIO_MARKER = "__lg_director:retratos";
 export const PORTRAIT_SIZE = 256;
-/** Los personajes con apariencia (el jugador no tiene retrato de solo-diálogo). */
-export const PORTRAIT_IDS: readonly string[] = Object.keys(CHARACTER_LOOKS).filter((id) => id.startsWith("NPC-")).sort();
+/**
+ * Los personajes con retrato: los NPCs con apariencia (el jugador no tiene retrato de solo-diálogo). Plan estetica-c M5:
+ * la apariencia viene del contenido, así que la lista sale del catálogo cargado (boot/dev.ts la arma desde el store).
+ */
+export const portraitIds = (looks: ReadonlyMap<string, CharacterLook>): string[] => [...looks.keys()].filter((id) => id.startsWith("NPC-")).sort();
 
 let renderer: WebGLRenderer | null = null;
 
@@ -29,9 +32,8 @@ function studioRenderer(size: number): WebGLRenderer {
   return renderer;
 }
 
-/** Renderiza el retrato de `id` (el modelo del juego en idle, de busto) y lo devuelve como PNG. */
-export async function renderPortrait(id: string, size = PORTRAIT_SIZE, background = "#f4ede2"): Promise<Blob> {
-  const look = characterLook(id);
+/** Renderiza el retrato de `id` con su apariencia (el modelo del juego en idle, de busto) y lo devuelve como PNG. */
+export async function renderPortrait(id: string, look: CharacterLook, size = PORTRAIT_SIZE, background = "#f4ede2"): Promise<Blob> {
   const assets = await loadCharacterAssets(look.body);
   const c = buildSkinnedCharacter(assets.body, assets.clips, look, 0);
   try {

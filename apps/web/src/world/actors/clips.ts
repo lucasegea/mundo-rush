@@ -9,8 +9,8 @@ import { GESTURES, type ProceduralGesture } from "./gestures";
 
 /** Archivo de clips del pipeline (`modelo/` + esto = el asset servido). */
 export const CLIPS_ASSET = "kaykit-adventurers-1/animaciones";
-/** Cuerpo base `id` → asset servido. */
-export const bodyAsset = (body: string): string => `kaykit-adventurers-1/cuerpo-${body}`;
+/** Cuerpo base `id` → asset servido (en @lg/art desde M5: el estimador de validate:content lo usa igual). */
+export { bodyAsset } from "@lg/art";
 
 /** Las 41 articulaciones de Rig_Medium 1.0 (nombres del glTF). */
 export const RIG_BONES = [

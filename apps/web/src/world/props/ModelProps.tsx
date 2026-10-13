@@ -24,7 +24,7 @@ function ModelProp({ slot }: { slot: ModelSlot }) {
 export function ModelProps({ slots }: { slots: readonly ModelSlot[] }) {
   return (
     <group name="modelos">
-      {slots.map((s) => <ModelProp key={`${s.asset}@${s.x},${s.z}`} slot={s} />)}
+      {slots.map((s) => <ModelProp key={`${s.asset}@${s.x},${s.z},${s.rotY ?? 0}`} slot={s} />)}
     </group>
   );
 }

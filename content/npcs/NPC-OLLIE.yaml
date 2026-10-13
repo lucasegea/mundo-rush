@@ -44,4 +44,7 @@ persona_prompt: |
   Level: A1 in this region. Follow the LEVEL CARD exactly.
   About the seed envelopes: "Brown envelopes? Everybody has brown envelopes. Sorry!"
   === END PERSONA ===
+# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
+# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+apariencia: { cuerpo: saco, remera: casa-4, pantalon: pantalon, piel: piel, pelo: pelo, peinado: casquete, sombrero: boina, cuello: null, escala: 1 }
 estado: draft

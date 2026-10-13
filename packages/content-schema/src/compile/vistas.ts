@@ -71,6 +71,8 @@ export const vistaCliente = (c: Conjunto, modo: Modo): Salida => ({
   "npcs.json": c.npcs.map(({ data: n }) => ({
     id: n.id, nombre: n.nombre, rol: n.rol, lugar: n.lugar, es_menor: n.es_menor,
     requiere_presentacion: n.requiere_presentacion, presentado_por: n.presentado_por,
+    // Plan estetica-c M5: world/ dibuja a cada vecino con su apariencia (null si la ficha todavía no la trae).
+    apariencia: n.apariencia ?? null,
   })),
   "fundaciones.json": c.fundaciones.map((f) => f.data),
   "saberes.json": filtrarSaberes(c.saberes.map((s) => s.data), modo).map((s) => ({

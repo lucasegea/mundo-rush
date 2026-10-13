@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 import { pickDiorama } from "../src/services/content";
 import { buildBlobShadows } from "../src/world/actors/BlobShadows";
 import { buildChibi, CHIBI_HEAD_TOP, HEAD_RADIUS, CHIBI_SCALE } from "../src/world/actors/chibiModel";
-import { CHIBI_LOOKS, chibiLook } from "../src/world/actors/looks";
+import { fallbackLook } from "../src/world/actors/looks";
 import { estimateBudget, withinBudget } from "../src/world/budget/estimate";
 import { CAMERA_RIG_PRESETS } from "../src/world/camera/presets";
 import {
@@ -27,12 +27,16 @@ import { hexToLinear, LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS, maxDihedralDeg, 
 import { auditMaterials, materialKind, tagMaterial, toonMaterial, WORLD_MATERIAL_KINDS } from "../src/world/materials/registry";
 import { BRUSH_MAX, BRUSH_MIN, BRUSH_SIZE, brushPixels, brushTexture, toonRamp, toonRampData, TOON_BANDS } from "../src/world/materials/toon";
 import { buildProp, PROP_BUILDERS } from "../src/world/props/builders";
+import type { CodePropAsset } from "@lg/art";
 import { buildTerrain, TERRAIN_SKIRT, TILE, tileAt } from "../src/world/terrain/buildTerrain";
 import { setWaterFog, tickWater, waterMaterial } from "../src/world/water/waterMaterial";
-import { compiledClientContent } from "./helpers";
+import { compiledClientContent, contentLooks, lookOf } from "./helpers";
+import { TILES_FIXTURE } from "./fixtures";
 
 const layout = (): DioramaLayout => pickDiorama(compiledClientContent()["dioramas.json"], "test");
 const testDiorama = (): DioramaRuntime => prepareDiorama(layout());
+/** El test.yaml de M1 en tiles (fixture de 43c2b48): las pruebas del adaptador de tiles, que vive hasta M7. */
+const tilesDiorama = (): DioramaRuntime => prepareDiorama(TILES_FIXTURE as unknown as DioramaLayout);
 /** 16:9, 21:9, 4:3 y dos verticales (9:16 y el de un teléfono, 9:19,5). */
 const ASPECTS = [16 / 9, 21 / 9, 4 / 3, 9 / 16, 9 / 19.5];
 /** El rayo más largo de una esquina de la pantalla hasta el suelo (m), con la cámara de juego a esa distancia. */
@@ -82,7 +86,7 @@ describe("A1 cámara de lente largo (perspective3D)", () => {
 describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () => {
   test("para cada celda caminable, cada zoom y aspectos 16:9, 21:9, 4:3, 9:16 y 9:19,5, la huella cae dentro del terreno", () => {
     const d = testDiorama();
-    const { extent } = buildTerrain({ bounds: d.bounds, layers: d.layers });
+    const { extent } = buildTerrain({ bounds: d.bounds, layers: d.layers, ground: d.ground });
     const { pitchDeg, yawDeg } = presetAngles("perspective3D");
     let checked = 0;
     for (const c of walkableCenters(d)) {
@@ -142,8 +146,8 @@ describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () =>
   });
 });
 
-describe("A3 terreno por alturas", () => {
-  const d = testDiorama();
+describe("A3 terreno por alturas (adaptador de tiles de M1, sobre el fixture; el formato de la maqueta en maqueta.test.ts)", () => {
+  const d = tilesDiorama();
   const t = buildTerrain({ bounds: d.bounds, layers: d.layers });
   const suelo = d.layers.find((l) => l.name === "suelo");
 
@@ -226,7 +230,7 @@ describe("A4 material único del mundo", () => {
   test("el diorama de prueba usa a lo sumo 2 instancias de superficie (toon y agua) y ningún material fuera de la lista", () => {
     const scene = buildDioramaScene(testDiorama());
     const all = new Group();
-    all.add(scene.root, buildChibi(chibiLook("player")).root, buildBlobShadows(scene.blobAnchors), createNameLabel("Inés", true));
+    all.add(scene.root, buildChibi(lookOf("player")).root, buildBlobShadows(scene.blobAnchors), createNameLabel("Inés", true));
     const audit = auditMaterials(all);
     expect(audit.unknown).toEqual([]);
     expect(audit.surfaceInstances).toBeLessThanOrEqual(2);
@@ -280,7 +284,7 @@ describe("A5 regla del bisel", () => {
   });
 
   test("el cuerpo del chibi tampoco tiene aristas duras (la cabeza lleva ojos y alas de sombrero finas a propósito)", () => {
-    const c = buildChibi(chibiLook("NPC-HARLAN"));
+    const c = buildChibi(lookOf("NPC-HARLAN"));
     for (const m of c.meshes.filter((x) => x !== c.head)) {
       expect(maxDihedralDeg(m.geometry.getAttribute("position").array, m.geometry.index?.array ?? null)).toBeLessThan(MAX_DIHEDRAL_DEG);
     }
@@ -297,19 +301,21 @@ describe("A6 props por código", () => {
     const props = layout().props ?? [];
     // Desde M2 un prop es `codigo/*` (constructor) o `modelo/*` (glTF con registro; lo chequea validate:content).
     expect(props.every((p) => p.asset.startsWith("codigo/") || p.asset.startsWith("modelo/")), props.map((p) => p.asset).join(", ")).toBe(true);
-    for (const p of props.filter((x) => x.asset.startsWith("codigo/"))) expect(PROP_BUILDERS[p.asset], p.asset).toBeTypeOf("function");
+    for (const p of props.filter((x) => x.asset.startsWith("codigo/"))) expect(PROP_BUILDERS[p.asset as CodePropAsset], p.asset).toBeTypeOf("function");
     expect(() => buildProp("codigo/inexistente", { w: 1, h: 1, d: 1 })).toThrow(/codigo\/inexistente/);
   });
 
   test("los árboles nuevos bloquean su huella en la grilla; sin ellos, ese lugar es caminable", () => {
     const l = layout();
     const trees = (l.props ?? []).filter((p) => p.asset === "codigo/arbol" || p.asset === "codigo/pino");
-    expect(trees.length).toBeGreaterThanOrEqual(8);
+    // Desde M5 los árboles repetidos van como `instancias` de un solo prop.
+    const spots = trees.flatMap((p) => (p.instancias ? p.instancias.map((i) => i.pos) : p.pos ? [p.pos] : []));
+    expect(spots.length).toBeGreaterThanOrEqual(8);
     const withTrees = prepareDiorama(l);
     const without = prepareDiorama({ ...l, props: (l.props ?? []).filter((p) => !trees.includes(p)) });
-    for (const t of trees) {
-      expect(circleBlocked(withTrees.grid, t.pos[0], t.pos[2], 0.05)).toBe(true);
-      expect(circleBlocked(without.grid, t.pos[0], t.pos[2], 0.05)).toBe(false);
+    for (const [x, , z] of spots) {
+      expect(circleBlocked(withTrees.grid, x, z, 0.05)).toBe(true);
+      expect(circleBlocked(without.grid, x, z, 0.05)).toBe(false);
     }
   });
 
@@ -424,13 +430,13 @@ describe("personajes chibi (ítem 13)", () => {
     expect(heads).toBeGreaterThanOrEqual(2.5);
     expect(heads).toBeLessThanOrEqual(3);
     expect(HEAD_RADIUS).toBe(0.42);
-    for (const id of Object.keys(CHIBI_LOOKS)) expect(buildChibi(chibiLook(id)).meshes.length).toBeLessThanOrEqual(6);
+    for (const id of Object.keys(contentLooks())) expect(buildChibi(lookOf(id)).meshes.length).toBeLessThanOrEqual(6);
     // Desde M3 los accesorios son piezas sueltas (sombrero, peinado, pañuelo o bufanda), no uno solo por personaje.
-    expect(CHIBI_LOOKS["player"]?.hat).toBe("gorra");
-    expect(CHIBI_LOOKS["NPC-INES"]?.scarf).toBe("panuelo");
-    expect(CHIBI_LOOKS["NPC-NELL"]?.hairStyle).toBe("rodete");
-    expect(CHIBI_LOOKS["NPC-HARLAN"]?.hat).toBe("paja");
-    expect(chibiLook("NPC-OTRO")).toEqual(chibiLook("NPC-OTRO"));
+    expect(contentLooks()["player"]?.hat).toBe("gorra");
+    expect(contentLooks()["NPC-INES"]?.scarf).toBe("panuelo");
+    expect(contentLooks()["NPC-NELL"]?.hairStyle).toBe("rodete");
+    expect(contentLooks()["NPC-HARLAN"]?.hat).toBe("paja");
+    expect(fallbackLook("NPC-OTRO")).toEqual(fallbackLook("NPC-OTRO"));
   });
 });
 
@@ -440,7 +446,7 @@ describe("A15 presupuesto estimado (medium)", () => {
   test("test.yaml con 4 chibis, 3 etiquetas y las sombras blob: ≤ 120 llamadas y ≤ 50k triángulos", () => {
     const d = testDiorama();
     const scene = buildDioramaScene(d);
-    const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(chibiLook(id)).root);
+    const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(lookOf(id)).root);
     const labels = d.npcs.map((n) => createNameLabel(n.id, false));
     const blobs = buildBlobShadows(scene.blobAnchors);
     blobs.count = scene.blobAnchors.length + actors.length;
@@ -565,7 +571,7 @@ describe("D-208 zoom lejano: niebla, sombra, tilt-shift, etiquetas y presupuesto
     // El estimador suma todo el grafo sin recortar por frustum: es la vista lejana, donde todo entra en pantalla.
     const d = testDiorama();
     const scene = buildDioramaScene(d);
-    const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(chibiLook(id)).root);
+    const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(lookOf(id)).root);
     const far = zoomDistance(0);
     const labels = labelEntries(d.npcs.map((n) => ({ id: n.id, name: n.id })), d.npcs[0]?.id ?? null, null, far).map((l) => createNameLabel(l.name, l.highlighted));
     expect(labels).toHaveLength(1);

@@ -4,6 +4,7 @@
 // R7): la pose (posición, giro suave hacia donde mira), la elección de animState.ts (velocidad, papel en la escena,
 // gesto pedido, "reducir movimiento") y, si el gobernador lo deja, el avance de la animación. Deja su lugar en
 // `actorSpots` para la sombra blob y el gobernador. Con `onSelect`, el clic sobre el cuerpo llega como en el billboard.
+// Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido).
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { actorSpots, animatedActors } from "../runtime";
@@ -11,7 +12,7 @@ import { chooseAnimation, type GestureId, type SceneRole } from "./animState";
 import { loadCharacterAssets } from "./characterAssets";
 import { applyChibiPose, buildChibi, chibiPose, disposeChibi } from "./chibiModel";
 import { gestureDone, PROCEDURAL_GESTURES, type ProceduralGesture } from "./gestures";
-import { characterLook } from "./looks";
+import type { CharacterLook } from "./looks";
 import { buildSkinnedCharacter, disposeSkinnedCharacter, driveCharacter, type SkinnedCharacter } from "./skinned";
 
 export interface ActorPose {
@@ -25,7 +26,7 @@ export interface ActorPose {
 
 interface Props {
   id: string;
-  lookId: string;
+  look: CharacterLook;
   /** La pose de este cuadro; se llama dentro de useFrame. */
   pose: (dtSec: number) => ActorPose;
   /** "Reducir movimiento": el giro corta en vez de suavizarse y el rebote baja a cero. */
@@ -51,8 +52,7 @@ const seedOf = (id: string): number => {
 
 const isProcedural = (g: string): g is ProceduralGesture => (PROCEDURAL_GESTURES as readonly string[]).includes(g);
 
-export function Character({ id, lookId, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4 }: Props) {
-  const look = useMemo(() => characterLook(lookId), [lookId]);
+export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4 }: Props) {
   const seed = useMemo(() => seedOf(id), [id]);
   const chibi = useMemo(() => buildChibi(look, seed), [look, seed]);
   const [skinned, setSkinned] = useState<SkinnedCharacter | null>(null);

@@ -1,5 +1,6 @@
 // Compilador de contenido: puro (texto → datos + hallazgos). scripts/content/build.ts hace el IO.
 import { chequearAssets } from "./assets.ts";
+import { chequearDioramas } from "./dioramas.ts";
 import { buscarRetirados } from "./retirados.ts";
 import { agregarArchivo, chequearDuplicados, conjuntoVacio } from "./conjunto.ts";
 import type { Conjunto } from "./conjunto.ts";
@@ -51,6 +52,7 @@ export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo
   chequearCatalogoLumi(c, h);
   chequearNiveles(c, h);
   chequearAssets(c, h, publicos);
+  chequearDioramas(c, h);
 
   const lineas = extraerLineas(c);
   lintBloqueos(c, lineas, h);

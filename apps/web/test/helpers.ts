@@ -1,10 +1,12 @@
 // Dobles y utilidades de los tests de apps/web (F1.3). Sin navegador real (D-016): jsdom donde hace falta DOM.
+import { parseApariencia, type CharacterLook } from "@lg/art";
 import { compilarContenido, formatearHallazgo, type ArchivoFuente } from "@lg/content-schema";
 import { boot, type BootDeps } from "../src/boot";
 import type { FetchJson } from "../src/services/content";
 import type { Platform } from "../src/services/platform";
 import type { QualityEnv } from "../src/services/quality";
 import { actions } from "../src/state/actions";
+import { fallbackLook, PLAYER_LOOK, PLAYER_LOOK_ID } from "../src/world/actors/looks";
 import { gameStore, initialGameState } from "../src/state/store";
 
 /** Vuelve el store único a su estado inicial (la UI lee el store único, como en la app). */
@@ -33,9 +35,14 @@ export const fakeQualityEnv = ({ webgl2, memory = 8, cores = 8 }: { webgl2: bool
 // validate:content en apps/web/public/content/, que está fuera de git y puede no existir todavía).
 const RAW = import.meta.glob("../../../content/**/*.{yaml,txt}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
-export function compiledClientContent(): Record<string, unknown> {
+/** El resultado entero del compilador sobre el contenido real (conjunto validado incluido), en modo dev. */
+export function compiledContent(): ReturnType<typeof compilarContenido> {
   const files: ArchivoFuente[] = Object.entries(RAW).map(([path, texto]) => ({ ruta: path.replace(/^(\.\.\/)+/, ""), texto }));
-  const r = compilarContenido(files, "dev");
+  return compilarContenido(files, "dev");
+}
+
+export function compiledClientContent(): Record<string, unknown> {
+  const r = compiledContent();
   if (!r.salida) throw new Error(`el contenido real no compila:\n${r.errores.map(formatearHallazgo).join("\n")}`);
   return r.salida.cliente;
 }
@@ -70,3 +77,24 @@ export const bootApp = (o: BootOptions) =>
     ...(o.world ? { world: o.world } : {}),
     ...(o.scene ? { scene: o.scene } : {}),
   });
+
+let looksCache: Readonly<Record<string, CharacterLook>> | null = null;
+/**
+ * Plan estetica-c M5: las apariencias del contenido real (bloque `apariencia` de cada ficha, vía npcs.json compilado)
+ * más la del jugador (PLAYER_LOOK, en código hasta que haya archivo de contenido del jugador).
+ */
+export function contentLooks(): Readonly<Record<string, CharacterLook>> {
+  if (looksCache) return looksCache;
+  const out: Record<string, CharacterLook> = { [PLAYER_LOOK_ID]: PLAYER_LOOK };
+  for (const n of compiledClientContent()["npcs.json"] as { id: string; apariencia: unknown }[]) {
+    if (n.apariencia === null) continue;
+    const r = parseApariencia(n.apariencia);
+    if (!r.ok) throw new Error(`${n.id}: ${r.error}`);
+    out[n.id] = r.look;
+  }
+  looksCache = out;
+  return out;
+}
+
+/** La apariencia de `id` como la dibuja el juego: la del contenido, o la de reserva. */
+export const lookOf = (id: string): CharacterLook => contentLooks()[id] ?? fallbackLook(id);

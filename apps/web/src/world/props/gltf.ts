@@ -62,11 +62,13 @@ export interface ModelBox {
   w: number;
   h: number;
   d: number;
+  /** Giro alrededor del eje vertical (radianes, plan estetica-c M5): la caja `tam` gira con el modelo. */
+  rotY?: number;
 }
 
 /**
  * Escala uniforme para que el modelo entre en la caja `tam` del prop (la misma huella que bloquea la grilla), apoyado
- * en `y` y centrado en x, z. Devuelve el mismo objeto.
+ * en `y` y centrado en x, z; con `rotY`, girado alrededor de ese centro. Devuelve el mismo objeto.
  */
 export function fitToBox(model: Object3D, box: ModelBox): Object3D {
   model.position.set(0, 0, 0);
@@ -78,6 +80,15 @@ export function fitToBox(model: Object3D, box: ModelBox): Object3D {
   const center = bb.getCenter(new Vector3());
   model.scale.setScalar(s);
   model.position.set(box.x - center.x * s, box.y - bb.min.y * s, box.z - center.z * s);
+  const rot = box.rotY ?? 0;
+  if (rot !== 0) {
+    // Gira alrededor del centro de la caja: x' = x cos + z sin, z' = -x sin + z cos (el giro de three sobre +y).
+    const dx = model.position.x - box.x;
+    const dz = model.position.z - box.z;
+    model.rotation.y = rot;
+    model.position.x = box.x + dx * Math.cos(rot) + dz * Math.sin(rot);
+    model.position.z = box.z - dx * Math.sin(rot) + dz * Math.cos(rot);
+  }
   model.updateMatrixWorld(true);
   return model;
 }

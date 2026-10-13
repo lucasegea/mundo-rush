@@ -106,6 +106,12 @@ export const RegistroAsset = z.strictObject({
   bisel_razon: z.string().min(1).optional(),
   /** Plan estetica-c M3: la fila es un cuerpo con esqueleto o un archivo de clips (scripts/assets/characters.ts). */
   personaje: PiezaPersonaje.optional(),
+  /**
+   * Plan estetica-c M5: triángulos y primitivas (una llamada cada una) del .glb servido. Los usa el estimador de
+   * presupuesto de validate:content (que no lee .glb); check:budgets los compara con el archivo y falla si no coinciden.
+   */
+  triangulos: z.number().int().min(0).optional(),
+  primitivas: z.number().int().min(0).optional(),
   notas: z.string().min(1).optional(),
 }).refine((r) => r.bisel === undefined || r.bisel_razon !== undefined, { message: "bisel sin bisel_razon", path: ["bisel_razon"] });
 export type RegistroAsset = z.infer<typeof RegistroAsset>;

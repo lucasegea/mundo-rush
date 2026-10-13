@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import { loadBudgets } from "../budgets/bundle-size.ts";
-import { chequearDescarga, listarModelos, medirDioramas, medirPieza, run, type PiezaMedida } from "./inspect-budgets.ts";
+import { chequearDescarga, chequearMedidasRegistro, listarModelos, medirDioramas, medirPieza, run, type PiezaMedida } from "./inspect-budgets.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const B = loadBudgets();
@@ -28,6 +28,27 @@ describe("inspect-budgets sobre el árbol real", () => {
     // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los 4 archivos de personaje, dentro del tope de muelle.
     expect(lineas.join("\n")).toMatch(/info diorama test: 6 modelo\(s\)/);
     expect(lineas.join("\n")).toMatch(/OK {3}diorama test contra assets_muelle_mb/);
+    // Plan estetica-c M5: cada fila del registro con pieza servida trae la medida que usa el estimador, y coincide.
+    expect(lineas.filter((l) => /^OK {3}registro /.test(l)).length).toBe(modelos.length);
+    expect(lineas.filter((l) => /^FAIL registro /.test(l))).toEqual([]);
+  });
+});
+
+describe("medidas del registro (plan estetica-c M5): el estimador de validate:content cuenta con ellas", () => {
+  const p = pieza(archivo("a"), 10, { triangulos: 948, primitivas: 1 });
+  test("coinciden: pasa", () => {
+    expect(chequearMedidasRegistro([p], [{ id: "pack/a", archivo: archivo("a"), triangulos: 948, primitivas: 1 }]).ok).toBe(true);
+  });
+  test("teeth: una fila sin medida o con otra medida falla nombrando la fila", () => {
+    const sin = chequearMedidasRegistro([p], [{ id: "pack/a", archivo: archivo("a") }]);
+    expect(sin.ok).toBe(false);
+    expect(sin.lineas.join("\n")).toContain("FAIL registro pack/a: sin triangulos/primitivas; medido 948 triángulos");
+    const otra = chequearMedidasRegistro([p], [{ id: "pack/a", archivo: archivo("a"), triangulos: 900, primitivas: 1 }]);
+    expect(otra.ok).toBe(false);
+    expect(otra.lineas.join("\n")).toContain("FAIL registro pack/a: dice 900 triángulos");
+  });
+  test("una fila sin pieza servida no se mide acá (la cubre el registro de licencias)", () => {
+    expect(chequearMedidasRegistro([], [{ id: "pack/z", archivo: archivo("z") }])).toEqual({ ok: true, lineas: [] });
   });
 });
 

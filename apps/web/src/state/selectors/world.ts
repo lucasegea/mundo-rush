@@ -1,6 +1,7 @@
 // Selectores del slice `world`: view-model del modo solo-diálogo (lugares de la región y quién está en cada uno)
 // y, desde F2, lo que world/ dibuja, el aviso de interacción del HUD y los parámetros de render del mapa.
 import { presetAngles, zoomDistance, ZOOM_STEPS, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier, type ZoomStep } from "@lg/core";
+import type { CharacterLook } from "@lg/art";
 import type { GameState } from "../store";
 import { selectEffectiveTier } from "./settings";
 import { createViewSelector } from "./view";
@@ -54,6 +55,8 @@ export interface MapActor {
   name: string;
   x: number;
   z: number;
+  /** Apariencia de su ficha (plan estetica-c M5); null si el catálogo no cargó o la ficha no la trae. */
+  look: CharacterLook | null;
 }
 
 export interface MapView {
@@ -65,14 +68,29 @@ export interface MapView {
 
 const npcName = (npcs: GameState["world"]["npcs"], id: string): string => npcs.find((n) => n.id === id)?.name ?? id;
 
-/** Lo que world/ dibuja: el diorama (estático) y los NPCs. Cambia solo al cargar un diorama. */
+/** Lo que world/ dibuja: el diorama (estático) y los NPCs. Cambia al cargar un diorama o el catálogo. */
 export const selectMapView = createViewSelector(
   (s: GameState) => [s.world.dioramaStatus, s.world.diorama, s.world.npcs] as const,
   (status, diorama, npcs): MapView => ({
     status,
     diorama,
-    actors: (diorama?.npcs ?? []).map((n) => ({ id: n.id, name: npcName(npcs, n.id), x: n.x, z: n.z })),
+    actors: (diorama?.npcs ?? []).map((n) => {
+      const info = npcs.find((x) => x.id === n.id);
+      return { id: n.id, name: info?.name ?? n.id, x: n.x, z: n.z, look: info?.look ?? null };
+    }),
   }),
+);
+
+/**
+ * Burbuja ámbar de pedido (propuesta C §3, plan estetica-c M5): los NPCs del diorama con un pedido abierto, según
+ * `npcStates[id].requestIcon` del slice `world`, la señal más angosta que ya existe para "este NPC tiene un pedido". El
+ * NPC de la charla en curso no la muestra (el panel ya lo nombra). M5 SEAM: hoy nadie escribe `requestIcon`, así que la
+ * lista sale vacía en el juego; la llena el sistema de misiones o del tablero cuando abra pedidos por NPC.
+ */
+export const selectRequestBubbles = createViewSelector(
+  (s: GameState) => [s.world.diorama, s.world.npcStates, selectConversationFrame(s)?.npcId ?? null] as const,
+  (diorama, states, talking): string[] =>
+    (diorama?.npcs ?? []).filter((n) => states[n.id]?.requestIcon === true && n.id !== talking).map((n) => n.id),
 );
 
 export interface InteractionPrompt {

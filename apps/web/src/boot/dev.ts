@@ -48,7 +48,16 @@ export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null
   const mount = deps.portraitsMount ?? globalThis.document?.body;
   if (new URLSearchParams(search).has("retratos") && mount) {
     const [{ startPortraitPanel }, studio] = await Promise.all([import("../dev/portraits"), import("../world/portraits/studio")]);
-    stopPortraits = startPortraitPanel({ ids: studio.PORTRAIT_IDS, render: (id) => studio.renderPortrait(id), mount });
+    // Plan estetica-c M5: las apariencias vienen del catálogo de contenido (boot ya lo cargó antes de este gancho).
+    const looks = new Map(deps.store.getState().world.npcs.flatMap((n) => (n.look ? [[n.id, n.look] as const] : [])));
+    stopPortraits = startPortraitPanel({
+      ids: studio.portraitIds(looks),
+      render: (id) => {
+        const look = looks.get(id);
+        return look ? studio.renderPortrait(id, look) : Promise.reject(new Error(`retrato ${id}: sin apariencia en el catálogo`));
+      },
+      mount,
+    });
   }
   return () => {
     stopPortraits?.();
