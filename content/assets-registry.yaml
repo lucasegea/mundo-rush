@@ -1,7 +1,8 @@
 # content/assets-registry.yaml: registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2, D-207).
 # Todo archivo servido en apps/web/public/{models,textures,audio,sprites} tiene una fila en `assets`; validate:content
-# falla si falta, si la licencia es no comercial o de uso personal, o si una fila con atribucion_requerida no está en
-# content/creditos.yaml. `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
+# falla si falta, si la licencia no está en la lista permitida (CC0-1.0, o CC-BY-4.0 con atribución; todo lo demás,
+# "uso personal" o "no comercial" en cualquier grafía incluido, se rechaza), o si una fila con atribucion_requerida no
+# está en content/creditos.yaml. `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
 # diferido al operador o pendiente para un hito posterior). Fuente de todas las verificaciones: investigación de assets
 # del 2026-10-13 (documento interno), con fuente y fecha de acceso por pack.
 # `pintura` es la tabla del pack de material de origen a token de la paleta (@lg/art) que usa scripts/assets/optimize.ts.
@@ -30,6 +31,22 @@ packs:
       Brown: madera
       RoofBlack: tinta-suave
       Grey: piedra
+  # ---------- usados en M3 (personajes) ----------
+  - id: kaykit-adventurers-1
+    nombre: KayKit Character Pack Adventurers 1.0 (GitHub)
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+    fecha_acceso: 2026-10-13
+    verificacion: [V1, V4]
+    estado: usado
+    razon: >-
+      Cuerpos base chibi con esqueleto (Rig_Medium de la 1.0: root, hips, spine, chest, head, brazos y piernas con
+      controles IK, sin cuello ni dedos) y 76 clips embebidos. Es el esqueleto de destino de M3 (investigación, V1 y V4). La 1.0
+      está en GitHub y se baja por script sin login; LICENSE.txt del repo: CC0, crédito no obligatorio. Se usan tres
+      cuerpos (Mage, Rogue y Barbarian, sin cabeza ni armas) repintados a la paleta y los clips de un solo archivo
+      (Knight), que comparte el esqueleto. La 2.0 de itch.io queda diferida (fila kaykit-adventurers).
+    fuente_investigacion: investigación 2026-10-13, V1 (KayKit, descarga por script de GitHub) y V4 (esqueleto de destino)
   # ---------- descartados ----------
   - id: quaternius-medieval-village-megakit
     nombre: Quaternius Medieval Village MegaKit (Standard)
@@ -263,3 +280,110 @@ assets:
       Original Fence.glb de static.poly.pizza (188 triángulos, 1 material, 5,9 m de largo). Reemplaza al silo
       (Silo, 5GhLrv5Ce3, 1592 triángulos) que se probó primero: con el silo el diorama de prueba estimaba 50.676
       triángulos en medium, por encima del tope de 50k (03 §2.7.1).
+  # ---------- personajes (plan estetica-c M3) ----------
+  - id: kaykit-adventurers-1/cuerpo-saco
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco.glb
+    fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cf898585da33fab50c724d31605fb931eb2912e6d2280092141e98ca81ad507d"
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): sin cabeza, sombrero, capa, libro ni bastón; las cinco mallas del
+      cuerpo unidas en una con su esqueleto; sin clips; repintado por vértice con las reglas de abajo (la textura de
+      paleta se muestrea por UV y se descarta); saco marcado como remera y pantalón como prenda; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Las costuras del saco, el cinturón y los puños tienen aristas de más de 80°; son detalles chicos de un cuerpo
+      redondeado que se lee bien a la distancia de juego. Se revisa en el gate del operador de M3.
+    personaje:
+      tipo: cuerpo
+      nodos: [Mage_Body, Mage_ArmLeft, Mage_ArmRight, Mage_LegLeft, Mage_LegRight]
+      pintura:
+        - { huesos: [hand.l, hand.r], token: piel }
+        - { color: "#838d92", radio: 0.16, token: muro }
+        - { color: "#aab8be", radio: 0.2, token: piedra }
+        - { color: "#a95026", radio: 0.16, token: madera }
+        - { color: "#316069", radio: 0.14, token: madera }
+        - { color: "#298588", radio: 0.14, token: madera }
+        - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
+        - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
+        - { ropa: remera }
+  - id: kaykit-adventurers-1/cuerpo-tunica
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica.glb
+    fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d"
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): sin cabeza, capa, cuchillos ni ballestas; las cinco mallas del cuerpo
+      unidas en una con su esqueleto; sin clips; repintado por vértice con las reglas de abajo; túnica marcada como remera
+      y pantalón como prenda; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Cinturón, hebilla y bolsitas con aristas de más de 80°; detalles chicos de un cuerpo redondeado. Se revisa en el
+      gate del operador de M3.
+    personaje:
+      tipo: cuerpo
+      nodos: [Rogue_Body, Rogue_ArmLeft, Rogue_ArmRight, Rogue_LegLeft, Rogue_LegRight]
+      pintura:
+        - { huesos: [hand.l, hand.r], token: piel }
+        - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
+        - { color: "#8d989e", radio: 0.2, token: piedra }
+        - { color: "#aab8be", radio: 0.2, token: piedra }
+        - { color: "#965541", radio: 0.14, token: madera }
+        - { color: "#7d3d2c", radio: 0.14, token: madera }
+        - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
+        - { ropa: remera }
+  - id: kaykit-adventurers-1/cuerpo-ancho
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho.glb
+    fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6"
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): sin cabeza, casco, capa, hachas, escudo ni jarro; las cinco mallas del
+      cuerpo unidas en una con su esqueleto; sin clips; repintado por vértice con las reglas de abajo; chaleco marcado
+      como remera y pantalón como prenda; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El borde de piel dentado del cinturón y de los puños tiene aristas de más de 80°; se lee como ribete. Se revisa en
+      el gate del operador de M3.
+    personaje:
+      tipo: cuerpo
+      nodos: [Barbarian_Body, Barbarian_ArmLeft, Barbarian_ArmRight, Barbarian_LegLeft, Barbarian_LegRight]
+      pintura:
+        - { huesos: [hand.l, hand.r], token: piel }
+        - { color: "#e3e8ea", radio: 0.3, token: muro }
+        - { color: "#844432", radio: 0.12, token: madera }
+        - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
+        - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
+        - { ropa: remera }
+  - id: kaykit-adventurers-1/animaciones
+    archivo: apps/web/public/models/kaykit-adventurers-1/animaciones.glb
+    fuente: assets-src/kaykit-adventurers-1/Knight/Knight.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Knight.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "60428e3abc09ba83e595d256e3af8c5c976b46cdae599f0802fc82b4a3445168"
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): solo el esqueleto y los clips nativos que usa el set mínimo de la
+      propuesta C §3 (el resto de los 76 se descarta); sin mallas ni texturas; remuestreado y meshopt. Los cuatro
+      personajes del pack comparten este esqueleto, así que un solo archivo de clips sirve para los tres cuerpos.
+    atribucion_requerida: false
+    personaje:
+      tipo: animaciones
+      clips: [Idle, Walking_A, Running_A, Sit_Chair_Idle, Interact, PickUp]

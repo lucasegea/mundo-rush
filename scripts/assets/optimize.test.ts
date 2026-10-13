@@ -188,7 +188,8 @@ describe("optimize: tabla de pintura del pack", () => {
 
 describe("piezas reales del registro", () => {
   const { packs, assets } = leerRegistro(ROOT);
-  const servidas = assets.filter((a) => a.archivo.endsWith(".glb"));
+  // Los archivos de personaje (bloque `personaje`, M3) tienen su propio test en characters.test.ts.
+  const servidas = assets.filter((a) => a.archivo.endsWith(".glb") && !a.personaje);
 
   test("hay al menos dos piezas CC0 servidas y cada una salió del pipeline", async () => {
     expect(servidas.length).toBeGreaterThanOrEqual(2);

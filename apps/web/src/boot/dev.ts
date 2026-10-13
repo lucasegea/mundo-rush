@@ -1,6 +1,8 @@
 // Gancho de desarrollo (03 §6.5.1, ADR-026). El modo director se carga con `import()` SOLO bajo la doble llave
 // `import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1"`. En `vite build` `import.meta.env.DEV` es false:
 // la rama se elimina y sus chunks no se emiten (check:dev-only lo comprueba sobre el dist, con y sin la variable).
+// Plan estetica-c M3 (D-030): con `?retratos` en la url, además, el panel de retratos (dev/portraits/) con el estudio
+// de world/portraits/ inyectado (dev/ no conoce three ni world/; boot es la raíz de composición).
 import type { GameActions } from "../state/actions";
 import type { GameStore } from "../state/store";
 import type { FetchJson } from "../services/content";
@@ -21,6 +23,10 @@ export interface DevHookDeps {
   hot?: DevHot;
   /** Recibe `pagehide` para cerrar la sesión del diario (la app pasa window). */
   pageEvents?: EventTarget;
+  /** Query de la url (por defecto la de la página): `?retratos` monta el panel de retratos. */
+  search?: string;
+  /** Dónde montar el panel de retratos (por defecto document.body). */
+  portraitsMount?: HTMLElement;
 }
 
 /** Arranca el modo director si corresponde. Devuelve con qué detenerlo, o null si no arrancó. */
@@ -37,7 +43,15 @@ export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null
   const stopReload = startContentHotReload({
     hot, store: deps.store, actions: deps.actions, baseUrl: deps.baseUrl, ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}),
   });
+  let stopPortraits: (() => void) | null = null;
+  const search = deps.search ?? globalThis.location?.search ?? "";
+  const mount = deps.portraitsMount ?? globalThis.document?.body;
+  if (new URLSearchParams(search).has("retratos") && mount) {
+    const [{ startPortraitPanel }, studio] = await Promise.all([import("../dev/portraits"), import("../world/portraits/studio")]);
+    stopPortraits = startPortraitPanel({ ids: studio.PORTRAIT_IDS, render: (id) => studio.renderPortrait(id), mount });
+  }
   return () => {
+    stopPortraits?.();
     stopReload();
     stopDirector();
   };

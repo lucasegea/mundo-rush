@@ -1,6 +1,20 @@
 // Retrato de NPC por código (D-030): busto SVG con la paleta del GDD (§5.4), determinístico por id. Desde F3
 // lo reemplaza el busto o el sprite de frente del pack. Los colores salen de los tokens --lg-color-*.
+// Plan estetica-c M3: si el id tiene retrato renderizado del modelo 3D (PNG en public/portraits/, bajado del panel de
+// retratos del modo director), se muestra ese; si no lo tiene, o si el PNG no carga, sigue el SVG.
+import { useState } from "react";
 import { t } from "../../i18n";
+
+/**
+ * Los ids con PNG commiteado en apps/web/public/portraits/<id>.png (con su fila en content/assets-registry.yaml).
+ * M3 SEAM: vacío hasta que el operador renderice y commitee los retratos (DEFERRED-OPERATOR); se agregan acá.
+ */
+export const RENDERED_PORTRAITS: ReadonlySet<string> = new Set<string>();
+
+/** Url del retrato renderizado de `id`, o null si no hay (cae al SVG). */
+export function portraitImageUrl(id: string, available: ReadonlySet<string> = RENDERED_PORTRAITS, base = import.meta.env.BASE_URL): string | null {
+  return available.has(id) ? `${base}portraits/${id}.png` : null;
+}
 
 const BACKGROUNDS = ["casa-1", "casa-2", "casa-3", "casa-4", "casa-5", "casa-6"] as const;
 const CLOTHES = ["agua", "pasto", "campo", "cielo-atardecer", "noche", "casa-1"] as const;
@@ -45,7 +59,14 @@ export function portraitLook(id: string): PortraitLook {
 
 const fill = (token: string) => ({ fill: `var(--lg-color-${token})` });
 
-export function Portrait({ id, name, size = 96 }: { id: string; name: string; size?: number }) {
+export function Portrait({ id, name, size = 96, available = RENDERED_PORTRAITS }: { id: string; name: string; size?: number; available?: ReadonlySet<string> }) {
+  const [failed, setFailed] = useState(false);
+  const src = failed ? null : portraitImageUrl(id, available);
+  if (src) {
+    return (
+      <img src={src} alt={t("dialogOnly.portrait", { name })} width={size} height={size} className="shrink-0 rounded-lg" onError={() => setFailed(true)} />
+    );
+  }
   const look = portraitLook(id);
   return (
     <svg role="img" aria-label={t("dialogOnly.portrait", { name })} viewBox="0 0 64 64" width={size} height={size} className="shrink-0 rounded-lg">

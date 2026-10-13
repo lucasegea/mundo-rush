@@ -18,19 +18,30 @@ describe("inspect-budgets sobre el árbol real", () => {
   test("mide las piezas servidas y pasa (exit 0)", async () => {
     const modelos = listarModelos(ROOT);
     expect(modelos.length).toBeGreaterThanOrEqual(2);
-    const p = await medirPieza(modelos[0] as string, new Uint8Array(readFileSync(join(ROOT, modelos[0] as string))));
+    const conMalla = modelos.find((m) => !m.endsWith("/animaciones.glb")) as string; // el archivo de clips no tiene mallas
+    const p = await medirPieza(conMalla, new Uint8Array(readFileSync(join(ROOT, conMalla))));
     expect(p.triangulos).toBeGreaterThan(0);
     expect(p.texturas).toBe(0);
     expect(p.conColor).toBe(true);
     const lineas: string[] = [];
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
-    expect(lineas.join("\n")).toMatch(/info diorama test: 2 modelo\(s\)/);
+    // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los 4 archivos de personaje, dentro del tope de muelle.
+    expect(lineas.join("\n")).toMatch(/info diorama test: 6 modelo\(s\)/);
+    expect(lineas.join("\n")).toMatch(/ref {2}diorama test contra assets_muelle_mb/);
   });
 });
 
 describe("presupuestos de descarga (03 §2.7.3)", () => {
   const piezas = [pieza(archivo("a"), 4_000_000), pieza(archivo("b"), 3_000_000), pieza(archivo("c"), 9_000_000)];
   const mapa = new Map(piezas.map((p) => [p.archivo, p]));
+
+  test("los archivos de personaje entran en la descarga de cada diorama (una vez, aunque un prop repita el archivo)", () => {
+    const [d] = medirDioramas([{ id: "muelle", props: [{ asset: modelo("a") }] }], mapa, [archivo("b"), archivo("a")]);
+    expect(d?.modelos).toEqual([archivo("a"), archivo("b")]);
+    expect(d?.bytes).toBe(7_000_000);
+    // 7 MB pasan el tope de 6 MB de muelle: los personajes cuentan contra el presupuesto.
+    expect(chequearDescarga(piezas, [d as NonNullable<typeof d>], B).ok).toBe(7 <= B.assets_muelle_mb);
+  });
 
   test("un modelo repetido se cuenta una vez en bytes y por cada aparición en triángulos", () => {
     const [d] = medirDioramas([{ id: "muelle", props: [{ asset: modelo("a") }, { asset: modelo("a") }, { asset: "codigo/caja" }] }], mapa);

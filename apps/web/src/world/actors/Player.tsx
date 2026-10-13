@@ -1,4 +1,4 @@
-// world/actors/Player.tsx — el jugador como chibi (plan estetica-c M1 ítem 13). Lee la pose lógica (30 Hz) de forma
+// world/actors/Player.tsx — el jugador (plan estetica-c M1 ítem 13; con esqueleto desde M3). Lee la pose lógica (30 Hz) de forma
 // transitoria e interpola entre el paso anterior y el actual (R7); un salto de la pose (el acomodo al empezar la charla)
 // se desliza desde la última posición dibujada (glide.ts). Publica la posición dibujada para la cámara y los NPCs. En
 // la charla mira al NPC; caminando, hacia donde va.
@@ -6,7 +6,8 @@ import { useRef } from "react";
 import type { ConversationFrame } from "../../state/selectors";
 import { readGame, selectPlayerPose } from "../../state/selectors";
 import { followTarget } from "../runtime";
-import { Chibi, type ActorPose } from "./Chibi";
+import type { SceneRole } from "./animState";
+import { Character, type ActorPose } from "./Character";
 import { stepGlide, type GlideState } from "./glide";
 import { PLAYER_LOOK_ID } from "./looks";
 
@@ -15,7 +16,7 @@ export function interpolationAlpha(elapsedSec: number, stepSec: number): number 
   return stepSec > 0 ? Math.min(1, Math.max(0, elapsedSec / stepSec)) : 1;
 }
 
-export function Player({ conversation, cut }: { conversation: ConversationFrame | null; cut: boolean }) {
+export function Player({ conversation, cut, scene = null }: { conversation: ConversationFrame | null; cut: boolean; scene?: SceneRole }) {
   const lastTick = useRef({ tick: -1, at: 0 });
   const glide = useRef<GlideState | null>(null);
 
@@ -39,5 +40,5 @@ export function Player({ conversation, cut }: { conversation: ConversationFrame 
     return { x: shown.x, z: shown.z, speed, yaw };
   };
 
-  return <Chibi id={PLAYER_LOOK_ID} lookId={PLAYER_LOOK_ID} pose={pose} cut={cut} initialYaw={Math.PI * 0.25} />;
+  return <Character id={PLAYER_LOOK_ID} lookId={PLAYER_LOOK_ID} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} />;
 }

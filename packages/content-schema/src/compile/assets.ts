@@ -1,13 +1,14 @@
 // Chequeos del registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2). Puro: la lista de archivos
 // servidos llega como dato (la arma scripts/content/build.ts). Falla el build si un archivo servido no tiene registro, si
-// una licencia es no comercial o de uso personal, si un registro con atribución obligatoria no está en los créditos, o si
-// un diorama usa un `modelo/*` sin registro.
-import { archivoDeModelo, CARPETAS_CON_REGISTRO, LICENCIA_PROHIBIDA, PREFIJO_MODELO } from "../schemas/assets.ts";
+// una licencia no está en la lista cerrada (M3, nota N1: CC0-1.0 y CC-BY-4.0 con atribución), si un registro con
+// atribución obligatoria no está en los créditos, o si un diorama usa un `modelo/*` sin registro.
+import { archivoDeModelo, CARPETAS_CON_REGISTRO, LICENCIAS_CON_ATRIBUCION, LICENCIAS_PERMITIDAS, licenciaPermitida, PREFIJO_MODELO } from "../schemas/assets.ts";
 import type { Conjunto } from "./conjunto.ts";
 import type { Hallazgo } from "./tipos.ts";
 
 const RUTA_REGISTRO = "content/assets-registry.yaml";
 const RUTA_CREDITOS = "content/creditos.yaml";
+const FUERA_DE_LISTA = `fuera de la lista permitida (${LICENCIAS_PERMITIDAS.join(", ")}): no comercial, uso personal o desconocida no se puede usar (D-153)`;
 
 /** ¿Este archivo servido necesita registro? (models, textures, audio, sprites; 03 §6.4.2). */
 export const necesitaRegistro = (ruta: string): boolean => CARPETAS_CON_REGISTRO.some((c) => ruta.startsWith(c));
@@ -33,8 +34,9 @@ export const chequearAssets = (c: Conjunto, h: Hallazgo[], publicos?: readonly s
   if (reg) {
     const packs = new Map(reg.packs.map((p) => [p.id, p]));
     reg.packs.forEach((p, i) => {
-      if (LICENCIA_PROHIBIDA.test(p.licencia) && p.estado === "usado") {
-        err(RUTA_REGISTRO, `packs[${i}].licencia`, `el pack "${p.id}" tiene licencia "${p.licencia}": no comercial o de uso personal no se puede usar (D-153)`);
+      // Un pack descartado, diferido o pendiente es el registro de una evaluación: puede nombrar una licencia que no sirve.
+      if (p.estado === "usado" && !licenciaPermitida(p.licencia)) {
+        err(RUTA_REGISTRO, `packs[${i}].licencia`, `el pack "${p.id}" tiene licencia "${p.licencia}", ${FUERA_DE_LISTA}`);
       }
     });
     const vistos = new Set<string>();
@@ -42,8 +44,10 @@ export const chequearAssets = (c: Conjunto, h: Hallazgo[], publicos?: readonly s
       const k = `assets[${i}]`;
       if (vistos.has(a.archivo)) err(RUTA_REGISTRO, `${k}.archivo`, `"${a.archivo}" registrado dos veces`);
       vistos.add(a.archivo);
-      if (LICENCIA_PROHIBIDA.test(a.licencia)) {
-        err(RUTA_REGISTRO, `${k}.licencia`, `"${a.id}" tiene licencia "${a.licencia}": no comercial o de uso personal no se puede usar (D-153)`);
+      const licencia = licenciaPermitida(a.licencia);
+      if (!licencia) err(RUTA_REGISTRO, `${k}.licencia`, `"${a.id}" tiene licencia "${a.licencia}", ${FUERA_DE_LISTA}`);
+      else if (LICENCIAS_CON_ATRIBUCION.includes(licencia) && !a.atribucion_requerida) {
+        err(RUTA_REGISTRO, `${k}.atribucion_requerida`, `"${a.id}" es ${licencia}: lleva atribucion_requerida: true y su crédito`);
       }
       const pack = packs.get(a.pack);
       if (!pack) err(RUTA_REGISTRO, `${k}.pack`, `"${a.id}": el pack "${a.pack}" no está en packs`);

@@ -1,16 +1,18 @@
-// world/actors/chibiModel.ts — personaje placeholder en proporciones C (plan estetica-c M1 ítem 13, propuesta C §3): cuerpo
-// de cápsulas, cabeza redonda de radio 0,42, manos de bolita, ojos ovalados con brillo y mejillas, 2,5 a 3 cabezas de
-// alto. Presupuesto ≤ 6 llamadas por personaje (revisión de arquitectura 2026-10-12): cabeza (con ojos, mejillas, pelo y accesorio
-// fusionados), torso y 4 extremidades con su mano o su pie. Todo con el material toon compartido.
-import { Group, Mesh, SphereGeometry, type BufferGeometry } from "three";
+// world/actors/chibiModel.ts — el cuerpo de cápsulas en proporciones C (plan estetica-c M1 ítem 13, propuesta C §3). Desde
+// M3 es el cuerpo de reserva: se ve mientras baja el cuerpo con esqueleto del pipeline (o si no baja), y es el que miden
+// los tests sin red. Cuerpo de cápsulas, manos de bolita y la misma cabeza por código que el cuerpo con esqueleto
+// (head.ts), 2,5 a 3 cabezas de alto. Presupuesto ≤ 6 llamadas (revisión de arquitectura 2026-10-12): cabeza, torso y 4 extremidades.
+import { Group, Mesh, type BufferGeometry } from "three";
 import { toonMaterial } from "../materials/registry";
-import { capsule, mergeParts, painted, sphere, torus } from "../props/geometry";
-import type { ChibiLook } from "./looks";
+import { capsule, mergeParts, painted, sphere } from "../props/geometry";
+import { characterHeadGeometry, HEAD_RADIUS } from "./head";
+import type { CharacterLook } from "./looks";
+
+export { HEAD_RADIUS } from "./head";
 
 /** Escala de juguete: ~2,3 m de alto (plan estetica-c M1 riesgo 2: se mide en el gate). */
 export const CHIBI_SCALE = 1.05;
 const HEAD_Y = 1.78;
-export const HEAD_RADIUS = 0.42;
 /** Alto de la cabeza (arriba del pelo, sin sombrero) en metros del mundo. */
 export const CHIBI_HEAD_TOP = (HEAD_Y + HEAD_RADIUS + 0.03) * CHIBI_SCALE;
 /** Donde va la etiqueta: ~0,4 m sobre la cabeza (con lugar para el sombrero de paja). */
@@ -25,45 +27,8 @@ export interface Chibi {
   meshes: Mesh[];
 }
 
-function accessory(look: ChibiLook, seed: number): BufferGeometry[] {
-  switch (look.accessory) {
-    case "gorra":
-      return [
-        painted(new SphereGeometry(0.45, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.42).translate(0, 0.06, 0), "gorra", seed),
-        painted(sphere(0.3, 12, 6).scale(1, 0.12, 1.1).translate(0, 0.2, 0.36), "gorra", seed),
-      ];
-    case "paja":
-      return [
-        painted(sphere(0.74, 16, 6).scale(1, 0.06, 1).translate(0, 0.28, 0), "paja", seed, { jitter: 0.12 }),
-        painted(new SphereGeometry(0.4, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(1, 0.9, 1).translate(0, 0.3, 0), "paja", seed, { jitter: 0.12 }),
-        painted(torus(0.4, 0.05, 6, 20).rotateX(Math.PI / 2).translate(0, 0.33, 0), "techo", seed),
-      ];
-    case "panuelo":
-      return [
-        painted(new SphereGeometry(0.455, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.5).rotateX(-0.35).translate(0, 0.02, -0.02), "casa-1", seed),
-        painted(sphere(0.11, 8, 6).translate(0, 0.02, -0.45), "casa-1", seed),
-      ];
-    case "rodete":
-      return [painted(sphere(0.21, 12, 8).translate(0, 0.36, -0.22), look.hair, seed)];
-    default:
-      return [];
-  }
-}
-
-/** Geometría de la cabeza: cabeza, pelo, ojos con brillo, mejillas y accesorio, en una sola malla centrada en 0. */
-export function chibiHeadGeometry(look: ChibiLook, seed = 0): BufferGeometry {
-  const parts: BufferGeometry[] = [
-    painted(sphere(HEAD_RADIUS, 16, 11), look.skin, seed, { top: 0.1, bottomDark: 0.08 }),
-    painted(new SphereGeometry(0.445, 16, 9, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(-0.55).translate(0, 0.02, -0.02), look.hair, seed, { top: 0.1 }),
-  ];
-  for (const x of [-0.14, 0.14]) {
-    parts.push(painted(sphere(0.068, 8, 6).scale(1, 1.3, 0.6).translate(x, -0.02, 0.385), "tinta", seed, { jitter: 0, bottomDark: 0 }));
-    parts.push(painted(sphere(0.022, 6, 4).translate(x + 0.02, 0.02, 0.43), "blanco", seed, { jitter: 0, bottomDark: 0 }));
-    parts.push(painted(sphere(0.06, 8, 6).scale(1, 0.6, 0.3).translate(x * 1.7, -0.12, 0.37), "mejilla", seed, { jitter: 0, bottomDark: 0 }));
-  }
-  parts.push(...accessory(look, seed));
-  return mergeParts(parts);
-}
+/** Compatibilidad con M1: la cabeza del cuerpo de cápsulas es la misma que la del cuerpo con esqueleto. */
+export const chibiHeadGeometry = characterHeadGeometry;
 
 const mesh = (g: BufferGeometry, castShadow = true): Mesh => {
   const m = new Mesh(g, toonMaterial());
@@ -73,7 +38,7 @@ const mesh = (g: BufferGeometry, castShadow = true): Mesh => {
 };
 
 /** Arma el personaje (sin GPU): 6 mallas, pivotes en hombros y caderas para animar. */
-export function buildChibi(look: ChibiLook, seed = 0): Chibi {
+export function buildChibi(look: CharacterLook, seed = 0): Chibi {
   const root = new Group();
   const body = new Group();
   root.add(body);
@@ -101,11 +66,11 @@ export function buildChibi(look: ChibiLook, seed = 0): Chibi {
   meshes.push(torso);
   const arms: [Group, Group] = [arm(-0.45), arm(0.45)];
   // La cabeza no proyecta sombra: el sombrero no ensombrece la cara (propuesta C §3, legibilidad antes que realismo).
-  const head = mesh(chibiHeadGeometry(look, seed), false);
+  const head = mesh(characterHeadGeometry(look, seed), false);
   head.position.y = HEAD_Y;
   body.add(head);
   meshes.push(head);
-  root.scale.setScalar(CHIBI_SCALE);
+  root.scale.setScalar(CHIBI_SCALE * look.scale);
   return { root, body, head, arms, legs, meshes };
 }
 
@@ -118,12 +83,13 @@ export interface ChibiPose {
 
 /**
  * Animación procedural (pura): quieto, respiración y balanceo de cabeza; caminando, piernas y brazos que van y vienen
- * y un rebote que crece con la velocidad. `phase` avanza con el paso; `t` es el reloj.
+ * y un rebote que crece con la velocidad. `phase` avanza con el paso; `t` es el reloj; `bounce` escala el rebote (0 con
+ * "reducir movimiento", lo decide la máquina de animación).
  */
-export function chibiPose(phase: number, speed01: number, t: number): ChibiPose {
-  if (speed01 <= 0.05) return { legSwing: 0, armSwing: 0, bob: Math.sin(t * 2) * 0.015, headRoll: Math.sin(t * 0.9) * 0.04 };
+export function chibiPose(phase: number, speed01: number, t: number, bounce = 1): ChibiPose {
+  if (speed01 <= 0.05) return { legSwing: 0, armSwing: 0, bob: Math.sin(t * 2) * 0.015 * bounce, headRoll: Math.sin(t * 0.9) * 0.04 };
   const s = Math.sin(phase);
-  return { legSwing: s * 0.7 * speed01, armSwing: -s * 0.6 * speed01, bob: Math.abs(s) * 0.07 * speed01, headRoll: 0 };
+  return { legSwing: s * 0.7 * speed01, armSwing: -s * 0.6 * speed01, bob: Math.abs(s) * 0.07 * speed01 * bounce, headRoll: 0 };
 }
 
 /** Aplica la pose al personaje. */

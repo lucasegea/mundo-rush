@@ -1,14 +1,15 @@
 // world/dioramas/Diorama.tsx — dibuja el diorama que el store cargó en el look C (plan estetica-c M1): el grafo
-// estático de scene.ts (terreno, agua, props, árboles, detalle), los modelos glTF del pipeline (M2), los NPCs como chibis con su etiqueta de nombre y las
+// estático de scene.ts (terreno, agua, props, árboles, detalle), los modelos glTF del pipeline (M2), los NPCs (personajes con esqueleto desde M3) con su etiqueta de nombre y las
 // sombras blob. Recibe los clics: el suelo → `moveTo`, un NPC → `interact`. Los clics entran como acciones semánticas
 // por state/bridge.ts (R3: nada de eventos del DOM; R10: el mismo traductor del núcleo que usa services/input).
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useMemo } from "react";
 import type { DioramaRuntime } from "@lg/core";
 import { bridge } from "../../state/bridge";
-import type { MapActor } from "../../state/selectors";
+import type { MapActor, SceneActivityView } from "../../state/selectors";
+import { AnimationGovernor } from "../actors/AnimationGovernor";
 import { BlobShadows } from "../actors/BlobShadows";
-import { Chibi, type ActorPose } from "../actors/Chibi";
+import { Character, type ActorPose } from "../actors/Character";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
 import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
@@ -28,12 +29,16 @@ interface Props {
   /** Distancia pedida de la cámara (m): de lejos solo queda la etiqueta resaltada (D-208). */
   viewDistance: number;
   cut: boolean;
+  /** Quién habla y quién escucha en la escena (la máquina de animación lo lee). */
+  activity: SceneActivityView;
+  /** Tope de personajes animados del tier (`maxAnimatedCharacters`). */
+  maxAnimated: number;
 }
 
 /** A menos de esto el NPC gira cabeza y cuerpo hacia el jugador (propuesta C §3). */
 const LOOK_AT_PLAYER_M = 6;
 
-function Npc({ actor, cut }: { actor: MapActor; cut: boolean }) {
+function Npc({ actor, cut, activity }: { actor: MapActor; cut: boolean; activity: SceneActivityView }) {
   const pose = useMemo((): (() => ActorPose) => {
     return () => {
       const near = followTarget.ready && Math.hypot(followTarget.x - actor.x, followTarget.z - actor.z) < LOOK_AT_PLAYER_M;
@@ -44,7 +49,18 @@ function Npc({ actor, cut }: { actor: MapActor; cut: boolean }) {
     e.stopPropagation(); // el suelo de atrás no recibe el mismo clic
     bridge.pointer({ kind: "interactable", id: actor.id }, e.nativeEvent.button);
   };
-  return <Chibi id={actor.id} lookId={actor.id} pose={pose} cut={cut} onSelect={onSelect} />;
+  const mine = activity.npcId === actor.id;
+  return (
+    <Character
+      id={actor.id}
+      lookId={actor.id}
+      pose={pose}
+      cut={cut}
+      scene={mine ? activity.npc : null}
+      gesture={mine && activity.greet ? "saludar" : null}
+      onSelect={onSelect}
+    />
+  );
 }
 
 function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
@@ -52,7 +68,7 @@ function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
   return null;
 }
 
-export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewDistance, cut }: Props) {
+export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewDistance, cut, activity, maxAnimated }: Props) {
   const { minX, maxX, minZ, maxZ } = diorama.bounds;
   const onGround = (e: ThreeEvent<MouseEvent>): void => {
     bridge.pointer({ kind: "ground", x: e.point.x, z: e.point.z }, e.nativeEvent.button);
@@ -68,7 +84,8 @@ export function Diorama({ diorama, scene, actors, highlightId, sceneNpcId, viewD
       <primitive object={scene.root} />
       <ModelProps slots={scene.models} />
       <WaterClock reduceMotion={cut} />
-      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} />)}
+      <AnimationGovernor max={maxAnimated} />
+      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} activity={activity} />)}
       {labels.map((l) => {
         const a = actors.find((x) => x.id === l.id) as MapActor; // labelEntries sale de `actors`
         return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={LABEL_HEIGHT} z={a.z} />;

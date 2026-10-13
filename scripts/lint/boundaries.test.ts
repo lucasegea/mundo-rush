@@ -571,7 +571,8 @@ const M1_ALLOWED: Omit<Case, "rule">[] = [
 const REAL_M1 = [
   `${WEB}/world/materials/registry.ts`, `${WEB}/world/materials/paintGeometry.ts`, `${WEB}/world/terrain/buildTerrain.ts`,
   `${WEB}/world/labels/labelSprite.ts`, `${WEB}/world/labels/NameLabel.tsx`, `${WEB}/world/budget/estimate.ts`,
-  `${WEB}/world/actors/Chibi.tsx`, `${WEB}/world/dioramas/scene.ts`, `${WEB}/world/water/waterMaterial.ts`,
+  // Chibi.tsx pasó a Character.tsx en M3 (mismo lugar, misma zona).
+  `${WEB}/world/actors/Character.tsx`, `${WEB}/world/dioramas/scene.ts`, `${WEB}/world/water/waterMaterial.ts`,
   `${WEB}/world/props/builders.ts`, `${WEB}/world/lighting/Lighting.tsx`,
 ];
 
@@ -614,6 +615,61 @@ describe("estetica-c M1 A16: zonas nuevas de world/", () => {
     const ok = run("export const x = 1;\n");
     expect(ok.status, ok.stdout + ok.stderr).toBe(0);
   }, 60_000);
+});
+
+// ---------- estetica-c M3: world/portraits/ (estudio de retratos) y dev/portraits/ (su panel) ----------
+// Zonas nuevas con su marcador y su fixture: el marcador se comprueba antes de mirar el ruleId.
+const PORTRAITS = `${WEB}/world/portraits/__probe__.ts`;
+const DEV_PORTRAITS = `${WEB}/dev/portraits/__probe__.ts`;
+const M3_FORBIDDEN: Case[] = [
+  { name: "D-207: import * as THREE en world/portraits/", file: PORTRAITS, code: imp("three"), rule: SYNTAX, msg: "D-207" },
+  { name: "R11: new PerspectiveCamera() en world/portraits/ (la cámara vive en world/camera/)", file: PORTRAITS, code: expr("new PerspectiveCamera()"), rule: SYNTAX, msg: "R11" },
+  { name: "R11: PerspectiveCamera importada en world/portraits/", file: PORTRAITS, code: named("PerspectiveCamera", "three"), rule: IMP, msg: "R11" },
+  { name: "R3: world/portraits/ -> ui", file: PORTRAITS, code: imp("@ui/index"), rule: ZONE, msg: "R3" },
+  { name: "§4.3: world/portraits/ -> services", file: PORTRAITS, code: imp("../../services/index"), rule: ZONE },
+  { name: "ADR-026: dev/portraits/ -> world/portraits/", file: DEV_PORTRAITS, code: imp("../../world/portraits/index"), rule: ZONE, msg: "ADR-026" },
+  { name: "ADR-026: dev/portraits/ -> three", file: DEV_PORTRAITS, code: imp("three"), rule: TS_IMP },
+  { name: "ADR-026: ui -> dev/portraits/", file: F.ui, code: imp("../dev/portraits/index"), rule: ZONE, msg: "ADR-026" },
+  { name: "ADR-026: world -> dev/portraits/", file: F.world, code: imp("../dev/portraits/index"), rule: ZONE, msg: "ADR-026" },
+];
+const M3_ALLOWED: Omit<Case, "rule">[] = [
+  { name: "world/portraits/ -> world/camera/portrait (la fábrica de la cámara)", file: PORTRAITS, code: named("createPortraitCamera", "../camera/portrait") },
+  { name: "raíz de composición -> dev/portraits/", file: F.boot, code: imp("../dev/portraits/index") },
+];
+const REAL_M3 = [
+  `${WEB}/world/actors/Character.tsx`, `${WEB}/world/actors/skinned.ts`, `${WEB}/world/actors/AnimationGovernor.tsx`,
+  `${WEB}/world/actors/animState.ts`, `${WEB}/world/actors/clips.ts`, `${WEB}/world/actors/gestures.ts`,
+  `${WEB}/world/actors/characterAssets.ts`, `${WEB}/world/actors/head.ts`, `${WEB}/world/camera/portrait.ts`,
+  `${WEB}/world/portraits/studio.ts`, `${WEB}/dev/portraits/index.ts`, `${WEB}/boot/dev.ts`, "scripts/assets/characters.ts", "scripts/assets/png.ts",
+];
+
+describe("estetica-c M3: world/portraits/ y dev/portraits/", () => {
+  test("cada zona tiene su marcador y los archivos reales existen (antes de mirar el ruleId)", () => {
+    expect(isFile(resolve(ROOT, WEB, "world/portraits/index.ts")), "marcador de world/portraits/").toBe(true);
+    expect(isFile(resolve(ROOT, WEB, "dev/portraits/index.ts")), "marcador de dev/portraits/").toBe(true);
+    for (const f of REAL_M3) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of [...M3_FORBIDDEN, ...M3_ALLOWED]) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(M3_FORBIDDEN.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test.each(M3_ALLOWED.map((c) => [c.name, c] as const))("%s pasa", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_M3)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
 });
 
 // ---------- estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art puro y la zona scripts/assets/ ----------

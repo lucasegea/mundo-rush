@@ -19,8 +19,8 @@ export const TERRAIN_SKIRT = 160;
  */
 const BRUSH_UV_SKIRT = 48;
 /** Paso máximo de la grilla cerca del diorama; más allá, cada celda es FAR_GROWTH veces la anterior. */
-const NEAR_MAX_STEP = 8;
-const FAR_GROWTH = 2.2;
+const NEAR_MAX_STEP = 3;
+const FAR_GROWTH = 4;
 /** Separación de vértices cerca y dentro de los límites (la mitad de un tile). */
 export const FINE_STEP = 0.5;
 const FINE_MARGIN = 0.5;
@@ -98,7 +98,9 @@ export function outsideDistance(b: Bounds, x: number, z: number): number {
 
 /**
  * Líneas de grilla: finas (0,5 m) entre fineMin y fineMax, y cada vez más gruesas hacia min y max (de 2 a 8 m de a
- * un metro, y después geométricas: 35, ~53, ~91 y el borde, a 160 m del diorama).
+ * un metro hasta 3 m, y después geométricas por 4: 2, 5, 17, 65 y el borde, a 160 m del diorama). Plan estetica-c M3:
+ * la falda lejana bajó de resolución (antes de 2 a 8 m de a un metro y después por 2,2, diez líneas por lado; ahora
+ * cinco) para que entren los personajes con esqueleto en `medium`; lo de cerca (paso fino de 0,5 m) no cambió.
  */
 function gridLines(min: number, max: number, fineMin: number, fineMax: number): Float64Array {
   const fine: number[] = [];
@@ -270,7 +272,12 @@ export function borderPines(bounds: Bounds, seed = TERRAIN_SEED, count = 16): Sc
   return out;
 }
 
-/** Instancias de detalle desde las capas: flores (6), matas (7), piedritas (8) y piedras del empedrado (suelo 5). */
+/**
+ * Instancias de detalle desde las capas: flores (6), matas (7), piedritas (8) y piedras del empedrado (suelo 5). Plan
+ * estetica-c M3: una flor y una piedrita por tile (antes dos), dos piedras por tile de empedrado (antes tres) y una mata
+ * cada dos tiles en damero (antes una por tile), para que entren los personajes con esqueleto en el presupuesto de
+ * `medium`.
+ */
 export function detailScatter(layers: readonly TileLayerData[], seed = TERRAIN_SEED): Record<"flores" | "matas" | "piedritas" | "empedrado", Scatter[]> {
   const r = rng(seed * 17 + 3);
   const out = { flores: [] as Scatter[], matas: [] as Scatter[], piedritas: [] as Scatter[], empedrado: [] as Scatter[] };
@@ -284,10 +291,10 @@ export function detailScatter(layers: readonly TileLayerData[], seed = TERRAIN_S
         const tx = layer.originX + col;
         const tz = layer.originZ + row;
         if (layer.name === "suelo") {
-          if (id === TILE.empedrado) put(out.empedrado, tx, tz, 3, 0.8, 1.2);
-        } else if (id === DETAIL.flores) put(out.flores, tx, tz, 2, 0.9, 1.4);
-        else if (id === DETAIL.matas) put(out.matas, tx, tz, 1, 0.7, 1.1);
-        else if (id === DETAIL.piedritas) put(out.piedritas, tx, tz, 2, 0.7, 1.2);
+          if (id === TILE.empedrado) put(out.empedrado, tx, tz, 2, 0.8, 1.2);
+        } else if (id === DETAIL.flores) put(out.flores, tx, tz, 1, 0.9, 1.4);
+        else if (id === DETAIL.matas) put(out.matas, tx, tz, (((tx + tz) % 2) + 2) % 2 === 0 ? 1 : 0, 0.7, 1.1);
+        else if (id === DETAIL.piedritas) put(out.piedritas, tx, tz, 1, 0.7, 1.2);
       }
     }
   }

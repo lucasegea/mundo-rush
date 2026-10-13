@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, test } from "vitest";
-import { compilarContenido, formatearHallazgo, LICENCIA_PROHIBIDA } from "@lg/content-schema";
+import { compilarContenido, formatearHallazgo, LICENCIAS_PERMITIDAS, licenciaPermitida } from "@lg/content-schema";
 import type { ArchivoFuente, Hallazgo } from "@lg/content-schema";
 import { construir, leerContenido, leerPublicos } from "./build.ts";
 
@@ -63,12 +63,36 @@ describe("teeth del registro (validate:content falla)", () => {
     conError(errores(REAL, [...PUBLICOS, "apps/web/public/audio/sfx/x.ogg"]), "apps/web/public/audio/sfx/x.ogg", "sin registro");
   });
 
-  test("una licencia no comercial o de uso personal", () => {
+  // M3, nota N1 de QA en M2: lista cerrada. Cada grafía de "uso personal" y "no comercial" (con y sin tilde, en
+  // cualquier caja) falla, igual que una licencia desconocida.
+  const RECHAZADAS = [
+    "sólo uso personal", "solo uso personal", "SÓLO USO PERSONAL", "Solo Uso Personal", "sólo_uso_personal", "uso personal",
+    "Uso Personal", "USO PERSONAL", "no comercial", "No Comercial", "NO COMERCIAL", "no-comercial", "nó comercial",
+    "CC-BY-NC-4.0", "non-commercial", "Personal use only", "Standard License (personal)", "comercial-con-modificacion", "",
+  ];
+
+  test("una licencia fuera de la lista cerrada (cada forma rechazada, en una fila de asset)", () => {
     const licencia = "    licencia: CC0-1.0\n    url_origen: https://poly.pizza/m/DM0F8siLam";
-    conError(errores(mut(REG, licencia, "    licencia: CC-BY-NC-4.0\n    url_origen: https://poly.pizza/m/DM0F8siLam")), REG, "no comercial");
-    conError(errores(mut(REG, licencia, "    licencia: solo uso personal\n    url_origen: https://poly.pizza/m/DM0F8siLam")), REG, "no comercial");
-    for (const ok of ["CC0-1.0", "CC-BY-4.0", "comercial-con-modificacion"]) expect(LICENCIA_PROHIBIDA.test(ok), ok).toBe(false);
-    for (const mal of ["CC-BY-NC-4.0", "no comercial", "non-commercial", "Personal use only", "solo_uso_personal"]) expect(LICENCIA_PROHIBIDA.test(mal), mal).toBe(true);
+    for (const mal of RECHAZADAS.filter((m) => m !== "")) {
+      conError(errores(mut(REG, licencia, `    licencia: "${mal}"\n    url_origen: https://poly.pizza/m/DM0F8siLam`)), REG, "fuera de la lista permitida");
+    }
+  });
+
+  test("la lista cerrada: solo CC0-1.0 y CC-BY-4.0 (con su grafía normalizada)", () => {
+    expect(LICENCIAS_PERMITIDAS).toEqual(["CC0-1.0", "CC-BY-4.0"]);
+    for (const ok of ["CC0-1.0", "cc0 1.0", " CC0_1.0 ", "CC-BY-4.0", "cc-by 4.0"]) expect(licenciaPermitida(ok), ok).not.toBeNull();
+    for (const mal of RECHAZADAS) expect(licenciaPermitida(mal), mal).toBeNull();
+  });
+
+  test("un pack usado con licencia fuera de la lista falla; uno descartado puede nombrarla (es el registro de la evaluación)", () => {
+    const pack = "    licencia: CC0-1.0\n    url: https://quaternius.com/packs/farmbuildings.html";
+    conError(errores(mut(REG, pack, "    licencia: sólo uso personal\n    url: https://quaternius.com/packs/farmbuildings.html")), REG, "fuera de la lista permitida");
+    expect(errores(REAL).map(formatearHallazgo)).toEqual([]); // mixamo (descartado) no es CC0 y el registro real compila
+  });
+
+  test("CC-BY-4.0 exige atribucion_requerida: true", () => {
+    const licencia = "    licencia: CC0-1.0\n    url_origen: https://poly.pizza/m/DM0F8siLam";
+    conError(errores(mut(REG, licencia, "    licencia: CC-BY-4.0\n    url_origen: https://poly.pizza/m/DM0F8siLam")), REG, "lleva atribucion_requerida: true");
   });
 
   test("un registro con atribución obligatoria ausente de los créditos", () => {

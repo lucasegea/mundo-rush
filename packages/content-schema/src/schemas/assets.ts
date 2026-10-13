@@ -16,8 +16,23 @@ export const CARPETAS_CON_REGISTRO = [
   "apps/web/public/sprites/",
 ] as const;
 
-/** Licencias que el juego no puede usar (D-153): no comercial o solo uso personal, en cualquier grafía. */
-export const LICENCIA_PROHIBIDA = /no[\s_-]*comercial|non[\s_-]*commercial|(^|[^a-z])nc([^a-z]|$)|solo[\s_-]*uso[\s_-]*personal|personal[\s_-]*use/i;
+/**
+ * Licencias que el juego puede usar (D-153). Lista cerrada (nota N1 de QA en M2): una lista de prohibidas dejaba pasar
+ * "sólo uso personal" con tilde o "uso personal" a secas; con la lista cerrada, toda grafía de "no comercial" o de "uso
+ * personal", y toda licencia desconocida, falla cerrada. CC-BY-4.0 exige `atribucion_requerida: true` (créditos).
+ */
+export const LICENCIAS_PERMITIDAS = ["CC0-1.0", "CC-BY-4.0"] as const;
+export type LicenciaPermitida = (typeof LICENCIAS_PERMITIDAS)[number];
+/** Las que piden atribución en los créditos. */
+export const LICENCIAS_CON_ATRIBUCION: readonly LicenciaPermitida[] = ["CC-BY-4.0"];
+
+/** Mayúsculas, sin tildes y con guiones en lugar de espacios o guiones bajos ("cc0 1.0" → "CC0-1.0"). */
+const normalizarLicencia = (s: string): string =>
+  s.normalize("NFD").replace(/\p{M}/gu, "").trim().toUpperCase().replace(/[\s_]+/g, "-");
+
+/** La licencia permitida que nombra el texto, o null si no está en la lista (no comercial, uso personal o desconocida). */
+export const licenciaPermitida = (licencia: string): LicenciaPermitida | null =>
+  LICENCIAS_PERMITIDAS.find((l) => l === normalizarLicencia(licencia)) ?? null;
 
 /** Qué hace el pipeline con una pieza que no pasa la regla del bisel (plan estetica-c M2). */
 export const Bisel = z.enum(["rehecho_por_codigo", "aceptado"]);
@@ -45,6 +60,33 @@ export const PackAssets = z.strictObject({
 });
 export type PackAssets = z.infer<typeof PackAssets>;
 
+const HexColor = z.string().regex(/^#[0-9a-f]{6}$/, "#rrggbb en minúsculas");
+
+/**
+ * Una regla de pintura de un cuerpo (plan estetica-c M3): toma el vértice si el hueso que más lo mueve está en `huesos`
+ * y/o si el color de la textura de paleta en su UV está a menos de `radio` de `color`. Pinta con `token` o marca la
+ * prenda (`ropa`) que world/ repinta con el color de cada personaje. Las reglas se prueban en orden.
+ */
+export const ReglaPinturaPersonaje = z.strictObject({
+  huesos: z.array(z.string().min(1)).min(1).optional(),
+  color: HexColor.optional(),
+  radio: z.number().positive().max(1).optional(),
+  token: z.string().min(1).optional(),
+  ropa: z.enum(["remera", "pantalon"]).optional(),
+}).refine((r) => (r.token === undefined) !== (r.ropa === undefined), { message: "una regla lleva token o ropa (una de las dos)" })
+  .refine((r) => r.radio === undefined || r.color !== undefined, { message: "radio sin color", path: ["radio"] });
+export type ReglaPinturaPersonaje = z.infer<typeof ReglaPinturaPersonaje>;
+
+/**
+ * Una pieza de personaje (plan estetica-c M3): un cuerpo con esqueleto (las mallas que quedan y sus reglas de pintura) o
+ * el archivo de clips del esqueleto (los clips que quedan). Las cabezas, el pelo y los accesorios son código hasta M5.
+ */
+export const PiezaPersonaje = z.discriminatedUnion("tipo", [
+  z.strictObject({ tipo: z.literal("cuerpo"), nodos: z.array(z.string().min(1)).min(1), pintura: z.array(ReglaPinturaPersonaje).min(1) }),
+  z.strictObject({ tipo: z.literal("animaciones"), clips: z.array(z.string().min(1)).min(1) }),
+]);
+export type PiezaPersonaje = z.infer<typeof PiezaPersonaje>;
+
 /** Una pieza servida (03 §6.4.2). */
 export const RegistroAsset = z.strictObject({
   /** `<pack>/<pieza>`; un diorama la usa como `modelo/<pack>/<pieza>`. */
@@ -62,6 +104,8 @@ export const RegistroAsset = z.strictObject({
   atribucion_requerida: z.boolean(),
   bisel: Bisel.optional(),
   bisel_razon: z.string().min(1).optional(),
+  /** Plan estetica-c M3: la fila es un cuerpo con esqueleto o un archivo de clips (scripts/assets/characters.ts). */
+  personaje: PiezaPersonaje.optional(),
   notas: z.string().min(1).optional(),
 }).refine((r) => r.bisel === undefined || r.bisel_razon !== undefined, { message: "bisel sin bisel_razon", path: ["bisel_razon"] });
 export type RegistroAsset = z.infer<typeof RegistroAsset>;

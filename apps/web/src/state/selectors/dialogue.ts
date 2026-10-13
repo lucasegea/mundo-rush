@@ -206,3 +206,42 @@ export const selectDialogueHudView = createViewSelector(
 export const selectSceneRequest = (s: GameState) => s.dialogue.request;
 export const selectSceneOutbox = (s: GameState) => s.dialogue.outbox;
 export const selectLexiconStatus = (s: GameState) => s.dialogue.lexicon.status;
+
+/** El papel de un personaje en la escena en curso (lo lee la máquina de animación de world/actors, plan estetica-c M3). */
+export type SceneRoleView = "habla" | "escucha" | null;
+
+export interface SceneActivityView {
+  /** El NPC de la escena (null sin escena). */
+  npcId: string | null;
+  npc: SceneRoleView;
+  player: SceneRoleView;
+  /** La escena está arrancando: el NPC saluda. */
+  greet: boolean;
+}
+
+const NO_ACTIVITY: SceneActivityView = { npcId: null, npc: null, player: null, greet: false };
+
+/**
+ * Quién habla y quién escucha: el NPC habla mientras dice su línea y escucha en el turno del jugador; el jugador habla
+ * con el micrófono abierto. M3 SEAM: los gestos que pida el diálogo (asentir, negar, pensar, sorprenderse, dar algo)
+ * entran acá cuando el protocolo los mande; hoy el único pedido es el saludo al empezar.
+ */
+let lastActivity: SceneActivityView = NO_ACTIVITY;
+const sameActivity = (a: SceneActivityView, b: SceneActivityView): boolean =>
+  a.npcId === b.npcId && a.npc === b.npc && a.player === b.player && a.greet === b.greet;
+
+export const selectSceneActivity = createViewSelector(
+  (s: GameState) => [s.dialogue] as const,
+  (d): SceneActivityView => {
+    let next = NO_ACTIVITY;
+    if (d.sceneId !== null && d.npcId !== null) {
+      const phase = phaseOf(d);
+      const npc: SceneRoleView = phase === "npcSpeaking" ? "habla" : phase === "yourTurn" || phase === "passMenu" ? "escucha" : null;
+      const player: SceneRoleView = voicePhaseOf(d) === "listening" && voiceView(d) !== null ? "habla" : phase === "npcSpeaking" ? "escucha" : null;
+      next = { npcId: d.npcId, npc, player, greet: phase === "starting" };
+    }
+    // El nivel del micrófono cambia muchas veces por segundo: la misma actividad devuelve el mismo objeto (sin re-render).
+    if (!sameActivity(next, lastActivity)) lastActivity = next;
+    return lastActivity;
+  },
+);

@@ -2,7 +2,9 @@
 // 03 §6.4.1 y §2.7.3). Lo corre check:budgets: el primer diorama (muelle) entra en `assets_muelle_mb` y muelle + plaza
 // en `assets_muelle_plaza_mb` (scripts/budgets/budgets.json, copia de la tabla de 03 §2.7.3; ningún umbral cambia acá).
 // Los demás dioramas (hoy `test`) se informan sin tope, porque la tabla no les da uno. Además, toda pieza servida en
-// apps/web/public/models tiene que haber salido del pipeline: sin texturas y con color por vértice.
+// apps/web/public/models tiene que haber salido del pipeline: sin texturas y con color por vértice. Desde M3 la descarga de
+// cada diorama suma los archivos de personaje (los cuerpos base y el de clips, filas con bloque `personaje` del
+// registro): todo diorama muestra al jugador y a sus vecinos, así que se cuentan enteros (cota de arriba).
 //
 // Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
 import { readdirSync, readFileSync } from "node:fs";
@@ -30,7 +32,7 @@ export interface PiezaMedida {
 
 export interface DioramaMedido {
   id: string;
-  /** Archivos .glb distintos que usa (se bajan una vez). */
+  /** Archivos .glb distintos que usa (se bajan una vez), personajes incluidos. */
   modelos: string[];
   bytes: number;
   /** Triángulos de los modelos por cada vez que aparecen. */
@@ -54,11 +56,18 @@ export async function medirPieza(archivo: string, bytes: Uint8Array): Promise<Pi
   return { archivo, bytes: bytes.byteLength, triangulos, primitivas, materiales: root.listMaterials().length, texturas: root.listTextures().length, conColor };
 }
 
-/** Los props `modelo/*` de cada diorama → archivos y peso de descarga. */
-export function medirDioramas(dioramas: readonly { id: string; props?: readonly { asset: string }[] | undefined }[], piezas: ReadonlyMap<string, PiezaMedida>): DioramaMedido[] {
+/**
+ * Los props `modelo/*` de cada diorama → archivos y peso de descarga. `personajes` son los archivos de personaje (se
+ * bajan con cualquier diorama; sus triángulos se miden en el test del diorama, no acá).
+ */
+export function medirDioramas(
+  dioramas: readonly { id: string; props?: readonly { asset: string }[] | undefined }[],
+  piezas: ReadonlyMap<string, PiezaMedida>,
+  personajes: readonly string[] = [],
+): DioramaMedido[] {
   return dioramas.map((d) => {
     const usos = (d.props ?? []).filter((p) => p.asset.startsWith(PREFIJO_MODELO)).map((p) => archivoDeModelo(p.asset));
-    const modelos = [...new Set(usos)].sort();
+    const modelos = [...new Set([...usos, ...personajes])].sort();
     return {
       id: d.id,
       modelos,
@@ -101,6 +110,8 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
   tope("descarga inicial del vertical slice", ["muelle", "plaza"], b.assets_muelle_plaza_mb, "assets_muelle_plaza_mb");
   for (const d of dioramas.filter((x) => x.id !== "muelle" && x.id !== "plaza")) {
     lineas.push(`info diorama ${d.id}: ${d.modelos.length} modelo(s), ${mb(d.bytes)} MB, ${d.triangulos} triángulos de modelos (sin tope en 03 §2.7.3)`);
+    // Referencia: el diorama de prueba contra el tope del primer diorama (plan estetica-c M3, con los personajes).
+    if (d.id === "test") lineas.push(`${d.bytes / MB <= b.assets_muelle_mb ? "ref " : "WARN"} diorama test contra assets_muelle_mb: ${mb(d.bytes)} de ${b.assets_muelle_mb} MB`);
   }
   return { ok, lineas };
 }
@@ -135,7 +146,8 @@ export async function run(root = ROOT, log: (s: string) => void = console.log): 
     log(`inspect-budgets: el contenido no compila (${contenido.errores.length} error(es)); corré validate:content`);
     return 1;
   }
-  const dioramas = medirDioramas(contenido.conjunto.dioramas.map((d) => d.data), new Map(piezas.map((p) => [p.archivo, p])));
+  const personajes = (contenido.conjunto.registroAssets?.data.assets ?? []).filter((a) => a.personaje).map((a) => a.archivo).sort();
+  const dioramas = medirDioramas(contenido.conjunto.dioramas.map((d) => d.data), new Map(piezas.map((p) => [p.archivo, p])), personajes);
   const r = chequearDescarga(piezas, dioramas, loadBudgets());
   for (const l of r.lineas) log(l);
   return r.ok ? 0 : 1;

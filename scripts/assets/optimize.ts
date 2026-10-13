@@ -8,6 +8,9 @@
 //   · se descartan texturas, materiales y atributos que el material toon no usa
 //   · join (una primitiva por pieza = una llamada) · dedup · prune · meshopt (reorder + quantize + EXT_meshopt_compression)
 //
+// Personajes (plan estetica-c M3): una fila con `personaje` (cuerpo con esqueleto o archivo de clips) va por
+// scripts/assets/characters.ts con las mismas reglas de fondo (paleta, bisel, sin texturas, meshopt).
+//
 // Uso: node scripts/assets/optimize.ts [--solo <pack>/<pieza>]
 // Lee content/assets-registry.yaml: cada fila con `fuente` se optimiza con la tabla `pintura` de su pack. La fuente
 // tiene que tener el sha256 registrado (si cambió, se frena). Sale con 1 si una pieza se rechaza o falla.
@@ -20,8 +23,9 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { dedup, dequantize, flatten, join as joinPrimitives, meshopt, normals, prune, transformMesh, weld } from "@gltf-transform/functions";
 import { MeshoptDecoder, MeshoptEncoder } from "meshoptimizer";
 import { parse } from "yaml";
-import { ArchivoRegistroAssets, type PackAssets, type RegistroAsset } from "@lg/content-schema";
+import { ArchivoRegistroAssets, type PackAssets, type PiezaPersonaje, type RegistroAsset } from "@lg/content-schema";
 import { MAX_DIHEDRAL_DEG, maxDihedralDeg, paintColors, PALETTE, tokenRgb, type PaletteToken } from "@lg/art";
+import { optimizarClips, optimizarCuerpo, PersonajeRechazado } from "./characters.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const REGISTRO = "content/assets-registry.yaml";
@@ -90,8 +94,9 @@ function hornearTransformaciones(doc: Document, id: string): void {
   for (const node of doc.getRoot().listNodes()) {
     const mesh = node.getMesh();
     if (!mesh) continue;
-    // M2 SEAM: las piezas con esqueleto (personajes y animales) entran en M3, con retargeting y su manifiesto.
-    if (node.getSkin()) throw new PiezaRechazada(`${id}: la pieza tiene esqueleto; los personajes entran por el pipeline de M3`);
+    // Plan estetica-c M3: un prop no tiene esqueleto; los personajes entran por una fila con `personaje` (characters.ts).
+    // M3 SEAM: los animales con esqueleto (V2, M5) entran por el mismo camino de personajes.
+    if (node.getSkin()) throw new PiezaRechazada(`${id}: la pieza tiene esqueleto; un personaje se registra con un bloque \`personaje\``);
     const m = node.getWorldMatrix();
     const identidad = m.every((v, i) => Math.abs(v - (i % 5 === 0 ? 1 : 0)) < 1e-9);
     if (identidad) continue;
@@ -173,18 +178,47 @@ export function leerRegistro(root = ROOT): { packs: Map<string, PackAssets>; ass
   return { packs: new Map(data.packs.map((p) => [p.id, p])), assets: data.assets };
 }
 
-/** Optimiza una fila del registro desde su fuente en assets-src/. */
-export async function optimizarFila(fila: RegistroAsset, pack: PackAssets | undefined, root = ROOT): Promise<ReportePieza> {
+/**
+ * Una pieza de personaje (plan estetica-c M3): un cuerpo con esqueleto o el archivo de clips, por characters.ts.
+ * Determinístico como los props.
+ */
+export async function optimizarPersonajeGlb(entrada: Uint8Array, id: string, pieza: PiezaPersonaje, bisel?: Bisel): Promise<{ glb: Uint8Array; linea: string }> {
+  const io = await crearIO();
+  const doc = await io.readBinary(entrada);
+  doc.setLogger(new Logger(Logger.Verbosity.WARN));
+  try {
+    if (pieza.tipo === "cuerpo") {
+      const r = await optimizarCuerpo(doc, { id, nodos: pieza.nodos, pintura: pieza.pintura, bisel });
+      const glb = await io.writeBinary(doc);
+      return {
+        glb,
+        linea: `OK   ${id}: cuerpo, ${entrada.byteLength} → ${glb.byteLength} bytes, ${r.triangulos} triángulos, ${r.vertices} vértices, ` +
+          `${r.huesos.length} huesos, diedro máx ${r.diedroMax.toFixed(1)}°, ${r.texturasDescartadas} textura(s) y ${r.animacionesDescartadas} clip(s) descartados, ` +
+          `remera ${r.ropa.remera} y pantalón ${r.ropa.pantalon} vértices, tokens ${Object.entries(r.tokens).map(([t, n]) => `${t}:${n}`).join(" ")}`,
+      };
+    }
+    const r = await optimizarClips(doc, { id, clips: pieza.clips });
+    const glb = await io.writeBinary(doc);
+    return { glb, linea: `OK   ${id}: clips, ${entrada.byteLength} → ${glb.byteLength} bytes, ${r.clips.join(" ")} sobre ${r.huesos.length} huesos (${r.animacionesDescartadas} clips y ${r.canalesDescartados} canales fuera del esqueleto descartados)` };
+  } catch (e) {
+    throw e instanceof PersonajeRechazado ? new PiezaRechazada(e.message) : e;
+  }
+}
+
+/** Optimiza una fila del registro desde su fuente en assets-src/. Devuelve la línea del reporte. */
+export async function optimizarFila(fila: RegistroAsset, pack: PackAssets | undefined, root = ROOT): Promise<string> {
   if (!fila.fuente) throw new PiezaRechazada(`${fila.id}: la fila no tiene fuente en assets-src/`);
-  if (!pack?.pintura) throw new PiezaRechazada(`${fila.id}: el pack "${fila.pack}" no tiene tabla de pintura en ${REGISTRO}`);
+  if (!fila.personaje && !pack?.pintura) throw new PiezaRechazada(`${fila.id}: el pack "${fila.pack}" no tiene tabla de pintura en ${REGISTRO}`);
   const entrada = new Uint8Array(readFileSync(join(root, fila.fuente)));
   const hash = sha256(entrada);
   if (hash !== fila.sha256_original) throw new PiezaRechazada(`${fila.id}: la fuente ${fila.fuente} tiene sha256 ${hash}, el registro dice ${fila.sha256_original}`);
-  const { glb, reporte } = await optimizarGlb(entrada, { id: fila.id, pintura: pack.pintura, bisel: fila.bisel });
+  const { glb, linea } = fila.personaje
+    ? await optimizarPersonajeGlb(entrada, fila.id, fila.personaje, fila.bisel)
+    : await optimizarGlb(entrada, { id: fila.id, pintura: pack?.pintura ?? {}, bisel: fila.bisel }).then((r) => ({ glb: r.glb, linea: formatearReporte(r.reporte) }));
   const salida = join(root, fila.archivo);
   mkdirSync(dirname(salida), { recursive: true });
   writeFileSync(salida, glb);
-  return reporte;
+  return linea;
 }
 
 export const formatearReporte = (r: ReportePieza): string =>
@@ -209,7 +243,7 @@ export async function run(args: readonly string[], log: (s: string) => void = co
       continue;
     }
     try {
-      log(formatearReporte(await optimizarFila(fila, packs.get(fila.pack), root)));
+      log(await optimizarFila(fila, packs.get(fila.pack), root));
     } catch (e) {
       fallas += 1;
       log(`FAIL ${e instanceof Error ? e.message : String(e)}`);

@@ -425,10 +425,11 @@ describe("personajes chibi (ítem 13)", () => {
     expect(heads).toBeLessThanOrEqual(3);
     expect(HEAD_RADIUS).toBe(0.42);
     for (const id of Object.keys(CHIBI_LOOKS)) expect(buildChibi(chibiLook(id)).meshes.length).toBeLessThanOrEqual(6);
-    expect(CHIBI_LOOKS["player"]?.accessory).toBe("gorra");
-    expect(CHIBI_LOOKS["NPC-INES"]?.accessory).toBe("panuelo");
-    expect(CHIBI_LOOKS["NPC-NELL"]?.accessory).toBe("rodete");
-    expect(CHIBI_LOOKS["NPC-HARLAN"]?.accessory).toBe("paja");
+    // Desde M3 los accesorios son piezas sueltas (sombrero, peinado, pañuelo o bufanda), no uno solo por personaje.
+    expect(CHIBI_LOOKS["player"]?.hat).toBe("gorra");
+    expect(CHIBI_LOOKS["NPC-INES"]?.scarf).toBe("panuelo");
+    expect(CHIBI_LOOKS["NPC-NELL"]?.hairStyle).toBe("rodete");
+    expect(CHIBI_LOOKS["NPC-HARLAN"]?.hat).toBe("paja");
     expect(chibiLook("NPC-OTRO")).toEqual(chibiLook("NPC-OTRO"));
   });
 });

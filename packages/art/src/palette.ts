@@ -26,6 +26,8 @@ export const PALETTE = {
   "casa-3": "#9ED8B8",
   "casa-4": "#9CC7E8",
   "casa-5": "#B9A6DB",
+  /** `casa-6` del GDD: el mismo hex que `muro` (propuesta C §6); como ropa es la remera clara (plan estetica-c M3). */
+  "casa-6": "#F4EDE2",
   techo: "#C9624B",
   cumbrera: "#A84E3B",
   madera: "#9A6B43",
@@ -66,6 +68,9 @@ export type PaletteToken = keyof typeof PALETTE;
 
 /** Las fachadas y la ropa (`casa-1..5`). */
 export const HOUSE_TOKENS = ["casa-1", "casa-2", "casa-3", "casa-4", "casa-5"] as const satisfies readonly PaletteToken[];
+
+/** La ropa de los personajes: `casa-1..6` (D-153 releída por D-207, plan estetica-c M3). */
+export const SHIRT_TOKENS = ["casa-1", "casa-2", "casa-3", "casa-4", "casa-5", "casa-6"] as const satisfies readonly PaletteToken[];
 
 /** Pares de texto de las etiquetas de nombre (A14): los lee check:contrast desde acá, sin copiarlos en tokens.css. */
 export const LABEL_CONTRAST_PAIRS = [

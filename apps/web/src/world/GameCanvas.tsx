@@ -11,7 +11,7 @@ import { lazy, Suspense, useEffect, useMemo } from "react";
 import { ACESFilmicToneMapping } from "three";
 import type { SelectableTier } from "@lg/core";
 import { bridge } from "../state/bridge";
-import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectWorldRender, useGameView } from "../state/selectors";
+import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectSceneActivity, selectWorldRender, useGameView } from "../state/selectors";
 import { Player } from "./actors/Player";
 import { CameraRig } from "./camera/CameraRig";
 import { TWO_SHOT, viewScale } from "./camera/rig";
@@ -29,6 +29,8 @@ export interface WorldTierParams {
   maxDpr: number | null;
   post: PostLevel;
   shadows: ShadowMode;
+  /** Tope de personajes animados a la vez (plan estetica-c M3); los demás quedan congelados. */
+  maxAnimatedCharacters: number;
 }
 
 /** Atributo del contenedor: services/input solo hace zoom con la rueda sobre el mapa. */
@@ -39,6 +41,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const render = useGameView(selectWorldRender);
   const conversation = useGameView(selectConversationFrame);
   const highlightId = useGameView(selectHighlightedNpc);
+  const activity = useGameView(selectSceneActivity);
   const params = tierParams[render.tier];
   const post: PostLevel = render.post ? params.post : "none";
   const cut = render.cameraMotion === "cut";
@@ -77,10 +80,12 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             sceneNpcId={conversation?.npcId ?? null}
             viewDistance={viewDistance}
             cut={cut}
+            activity={activity}
+            maxAnimated={params.maxAnimatedCharacters}
           />
         ) : null}
         {/* Player antes que CameraRig: en cada cuadro la cámara sigue la posición ya dibujada. */}
-        {map.diorama ? <Player conversation={conversation} cut={cut} /> : null}
+        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} /> : null}
         <CameraRig
           preset={render.preset}
           pitchDeg={render.pitchDeg}
