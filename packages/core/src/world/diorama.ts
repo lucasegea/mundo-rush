@@ -1,9 +1,10 @@
-// Diorama listo para jugar (03 §6.4.3): del layout de contenido (YAML compilado a JSON) a capas de tiles,
+// Diorama listo para jugar (03 §6.4.3): del layout de contenido (YAML compilado a JSON) al suelo de la maqueta,
 // volúmenes, NPCs, interactuables y grilla de caminabilidad. Puro: lo llama la acción que carga el diorama.
 // Plan estetica-c M5 (D-207): el formato de la maqueta (caminos y ríos por curvas, agua por polígonos, detalle por
 // zonas, props con giro, tinte e instancias). El núcleo muestrea las curvas una vez y deja los datos listos; no sabe
 // nada del look (alturas y colores los decide world/terrain/). La grilla sale de los props, el agua, los ríos, los
-// polígonos `no_caminable` y los NPCs; las capas `tiles` de M1 siguen aceptadas hasta M7 (no bloquean nada).
+// polígonos `no_caminable` y los NPCs. Plan estetica-c M7 (D-207): las capas `tiles` y `atlas_tiles` de HD-2D se
+// retiraron; el schema las rechaza y el núcleo ya no las lee.
 import {
   buildWalkGrid, DEFAULT_INTERACT_RADIUS, type Bounds, type Interactable, type Point, type Rect, type WalkGrid,
 } from "../movement";
@@ -18,9 +19,6 @@ export interface DioramaLayout {
   bounds: Bounds;
   /** Punto de aparición del jugador; sin él, el centro de los límites. */
   spawn?: Vec3;
-  atlas_tiles?: string;
-  /** Capas de tiles: cada fila es una lista de ids del atlas separados por espacios (0 = vacío); 1 tile = 1 m. */
-  tiles?: readonly { capa: string; origen: Vec2; filas: readonly string[] }[];
   /**
    * Volúmenes. Con `tam` (ancho, alto, profundidad) su huella bloquea la grilla. `rotY` en grados; `tinte`, token que
    * reemplaza el color principal; `instancias`, los lugares de un prop repetido (en lugar de `pos`).
@@ -47,17 +45,6 @@ export interface LayoutProp {
   instancias?: readonly { pos: Vec3; rotY?: number; tam?: Vec3 }[];
 }
 
-export interface TileLayerData {
-  name: string;
-  /** Esquina (x, z) del tile [0, 0] en metros. */
-  originX: number;
-  originZ: number;
-  width: number;
-  height: number;
-  /** Fila mayor: tiles[z * width + x]; 0 = vacío. */
-  tiles: number[];
-}
-
 export interface PropBox {
   asset: string;
   x: number;
@@ -78,10 +65,8 @@ export interface PathLine {
   line: Point[];
 }
 
-/** Lo que world/terrain/ necesita del formato de la maqueta (vacío en un diorama de tiles). */
+/** Lo que world/terrain/ necesita del formato de la maqueta (plan estetica-c M5). */
 export interface DioramaGround {
-  /** "tiles" (M1, hasta M7) o "maqueta" (M5). */
-  format: "tiles" | "maqueta";
   /** null = los defaults del look (world/ los toma de @lg/art). */
   terrain: { extension: number | null; hills: number | null; seed: number | null };
   /** Papel del terreno → token de la paleta. */
@@ -96,31 +81,13 @@ export interface DioramaGround {
 export interface DioramaRuntime {
   id: string;
   bounds: Bounds;
-  atlas: string | null;
   spawn: Point;
-  layers: TileLayerData[];
   /** Formato de la maqueta (plan estetica-c M5). */
   ground: DioramaGround;
   boxes: PropBox[];
   npcs: { id: string; x: number; z: number }[];
   interactables: Interactable[];
   grid: WalkGrid;
-}
-
-/** Filas de texto → capa de tiles. Falla clara si una fila tiene otro largo o un id que no es entero ≥ 0. */
-export function parseTileRows(name: string, origin: Vec2, rows: readonly string[]): TileLayerData {
-  const parsed = rows.map((row, i) =>
-    row.trim().split(/\s+/).filter(Boolean).map((cell) => {
-      const n = Number(cell);
-      if (!Number.isInteger(n) || n < 0) throw new Error(`capa ${name}, fila ${i}: id de tile inválido "${cell}"`);
-      return n;
-    }),
-  );
-  const width = parsed[0]?.length ?? 0;
-  parsed.forEach((r, i) => {
-    if (r.length !== width) throw new Error(`capa ${name}, fila ${i}: ${r.length} tiles, se esperaban ${width}`);
-  });
-  return { name, originX: origin[0], originZ: origin[1], width, height: parsed.length, tiles: parsed.flat() };
 }
 
 const DEG = Math.PI / 180;
@@ -156,9 +123,7 @@ function propBoxes(props: readonly LayoutProp[]): PropBox[] {
 }
 
 function groundOf(layout: DioramaLayout): DioramaGround {
-  const tiles = (layout.tiles?.length ?? 0) > 0 && [layout.caminos, layout.rio, layout.agua, layout.detalle].every((x) => x === undefined);
   return {
-    format: tiles ? "tiles" : "maqueta",
     terrain: { extension: layout.terreno?.extension ?? null, hills: layout.terreno?.lomas ?? null, seed: layout.terreno?.semilla ?? null },
     palette: { ...(layout.paleta ?? {}) },
     paths: (layout.caminos ?? []).map((c) => ({
@@ -195,9 +160,7 @@ export function prepareDiorama(layout: DioramaLayout): DioramaRuntime {
   return {
     id: layout.id,
     bounds,
-    atlas: layout.atlas_tiles ?? null,
     spawn: layout.spawn ? { x: layout.spawn[0], z: layout.spawn[2] } : { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 },
-    layers: (layout.tiles ?? []).map((t) => parseTileRows(t.capa, t.origen, t.filas)),
     ground,
     boxes,
     npcs,

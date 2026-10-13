@@ -1,15 +1,14 @@
 // world/terrain/buildTerrain.ts: terreno por alturas de la propuesta C (plan estetica-c M1 ítem 8 y M5), puro y sin
 // three: una malla de alturas continua (una sola grilla indexada: sin vértices duplicados) con color por vértice. Lee
-// dos formatos de suelo detrás de una misma interfaz (`GroundSource`):
-// - "maqueta" (M5): caminos y ríos por curvas (polilíneas que el núcleo muestreó), agua por polígonos. El terreno se
-//   aplana bajo los caminos (también entre las lomas de afuera), se hunde bajo el agua y lleva orilla; el camino se
-//   pinta `camino` (o piedra si es empedrado) con borde ruidoso `tierra-borde`.
-// - "tiles" (adaptador de M1, hasta M7): 1 pasto, 2 pasto-luz, 3 camino, 4 agua, 5 empedrado.
+// el suelo del formato de la maqueta (M5) detrás de `GroundSource`: caminos y ríos por curvas (polilíneas que el núcleo
+// muestreó), agua por polígonos. El terreno se aplana bajo los caminos (también entre las lomas de afuera), se hunde bajo
+// el agua y lleva orilla; el camino se pinta `camino` (o piedra si es empedrado) con borde ruidoso `tierra-borde`.
+// Plan estetica-c M7 (D-207): el adaptador de tiles de M1 se retiró junto con las capas `tiles` del schema.
 // Dentro de los límites caminables el suelo es plano en y = 0 (el raycast del suelo sigue siendo el plano invisible);
 // afuera sube en lomas de hasta `lomas` m, lo bastante lejos como para que ninguna cámara de juego vea el borde (A2).
 // Las líneas de la grilla salen de @lg/art (la misma cuenta que usa el estimador de validate:content). Determinístico
 // con la misma semilla.
-import type { Bounds, DioramaGround, TileLayerData, WalkGrid } from "@lg/core";
+import type { Bounds, DioramaGround, WalkGrid } from "@lg/core";
 import {
   FINE_STEP as ART_FINE_STEP, HILL_MAX as ART_HILL_MAX, insidePolygon, noise2, pavingStoneCount, polygonEdgeDistance,
   polylineDistance, TERRAIN_SEED as ART_TERRAIN_SEED, TERRAIN_SKIRT as ART_TERRAIN_SKIRT, terrainExtent, terrainLines,
@@ -20,7 +19,7 @@ import { rng } from "../materials/rng";
 
 /** Metros de terreno más allá de los límites caminables, de cada lado (D-208; ver @lg/art terrain.ts). */
 export const TERRAIN_SKIRT = ART_TERRAIN_SKIRT;
-/** Separación de vértices cerca y dentro de los límites (la mitad de un tile). */
+/** Separación de vértices cerca y dentro de los límites (la mitad de una celda de 1 m). */
 export const FINE_STEP = ART_FINE_STEP;
 export const HILL_MAX = ART_HILL_MAX;
 export const TERRAIN_SEED = ART_TERRAIN_SEED;
@@ -31,15 +30,10 @@ export const TERRAIN_SEED = ART_TERRAIN_SEED;
 const BRUSH_UV_SKIRT = 48;
 const HILL_RAMP = 16;
 
-export const TILE = { pasto: 1, pastoLuz: 2, camino: 3, agua: 4, empedrado: 5 } as const;
-export const DETAIL = { flores: 6, matas: 7, piedritas: 8 } as const;
-
 export interface TerrainSpec {
   bounds: Bounds;
-  /** Capas de tiles (adaptador de M1); se usan si `ground` no es del formato de la maqueta. */
-  layers: readonly TileLayerData[];
   /** El suelo del formato de la maqueta (plan estetica-c M5). */
-  ground?: DioramaGround;
+  ground: DioramaGround;
   seed?: number;
   /** Plan estetica-c M6: resolución de la malla por tier (la reducida de `low`: paso fino de 1 m y falda más gruesa). */
   density?: SceneDensity;
@@ -67,36 +61,6 @@ const smooth = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-/** Id del tile de la capa en (x, z) (0 fuera de la capa o sin capa). */
-export function tileAt(layer: TileLayerData | undefined, x: number, z: number): number {
-  if (!layer) return 0;
-  const col = Math.floor(x - layer.originX);
-  const row = Math.floor(z - layer.originZ);
-  if (col < 0 || row < 0 || col >= layer.width || row >= layer.height) return 0;
-  return layer.tiles[row * layer.width + col] ?? 0;
-}
-
-/** Distancia de (x, z) al tile más cercano con ese id, buscando hasta `maxR` m (Infinity si no hay). */
-export function distToTile(layer: TileLayerData | undefined, x: number, z: number, id: number, maxR: number): number {
-  if (!layer) return Infinity;
-  let best = Infinity;
-  const c0 = Math.floor(x - layer.originX - maxR);
-  const c1 = Math.floor(x - layer.originX + maxR);
-  const r0 = Math.floor(z - layer.originZ - maxR);
-  const r1 = Math.floor(z - layer.originZ + maxR);
-  for (let row = Math.max(0, r0); row <= Math.min(layer.height - 1, r1); row++) {
-    for (let col = Math.max(0, c0); col <= Math.min(layer.width - 1, c1); col++) {
-      if (layer.tiles[row * layer.width + col] !== id) continue;
-      const minX = layer.originX + col;
-      const minZ = layer.originZ + row;
-      const dx = Math.max(minX - x, 0, x - (minX + 1));
-      const dz = Math.max(minZ - z, 0, z - (minZ + 1));
-      best = Math.min(best, Math.hypot(dx, dz));
-    }
-  }
-  return best <= maxR ? best : Infinity;
-}
-
 /** Distancia de (x, z) a los límites (0 adentro). */
 export function outsideDistance(b: Bounds, x: number, z: number): number {
   const dx = Math.max(b.minX - x, 0, x - b.maxX);
@@ -116,10 +80,10 @@ function lineCell(lines: Float64Array, v: number): number {
   return lo;
 }
 
-/** Lo que el terreno pregunta del suelo, sea de tiles o de curvas. */
+/** Lo que el terreno pregunta del suelo. */
 export interface GroundSource {
-  /** Superficie en (x, z): camino, empedrado, pasto-luz (solo tiles) o pasto. */
-  surface(x: number, z: number): "camino" | "empedrado" | "pastoLuz" | "pasto";
+  /** Superficie en (x, z): camino, empedrado o pasto. */
+  surface(x: number, z: number): "camino" | "empedrado" | "pasto";
   /** ¿Agua en (x, z)? */
   isWater(x: number, z: number): boolean;
   /** Para un punto en el agua: distancia a la orilla (m, acotada a 1,5). */
@@ -130,29 +94,6 @@ export interface GroundSource {
   waterDistance(x: number, z: number, maxR: number): number;
   /** Fuera de los límites: cuánto se aplanan las lomas acá (0 nada, 1 del todo), por un camino o un río. */
   flatten(x: number, z: number): number;
-}
-
-/** Adaptador de M1: el suelo desde las capas de tiles (hasta M7). */
-export function tileGround(layers: readonly TileLayerData[]): GroundSource {
-  const suelo = layers.find((l) => l.name === "suelo") ?? layers[0];
-  const kinds = { [TILE.camino]: "camino", [TILE.empedrado]: "empedrado", [TILE.pastoLuz]: "pastoLuz" } as const;
-  const isWater = (x: number, z: number): boolean => tileAt(suelo, x, z) === TILE.agua;
-  return {
-    surface: (x, z) => kinds[tileAt(suelo, x, z) as keyof typeof kinds] ?? "pasto",
-    isWater,
-    shoreDistance: (x, z) => {
-      for (let r = 0.25; r <= 1.5; r += 0.25) {
-        for (let k = 0; k < 16; k++) {
-          const a = (k / 16) * Math.PI * 2;
-          if (!isWater(x + Math.cos(a) * r, z + Math.sin(a) * r)) return r;
-        }
-      }
-      return 1.5;
-    },
-    roadDistance: (x, z, maxR) => distToTile(suelo, x, z, TILE.camino, maxR),
-    waterDistance: (x, z, maxR) => distToTile(suelo, x, z, TILE.agua, maxR),
-    flatten: () => 0,
-  };
 }
 
 /** El suelo del formato de la maqueta (plan estetica-c M5): curvas muestreadas y polígonos. */
@@ -190,10 +131,6 @@ export function curveGround(g: DioramaGround): GroundSource {
     },
   };
 }
-
-/** La fuente del suelo de un diorama: curvas si es del formato de la maqueta; tiles si no. */
-export const groundSource = (spec: Pick<TerrainSpec, "layers" | "ground">): GroundSource =>
-  spec.ground?.format === "maqueta" ? curveGround(spec.ground) : tileGround(spec.layers);
 
 interface TerrainShape {
   bounds: Bounds;
@@ -248,7 +185,6 @@ function groundColor(p: Palette, shape: TerrainShape, src: GroundSource, x: numb
   if (surface === "camino") return scaleRgb(p.camino, 1 + (n2 - 0.5) * 0.06);
   if (surface === "empedrado") return mixRgb(p.piedra, p.borde, smooth(0.4, 0.8, n2) * 0.5);
   if (outside) return mixRgb(c, p.luz, Math.min(0.5, Math.max(0, h / 6)));
-  if (surface === "pastoLuz") c = mixRgb(c, p.luz, 0.7);
   const dRoad = src.roadDistance(jx, jz, 1);
   if (dRoad < 1) c = mixRgb(c, p.borde, 1 - smooth(0.1, 0.6, dRoad));
   const dWater = src.waterDistance(jx, jz, 1.2);
@@ -258,15 +194,15 @@ function groundColor(p: Palette, shape: TerrainShape, src: GroundSource, x: numb
 
 export function buildTerrain(spec: TerrainSpec): Terrain {
   const { bounds } = spec;
-  const t = spec.ground?.terrain;
+  const t = spec.ground.terrain;
   const shape: TerrainShape = { bounds, hillMax: t?.hills ?? HILL_MAX, seed: spec.seed ?? t?.seed ?? TERRAIN_SEED };
   const skirt = t?.extension ?? TERRAIN_SKIRT;
-  const src = groundSource(spec);
+  const src = curveGround(spec.ground);
   const extent: Bounds = terrainExtent(bounds, skirt);
   const { xs, zs } = terrainLines(bounds, skirt, spec.density ?? "full");
   const nx = xs.length;
   const nz = zs.length;
-  const p = palette(spec.ground?.palette);
+  const p = palette(spec.ground.palette);
   const positions = new Float32Array(nx * nz * 3);
   const colors = new Float32Array(nx * nz * 3);
   const uvs = new Float32Array(nx * nz * 2);
@@ -347,34 +283,6 @@ export function borderPines(bounds: Bounds, seed = TERRAIN_SEED, count = 16): Sc
 }
 
 export type DetailScatter = Record<"flores" | "matas" | "piedritas" | "empedrado", Scatter[]>;
-
-/**
- * Instancias de detalle desde las capas (adaptador de M1): flores (6), matas (7), piedritas (8) y piedras del empedrado
- * (suelo 5). Plan estetica-c M3: una flor y una piedrita por tile, dos piedras por tile de empedrado y una mata cada dos
- * tiles en damero, para que entren los personajes con esqueleto en el presupuesto de `medium`.
- */
-export function detailScatter(layers: readonly TileLayerData[], seed = TERRAIN_SEED): DetailScatter {
-  const r = rng(seed * 17 + 3);
-  const out: DetailScatter = { flores: [], matas: [], piedritas: [], empedrado: [] };
-  const put = (list: Scatter[], tx: number, tz: number, n: number, s0: number, s1: number) => {
-    for (let i = 0; i < n; i++) list.push({ x: tx + 0.15 + r() * 0.7, z: tz + 0.15 + r() * 0.7, rot: r() * Math.PI * 2, scale: s0 + r() * (s1 - s0) });
-  };
-  for (const layer of layers) {
-    for (let row = 0; row < layer.height; row++) {
-      for (let col = 0; col < layer.width; col++) {
-        const id = layer.tiles[row * layer.width + col];
-        const tx = layer.originX + col;
-        const tz = layer.originZ + row;
-        if (layer.name === "suelo") {
-          if (id === TILE.empedrado) put(out.empedrado, tx, tz, 2, 0.8, 1.2);
-        } else if (id === DETAIL.flores) put(out.flores, tx, tz, 1, 0.9, 1.4);
-        else if (id === DETAIL.matas) put(out.matas, tx, tz, (((tx + tz) % 2) + 2) % 2 === 0 ? 1 : 0, 0.7, 1.1);
-        else if (id === DETAIL.piedritas) put(out.piedritas, tx, tz, 1, 0.7, 1.2);
-      }
-    }
-  }
-  return out;
-}
 
 const SCALES = { flores: [0.9, 1.4], matas: [0.7, 1.1], piedritas: [0.7, 1.2], empedrado: [0.8, 1.2] } as const;
 /** Intentos por instancia antes de rendirse con una zona llena (el estimador cuenta `cantidad`: cota de arriba). */

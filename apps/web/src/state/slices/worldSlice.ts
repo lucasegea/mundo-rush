@@ -1,7 +1,7 @@
 // Slice `world` (03 §3.3). F1.3 llena solo lo que necesita el modo solo-diálogo: los lugares de la región
 // y dónde está cada NPC (contenido compilado de F1.2, cargado por services/content). El resto (dioramas,
 // flags, fundaciones, red, NPCs en el mapa, interactuables) arranca vacío y lo llenan F2-F3.3.
-// F2: el diorama cargado, listo para jugar (capas de tiles, cajas, NPCs, interactuables y grilla de caminabilidad).
+// F2: el diorama cargado, listo para jugar (suelo de la maqueta, cajas, NPCs, interactuables y grilla de caminabilidad).
 import type { DioramaRuntime } from "@lg/core";
 import type { CharacterLook } from "@lg/art";
 

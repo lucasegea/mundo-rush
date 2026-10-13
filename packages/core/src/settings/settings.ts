@@ -25,8 +25,9 @@ export const COLOR_VISION_MODES = ["none", "protanopia", "deuteranopia", "tritan
 export type ColorVisionMode = (typeof COLOR_VISION_MODES)[number];
 
 /**
- * Cámara que el jugador puede elegir (D-207): solo el lente largo `perspective3D`. Un ajuste guardado viejo
- * (`topdownOrtho`, `isoOrtho`) no está en la lista y `oneOf` lo lleva al default al cargar.
+ * Cámara que el jugador puede elegir (D-207): solo el lente largo `perspective3D`. Un ajuste guardado viejo (uno de
+ * los presets ortográficos de HD-2D, retirados de R11 en el plan estetica-c M7) no está en la lista y `oneOf` lo lleva
+ * al default al cargar.
  */
 export const CAMERA_PRESETS = ["perspective3D"] as const;
 export type CameraPreset = (typeof CAMERA_PRESETS)[number];

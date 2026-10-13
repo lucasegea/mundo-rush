@@ -1,5 +1,6 @@
-// Fixtures de plan estetica-c M5 (sacados en 43c2b48, antes de migrar test.yaml al formato de la maqueta): el diorama
-// de prueba en tiles (lo que lee el adaptador de M1 hasta M7) y su grilla de caminata compilada, celda por celda.
+// Fixture de plan estetica-c M5 (sacado en 43c2b48, antes de migrar test.yaml al formato de la maqueta): la grilla de
+// caminata compilada del diorama de prueba en tiles, celda por celda. Plan estetica-c M7: el layout en tiles se retiró
+// con las capas `tiles` del schema; la grilla queda como registro de que la migración no cambió qué se camina.
 const FILES = import.meta.glob("./fixtures/*.json", { import: "default", eager: true }) as Record<string, unknown>;
 
 const fixture = (name: string): unknown => {
@@ -7,9 +8,6 @@ const fixture = (name: string): unknown => {
   if (v === undefined) throw new Error(`falta el fixture ${name}`);
   return v;
 };
-
-/** content/dioramas/test.yaml en 43c2b48 (tiles), parseado tal cual. */
-export const TILES_FIXTURE = fixture("test-tiles-43c2b48.json");
 
 export interface GridFixture {
   originX: number;

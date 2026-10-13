@@ -1,5 +1,5 @@
 // Plan estetica-c M5 (D-207): el formato de la maqueta en el núcleo. Curvas catmull-rom, props con instancias, giro y
-// tinte, huella girada, agua por polígonos y ríos que bloquean la grilla, y la elección del formato (tiles o maqueta).
+// tinte, huella girada, agua por polígonos y ríos que bloquean la grilla; desde M7, sin capas de tiles.
 import { describe, expect, test } from "vitest";
 import {
   buildWalkGrid, cellAt, distanceToPolyline, isWalkable, prepareDiorama, sampleCatmullRom, CURVE_SAMPLES_PER_SPAN,
@@ -138,13 +138,14 @@ describe("agua, ríos y caminos en la grilla", () => {
 });
 
 describe("formato del diorama", () => {
-  const capa = { capa: "suelo", origen: [-8, -8] as [number, number], filas: ["1 1", "1 1"] };
-
-  test("tiles sin campos de la maqueta → tiles; cualquier campo de la maqueta → maqueta", () => {
-    expect(prepareDiorama(base({ tiles: [capa] })).ground.format).toBe("tiles");
-    expect(prepareDiorama(base()).ground.format).toBe("maqueta");
-    expect(prepareDiorama(base({ tiles: [capa], agua: [] })).ground.format).toBe("maqueta");
-    expect(prepareDiorama(base({ tiles: [] })).ground.format).toBe("maqueta");
+  test("plan estetica-c M7: el núcleo no lee tiles (el schema las rechaza); el runtime no tiene capas ni atlas", () => {
+    const capa = { capa: "suelo", origen: [-8, -8], filas: ["4 4", "4 4"] };
+    const conTiles = prepareDiorama({ ...base(), ...({ tiles: [capa], atlas_tiles: "atlas/test" } as object) } as DioramaLayout);
+    expect(conTiles).not.toHaveProperty("layers");
+    expect(conTiles).not.toHaveProperty("atlas");
+    expect(conTiles.ground).not.toHaveProperty("format");
+    expect(conTiles.ground).toEqual(prepareDiorama(base()).ground);
+    expect(Array.from(conTiles.grid.walkable)).toEqual(Array.from(prepareDiorama(base()).grid.walkable));
   });
 
   test("terreno, paleta y detalle pasan tal cual; la semilla del detalle por defecto es su posición + 1", () => {

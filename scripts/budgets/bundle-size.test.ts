@@ -7,6 +7,7 @@ import { afterAll, describe, expect, test } from "vitest";
 import {
   BUDGET_KEYS,
   checkBundle,
+  checkPostChunk,
   formatReport,
   loadBudgets,
   run,
@@ -14,9 +15,11 @@ import {
   THREE_MODULE,
   POST_ENTRY,
   POST_MODULE,
+  WORLD_CANVAS_ENTRY,
   type Budgets,
   type ChunkModules,
   type Manifest,
+  type ManifestChunk,
 } from "./bundle-size";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -304,6 +307,19 @@ describe("estetica-c M6: low y dialog-only no descargan el postprocesado", () =>
     const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), undefined, leaky);
     expect(report.ok).toBe(false);
     expect(report.violations.join("\n")).toContain("assets/three-e5.js (_three-e5.js) trae node_modules/postprocessing/build/index.js");
+  });
+
+  test("dientes (M7, nota 4 de QA): con módulos del mundo y sin la clave del canvas, falla; sin mundo, no hay nada que chequear", () => {
+    const full = manifest("assets/vendor-b2.js");
+    const canvas = full[WORLD_CANVAS_ENTRY] as ManifestChunk;
+    const m: Manifest = Object.fromEntries(Object.entries(full).filter(([k]) => k !== WORLD_CANVAS_ENTRY));
+    m["src/world/Canvas3D.tsx"] = { ...canvas, src: "src/world/Canvas3D.tsx" };
+    (m["index.html"] as ManifestChunk).dynamicImports = ["src/world/Canvas3D.tsx"];
+    const v = checkPostChunk(m, staticClosure(m, "index.html"), modules);
+    expect(v).toHaveLength(1);
+    expect(v[0]).toContain(`falta la entrada del canvas ${WORLD_CANVAS_ENTRY}`);
+    expect(checkBundle(m, BUDGETS, sizes({}), undefined, modules).ok).toBe(false);
+    expect(checkPostChunk({ "index.html": { file: "assets/index-a1.js", src: "index.html", isEntry: true } }, ["index.html"])).toEqual([]);
   });
 
   test("el canvas real carga Post con import() y React.lazy (nunca estático)", () => {

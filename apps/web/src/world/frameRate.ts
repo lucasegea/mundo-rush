@@ -34,6 +34,43 @@ export function nextDeadline(deadline: number, now: number, maxFps: number): num
 /** PerformanceMonitor mide solo fuera del tope de la charla (nunca baja ni sube el tier mientras se habla, §2.7.2.2). */
 export const monitorActive = (conversationFps: number | null): boolean => conversationFps === null;
 
+/** Los bounds por defecto de drei PerformanceMonitor (los que se usan sin tope que muerda). */
+export const DREI_DEFAULT_BOUNDS = (refreshrate: number): [number, number] => (refreshrate > 100 ? [60, 100] : [40, 60]);
+
+/**
+ * Bounds de PerformanceMonitor según el tope de cuadros (nota 2 de QA en M6). drei declina cuando el promedio cae
+ * debajo de `lower`, y su `refreshrate` es el máximo de FPS que midió, que con tope es el tope mismo: con los bounds por
+ * defecto un tope de 30 da [40, 60] y el monitor tomaría su propio tope por una caída cada ~2,5 s. Con tope, los bounds
+ * salen del tope (no de lo medido, para que una PC que no llega al tope siga declinando) con la proporción del default
+ * de 60 Hz: 2/3 abajo, el tope arriba. A 30 FPS, [20, 30]; a 60, [40, 60] (el default). Sin tope, el default de drei.
+ */
+export function monitorBounds(cap: number | null): (refreshrate: number) => [number, number] {
+  return (refreshrate) => (cap === null ? DREI_DEFAULT_BOUNDS(refreshrate) : [(cap * 2) / 3, cap]);
+}
+
+/** Lo que el canvas hace con el bucle de cuadros: modo de R3F, tope del regulador y PerformanceMonitor. */
+export interface CanvasLoop {
+  /** "demand" con un panel que pausa o con tope (el regulador pide los cuadros); "always" sin tope. */
+  frameloop: "always" | "demand";
+  /** Tope que aplica FrameRegulator; null = no se monta (pausado o sin tope). */
+  regulatorFps: number | null;
+  /** PerformanceMonitor con sus bounds; null = no se monta (durante la charla). */
+  monitor: { bounds: (refreshrate: number) => [number, number] } | null;
+}
+
+/**
+ * El bucle de cuadros del canvas como función pura (nota 1 de QA en M6): GameCanvas solo aplica lo que esto devuelve,
+ * así un cambio que monte el monitor en la charla o deje el canvas en "always" con tope rompe un test.
+ */
+export function canvasLoop(render: { paused: boolean; conversationFps: number | null }, tierFps: number | null): CanvasLoop {
+  const cap = frameCap(render.conversationFps, tierFps);
+  return {
+    frameloop: render.paused || cap !== null ? "demand" : "always",
+    regulatorFps: !render.paused && cap !== null ? cap : null,
+    monitor: monitorActive(render.conversationFps) ? { bounds: monitorBounds(cap) } : null,
+  };
+}
+
 /**
  * Cuadros dibujados en `durationMs` con una pantalla de `displayHz` y un tope `maxFps` (simulación del regulador, para
  * los tests y para razonar el margen). `jitterMs(i)` corre el i-ésimo cuadro del navegador.

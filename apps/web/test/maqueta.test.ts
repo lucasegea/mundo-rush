@@ -39,7 +39,7 @@ import { materialKind } from "../src/world/materials/registry";
 import { buildProp, PROP_BUILDERS, TREE_HEIGHT } from "../src/world/props/builders";
 import { fitToBox, modelUrl, parseModel } from "../src/world/props/gltf";
 import { buildTerrain } from "../src/world/terrain/buildTerrain";
-import { GRID_FIXTURE, TILES_FIXTURE } from "./fixtures";
+import { GRID_FIXTURE } from "./fixtures";
 import { compiledClientContent, compiledContent, lookOf } from "./helpers";
 
 const SERVED = import.meta.glob("../public/models/**/*.glb", { query: "?inline", import: "default", eager: true }) as Record<string, string>;
@@ -54,7 +54,6 @@ const tris = (g: BufferGeometry): number => (g.index ? g.index.count : g.getAttr
 
 const LAYOUT = (): DioramaLayout => pickDiorama(compiledClientContent()["dioramas.json"], "test");
 const testDiorama = (): DioramaRuntime => prepareDiorama(LAYOUT());
-const tilesDiorama = (): DioramaRuntime => prepareDiorama(TILES_FIXTURE as DioramaLayout);
 const gridRows = (g: WalkGrid): string[] =>
   Array.from({ length: g.rows }, (_, r) => Array.from({ length: g.cols }, (_, c) => (isWalkable(g, c, r) ? "." : "#")).join(""));
 
@@ -70,10 +69,6 @@ describe("la grilla de test.yaml migrado es la de tiles, celda por celda", () =>
     });
     expect(diffs).toEqual([]);
     expect(rows.join("").split("#").length - 1).toBeGreaterThan(50); // mide algo: hay celdas bloqueadas
-  });
-
-  test("el fixture es la grilla del diorama de tiles (el adaptador de M1 la sigue armando igual)", () => {
-    expect(gridRows(tilesDiorama().grid)).toEqual(GRID_FIXTURE.celdas);
   });
 
   test("teeth: sin el estanque, la grilla ya no coincide", () => {
@@ -140,7 +135,7 @@ describe("conectividad (03 §6.4.5): cada NPC se alcanza desde el spawn por pasi
 
 describe("terreno de la maqueta", () => {
   const d = testDiorama();
-  const t = buildTerrain({ bounds: d.bounds, layers: d.layers, ground: d.ground });
+  const t = buildTerrain({ bounds: d.bounds, ground: d.ground });
 
   test("toda celda caminable tiene altura 0; el estanque está bajo 0 y sus celdas no se caminan", () => {
     for (let r = 0; r < d.grid.rows; r++) {
@@ -168,8 +163,8 @@ describe("terreno de la maqueta", () => {
     const bounds = { minX: -8, maxX: 8, minZ: -8, maxZ: 8 };
     const con = prepareDiorama({ id: "c", bounds, caminos: [{ puntos: [[0, 0], [60, 0]], ancho: 3 }] });
     const sin = prepareDiorama({ id: "s", bounds, caminos: [] });
-    const hCon = buildTerrain({ bounds, layers: [], ground: con.ground }).heightAt(30, 0);
-    const hSin = buildTerrain({ bounds, layers: [], ground: sin.ground }).heightAt(30, 0);
+    const hCon = buildTerrain({ bounds, ground: con.ground }).heightAt(30, 0);
+    const hSin = buildTerrain({ bounds, ground: sin.ground }).heightAt(30, 0);
     expect(hSin).toBeGreaterThan(1);
     // Lejos la malla es gruesa: el punto interpola vértices de los costados del camino, por eso no da 0 justo.
     expect(Math.abs(hCon), `${hCon} contra ${hSin}`).toBeLessThan(0.25 * hSin);
@@ -187,14 +182,14 @@ describe("terreno de la maqueta", () => {
 
   test("la paleta por zona cambia el color; determinístico", () => {
     const g2 = { ...d.ground, palette: { pasto: "copa" } };
-    expect(buildTerrain({ bounds: d.bounds, layers: [], ground: g2 }).colors).not.toEqual(t.colors);
-    expect(buildTerrain({ bounds: d.bounds, layers: d.layers, ground: d.ground }).colors).toEqual(t.colors);
+    expect(buildTerrain({ bounds: d.bounds, ground: g2 }).colors).not.toEqual(t.colors);
+    expect(buildTerrain({ bounds: d.bounds, ground: d.ground }).colors).toEqual(t.colors);
   });
 
   test("un río hunde el terreno a lo largo de la curva y se dibuja con agua", () => {
     const bounds = { minX: -8, maxX: 8, minZ: -8, maxZ: 8 };
     const r = prepareDiorama({ id: "r", bounds, rio: [{ puntos: [[-8, 0], [0, 1], [8, 0]], ancho: 2 }] });
-    expect(buildTerrain({ bounds, layers: [], ground: r.ground }).heightAt(0, 1)).toBeLessThan(-0.3);
+    expect(buildTerrain({ bounds, ground: r.ground }).heightAt(0, 1)).toBeLessThan(-0.3);
     expect(buildDioramaScene(r).root.getObjectByName("agua")).toBeDefined();
     expect(buildDioramaScene(prepareDiorama({ id: "seco", bounds })).root.getObjectByName("agua")).toBeUndefined();
   });
@@ -272,6 +267,22 @@ async function realGraph(d: DioramaRuntime, density: SceneDensity = "full"): Pro
   return all;
 }
 
+/**
+ * Un diorama sintético pesado para los dientes del estimador: los límites, props y NPCs de test.yaml, sin caminos, agua
+ * ni detalle propios, y 400 matas en dos zonas libres (plan estetica-c M7: antes se armaba sobre el fixture de tiles).
+ */
+const heavyDiorama = (): DioramaSource => {
+  const base: Partial<DioramaSource> = { ...contexto().source("test") };
+  delete base.caminos;
+  delete base.rio;
+  delete base.agua;
+  delete base.detalle;
+  return DioramaSchema.parse({
+    ...base,
+    detalle: [{ tipo: "matas", centro: [-12, -8], radio: 3, cantidad: 200 }, { tipo: "matas", centro: [12, 8], radio: 3, cantidad: 200 }],
+  });
+};
+
 describe("el estimador de validate:content es el grafo que dibuja world/", () => {
   test("test.yaml: mismas llamadas y triángulos que estimateBudget sobre el grafo real, dentro de medium", async () => {
     const { source, ctx } = contexto();
@@ -283,18 +294,9 @@ describe("el estimador de validate:content es el grafo que dibuja world/", () =>
     expect(real.triangles).toBeLessThanOrEqual(50_000);
   });
 
-  test("el test.yaml de tiles (fixture): también coincide (el estimador cuenta el detalle de los tiles)", async () => {
-    const { ctx } = contexto();
-    const e = estimarPresupuestoDiorama(DioramaSchema.parse(TILES_FIXTURE), ctx);
-    expect(e.total).toEqual(estimateBudget([await realGraph(tilesDiorama())]));
-  });
-
   test("teeth: un diorama sintético de más se pasa de medium en los dos", async () => {
     const { ctx } = contexto();
-    const src = DioramaSchema.parse({
-      ...(TILES_FIXTURE as object), tiles: undefined,
-      detalle: [{ tipo: "matas", centro: [-12, -8], radio: 3, cantidad: 200 }, { tipo: "matas", centro: [12, 8], radio: 3, cantidad: 200 }],
-    });
+    const src = heavyDiorama();
     const e = estimarPresupuestoDiorama(src, ctx);
     const real = estimateBudget([await realGraph(prepareDiorama(src as unknown as DioramaLayout))]);
     expect(e.total).toEqual(real);
@@ -339,10 +341,7 @@ describe("estetica-c M6: el estimador por tier es el grafo que dibuja world/ con
 
   test("teeth: un diorama sintético pesado se pasa de low en el estimador y en el grafo reducido real", async () => {
     const { ctx } = contexto();
-    const src = DioramaSchema.parse({
-      ...(TILES_FIXTURE as object), tiles: undefined,
-      detalle: [{ tipo: "matas", centro: [-12, -8], radio: 3, cantidad: 200 }, { tipo: "matas", centro: [12, 8], radio: 3, cantidad: 200 }],
-    });
+    const src = heavyDiorama();
     const e = estimarPresupuestoDiorama(src, ctx, "low");
     const real = estimateBudget([await realGraph(prepareDiorama(src as unknown as DioramaLayout), "reduced")]);
     expect(e.total).toEqual(real);

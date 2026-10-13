@@ -25,7 +25,7 @@ import { TWO_SHOT, viewScale } from "./camera/rig";
 import { Diorama } from "./dioramas/Diorama";
 import { buildDioramaScene } from "./dioramas/scene";
 import { FrameRegulator } from "./FrameRegulator";
-import { frameCap, monitorActive } from "./frameRate";
+import { canvasLoop } from "./frameRate";
 import { Lighting, type ShadowMode } from "./lighting/Lighting";
 import { BACKGROUND, FOG, fogFor, TONE } from "./lighting/params";
 import { postLevel, type PostLevel } from "./post/level";
@@ -63,7 +63,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const density = params.density;
   const post = postLevel(render.post, params.post);
   const cut = render.cameraMotion === "cut";
-  const maxFps = frameCap(render.conversationFps, params.targetFps);
+  const loop = canvasLoop(render, params.targetFps);
   const inScene = render.conversationFps !== null;
   const animatedOnly = useMemo(() => sceneAnimated(inScene, [PLAYER_LOOK_ID, conversation?.npcId ?? null]), [inScene, conversation?.npcId]);
   const fog = fogFor(1, DENSITY[density].fogScale);
@@ -75,7 +75,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   return (
     <div {...WORLD_SURFACE} className="fixed inset-0 z-0" aria-hidden="true">
       <Canvas
-        frameloop={render.paused || maxFps !== null ? "demand" : "always"}
+        frameloop={loop.frameloop}
         dpr={[1, params.maxDpr ?? 1]}
         shadows={params.shadows === "directional"}
         gl={{ antialias: false }}
@@ -91,9 +91,10 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
       >
         <color attach="background" args={[BACKGROUND]} />
         <fog attach="fog" args={[FOG.color, fog.near, fog.far]} />
-        {!render.paused && maxFps !== null ? <FrameRegulator maxFps={maxFps} /> : null}
-        {/* Fuera de la charla mide y puede bajar el tier; durante la charla se desmonta (al volver arranca de cero). */}
-        {monitorActive(render.conversationFps) ? <PerformanceMonitor onDecline={() => bridge.performanceDeclined()} /> : null}
+        {loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}
+        {/* Fuera de la charla mide y puede bajar el tier; durante la charla se desmonta (al volver arranca de cero). Los
+            bounds salen del tope de cuadros, así el tope propio no se lee como caída (canvasLoop en frameRate.ts). */}
+        {loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} onDecline={() => bridge.performanceDeclined()} /> : null}
         <Lighting shadows={params.shadows} fogScale={DENSITY[density].fogScale} />
         {map.diorama && scene ? (
           <Diorama

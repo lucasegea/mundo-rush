@@ -15,7 +15,7 @@ import { pickAnimated, sceneAnimated } from "../src/world/actors/animState";
 import { PLAYER_LOOK_ID } from "../src/world/actors/looks";
 import { sampleRenderStats } from "../src/world/budget/renderStats";
 import { estimateTextureMemory } from "../src/world/budget/textures";
-import { frameCap, frameDue, monitorActive, nextDeadline, simulateFrames } from "../src/world/frameRate";
+import { canvasLoop, DREI_DEFAULT_BOUNDS, frameCap, frameDue, monitorActive, monitorBounds, nextDeadline, simulateFrames } from "../src/world/frameRate";
 import type { WorldTierParams } from "../src/world/GameCanvas";
 import { labelLayout } from "../src/world/labels/labels";
 import { postLevel } from "../src/world/post/level";
@@ -128,6 +128,74 @@ describe("tope de cuadros (03 §2.7.4)", () => {
   test("PerformanceMonitor no mide durante la charla (nunca sube ni baja tier o DPR por el tope propio)", () => {
     expect(monitorActive(null)).toBe(true);
     expect(monitorActive(CONVERSATION_MAX_FPS)).toBe(false);
+  });
+});
+
+// M7 (notas 1 y 2 de QA en M6): el bucle del canvas es una función pura que GameCanvas aplica tal cual.
+describe("canvasLoop: modo de R3F, regulador y PerformanceMonitor", () => {
+  const inScene = { paused: false, conversationFps: CONVERSATION_MAX_FPS };
+  const onMap = { paused: false, conversationFps: null };
+  const paused = { paused: true, conversationFps: null };
+
+  test("en la charla: demand con el regulador a 30 y SIN PerformanceMonitor, en todos los tiers", () => {
+    for (const tier of WORLD_TIERS) {
+      const loop = canvasLoop(inScene, TIER_PARAMS[tier].targetFps);
+      expect(loop.frameloop, tier).toBe("demand");
+      expect(loop.regulatorFps, tier).toBe(30);
+      expect(loop.monitor, tier).toBeNull();
+    }
+  });
+
+  test("en el mapa con tope del tier: demand con el regulador al tope y el monitor montado", () => {
+    for (const tier of WORLD_TIERS) {
+      const loop = canvasLoop(onMap, TIER_PARAMS[tier].targetFps);
+      expect(loop.frameloop, tier).toBe("demand");
+      expect(loop.regulatorFps, tier).toBe(TIER_PARAMS[tier].targetFps);
+      expect(loop.monitor, tier).not.toBeNull();
+    }
+  });
+
+  test("sin ningún tope: always, sin regulador, con monitor y los bounds de drei", () => {
+    const loop = canvasLoop(onMap, null);
+    expect(loop).toMatchObject({ frameloop: "always", regulatorFps: null });
+    expect(loop.monitor?.bounds(60)).toEqual(DREI_DEFAULT_BOUNDS(60));
+    expect(loop.monitor?.bounds(144)).toEqual(DREI_DEFAULT_BOUNDS(144));
+  });
+
+  test("con un panel que pausa: demand y sin regulador (nada pide cuadros)", () => {
+    expect(canvasLoop(paused, 60)).toMatchObject({ frameloop: "demand", regulatorFps: null });
+    expect(canvasLoop(paused, null)).toMatchObject({ frameloop: "demand", regulatorFps: null });
+  });
+
+  // drei declina cuando más del 75 % de los promedios quedan debajo de `lower`, y su `refreshrate` es el máximo medido:
+  // con tope, lo medido ES el tope. Un canvas sano que corre justo al tope no puede declinar.
+  test("low a 30 FPS: el monitor no toma su propio tope por una caída (bounds del tope, no los de drei)", () => {
+    const loop = canvasLoop(onMap, TIER_PARAMS.low.targetFps);
+    const [lower, upper] = loop.monitor?.bounds(30) ?? [Infinity, Infinity];
+    expect(30).toBeGreaterThanOrEqual(lower);
+    expect(28).toBeGreaterThanOrEqual(lower);
+    expect(upper).toBe(30);
+    expect(lower).toBe(20);
+    // dientes: con los bounds por defecto de drei, 30 medidos declinan.
+    expect(30).toBeLessThan(DREI_DEFAULT_BOUNDS(30)[0]);
+  });
+
+  test("con tope de 60 los bounds son los de drei a 60 Hz, aunque la pantalla sea de 144", () => {
+    expect(monitorBounds(60)(60)).toEqual([40, 60]);
+    expect(monitorBounds(60)(144)).toEqual([40, 60]);
+    // una PC que no llega al tope sigue declinando: los bounds no salen de lo medido.
+    expect(monitorBounds(60)(25)[0]).toBeGreaterThan(25);
+  });
+
+  test("GameCanvas aplica canvasLoop tal cual (sin recalcular el modo, el regulador ni el monitor)", () => {
+    const src = (import.meta.glob("../src/world/GameCanvas.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>)["../src/world/GameCanvas.tsx"] ?? "";
+    expect(src).toContain("const loop = canvasLoop(render, params.targetFps);");
+    expect(src).toContain("frameloop={loop.frameloop}");
+    expect(src).toContain("{loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}");
+    expect(src).toContain("{loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} ");
+    expect(src.split("<PerformanceMonitor ")).toHaveLength(2);
+    expect(src.split("<FrameRegulator ")).toHaveLength(2);
+    expect(src.match(/frameloop=/g)).toHaveLength(1);
   });
 });
 

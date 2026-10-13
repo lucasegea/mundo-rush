@@ -113,9 +113,11 @@ describe("props del diorama", () => {
 });
 
 describe("formato", () => {
-  test("teeth: tiles mezclados con el formato de la maqueta fallan", () => {
+  test("teeth (M7): `tiles` y `atlas_tiles` en un diorama real fallan en validate:content apuntando al formato de la maqueta", () => {
     const hs = errores(mut(TEST, "spawn: [0.5, 0, 3]\n", "spawn: [0.5, 0, 3]\ntiles: [{ capa: suelo, origen: [-16, -12], filas: [\"1 1\"] }]\n"));
-    conError(hs, TEST, "tiles", /tiles .* o en el formato de la maqueta/);
+    conError(hs, TEST, "tiles", /`tiles` se retiró con HD-2D .*formato de la maqueta \(plan estetica-c M5\)/);
+    const ha = errores(mut(TEST, "spawn: [0.5, 0, 3]\n", "spawn: [0.5, 0, 3]\natlas_tiles: atlas/test\n"));
+    conError(ha, TEST, "atlas_tiles", /`atlas_tiles` se retiró con HD-2D .*formato de la maqueta/);
   });
 
   test("teeth: un río más ancho que 12 m o un detalle de más de 200 piezas no pasan el esquema", () => {

@@ -1,7 +1,7 @@
 // F2: diorama listo para jugar, acciones semánticas (R10), pasos de zoom (D-197) y presets de cámara (R11).
 import { describe, expect, test } from "vitest";
 import {
-  CAMERA_PRESET_IDS, DEFAULT_ZOOM_STEP, dirFromHeld, downgradeTier, isWalkable, parseTileRows, pointerAction,
+  CAMERA_PRESET_IDS, DEFAULT_ZOOM_STEP, dirFromHeld, downgradeTier, isWalkable, pointerAction,
   prepareDiorama, presetAngles, screenDirToWorld, SEMANTIC_ACTIONS, stepZoom, wheelAction, ZOOM_STEPS,
   clampZoomStep, WHEEL_NOTCH_PX, wheelZoom, zoomDistance, ZOOM_DISTANCES,
   type DioramaLayout, type HeldDirection,
@@ -12,18 +12,15 @@ describe("diorama", () => {
     id: "test",
     bounds: { minX: -4, maxX: 4, minZ: -2, maxZ: 2 },
     spawn: [-3, 0, 0],
-    tiles: [{ capa: "suelo", origen: [-4, -2], filas: ["1 1 2 2 1 1 1 1", "1 0 0 1 1 1 1 1", "1 1 1 1 1 1 1 1", "3 3 3 3 3 3 3 3"] }],
     props: [{ asset: "codigo/caja", pos: [2, 0, 0], tam: [1, 1, 1] }, { asset: "kenney/arbol", pos: [0, 0, 1] }],
     npcs: [{ id: "NPC-NELL", spawn: [-1, 0, 0] }],
     interactuables: [{ id: "OBJ-CARTEL", pos: [3, 0, -1.5], radio: 1 }],
     no_caminable: [{ poligono: [[-4, 1], [-2, 1], [-2, 2], [-4, 2]] }],
   };
 
-  test("capas de tiles, cajas, NPCs, interactuables y grilla", () => {
+  test("cajas, NPCs, interactuables y grilla", () => {
     const d = prepareDiorama(layout);
     expect(d.spawn).toEqual({ x: -3, z: 0 });
-    expect(d.layers[0]).toMatchObject({ name: "suelo", originX: -4, originZ: -2, width: 8, height: 4 });
-    expect(d.layers[0]?.tiles.slice(8, 11)).toEqual([1, 0, 0]);
     expect(d.boxes).toEqual([{ asset: "codigo/caja", x: 2, y: 0, z: 0, w: 1, h: 1, d: 1, rotY: null, tint: null }]); // sin `tam` no hay caja
     expect(d.interactables.map((i) => [i.id, i.kind, i.radius])).toEqual([["NPC-NELL", "npc", 1.5], ["OBJ-CARTEL", "object", 1]]);
     const g = d.grid;
@@ -37,12 +34,6 @@ describe("diorama", () => {
 
   test("sin spawn, el centro de los límites", () => {
     expect(prepareDiorama({ id: "test", bounds: { minX: 0, maxX: 4, minZ: 0, maxZ: 2 } }).spawn).toEqual({ x: 2, z: 1 });
-  });
-
-  test("filas de tiles mal formadas fallan claro", () => {
-    expect(() => parseTileRows("suelo", [0, 0], ["1 2", "1"])).toThrow(/fila 1: 1 tiles, se esperaban 2/);
-    expect(() => parseTileRows("suelo", [0, 0], ["1 x"])).toThrow(/id de tile inválido "x"/);
-    expect(() => parseTileRows("suelo", [0, 0], ["1 -2"])).toThrow(/inválido/);
   });
 });
 
@@ -90,13 +81,12 @@ describe("acciones semánticas (R10)", () => {
 });
 
 describe("cámara: presets (R11) y zoom (D-197, D-208)", () => {
-  test("los 5 presets de R11; ángulos de D-053/D-154", () => {
-    expect([...CAMERA_PRESET_IDS]).toEqual(["topdownOrtho", "isoOrtho", "dialogueFrame", "perspective3D", "xrTabletop"]);
-    const top = presetAngles("topdownOrtho");
-    expect(top.yawDeg).toBe(0);
-    expect(top.pitchDeg).toBeGreaterThanOrEqual(55);
-    expect(top.pitchDeg).toBeLessThanOrEqual(60);
-    expect(presetAngles("isoOrtho").yawDeg).toBe(45);
+  test("los 3 presets de R11 desde M7 (D-207: sin ortográficos); ángulos de D-207", () => {
+    expect([...CAMERA_PRESET_IDS]).toEqual(["dialogueFrame", "perspective3D", "xrTabletop"]);
+    expect(presetAngles("perspective3D")).toEqual({ pitchDeg: 50, yawDeg: 45 });
+    expect(presetAngles("dialogueFrame")).toEqual({ pitchDeg: 20, yawDeg: 45 });
+    // Declarado sin implementar: hasta E-XR da los del lente largo (M7 SEAM en camera.ts).
+    expect(presetAngles("xrTabletop")).toEqual(presetAngles("perspective3D"));
   });
   test("escalera de D-208: de 160 a 22 m, el inicio en 30 m, la cantidad sale del arreglo", () => {
     expect([...ZOOM_DISTANCES]).toEqual([160, 120, 90, 65, 48, 38, 30, 22]);

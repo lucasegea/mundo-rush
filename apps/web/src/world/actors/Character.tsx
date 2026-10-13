@@ -3,7 +3,7 @@
 // cuerpo de cápsulas de reserva (chibiModel.ts), con la misma cabeza. Cada cuadro, en useFrame y mutando refs (03 §2.3,
 // R7): la pose (posición, giro suave hacia donde mira), la elección de animState.ts (velocidad, papel en la escena,
 // gesto pedido, "reducir movimiento") y, si el gobernador lo deja, el avance de la animación. Deja su lugar en
-// `actorSpots` para la sombra blob y el gobernador. Con `onSelect`, el clic sobre el cuerpo llega como en el billboard.
+// `actorSpots` para la sombra blob y el gobernador. Con `onSelect`, el clic sobre el cuerpo llega por el bridge (F2).
 // Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido). Plan estetica-c M6:
 // `lod` elige el cuerpo completo o el simplificado de `low`.
 import { useFrame, type ThreeEvent } from "@react-three/fiber";

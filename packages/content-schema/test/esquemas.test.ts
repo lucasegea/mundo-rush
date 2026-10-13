@@ -8,7 +8,7 @@ import {
   ArbolHabilidades, ArchivoAllowlist, ArchivoGlosario, ArchivoLugares, ArchivoLumi, ArchivoPistas,
   ArchivoPresentaciones, ArchivoRetirados, ArchivoSobres, Diorama, Efecto, Escena, Fundacion, ListaBloqueo,
   Mision, MomentoPronunciacion, Npc, PedidoTablero, Saber, TarjetaNivel, TemasGlobales, ArchivoRegistroAssets, PackAssets,
-  PiezaPersonaje,
+  PiezaPersonaje, FORMATO_MAQUETA,
 } from "../src/index.ts";
 
 const y = (s: string): unknown => parse(s);
@@ -223,12 +223,24 @@ describe("A1: esquemas con fixture válido e inválido", () => {
   test("diorama con anclas sitios:", () => {
     const d = y(`id: plaza
 bounds: { minX: 0, maxX: 10, minZ: 0, maxZ: 10 }
-tiles: []
 sitios:
   - { id: SITIO-X, pos: [1, 0, 2], ocupa: [[1, 2]], caminable_en: [fundado] }`);
     ok(Diorama, d);
     falla(Diorama, con(d, { sitios: [{ id: "SITIO-X", pos: [1, 2] }] }), "sitios.0.pos");
     falla(Diorama, con(d, { id: "faro" }), "id");
+  });
+  test("plan estetica-c M7: `tiles` y `atlas_tiles` se rechazan con un mensaje que apunta al formato de la maqueta", () => {
+    const d = y(`id: plaza
+bounds: { minX: 0, maxX: 10, minZ: 0, maxZ: 10 }`);
+    ok(Diorama, d);
+    for (const [clave, valor] of [["tiles", []], ["tiles", [{ capa: "suelo", origen: [0, 0], filas: ["1 1"] }]], ["atlas_tiles", "atlas/test"]] as const) {
+      const r = Diorama.safeParse(con(d, { [clave]: valor }));
+      expect(r.success, clave).toBe(false);
+      const issue = r.error?.issues.find((i) => i.path.join(".") === clave);
+      expect(issue?.message, clave).toContain(`\`${clave}\` se retiró con HD-2D`);
+      expect(issue?.message, clave).toContain(FORMATO_MAQUETA);
+      expect(issue?.message, clave).toMatch(/plan estetica-c M5/);
+    }
   });
   test("lugares y regiones", () => {
     const l = y(`regiones:

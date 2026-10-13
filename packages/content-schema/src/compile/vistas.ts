@@ -91,7 +91,7 @@ export const vistaCliente = (c: Conjunto, modo: Modo): Salida => ({
   "lugares.json": { regiones: c.regiones.map(({ data: r }) => ({ id: r.id, nombre: r.nombre, dioramas: r.dioramas })), lugares: c.lugares.map((l) => l.data) },
   // F4.2: qué estados del glosario muestra el HUD (03 §8.3, D-131): el valor es el modo de compilación.
   "manifiesto.json": { glossaryDisplay: modo },
-  // F2: el mapa necesita el layout entero (tiles, volúmenes, NPCs, zonas no caminables); no trae nada de diseño.
+  // F2: el mapa necesita el layout entero (suelo de la maqueta, volúmenes, NPCs, zonas no caminables); no trae nada de diseño.
   "dioramas.json": c.dioramas.map((d) => d.data),
   // Plan estetica-c M2 (03 §6.4.2): lo que muestra la pantalla de créditos (las atribuciones obligatorias del registro).
   "creditos.json": { atribuciones: c.creditos?.data.atribuciones ?? [] },

@@ -23,20 +23,17 @@ import { LABEL_HIDE_DISTANCE, labelEntries, LABEL_STYLES, labelVisibleAt } from 
 import { createNameLabel } from "../src/world/labels/labelSprite";
 import { SUN, HEMI, FOG, TONE, BACKGROUND, fogFor, SUN_SHADOW, sunShadowFor } from "../src/world/lighting/params";
 import { TILT_SHIFT_BASE, tiltShiftFor } from "../src/world/post/tiltShift";
-import { hexToLinear, LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS, maxDihedralDeg, MAX_DIHEDRAL_DEG, paintColors, PAINT_DEFAULTS, PALETTE, tokenRgb } from "@lg/art";
+import { hexToLinear, insidePolygon, LABEL_CONTRAST_MIN, polylineDistance, LABEL_CONTRAST_PAIRS, maxDihedralDeg, MAX_DIHEDRAL_DEG, paintColors, PAINT_DEFAULTS, PALETTE, tokenRgb } from "@lg/art";
 import { auditMaterials, materialKind, tagMaterial, toonMaterial, WORLD_MATERIAL_KINDS } from "../src/world/materials/registry";
 import { BRUSH_MAX, BRUSH_MIN, BRUSH_SIZE, brushPixels, brushTexture, toonRamp, toonRampData, TOON_BANDS } from "../src/world/materials/toon";
 import { buildProp, PROP_BUILDERS } from "../src/world/props/builders";
 import type { CodePropAsset } from "@lg/art";
-import { buildTerrain, TERRAIN_SKIRT, TILE, tileAt } from "../src/world/terrain/buildTerrain";
+import { buildTerrain, TERRAIN_SKIRT } from "../src/world/terrain/buildTerrain";
 import { setWaterFog, tickWater, waterMaterial } from "../src/world/water/waterMaterial";
 import { compiledClientContent, contentLooks, lookOf } from "./helpers";
-import { TILES_FIXTURE } from "./fixtures";
 
 const layout = (): DioramaLayout => pickDiorama(compiledClientContent()["dioramas.json"], "test");
 const testDiorama = (): DioramaRuntime => prepareDiorama(layout());
-/** El test.yaml de M1 en tiles (fixture de 43c2b48): las pruebas del adaptador de tiles, que vive hasta M7. */
-const tilesDiorama = (): DioramaRuntime => prepareDiorama(TILES_FIXTURE as unknown as DioramaLayout);
 /** 16:9, 21:9, 4:3 y dos verticales (9:16 y el de un teléfono, 9:19,5). */
 const ASPECTS = [16 / 9, 21 / 9, 4 / 3, 9 / 16, 9 / 19.5];
 /** El rayo más largo de una esquina de la pantalla hasta el suelo (m), con la cámara de juego a esa distancia. */
@@ -86,7 +83,7 @@ describe("A1 cámara de lente largo (perspective3D)", () => {
 describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () => {
   test("para cada celda caminable, cada zoom y aspectos 16:9, 21:9, 4:3, 9:16 y 9:19,5, la huella cae dentro del terreno", () => {
     const d = testDiorama();
-    const { extent } = buildTerrain({ bounds: d.bounds, layers: d.layers, ground: d.ground });
+    const { extent } = buildTerrain({ bounds: d.bounds, ground: d.ground });
     const { pitchDeg, yawDeg } = presetAngles("perspective3D");
     let checked = 0;
     for (const c of walkableCenters(d)) {
@@ -146,20 +143,21 @@ describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () =>
   });
 });
 
-describe("A3 terreno por alturas (adaptador de tiles de M1, sobre el fixture; el formato de la maqueta en maqueta.test.ts)", () => {
-  const d = tilesDiorama();
-  const t = buildTerrain({ bounds: d.bounds, layers: d.layers });
-  const suelo = d.layers.find((l) => l.name === "suelo");
+describe("A3 terreno por alturas (test.yaml en el formato de la maqueta; plan estetica-c M7 retiró el adaptador de tiles)", () => {
+  const d = testDiorama();
+  const t = buildTerrain({ bounds: d.bounds, ground: d.ground });
 
-  test("toda celda caminable tiene altura 0 en su centro; toda celda de agua está por debajo de 0", () => {
+  test("toda celda caminable tiene altura 0 en su centro; toda celda del estanque está por debajo de 0", () => {
     for (const c of walkableCenters(d)) expect(Math.abs(t.heightAt(c.x, c.z)), `${c.x},${c.z}`).toBeLessThanOrEqual(1e-6);
+    const pond = d.ground.ponds[0];
+    if (!pond) throw new Error("test.yaml sin estanque");
     let water = 0;
-    if (!suelo) throw new Error("sin capa suelo");
-    for (let j = 0; j < suelo.height; j++) {
-      for (let i = 0; i < suelo.width; i++) {
-        if (suelo.tiles[j * suelo.width + i] !== TILE.agua) continue;
+    for (let row = 0; row < d.grid.rows; row++) {
+      for (let col = 0; col < d.grid.cols; col++) {
+        const p = cellCenter(d.grid, col, row);
+        if (!insidePolygon(p.x, p.z, pond)) continue;
         water++;
-        expect(t.heightAt(suelo.originX + i + 0.5, suelo.originZ + j + 0.5)).toBeLessThan(0);
+        expect(t.heightAt(p.x, p.z), `${p.x},${p.z}`).toBeLessThan(0);
       }
     }
     expect(water).toBeGreaterThan(0);
@@ -176,30 +174,29 @@ describe("A3 terreno por alturas (adaptador de tiles de M1, sobre el fixture; el
     expect(Math.max(...Array.from({ length: t.positions.length / 3 }, (_, v) => t.positions[v * 3 + 1] as number))).toBeLessThanOrEqual(5.5 + 1e-6);
   });
 
-  test("el color del centro de una celda de camino está dentro de la tolerancia de `camino` con el temblor", () => {
-    if (!suelo) throw new Error("sin capa suelo");
+  test("el color de los vértices bien adentro de un camino está dentro de la tolerancia de `camino` con el temblor", () => {
     const camino = tokenRgb("camino");
+    const roads = d.ground.paths.filter((p) => p.surface === "camino");
+    const others = d.ground.paths.filter((p) => p.surface !== "camino");
+    expect(roads.length).toBeGreaterThan(0);
     let checked = 0;
-    for (let j = 0; j < suelo.height; j++) {
-      for (let i = 0; i < suelo.width; i++) {
-        const x = suelo.originX + i + 0.5;
-        const z = suelo.originZ + j + 0.5;
-        if (tileAt(suelo, x, z) !== TILE.camino || tileAt(suelo, x - 1, z) !== TILE.camino || tileAt(suelo, x + 1, z) !== TILE.camino) continue;
-        if (tileAt(suelo, x, z - 1) !== TILE.camino || tileAt(suelo, x, z + 1) !== TILE.camino) continue;
-        const v = t.vertexAt(x, z);
-        expect(v).toBeGreaterThanOrEqual(0);
-        for (let k = 0; k < 3; k++) expect(Math.abs((t.colors[v * 3 + k] as number) - (camino[k] as number))).toBeLessThanOrEqual(0.08);
-        checked++;
-      }
+    for (let v = 0; v < t.positions.length / 3; v++) {
+      const x = t.positions[v * 3] as number;
+      const z = t.positions[v * 3 + 2] as number;
+      if (x < d.bounds.minX || x > d.bounds.maxX || z < d.bounds.minZ || z > d.bounds.maxZ) continue;
+      if (!roads.some((p) => polylineDistance(x, z, p.line) < p.width / 2 - 0.5)) continue;
+      if (others.some((p) => polylineDistance(x, z, p.line) < p.width / 2 + 0.5)) continue;
+      for (let k = 0; k < 3; k++) expect(Math.abs((t.colors[v * 3 + k] as number) - (camino[k] as number)), `${x},${z}`).toBeLessThanOrEqual(0.08);
+      checked++;
     }
-    expect(checked).toBeGreaterThan(0);
+    expect(checked).toBeGreaterThan(20);
   });
 
   test("determinística con la misma semilla; otra semilla cambia el color", () => {
-    const again = buildTerrain({ bounds: d.bounds, layers: d.layers });
+    const again = buildTerrain({ bounds: d.bounds, ground: d.ground });
     expect(again.positions).toEqual(t.positions);
     expect(again.colors).toEqual(t.colors);
-    expect(buildTerrain({ bounds: d.bounds, layers: d.layers, seed: 99 }).colors).not.toEqual(t.colors);
+    expect(buildTerrain({ bounds: d.bounds, ground: d.ground, seed: 99 }).colors).not.toEqual(t.colors);
   });
 });
 
@@ -418,11 +415,10 @@ describe("A13/A14 paleta: una sola fuente de los hex", () => {
   test("ningún archivo nuevo de world/ escribe un hex fuera de palette.ts", () => {
     const zones = "materials|terrain|water|labels|budget|lighting|actors|dioramas|camera|props";
     const src = import.meta.glob("../src/world/*/**/*.{ts,tsx}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-    // Lo de HD-2D queda hasta M7 (D-207) y no es del look C.
-    const legacy = new Set(["props/Boxes.tsx"]);
+    // Plan estetica-c M7: lo de HD-2D (props/Boxes.tsx) se retiró; ya no hay excepciones.
     const files = Object.entries(src)
       .map(([path, text]) => [path.replace(/^.*\/src\/world\//, ""), text] as const)
-      .filter(([rel]) => new RegExp(`^(${zones})/`).test(rel) && !legacy.has(rel));
+      .filter(([rel]) => new RegExp(`^(${zones})/`).test(rel));
     expect(files.length).toBeGreaterThan(25);
     expect(files.filter(([, text]) => /#[0-9a-fA-F]{6}/.test(text)).map(([rel]) => rel)).toEqual([]);
   });

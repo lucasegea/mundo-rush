@@ -233,10 +233,15 @@ export function checkBundle(
 /**
  * Plan estetica-c M6: el postprocesado en su propio chunk. Con el canvas del mundo en el manifiesto, Post tiene que ser
  * una entrada dinámica y ni el grafo estático del canvas ni el del shell pueden traerla (ni a sus módulos): así `low` y
- * `dialog-only`, que montan el canvas sin Post, nunca la descargan. Sin el canvas no hay nada que chequear.
+ * `dialog-only`, que montan el canvas sin Post, nunca la descargan. Sin nada de `src/world/` en el manifiesto (antes de
+ * F2) no hay nada que chequear; con módulos del mundo y sin la clave del canvas, falla (nota 4 de QA en M6): un canvas
+ * renombrado no puede dejar pasar el chequeo en vacío.
  */
 export function checkPostChunk(manifest: Manifest, shellKeys: readonly string[], chunkModules?: ChunkModules): string[] {
-  if (!manifest[WORLD_CANVAS_ENTRY]) return [];
+  if (!manifest[WORLD_CANVAS_ENTRY]) {
+    const world = Object.keys(manifest).filter((key) => (manifest[key]?.src ?? key).startsWith(WORLD_PREFIX));
+    return world.length === 0 ? [] : [`falta la entrada del canvas ${WORLD_CANVAS_ENTRY} en el manifiesto, con módulos del mundo (${world.join(", ")}): no se puede chequear el chunk del postprocesado`];
+  }
   const violations: string[] = [];
   const post = manifest[POST_ENTRY];
   if (!post || post.isDynamicEntry !== true) violations.push(`postprocesado sin chunk propio: falta la entrada dinámica ${POST_ENTRY}`);

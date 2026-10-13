@@ -1,4 +1,4 @@
-// docs/adr/ (F1.1b A5; A2 suma ADR-027): exactamente 27 archivos ADR-001..ADR-027 sin huecos, con el estado que
+// docs/adr/ (F1.1b A5; A2 suma ADR-027; plan estetica-c M7 suma ADR-028, D-207): exactamente 28 archivos ADR-001..ADR-028 sin huecos, con el estado que
 // piden 04/05 (Aceptado si hay fila `decidida`) y la marca "enmendado (P0)" de la lista de 03 §11.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -23,23 +23,25 @@ const arch = readFileSync(join(ROOT, "docs/03-arquitectura.md"), "utf8");
 const amendParagraph = /\*\*Enmiendas de P0[^\n]*/.exec(arch)?.[0] ?? "";
 const AMENDED = [...new Set([...amendParagraph.matchAll(/ADR-(\d{3})/g)].map((m) => Number(m[1])))].sort((a, b) => a - b);
 
-// 04 F1.1b / 05 F1.1b: ADR-001/003 (D-086/D-136), 002 (D-087), 022 (D-139), 023 (D-092), 026 (D-187).
-const ACCEPTED = [1, 2, 3, 22, 23, 26];
+// 04 F1.1b / 05 F1.1b: ADR-001/003 (D-086/D-136), 002 (D-087), 022 (D-139), 023 (D-092), 026 (D-187), 028 (D-207).
+// ADR-022 sigue Aceptado como registro: ADR-028 lo reemplaza y lo dice su estado.
+const ACCEPTED = [1, 2, 3, 22, 23, 26, 28];
 
 describe("A5 docs/adr/", () => {
-  test("exactamente 27 archivos, todos con la forma ADR-NNN-<slug>.md", () => {
-    expect(files).toHaveLength(27);
+  test("exactamente 28 archivos, todos con la forma ADR-NNN-<slug>.md", () => {
+    expect(files).toHaveLength(28);
     for (const name of files) expect(name, name).toMatch(FILE);
   });
 
-  test("numerados 001-027 sin huecos ni repetidos", () => {
-    expect(adrs.map((a) => a.num)).toEqual(Array.from({ length: 27 }, (_, i) => i + 1));
+  test("numerados 001-028 sin huecos ni repetidos", () => {
+    expect(adrs.map((a) => a.num)).toEqual(Array.from({ length: 28 }, (_, i) => i + 1));
   });
 
   test("cada archivo abre con su número y tiene estado, decisión, alternativas y qué se resigna", () => {
     for (const a of adrs) {
       const num = String(a.num).padStart(3, "0");
-      expect(a.text.startsWith(`# ADR-${num} — `), a.name).toBe(true);
+      // Desde ADR-028 el encabezado usa dos puntos (los docs nuevos van sin rayas); los anteriores no se reescriben.
+      expect(a.text.startsWith(`# ADR-${num} — `) || a.text.startsWith(`# ADR-${num}: `), a.name).toBe(true);
       expect(a.estado, a.name).toMatch(/^(Aceptado|Propuesto) /);
       for (const h of ["## Decisión", "## Alternativas descartadas", "## Qué se resigna"]) expect(a.text, `${a.name} ${h}`).toContain(h);
     }
@@ -59,5 +61,11 @@ describe("A5 docs/adr/", () => {
 
   test("ADR-008 ya dice observador multimodal (enmienda de texto de P0)", () => {
     expect(byNum(8)?.text).toMatch(/## Decisión\n\nObservador \*\*multimodal\*\*/);
+  });
+
+  test("ADR-028 reemplaza a ADR-022 y enmienda a ADR-011 (D-207)", () => {
+    expect(byNum(28)?.estado).toMatch(/reemplaza a ADR-022/);
+    expect(byNum(22)?.estado).toMatch(/reemplazado por ADR-028/);
+    expect(byNum(11)?.estado).toMatch(/enmendado 2026-10-13 por ADR-028/);
   });
 });

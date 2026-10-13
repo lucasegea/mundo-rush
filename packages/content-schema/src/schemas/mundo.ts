@@ -68,15 +68,14 @@ export const AnclaSitio = z.strictObject({
 
 const Vec3 = z.tuple([z.number(), z.number(), z.number()]);
 const Vec2 = z.tuple([z.number(), z.number()]);
-const tilesDeFila = (fila: string): number => fila.trim().split(/\s+/).length;
 
-/** Capa de tiles (03 §6.4.3): cada fila, ids del atlas separados por espacios (0 = vacío); 1 tile = 1 m. */
-export const CapaTiles = z.strictObject({
-  capa: z.string().min(1),
-  origen: Vec2,
-  filas: z.array(z.string().regex(/^\s*\d+(\s+\d+)*\s*$/, "ids enteros separados por espacios")).min(1)
-    .refine((filas) => new Set(filas.map(tilesDeFila)).size === 1, { message: "todas las filas con la misma cantidad de tiles" }),
-});
+/**
+ * Claves de HD-2D retiradas en el plan estetica-c M7 (D-207): `tiles` y `atlas_tiles` fallan con un mensaje que apunta
+ * al formato de la maqueta de M5 (la grilla de caminata sale de props, agua, ríos y `no_caminable`, no de tiles).
+ */
+export const FORMATO_MAQUETA = "el formato de la maqueta (plan estetica-c M5): terreno, caminos y rio por curvas, agua por polígonos, detalle por zonas y props con rotY, tinte e instancias";
+const retirada = (clave: string) =>
+  z.never({ error: `\`${clave}\` se retiró con HD-2D (D-207, plan estetica-c M7): el diorama va en ${FORMATO_MAQUETA}` }).optional();
 
 /** Un token de la paleta del mundo (@lg/art, propuesta C §6): cualquier otro texto falla nombrándolo (plan estetica-c M5). */
 export const TokenPaleta = z.string().superRefine((v, ctx) => {
@@ -104,11 +103,11 @@ export const PropDiorama = z.looseObject({
 const Curva = z.strictObject({ puntos: z.array(Vec2).min(2), ancho: z.number().positive().max(12) });
 
 /**
- * Layout de diorama. F1.2 validó la forma general y las anclas `sitios:`; F2 tipó lo que consume el mapa de prueba en
- * tiles. Plan estetica-c M5 (D-207): el formato de la maqueta, con `terreno` (falda, lomas y semilla), `caminos` y `rio`
- * por curvas, `agua` por polígonos, `detalle` sembrado por zonas, `paleta` por zona y props con giro, tinte e
- * instancias. Las capas `tiles` siguen aceptadas (las lee el adaptador de M1) hasta M7, pero no se mezclan con el
- * formato nuevo. Lo que no se tipa todavía sigue pasando (looseObject).
+ * Layout de diorama. F1.2 validó la forma general y las anclas `sitios:`; F2 tipó lo que consume el mapa. Plan
+ * estetica-c M5 (D-207): el formato de la maqueta, con `terreno` (falda, lomas y semilla), `caminos` y `rio` por curvas,
+ * `agua` por polígonos, `detalle` sembrado por zonas, `paleta` por zona y props con giro, tinte e instancias. Plan
+ * estetica-c M7: las capas `tiles` y `atlas_tiles` de HD-2D se rechazan. Lo que no se tipa todavía sigue pasando
+ * (looseObject).
  */
 export const Diorama = z.looseObject({
   id: DioramaId,
@@ -116,9 +115,8 @@ export const Diorama = z.looseObject({
     .refine((b) => b.maxX > b.minX && b.maxZ > b.minZ, { message: "límites vacíos" }),
   /** Aparición del jugador (F2; 03 §6.4.5 la usa para la conectividad). */
   spawn: Vec3.optional(),
-  /** M7 SEAM: `atlas_tiles` y `tiles` salen del schema en M7 (las rechaza con un mensaje que apunta a este formato). */
-  atlas_tiles: z.string().min(1).optional(),
-  tiles: z.array(CapaTiles).optional(),
+  atlas_tiles: retirada("atlas_tiles"),
+  tiles: retirada("tiles"),
   terreno: z.strictObject({
     /** Metros de terreno más allá de los límites; como mínimo la falda de D-208, para no ver el borde del mundo. */
     extension: z.number().min(TERRAIN_SKIRT).max(400).optional(),
@@ -145,8 +143,5 @@ export const Diorama = z.looseObject({
   interactuables: z.array(z.looseObject({ id: z.string().min(1), pos: Vec3, radio: z.number().positive().optional() })).optional(),
   no_caminable: z.array(z.strictObject({ poligono: z.array(Vec2).min(3) })).optional(),
   sitios: z.array(AnclaSitio).default([]),
-}).refine((d) => !((d.tiles?.length ?? 0) > 0 && [d.caminos, d.rio, d.agua, d.detalle].some((x) => x !== undefined)), {
-  message: "un diorama va en tiles (M1, hasta M7) o en el formato de la maqueta (caminos, rio, agua, detalle), no en los dos",
-  path: ["tiles"],
 });
 export type Diorama = z.infer<typeof Diorama>;

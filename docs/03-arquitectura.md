@@ -3,6 +3,7 @@
 **Proyecto:** learning-game (título provisorio *Mundo Rush*, D-031) · **Documento:** arquitectura v0.3 · **Fecha:** 2026-10-06 (v0.1: 2026-10-05) · **Autor:** revisión de arquitectura (arquitecto, el entorno de desarrollo); integración v0.2: planificación
 **v0.2 (2026-10-06):** integra las decisiones del operador del 2026-10-06 (`00-decisiones.md` §1.1), `07-stack-objetivo.md` (revisión de arquitectura: stack objetivo y costuras R10-R15) y los estudios de la investigación de referencias `research/voz-costo-valor-2026-10-06.md` y `research/pronunciacion-2026-10-06.md`. Secciones nuevas: §2.9 (HD-2D en R3F), §5.11 (voz híbrida), §5.12 (servicio de pronunciación); reglas R10-R15 en §3.1; ADR-022 a ADR-025. Donde v0.1 decía low-poly toon, cámara de tercera persona o "pronunciación fuera de alcance", manda lo nuevo.
 **v0.3 (2026-10-06, integración planificación; la forma la revisa revisión de arquitectura):** (a) config exacta de ESLint de P0 (`docs/reports/P0-2026-10-06.md` §2.3) aplicada en §4.3-§4.3.2 (`import-x/no-restricted-paths` sobre rutas resueltas); (b) rutas canónicas nuevas de P0 §3 (raíz de composición, `state/actions.ts`, nombres `@lg/*`, persistencia del operador D-157, salida compilada fuera de git D-159, `VoiceTransport`, DSP puro); (c) **modo director** solo de desarrollo (§6.5, ADR-026; D-187, confirmado por el operador en el brief); (d) **capa de fundaciones y red visible** en el mapa (§2.9, §6.4.3, §6.4.8; D-169, D-194); (e) carpetas de contenido de `02` v0.2 (`fundaciones/`, `saberes/`, `red/`, `mystery/sobres.yaml`). Las enmiendas de "cómo" de P0 §1 rigen con el default de D-196.
+**Plan estetica-c M7 (2026-10-13, construcción; D-207, D-208):** la dirección C, "Maqueta pintada" (`docs/estetica/propuesta-c-maqueta-pintada.md`, biblia de arte), reemplaza a HD-2D (D-139, D-154) en §1 (C9, C14), §2.7.1, §2.8, §2.9, §3.1 (diagrama y R11), §3.3 (fila `settings`), §4.2, §6.4, §10 (R16) y §11 (ADR-028, que reemplaza a ADR-022 y enmienda a ADR-011). El código de HD-2D (tiles por chunk, arte pixel, billboards, cámaras ortográficas) se retiró del árbol. §9 sigue contando la secuencia como se construyó.
 **Estado:** propuesta completa para el modo 1 (vertical slice y v1). Las decisiones marcadas `DP-…` esperan validación del operador; cada una trae un default que una corrida headless usa sin frenarse.
 **Idioma:** español. Identificadores de código, nombres de paquetes y mensajes de protocolo, en inglés (ver §3.4).
 
@@ -58,12 +59,12 @@ Ninguna forma de este documento se justifica sin alguna de estas restricciones. 
 | C6 | Paga principalmente la institución; "el que paga financia al que no"; versión gratis con voz acotada y texto ilimitado | [Brief], [GDD DP-22] | Modelo institución → clase → alumno, pools de minutos de voz, modo texto de primera clase |
 | C7 | El mundo 3D y la UI DOM nunca se hablan directamente; el estado es la única fuente de verdad | [GDD §1.4.8], propuesta de terceros | Store único (Zustand) + núcleo de reglas en TS puro + límites de módulos verificados por lint (§3, §4.3) |
 | C8 | Modo 1 sin dinero ni economía; tycoon/construcción solo como candidata del modo 2 | [GDD §1.4.1, DP-15] | No existe slice de economía; el modo 2 se agrega como módulo nuevo sin tocar el núcleo (§3.6) |
-| C9 | Las IA de código no modelan 3D ni dibujan sprites: packs con licencia registrada (glTF CC0 para volúmenes y props; PNG pixel art para tiles y personajes, D-153), ubicados por código | Directiva del operador, [GDD §5.7], D-139 | Pipeline de assets con registro de licencias, layout de dioramas como datos (§6.4) |
+| C9 | Las IA de código no modelan 3D a mano: packs 3D CC0 con licencia registrada, repintados a la paleta por script (D-153 releída por D-207), y props redondeados por código, ubicados por código | Directiva del operador, [GDD §5.7], D-207 | Pipeline de assets con registro de licencias, layout de dioramas como datos (§6.4) |
 | C10 | Desarrollo headless en muchas corridas | Intención del operador | Contenido como datos validados por schema, núcleo determinístico testeable, gates automáticos sin navegador (§8, §9) |
 | C11 | Sin Playwright ni navegador automatizado; UI = vitest + tsc + lint; el operador mira en el navegador | Regla del operador | Pirámide de pruebas sin E2E de navegador; verificación de presupuestos por scripts (§8) |
 | C12 | Celular abierto, no es el arranque | [Brief], [GDD DP-31] | HUD responsive y táctil desde el día 1; nada en el núcleo depende de mouse o teclado |
 | C13 | Equipo de 1-2 personas, alcance en semanas | [Negocio §6.7] | Sesgo a menos piezas: sin microservicios, sin colas, un solo servidor, una sola base |
-| C14 | Arte **HD-2D** decidido por el operador: sprites pixel art sobre un escenario 3D, cámara ortográfica desde arriba en ángulo (referencia *Octopath Traveler*) | D-139 (2026-10-06) | Render HD-2D dentro de R3F (§2.9), cámara por presets, postprocesado como efecto de tier, pipeline de tiles y sprites (§6.4) |
+| C14 | Arte **"Maqueta pintada"** (dirección C) decidido por el operador: 3D redondeado pintado por vértice, toon de 4 bandas con pincelada, lente largo desde arriba en diagonal y charla en plano de a dos; reemplaza a HD-2D (D-139) | D-207 (2026-10-12) | Render maqueta pintada en R3F (§2.9, ADR-028), cámara por presets, postprocesado como efecto de tier, pipeline de assets 3D repintados (§6.4) |
 | C15 | Un stack que no obligue a mudarse: web hoy; app desktop, móvil y, eventualmente, VR después | D-086 / D-136 (2026-10-06), `07-stack-objetivo.md` | Costuras R10-R15 desde el día 1 (§3.1), sin construir los destinos todavía |
 | C16 | La pronunciación es núcleo desde la v1, sin falsas alarmas y sin interrumpir | D-044 (2026-10-06), [Referencias pronunciación] | Servicio de pronunciación del lado del servidor detrás de interfaces (§5.12); el clip del turno lo comparten observador y pronunciación; solo tipos de error que pasan la vara de F0.1 (D-151) |
 
@@ -105,7 +106,7 @@ Lo que **no** tengo como restricción y por eso no invento: número esperado de 
   - *three.js imperativo:* menos overhead, pero rompe "3D declarativo" y obliga a construir a mano el puente al store. El overhead de R3F es despreciable si se respeta la disciplina de arriba.
   - *Babylon.js / PlayCanvas:* motores completos, más pesados en bundle (Babylon) o con editor propietario (PlayCanvas); ninguno se integra con React DOM tan directo.
   - *Godot o Unity exportados a web:* builds de decenas de MB, arranque lento en PCs de 4 GB, UI propia que pierde la accesibilidad del DOM y las IA de código los manejan peor. Choca con C1 y C10.
-  - *2D (Pixi/Phaser):* más liviano, y [Negocio §0] lo recomienda para el prototipo. No lo elijo como render principal porque el operador pidió dirección estética 3D low-poly/cel-shaded (superado por D-139: HD-2D dentro de R3F, §2.9) y "nombrar objetos en contexto espacial" [Referencias §4.4] gana con 3D. **Pero** la arquitectura deja el 2D posible: el núcleo no depende del render (§3.1) y el modo "solo diálogo" (DOM con ilustración estática) existe desde el vertical slice como plan B real.
+  - *2D (Pixi/Phaser):* más liviano, y [Negocio §0] lo recomienda para el prototipo. No lo elijo como render principal porque el operador pidió dirección estética 3D low-poly/cel-shaded (superado por D-139, HD-2D, y luego por D-207: maqueta pintada dentro de R3F, §2.9) y "nombrar objetos en contexto espacial" [Referencias §4.4] gana con 3D. **Pero** la arquitectura deja el 2D posible: el núcleo no depende del render (§3.1) y el modo "solo diálogo" (DOM con ilustración estática) existe desde el vertical slice como plan B real.
 
 ### 2.4 Rapier: no en el modo 1 (resuelve DP-14)
 
@@ -152,7 +153,7 @@ Lo que **no** tengo como restricción y por eso no invento: número esperado de 
 | Resolución interna | 75-100% (dinámica) | 100% | 100% | n/a |
 | Triángulos visibles | ≤ 25k | ≤ 50k (GDD §5.7) | ≤ 100k | 0 |
 | Draw calls por frame | ≤ 60 | ≤ 120 | ≤ 150 (tope del GDD) | 0 |
-| Personajes animados visibles (sprites billboard; con HD-2D son baratos, el límite es de lectura en pantalla) | ≤ 4 | ≤ 8 | ≤ 12 | 0 |
+| Personajes animados visibles (con esqueleto, D-207; los demás quedan congelados, plan estetica-c M3) | ≤ 4 | ≤ 8 | ≤ 12 | 0 |
 | Sombras | ninguna (sombras blob como quad con textura) | blob | 1 luz direccional con shadow map 1024 solo en dinámicos | — |
 | Contornos (outline) | ninguno | personajes + interactivo enfocado | personajes + interactivos | — |
 | Luces dinámicas | 1 hemisférica + 1 direccional | + hasta 2 puntuales | + hasta 4 puntuales | — |
@@ -162,8 +163,8 @@ Lo que **no** tengo como restricción y por eso no invento: número esperado de 
 
 Reglas que valen para todos los tiers:
 - **Las luces del valle (Lumi, los caminitos de bichos de luz de la red, ventanas) son materiales emisivos + sprites de halo**, no luces puntuales. En render forward cada luz puntual encarece todos los materiales iluminados; decenas de bichos de luz como luces reales hundirían el tier bajo.
-- **Desaturación del progreso** [GDD §5.4]: un uniform por diorama en los materiales de tiles y volúmenes (un `mix` con luminancia en el shader), no un pase de postprocesado.
-- **Texturas:** atlas de tiles y hojas de sprites pixel art con filtrado `nearest` y sin mipmaps (D-154); atlas de paleta compartido para volúmenes (los packs de Kenney suelen usar un "colormap" común: se aprovecha) de ≤ 1024 px por diorama.
+- **Desaturación del progreso** [GDD §5.4]: un parámetro del color por vértice del material toon del mundo (D-207, propuesta C §5), no un pase de postprocesado.
+- **Texturas (D-207):** el color del mundo va por vértice, no por textura. Las únicas texturas son la pincelada de 256 px en escala de grises y la rampa de 4 bandas del material toon (la rampa es la única con filtrado `nearest`, `world/materials/toon.ts`), y los chips de nombre y las burbujas generados por código; los glTF del pipeline entran sin texturas (§6.4.1). La memoria por tier la estima `world/budget/textures.ts` (plan estetica-c M6).
 - **Tiers como contrato (R12):** se leen de un solo objeto (`apps/web/src/services/quality/quality.ts`); el tipo incluye `xr`, reservado y nunca elegido hasta la épica E-XR.
 
 #### 2.7.2 Detección y adaptación
@@ -196,40 +197,41 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 - Durante una escena de conversación el canvas baja a **30 FPS máximo** y congela animaciones no esenciales (agua, NPCs de fondo); la cámara está quieta en el encuadre de diálogo, así que la pérdida visual es nula y se libera CPU para el audio y el WebSocket.
 - Al abrir un panel DOM de pantalla completa (cuaderno, ajustes), el canvas pasa a `frameloop="demand"` (no renderiza si nada cambia).
 
-### 2.8 Cel-shading: enfoque y costo (resuelve el "cómo" de DP-17)
+### 2.8 Material único del mundo: toon de 4 bandas con pincelada (resuelve el "cómo" de DP-17; D-207, ADR-028)
 
-> **Desde v0.2 (D-139, HD-2D):** esta sección aplica solo a los **volúmenes** del escenario (casas, galpones, alambrados, el tanque) que lo necesiten; los personajes son sprites (§2.9) y no llevan contorno ni material toon. El postprocesado ya no está descartado en v1: es un efecto por tier (§2.7.1). Cualquier shader propio queda aislado en `world/materials` y `world/post` para portarlo a nodos (TSL) si algún día se activa WebGPU (D-144).
+> **Desde D-207 (plan estetica-c M1, retiro de HD-2D en M7):** todo el mundo (terreno, props por código, modelos del pipeline, personajes) comparte una sola instancia de material toon; el agua tiene su shader propio. Reemplaza el enfoque de v0.2 (toon solo para volúmenes, personajes como sprites; D-139). ADR-028 enmienda a ADR-011. Los shaders propios quedan aislados en `world/materials` y `world/water` para portarlos a nodos (TSL) si algún día se activa WebGPU (D-144).
 
-| Técnica | Costo en GPU integrada | Uso |
+| Pieza | Cómo es | Ruta |
 |---|---|---|
-| `MeshToonMaterial` con `gradientMap` de 2-3 bandas (textura 3×1 o 4×1, filtrado `nearest`) | Prácticamente igual a Lambert | **Default** para personajes, Lumi y props importantes |
-| Sombreado plano (`flatShading`) con Lambert y color por material desde la paleta | El más barato | Props de fondo, terreno, agua; tier `low` puede usarlo en todo |
-| Contorno por **casco invertido** (malla duplicada con caras traseras escalada por normal; drei `Outlines`) | +1 draw call por malla contorneada y el doble de vértices de esa malla | Solo personajes e interactivos (`medium`), apagado en `low` [GDD §5.3] |
-| Contorno por postprocesado (detección de bordes por normal/profundidad) | Un pase de pantalla completa + buffer de normales: caro en 1366×768 en integradas | **Descartado en v1** |
-| Agua estilo Townscaper | Plano con material toon + ondas por vértice baratas o textura animada | Default; sin reflejos ni refracción |
+| Material toon | `MeshToonMaterial` con `vertexColors`, `gradientMap` de 4 px en luminancia 150 / 195 / 232 / 255 con filtro `nearest` y `map` = pincelada de 256 px en escala de grises generada por código con semilla fija | `apps/web/src/world/materials/toon.ts` |
+| Color por vértice "pintado" | Degradé vertical (más oscuro abajo) y temblor de pincel en luminancia por posición, sobre la paleta de la propuesta C §6. El núcleo es TS puro sin three en `@lg/art`: lo usan `world/` y `scripts/assets/` (una sola implementación) | `packages/art/` · `apps/web/src/world/materials/` |
+| Registro de materiales | Lista cerrada de 4 clases: `toon`, `agua`, `etiqueta`, `sombra-blob`; una quinta hace fallar el test | `apps/web/src/world/materials/registry.ts` |
+| Agua | Plano con shader propio de bandas y brillos que corren, con niebla y tono incluidos; los brillos quedan quietos con "reducir movimiento" y durante la charla | `apps/web/src/world/water/` |
+| Contornos | Ninguno en v1 (la propuesta C los deja fuera): el NPC al que se le va a hablar se lee por su etiqueta resaltada en ámbar | n/a |
 
-**Material único del proyecto:** `ToonMaterial` propio (envoltorio de `MeshToonMaterial` con `onBeforeCompile` mínimo) que agrega: (a) uniform de desaturación por diorama, (b) tinte por instancia para recolorear piezas de distintos packs con la paleta común [GDD §5.7 "unificación visual"], (c) emisivo por instancia para ventanas, Lumi y los bichos de luz de la red. Un solo material base = menos programas de shader compilados = arranque más rápido.
+**Regla del bisel (propuesta C §1):** ningún volumen visible tiene aristas de 90° sin bisel. Un test diedro corre sobre cada constructor `codigo/*` y sobre cada pieza que entra por el pipeline (`@lg/art`; plan estetica-c M1 y M2).
 
-**Falla posible:** el casco invertido se ve mal en mallas con normales partidas (aristas duras), con huecos en el contorno. Mitigación: el pipeline de assets suaviza normales solo para la copia del contorno, o se desactiva el contorno en esa pieza (marcado en el registro de assets).
+**Por qué uno solo:** una instancia de material compila un programa por variante (arranque más rápido) y, como el color va por vértice, piezas de colores distintos se fusionan en una sola malla sin perder la paleta.
 
 
-### 2.9 HD-2D en R3F (D-139, D-138, D-154; ADR-022)
+### 2.9 Maqueta pintada en R3F (D-207, D-208; ADR-028)
 
-**Qué es:** personajes pixel art como sprites que siempre miran a la cámara, sobre un escenario 3D simple (tiles con textura pixel art, volúmenes de pocas caras) con luz 3D real, visto con una cámara ortográfica inclinada; profundidad de campo y bloom dan la "maqueta iluminada" (referencia *Octopath Traveler*; capturas en `docs/refs/estetica/`). Se construye **dentro del mismo stack** (R3F + drei), sin motor 2D aparte: datos, grilla, movimiento, cámara, input y store sobreviven a 3D completo y a VR (`07-stack-objetivo.md` §3).
+**Qué es:** el valle como una maqueta de juguete pintada a mano: 3D de pocos polígonos pero redondeado, pintado por vértice con el material toon de §2.8, visto desde arriba en diagonal con una perspectiva de lente largo, con luz cálida, bruma y, en el tier alto, tilt-shift (biblia de arte: `docs/estetica/propuesta-c-maqueta-pintada.md` y su mockup). Reemplaza a HD-2D (D-139: sprites pixel sobre tiles con cámara ortográfica; ADR-022). Se construye **dentro del mismo stack** (R3F + drei); datos, grilla, movimiento, input y store son los de antes, y la maqueta sirve tal cual en VR (`xrTabletop`, `07-stack-objetivo.md` §3).
 
 | Pieza | Cómo se hace | Ruta |
 |---|---|---|
-| **Tiles** | Tilemap por capas en el layout (§6.4.3) → `buildTileChunk(tilemap, chunkX, chunkZ)` fusiona 16×16 tiles en una `BufferGeometry` con UV del atlas (1 draw call por chunk y por capa). **1 tile = 1 m = 32×32 px**; la grilla de caminabilidad usa celdas de 0,5 m (§2.4). Tiles vacíos no generan geometría | `apps/web/src/world/tiles/` |
-| **Texturas pixel** | revisión de arquitectura PNG con `magFilter = minFilter = NearestFilter`, `generateMipmaps = false`, espacio de color sRGB; sin resampleo en el pipeline (§6.4.1) | `apps/web/public/textures/tiles/` |
-| **Volúmenes** | glTF CC0 de pocas caras (casas, galpones, alambrados, el tanque) o cajas por código, con textura pixel o color de paleta; instanciados y fusionados como en §6.4.4 | `apps/web/src/world/props/` |
-| **Sprites (billboards)** | Plano con la hoja de sprites (4 direcciones × ≥ 3 cuadros + idle), que rota **solo en Y** hacia la cámara, anclado por los pies; ~32×48 px a la misma densidad que los tiles; sombra *blob* en todos los tiers; los sprites de un mismo pack se dibujan instanciados. La orientación y el cuadro se calculan con funciones puras testeables | `apps/web/src/world/sprites/` · `apps/web/public/sprites/<pack>/` |
-| **Cámara** | `CameraRig` por presets (R11, D-053): `topdownOrtho` (default; yaw 0°, pitch 55-60°, ~15 tiles de ancho visibles, sigue al jugador con suavizado y **snap a la grilla de píxel** para que el pixel art no tiemble), `isoOrtho` (yaw 45°), `dialogueFrame`; `perspective3D` y `xrTabletop` declarados para el futuro | `apps/web/src/world/camera/` |
-| **Luz** | 1 direccional + ambiente/hemisférica; 3 presets por hora del día (D-051); bichos de luz y ventanas como emisivos + halos (§2.7.1) | `apps/web/src/world/lighting/` |
-| **Postprocesado por tier** | `@react-three/postprocessing`: `low` ninguno; `medium` bloom barato (umbral alto, media resolución); `high` bloom + DOF tilt-shift (foco en el jugador) + viñeta. Se apaga con "reducir movimiento" y durante la pérdida de contexto | `apps/web/src/world/post/` |
-| **Retratos** | Busto del pack si existe; si no, el sprite de frente escalado en el HUD con `image-rendering: pixelated` (D-030) | `apps/web/public/sprites/<pack>/` |
-| **Capa de fundaciones y red visible** (F3.3; D-169, D-194; `02` §1.7-§1.9, §4.1.3) | Lo que el jugador funda hablando **aparece en el mapa**: cada `SITIO-*` tiene un ancla en el layout del diorama (`sitios:`, §6.4.3) y una ficha de fundación (`content/fundaciones/`, `02` §6.2.6) con un visual por estado (`idea` → `en_marcha` → `fundado` → `crece`). Una función pura `foundationVisuals(fundaciones, diorama)` (en `packages/core/src/world/`) traduce el estado del store (`world.fundaciones`) a la lista de props y sprites a dibujar; `world/foundations/FoundationLayer.tsx` solo la pinta. Igual para la **red**: `networkPaths(red, casas)` da los caminitos de bichos de luz del atardecer (uno por vínculo, `02` §1.7) que dibuja `world/foundations/NetworkFireflies.tsx`; y la **saturación del Cruce** por progreso (−30 % al empezar, normal al cerrar la Región 1, `02` §1.9) es un parámetro de luz y material que sale de un selector. Nada se compra ni se acelera (D-169): el estado solo cambia por efectos de misión emitidos al cerrar escenas (§6.4.8) | `packages/core/src/world/` · `apps/web/src/world/foundations/` · `content/fundaciones/` |
+| **Terreno** | Malla de alturas continua con color por vértice, derivada del layout en el formato de la maqueta (§6.4.3): plana en y = 0 dentro de los límites caminables (el raycast del suelo sigue siendo el plano invisible), aplanada bajo los caminos, hundida bajo el agua con orilla, y lomas de hasta 5,5 m afuera. Se extiende 160 m más allá del diorama con celdas cada vez más grandes (D-208), así ninguna cámara de juego ve el borde | `apps/web/src/world/terrain/` · `packages/art/` |
+| **Agua** | Estanques (polígonos) y ríos (curvas) bajo un solo plano con el shader de §2.8 | `apps/web/src/world/water/` |
+| **Props** | Constructores por código `codigo/*` (biselados, una malla por prop, piezas fusionadas) y modelos `modelo/*` del pipeline (§6.4.1), los dos con el material toon; los repetidos como `InstancedMesh`. Detalle del suelo (flores, matas, piedritas, piedras del empedrado) instanciado | `apps/web/src/world/props/` · `apps/web/src/world/dioramas/scene.ts` |
+| **Personajes** | Chibi de 2,5 a 3 cabezas: cuerpo con esqueleto del pipeline (KayKit repintado), cabeza por código, clips y gestos por una máquina de animación pura; la apariencia de cada NPC sale de su ficha de contenido (`apariencia`). Sombra blob en todos los tiers | `apps/web/src/world/actors/` |
+| **Etiquetas y burbujas** | Nombre sobre la cabeza como `Sprite` de three de tamaño fijo en pantalla, textura dibujada por código; resaltado ámbar en el NPC que responde a la E (el mismo selector que el aviso del HUD); burbuja ámbar de pedido. Ocultas pasados 75 m salvo la del NPC resaltado (D-208) | `apps/web/src/world/labels/` |
+| **Cámara** | `CameraRig` por presets (R11, D-053 con el lente de D-207): `perspective3D` (FOV vertical 30°, 40,5° en pantallas verticales; inclinación 50°, giro 45°; escalera de zoom de 8 pasos de 160 a 22 m con inicio en 30 m, D-208; sigue al jugador; sin órbita) y `dialogueFrame` (plano de a dos en 3/4: 20°, 12,5 m, 6 ángulos candidatos con test de oclusión). Con "reducir movimiento", corte. `xrTabletop` declarado. Sin cámaras ortográficas | `apps/web/src/world/camera/` |
+| **Luz** | Sol cálido a 48° de elevación, hemisférica, niebla lineal de bruma de 34 a 78 m (escala con la distancia pasados los 30 m, D-208), ACES Filmic con exposición 1,05; sombras por tier (§2.7.1); presets por hora del día (D-051); emisivos + halos para bichos de luz y ventanas | `apps/web/src/world/lighting/` |
+| **Postprocesado por tier** | En su propio chunk (`low` y `dialog-only` nunca lo descargan): `low` ninguno; `medium` bloom en emisivos; `high` bloom + tilt-shift + viñeta. Se apaga con "reducir movimiento" y durante la pérdida de contexto | `apps/web/src/world/post/` |
+| **Retratos** | Del mismo modelo del juego, renderizados en el navegador del operador desde un estudio solo de desarrollo y commiteados como PNG con su registro (D-030; plan estetica-c M3); si falta, el SVG por código | `apps/web/src/world/portraits/` · `apps/web/public/portraits/` |
+| **Capa de fundaciones y red visible** (F3.3; D-169, D-194; `02` §1.7-§1.9, §4.1.3) | Lo que el jugador funda hablando **aparece en el mapa**: cada `SITIO-*` tiene un ancla en el layout del diorama (`sitios:`, §6.4.3) y una ficha de fundación (`content/fundaciones/`, `02` §6.2.6) con un visual por estado (`idea` → `en_marcha` → `fundado` → `crece`). Una función pura `foundationVisuals(fundaciones, diorama)` (en `packages/core/src/world/`) traduce el estado del store (`world.fundaciones`) a la lista de props a dibujar, en el vocabulario de §6.4.3 (`codigo/*` o `modelo/*` con `rotY`, `tinte` e `instancias`; las variantes por estado son cambios de prop o de tinte); `world/foundations/FoundationLayer.tsx` solo la pinta. Igual para la **red**: `networkPaths(red, casas)` da los caminitos de bichos de luz del atardecer (uno por vínculo, `02` §1.7), muestreados con la misma curva de los caminos; y la **saturación del Cruce** por progreso (−30 % al empezar, normal al cerrar la Región 1, `02` §1.9) es un parámetro del color por vértice que sale de un selector. Nada se compra ni se acelera (D-169): el estado solo cambia por efectos de misión emitidos al cerrar escenas (§6.4.8) | `packages/core/src/world/` · `apps/web/src/world/foundations/` · `content/fundaciones/` |
 
-**Presupuesto:** un chunk de tiles por capa cuenta como 1 draw call; los sprites de un pack como 1 por pack (instancias); el conteo de §2.7.1 se estima desde el layout (§6.4.5). **Riesgos:** temblor del pixel art con la cámara ortográfica (snap a la grilla de píxel, medido en F0.2); DOF caro en integradas (solo `high`); en VR los billboards se ven peor y el arte de personajes probablemente se rehace (aceptado por el operador al elegir HD-2D; D-139).
+**Presupuesto:** un `InstancedMesh` cuenta como 1 draw call; cada prop por código es una malla; un personaje cuenta su cuerpo, su cabeza, su etiqueta y su burbuja. El estimador estático (`world/budget/` y su copia de costos en `@lg/art`) corre dentro de `validate:content` para cada diorama y cada tier, con todo a la vista (el zoom más lejano), y falla por encima de §2.7.1 (§6.4.5; plan estetica-c M5 y M6). En desarrollo, el modo director muestra los contadores reales de `renderer.info`. **Riesgos:** "low-poly genérico" (mitigado por la regla del bisel, el repintado obligatorio y la pincelada); 25k triángulos en `low` (densidad reducida, §2.7.1); sombras PCF en `medium` y techos de DPR (preguntas abiertas del plan estetica-c, se deciden con números medidos).
 
 ---
 
@@ -242,7 +244,7 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 │ apps/web                                                              │
 │                                                                       │
 │  ui/ (React DOM + Tailwind)          world/ (R3F, declarativo)         │
-│  HUD, diálogo, Lumi (burbujas),      tiles, sprites, Lumi (bicho),    │
+│  HUD, diálogo, Lumi (burbujas),      terreno, actores, Lumi (bicho),  │
 │  cuaderno, ajustes, onboarding,      cámara, materiales, luces        │
 │  modo solo-diálogo                                                    │
 │        │  lee selectores                    │  lee selectores          │
@@ -279,7 +281,7 @@ El shell carga sin three.js: el jugador puede pasar bienvenida, accesibilidad y 
 **Costuras del día 1 (R10-R15, D-145; origen: `07-stack-objetivo.md` §5.3; ADR-025).** Cuestan interfaces y un adaptador `web`, no features; son lo que permite llegar a desktop, móvil y VR sin mudarse (C15). Todas se verifican sin navegador (lint de importación y tests).
 
 10. **R10 — Input semántico.** `services/input/` traduce dispositivos (teclado, mouse, táctil, gamepad; después controladores XR) a **acciones**: `move(dir)`, `moveTo(cell)`, `interact()`, `talk.start/stop`, `menu.open`, `confirm`, `back`, `openNotebook`. El núcleo, el store y `world/` solo ven acciones. Lint: `addEventListener` de teclado, puntero o gamepad solo dentro de `services/input/` (los controles DOM nativos con foco siguen funcionando como siempre).
-11. **R11 — Cámara por presets.** `world/camera/CameraRig` es el único que crea o mueve cámaras; recibe un preset desde datos (`topdownOrtho`, `isoOrtho`, `dialogueFrame`; más adelante `perspective3D`, `xrTabletop`). En XR la cámara la controla la cabeza y el rig mueve la maqueta. Lint: cámaras de three/drei solo dentro de `world/camera/`.
+11. **R11 — Cámara por presets.** `world/camera/CameraRig` es el único que crea o mueve cámaras; recibe un preset desde datos: `perspective3D` (lente largo, default) y `dialogueFrame` (plano de a dos de la charla); más adelante `xrTabletop` (E-XR). Desde D-207 (plan estetica-c M7, revisión de arquitectura 2026-10-12) los presets ortográficos de HD-2D salieron de R11 y no hay cámaras ortográficas en el árbol (lo prueba `scripts/lint/retiro-hd2d.test.ts`). El registro del rig (`world/camera/presets.ts`) tiene exactamente las claves de `CAMERA_PRESET_IDS`. En XR la cámara la controla la cabeza y el rig mueve la maqueta. Lint: cámaras de three/drei solo dentro de `world/camera/`.
 12. **R12 — Tiers de calidad como contrato.** Los tiers de §2.7.1 se leen de un solo objeto (`services/quality/quality.ts`); el tipo es `'low' | 'medium' | 'high' | 'dialog-only' | 'xr'` con `xr` reservado. Ningún componente decide calidad por su cuenta.
 13. **R13 — Audio y transporte de voz detrás de interfaces.** Un solo `AudioContext`, creado en `services/audio/`; captura y reproducción en AudioWorklet (§2.7.4); el transporte de voz del cliente es la interfaz `VoiceTransport` (WebSocket hoy; lugar para WebRTC); los permisos de micrófono pasan por el adaptador de plataforma (R15). Del lado del servidor, la voz del NPC es `RealtimeVoiceProvider` con adaptadores intercambiables (§5.11).
 14. **R14 — UI como vista del store.** Los componentes de `ui/` presentan view-models con nombre de `state/selectors/` (texto, orden y estados de cada pantalla) y despachan acciones; nada de lógica de estado dentro del JSX. La UI XR futura (uikit, D-143) consume los mismos view-models.
@@ -298,7 +300,7 @@ Un solo store (`useGameStore`) compuesto por slices. Cada slice declara su estad
 | Slice | Estado (campos principales) | Quién escribe (acciones) | Quién lee | Persistencia |
 |---|---|---|---|---|
 | `session` | fase de la app (`boot`, `onboarding`, `world`, `scene`, `notebook`, `dialogOnly`), cuenta (id opaco, rol, banda de edad, institución/clase si aplica), estado de conexión, brazos de experimentos asignados, presupuesto de voz restante (minutos), idioma de interfaz, par de idioma | servicios de auth/persistencia/voz; onboarding | todos | servidor (cuenta) |
-| `settings` | accesibilidad (tamaño de texto, fuente, subtítulos, karaoke, daltonismo, contraste, reducir movimiento, volúmenes por canal, voz de Lumi on/off), entrada (pulsar para hablar, umbral de fin de turno, solo botón, mapeo de teclas), modo de feedback (`accompanied`/`flagOnly`/`moreHelp`), velocidad de NPC preferida, nivel de ayuda fijado (o automático), tier gráfico (auto/manual), cámara (preset `topdownOrtho`/`isoOrtho`, R11) | `ui/settings`, onboarding | todos | servidor + copia local (preferencias por dispositivo como tier gráfico solo local) |
+| `settings` | accesibilidad (tamaño de texto, fuente, subtítulos, karaoke, daltonismo, contraste, reducir movimiento, volúmenes por canal, voz de Lumi on/off), entrada (pulsar para hablar, umbral de fin de turno, solo botón, mapeo de teclas), modo de feedback (`accompanied`/`flagOnly`/`moreHelp`), velocidad de NPC preferida, nivel de ayuda fijado (o automático), tier gráfico (auto/manual), cámara (solo `perspective3D` desde D-207; un valor guardado viejo cae a ese default al cargar, R11) | `ui/settings`, onboarding | todos | servidor + copia local (preferencias por dispositivo como tier gráfico solo local) |
 | `world` | diorama actual y cargados, momento del día, clima guionado, nivel de luz por barrio, flags del mundo (eventos de misión: `goat_found`…), **fundaciones** (`SITIO-*` → `idea`/`en_marcha`/`fundado`/`crece`, D-169), **red** (presentaciones consumadas `intro:<NPC>` y vínculos, D-168), último punto elegido en modo inspección (`lastPick`, solo lo usa el modo director, §6.5.3), estado de NPCs (posición lógica, ruta, disponible, ícono de pedido), relación por NPC (0-5, nunca baja), interactuables cercanos, interactuable enfocado | núcleo de mundo vía acciones; `world/` despacha `interact(id)`, `moveTo(x,z)`; resultados de escenas | `world/`, `ui/` (prompt de interacción, objetivo actual, lista accesible) | servidor (flags, relaciones, luz) |
 | `player` | posición lógica (celda y coordenadas de simulación), destino/camino, orientación, avatar, nombre de juego, pronombres, canasta (objetos prestados de misión) | núcleo de movimiento; onboarding | `world/`, `ui/` | servidor (avatar, nombre, pronombres, canasta); posición solo para reanudar |
 | `dialogue` | escena activa (`sceneId`, `npcId`), estado de la máquina de escena (§3.5.1), sub-estado de turno, modalidad (`voice`/`text`), subtítulos (líneas finales y parcial), última línea del NPC (para `Repetir`), velocidad efectiva, menú de silencio abierto, chip de pista visible, opciones sugeridas (modo texto), progreso de criterios (para la línea de objetivo, sin revelar evaluación), motivo de fallback a texto | servicio `voice-client` (mensajes del servidor), `ui/dialogue` (botones: `Terminé`, `Pasar el turno`, `Repetir`, `Más despacio`, `Escribir`, `Marcar`) | `ui/dialogue`, `world/` (animaciones de habla, encuadre de cámara) | no (la escena se reanuda desde su inicio [GDD §2.16]) |
@@ -467,7 +469,7 @@ learning-game/
 │  ├─ 06-grafo.yaml              # grafo de fases (derivado de 00/04/05)
 │  ├─ 07-stack-objetivo.md       # stack objetivo y costuras R10-R15 (revisión de arquitectura, insumo integrado acá)
 │  ├─ research/                  # estudios de la investigación de referencias (voz costo-valor, pronunciación)
-│  ├─ refs/                      # referencias visuales (estética HD-2D)
+│  ├─ refs/                      # referencias visuales (estética; la vigente es la maqueta pintada, D-207, en docs/estetica/)
 │  ├─ adr/                       # un archivo por ADR: ADR-NNN-<slug>.md (F1.1 copia ADR-001…025)
 │  ├─ reports/                   # F<n>-<AAAA-MM-DD>.md (corridas) · FV-veredicto-<AAAA-MM-DD>.md (operador)
 │  ├─ content/plantilla-capitulo.md  # plantilla para capítulos 2-4 (F8.3)
@@ -500,7 +502,7 @@ learning-game/
 │  │  ├─ confusions.es-en.yaml   # tabla de confusiones L1 es→en calibrada en F0.1 (§5.12)
 │  │  └─ habilitados.yaml        # tipos de error E1-E14 habilitados por la vara de F0.1 (D-151)
 │  ├─ dioramas/
-│  │  ├─ muelle.yaml             # Los Campos (id de diorama y de presupuesto `muelle`, D-180): capas de tiles, volúmenes, NPCs, rutas, interactuables, zonas no caminables, anclas `sitios`
+│  │  ├─ muelle.yaml             # Los Campos (id de diorama y de presupuesto `muelle`, D-180): formato de la maqueta (terreno, caminos, agua, detalle, props), NPCs, rutas, interactuables, zonas no caminables, anclas `sitios`
 │  │  └─ plaza.yaml              # El Cruce (id `plaza`, D-180)
 │  ├─ world/
 │  │  └─ places.yaml             # lugares de la región para el modo solo-diálogo (id, nombre, barrio)
@@ -544,9 +546,8 @@ learning-game/
 │  │  ├─ docente.html            # panel docente (sin three)
 │  │  ├─ vite.config.ts          # config del juego; NUNCA menciona ni importa el modo director (lint, fixture FD0 A2)
 │  │  ├─ public/
-│  │  │  ├─ models/<pack>/…glb   # SOLO volúmenes ya optimizados por el pipeline
-│  │  │  ├─ sprites/<pack>/      # hojas de sprites pixel art de personajes (D-153)
-│  │  │  ├─ textures/            # tiles/ (atlas pixel art), atlas de paleta, sprites de halo
+│  │  │  ├─ models/<pack>/…glb   # SOLO modelos ya optimizados y repintados por el pipeline (props y personajes, D-207)
+│  │  │  ├─ portraits/           # retratos de solo-diálogo renderizados del modelo 3D (D-030, plan estetica-c M3)
 │  │  │  ├─ audio/lines/         # líneas guionadas pre-generadas (Opus/OGG)
 │  │  │  ├─ audio/sfx/ …/music/  # CC0/CC-BY registrados
 │  │  │  ├─ fonts/               # autoalojadas
@@ -574,12 +575,15 @@ learning-game/
 │  │     ├─ world/               # R3F
 │  │     │  ├─ GameCanvas.tsx    # raíz del canvas (chunk diferido)
 │  │     │  ├─ dioramas/         # Diorama.tsx genérico que lee el layout
-│  │     │  ├─ actors/           # Player.tsx, Npc.tsx (sprites), Lumi.tsx (primitivas, DP-39 del GDD)
-│  │     │  ├─ tiles/            # buildTileChunk.ts, TileLayer.tsx (§2.9)
-│  │     │  ├─ sprites/          # Billboard.tsx, selección de cuadro por dirección (§2.9)
-│  │     │  ├─ props/            # Prop, InstancedProps, Interactable (volúmenes)
+│  │     │  ├─ actors/           # Player.tsx, Character.tsx (cuerpo con esqueleto + cabeza), máquina de animación, sombras blob (§2.9)
+│  │     │  ├─ terrain/          # buildTerrain.ts: malla de alturas pintada (§2.9)
+│  │     │  ├─ water/            # shader del agua (§2.8)
+│  │     │  ├─ props/            # constructores codigo/*, cargador de modelos del pipeline (§2.9)
+│  │     │  ├─ labels/           # etiquetas de nombre y burbujas de pedido (§2.9)
 │  │     │  ├─ camera/           # CameraRig.tsx con presets (R11)
-│  │     │  ├─ materials/        # material de tiles/volúmenes, ToonMaterial para volúmenes que lo necesiten
+│  │     │  ├─ materials/        # material toon único, registro de materiales (§2.8)
+│  │     │  ├─ budget/           # estimador de presupuesto y contadores de desarrollo (§2.9)
+│  │     │  ├─ portraits/        # estudio de retratos solo de desarrollo (§2.9)
 │  │     │  ├─ post/             # postprocesado por tier (§2.9)
 │  │     │  ├─ lighting/         # tiempo del día, saturación del Cruce por progreso, halos
 │  │     │  ├─ foundations/      # FoundationLayer.tsx (SITIO-* por estado) · NetworkFireflies.tsx (red) (F3.3, §2.9)
@@ -656,7 +660,7 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | Qué | Ruta canónica | Fase que la crea |
 |---|---|---|
 | Registro de licencias de assets | `content/assets-registry.yaml` (en el spike descartable: `experiments/f0-hd2d-spike/LICENSES.md`) | F3 (F0.2 en el spike) |
-| Layout de dioramas (con capas de tiles y anclas `sitios`) | `content/dioramas/muelle.yaml` (Los Campos), `content/dioramas/plaza.yaml` (El Cruce): ids de diorama y de presupuesto sin renombrar (D-180); F2 usa `content/dioramas/test.yaml`, con atlas placeholder | F2 (test), F3.1 (muelle), F3.2 (plaza), F3.3 (sitios) |
+| Layout de dioramas (formato de la maqueta y anclas `sitios`, §6.4.3) | `content/dioramas/muelle.yaml` (Los Campos), `content/dioramas/plaza.yaml` (El Cruce): ids de diorama y de presupuesto sin renombrar (D-180); F2 usa `content/dioramas/test.yaml` (migrado al formato de la maqueta en el plan estetica-c M5) | F2 (test), F3.1 (muelle), F3.2 (plaza), F3.3 (sitios) |
 | Lugares para solo-diálogo | `content/world/places.yaml` (F1.2 ya valida referencias escena→lugar) | F1.2 |
 | Compilador de contenido | `scripts/content/build.ts` | F1.2 |
 | Salida compilada | `apps/web/public/content/` (cliente, sin prompts) · `apps/server/generated/content/` (servidor); **ambas ignoradas por git y regeneradas por `build`/`validate:content`** (D-159); `content/audio-lines.manifest.json` sí se versiona | F1.2 |
@@ -685,10 +689,10 @@ Esta tabla es la **única fuente de rutas** del proyecto (`00-decisiones.md` §0
 | Copiloto del modo director | `tooling/director/src/copilot/` · panel `apps/web/src/dev/director/panel/` · `tooling/director/config.yaml` · costo `.director/cost.jsonl` (§6.5.3) | FD1 |
 | Capa DOM | `apps/web/src/ui/` (incluye `ui/hud/`, `ui/dialogue/`, `ui/companion/`, `ui/notebook/`, `ui/dialog-only/`, …) | F1.3 |
 | Capa 3D | `apps/web/src/world/` | F2 |
-| Optimizador de assets | `scripts/assets/optimize.ts` → `apps/web/public/models/<pack>/` (volúmenes) · `apps/web/public/textures/tiles/` (atlas) · `apps/web/public/sprites/<pack>/` (personajes) | F3 |
-| Render HD-2D | `apps/web/src/world/tiles/` · `apps/web/src/world/sprites/` · `apps/web/src/world/camera/CameraRig.tsx` · `apps/web/src/world/post/` (§2.9) | F2, F3 |
+| Optimizador de assets | `scripts/assets/optimize.ts` → `apps/web/public/models/<pack>/` (props y personajes, sin texturas, repintados a la paleta; D-207) | plan estetica-c M2 (antes F3) |
+| Render maqueta pintada | `apps/web/src/world/terrain/` · `apps/web/src/world/materials/` · `apps/web/src/world/props/` · `apps/web/src/world/actors/` · `apps/web/src/world/camera/CameraRig.tsx` · `apps/web/src/world/post/` (§2.8, §2.9) | plan estetica-c M1 a M7 |
 | Costuras R10-R15 | `apps/web/src/services/input/` (R10) · `apps/web/src/world/camera/` (R11) · `apps/web/src/services/quality/quality.ts` (R12) · `apps/web/src/services/audio/` + `VoiceTransport` (R13) · `apps/web/src/state/selectors/` (R14) · `apps/web/src/services/platform/` (R15) | F1.1 (lint), F1.3, F2, F5.2 |
-| Retratos para solo-diálogo | busto del pack o sprite de frente en `apps/web/public/sprites/<pack>/` (D-030); si faltan, SVG por código | F1.3 (SVG), F3 |
+| Retratos para solo-diálogo | PNG renderizado del modelo 3D en `apps/web/public/portraits/<id>.png` con su registro (D-030); si falta, SVG por código | F1.3 (SVG), plan estetica-c M3 |
 | Voz híbrida (servidor) | `apps/server/src/providers/gemini-live/` · `apps/server/src/providers/cascade/` · selección en `apps/server/config/models.yaml` (`voice.npc.adapter`) (§5.11) | F5.1 |
 | Pronunciación | núcleo `packages/core/src/pronunciation/` · servidor `apps/server/src/pronunciation/` · UI `apps/web/src/ui/pronunciation/` · clips locales `apps/web/src/services/audio/clipStore.ts` · datos `content/pronunciation/` · modelo `apps/server/models/zipa/` (gitignored) (§5.12) | FP |
 | Ledger de costo del operador | `apps/server/data/cost-ledger.jsonl` (gitignored; Postgres `cost_ledger` llega con F11.1) | F5.1a |
@@ -1259,26 +1263,27 @@ Los ids y nombres de la premisa v0.1 no se usan nunca en ejemplos ni fixtures: l
 - El nombre lleva el hash del texto + voz: si cambia el texto, el manifiesto marca la línea como desactualizada y el build lo advierte (en `build:release`, §8.3, falla).
 - Mientras una línea no tenga audio, el cliente la muestra como texto + TTS en vivo (degradación aceptable en desarrollo).
 
-### 6.4 Assets: volúmenes glTF (Kenney CC0 y afines), tiles y sprites pixel art (D-139, D-153)
+### 6.4 Assets: modelos 3D CC0 repintados a la paleta y props por código (D-207; D-153 releída)
 
 #### 6.4.1 Flujo
 
 ```
-descarga del pack (kenney.nl u otra fuente CC0)  →  assets-src/<pack>/ (gitignored)
+descarga del pack (KayKit, Quaternius, Kenney u otra fuente CC0; el operador elige y baja, D-029)  →  assets-src/<pack>/ (gitignored)
    → registro en content/assets-registry.yaml (obligatorio antes de usar)
    → scripts/assets/optimize.ts (gltf-transform):
-        prune · dedup · weld · resample animaciones · quantize · meshopt
-        · texturas: unificar a atlas de paleta / WebP o KTX2 según tier · tamaño máx 1024
-   → apps/web/public/models/<pack>/<pieza>.glb  (volúmenes; versionado en git)
-   → tiles: atlas PNG → apps/web/public/textures/tiles/ (empaquetado sin resampleo; filtrado nearest al cargar)
-   → personajes: hojas de sprites PNG → apps/web/public/sprites/<pack>/ (recolor por paleta por script, D-078)
-   → scripts/assets/inspect-budgets.ts (triángulos, materiales, memoria de texturas, tamaño)
-   → layout del diorama en content/dioramas/<barrio>.yaml lo referencia por id
+        prune · dedup · weld · quantize · meshopt
+        · descarta texturas y materiales de origen
+        · asigna un token de la paleta a cada malla (tabla por pack) y pinta por vértice con @lg/art (la misma pintura que world/)
+        · test diedro de aristas: rechaza la pieza salvo excepción declarada en el registro
+        · personajes: cuerpos base con esqueleto y clips retargeteados a un solo esqueleto (plan estetica-c M3)
+   → apps/web/public/models/<pack>/<pieza>.glb  (props y personajes; versionado en git)
+   → scripts/assets/inspect-budgets.ts (triángulos, primitivas, tamaño; lo compara check:budgets)
+   → layout del diorama en content/dioramas/<barrio>.yaml lo referencia como modelo/<pack>/<pieza> (o codigo/* para los props por código)
 ```
 
 #### 6.4.2 Registro de licencias (obligatorio, `content/assets-registry.yaml`)
 
-`{assetId, archivo, pack, autor, licencia (CC0-1.0 | CC-BY-4.0 | comercial-con-modificacion …), url_origen, fecha_descarga, sha256_original, modificaciones, atribucion_requerida, notas}`. El build falla si un archivo en `public/models`, `public/sprites`, `public/audio` o `public/textures` no tiene registro, si su licencia es "no comercial" o "solo uso personal" (D-153), o si un registro con `atribucion_requerida: true` no aparece en la pantalla de créditos generada. El modelo ONNX de ZIPA (CC BY 4.0) se registra igual aunque viva en el servidor. Los nombres exactos de los kits de Kenney y si los personajes traen rig y animaciones se verifican al descargar [GDD §5.7, DP-19].
+`{assetId, archivo, pack, autor, licencia (CC0-1.0 | CC-BY-4.0 | comercial-con-modificacion …), url_origen, fecha_descarga, sha256_original, modificaciones, atribucion_requerida, notas}`. El build falla si un archivo en `public/models`, `public/portraits`, `public/audio` o `public/textures` no tiene registro, si su licencia es "no comercial" o "solo uso personal" (D-153), o si un registro con `atribucion_requerida: true` no aparece en la pantalla de créditos generada. El modelo ONNX de ZIPA (CC BY 4.0) se registra igual aunque viva en el servidor. Los nombres exactos de los kits de Kenney y si los personajes traen rig y animaciones se verifican al descargar [GDD §5.7, DP-19].
 
 #### 6.4.3 Layout de dioramas como datos
 
@@ -1286,16 +1291,14 @@ descarga del pack (kenney.nl u otra fuente CC0)  →  assets-src/<pack>/ (gitign
 # content/dioramas/plaza.yaml
 id: plaza
 bounds: { minX: -20, maxX: 20, minZ: -16, maxZ: 16 }
-paleta: plaza            # tintes por instancia desde los tokens del GDD §5.4
-atlas_tiles: plaza-tiles # atlas en public/textures/tiles/ (32 px por tile, D-154)
-tiles:                   # capas de tiles; cada fila es una lista de ids del atlas (0 = vacío); 1 tile = 1 m
-  - { capa: suelo,   origen: [-20, -16], filas: ["12 12 12 13 …", "12 40 41 13 …"] }
-  - { capa: detalle, origen: [-20, -16], filas: ["0 0 77 0 …"] }
-props:                   # volúmenes
-  - { asset: kenney-city/house-small-a, pos: [4, 0, -6], rotY: 90, scale: 1, tinte: casa-1, ventana_emisiva: W-PLAZA-01 }
-  - { asset: kenney-nature/tree-round, instancias: [[-8,0,3],[-9,0,6],[-12,0,2]] }
-interactuables:
-  - { id: OBJ-FUENTE, asset: kenney-city/fountain, pos: [0,0,0], glosario: GL-FOUNTAIN }
+caminos:                 # curvas por puntos de control (x, z) con ancho en metros
+  - { puntos: [[-20, 0], [-6, 1], [0, 0], [20, -2]], ancho: 2.6 }
+agua:                    # estanques: hunden el terreno y no se caminan
+  - { poligono: [[8, -8], [12, -8], [12, -4], [8, -4]] }
+props:                   # codigo/* (constructores biselados) o modelo/<pack>/<pieza> (pipeline)
+  - { asset: codigo/casa, pos: [4, 0, -6], tam: [5.2, 3.6, 4.2], rotY: 90, tinte: casa-1 }
+  - { asset: codigo/arbol, tam: [1, 4.5, 1], instancias: [{ pos: [-8, 0, 3] }, { pos: [-9, 0, 6], rotY: 40 }] }
+# (el esquema exacto, con terreno, rio y detalle, está en packages/content-schema/src/schemas/mundo.ts y en content/dioramas/test.yaml)
 npcs:
   - { id: NPC-NELL, spawn: [6, 0, -3], ruta: [[6,0,-3],[8,0,-3]] }
 sitios:                  # anclas de fundación (02 §4.1.3; F3.3): dónde se dibuja cada SITIO-* según su estado
@@ -1307,7 +1310,7 @@ camara: { punto_dialogo_por_npc: { NPC-NELL: { offset: [1.5, 1.6, 2.5] } } }
 
 (El ejemplo usa el id de diorama `plaza` = El Cruce, D-180. `02` §6.2.6 escribe `diorama: cruce` en una ficha de ejemplo: mientras revisión de arquitectura no renombre los ids, el contenido usa `plaza` y `muelle`, y la diferencia se reporta.)
 
-El compilador genera: grilla de caminabilidad (celdas de 0,5 m), chunks de tiles de 16×16 por capa (`buildTileChunk`, §2.9), lista de instancias agrupadas por asset (para `Instances`), lista de props estáticos fusionables por material, la tabla de interactuables y la tabla de **anclas de sitios** (`validate:content` falla si una ficha de `content/fundaciones/` no tiene ancla en su diorama, si un ancla no tiene ficha, o si un estado que ocupa celdas deja a un NPC o interactuable sin camino; F3.3).
+Desde el plan estetica-c M7 (D-207) las claves `tiles` y `atlas_tiles` de HD-2D se rechazan con un mensaje que apunta a este formato (M5). El compilador genera: grilla de caminabilidad (celdas de 0,5 m), las curvas y el agua para `world/terrain/`, el estimado de presupuesto por tier (§6.4.5), la tabla de interactuables y la tabla de **anclas de sitios** (`validate:content` falla si una ficha de `content/fundaciones/` no tiene ancla en su diorama, si un ancla no tiene ficha, o si un estado que ocupa celdas deja a un NPC o interactuable sin camino; F3.3).
 
 #### 6.4.4 Instancing y fusión
 
@@ -1325,8 +1328,8 @@ Las IA de código ubican assets escribiendo coordenadas en YAML. Para que el ope
 
 #### 6.4.7 Personajes y Lumi
 
-- Personajes (desde v0.2, D-139/D-078/D-153): **sprites pixel art** de un pack base por región con licencia permitida, hojas de 4 direcciones (caminar ≥ 3 cuadros + idle; hablar/saludar si el pack las trae); diversidad de los 14 vecinos de `02` §3.1 (D-166) por paleta (recolor por script) y accesorios, no por modelos distintos; Clover (la cabra, D-174) es un sprite de animal del mismo pack o afín. El jugador también es sprite.
-- Animación fuera de pantalla o lejos: se congela el cuadro; en `low` los cuadros avanzan a 8-10 Hz.
+- Personajes (desde D-207; plan estetica-c M3 y M5): **chibi 3D con esqueleto** de 2,5 a 3 cabezas, un cuerpo base CC0 repintado (KayKit) con cabeza por código y clips retargeteados a un solo esqueleto (idle, caminar, hablar, gestos); diversidad de los 14 vecinos de `02` §3.1 (D-166) por bloque `apariencia` en su ficha de contenido, que `validate:content` exige para todo NPC puesto en un diorama. Clover (la cabra, D-174) depende del pack de animales. El jugador también es un personaje con esqueleto.
+- Animación fuera de pantalla o lejos: se congela; tope de personajes animados por tier (§2.7.1); durante la charla solo se animan el jugador y el NPC de la escena (§2.7.4).
 - Lumi: **bicho de luz que viaja en un frasco** (D-165, reemplaza al farolito): núcleo emisivo chico por código + halo + estela, y el frasco de vidrio como volumen simple que el jugador lleva; sale del frasco y flota cerca del jugador (lo que siga valiendo de DP-39 del GDD). Es el objeto más trabajado pero también el más barato de producir.
 
 #### 6.4.8 Mundo que reacciona al estado (fundaciones, red, saturación)
@@ -1574,14 +1577,14 @@ Orden por dependencias técnicas (el roadmap de producto decide calendario y con
 | R13 | **Timbre distinto** entre líneas pre-generadas y voz en vivo | Media / bajo-medio | Escucha del operador | Mismo motor y misma voz cuando exista; si no, aperturas y cierres también por Live con texto fijo inyectado (más costo) |
 | R14 | **Divergencia con LT** tras portar | Alta / bajo | — | Notas de procedencia en el código; LT queda como laboratorio y no se sincroniza automáticamente |
 | R15 | **Detección de pronunciación poco confiable** con acento rioplatense: falsas alarmas que hacen desconfiar de Lumi, o normalización que esconde errores | Media / alto (la pronunciación es núcleo) | Tabla tipo E# × herramienta de F0.1 | Vara por tipo (D-151), solo tipos habilitados, confianza baja oculta, percepción y autocomparación siempre, nunca interrumpe (§5.12) |
-| R16 | **Sprites HD-2D**: no hay pack con licencia permitida y estilo uniforme para 13 vecinos; temblor del pixel art con cámara ortográfica; los billboards se ven mal en VR | Media / medio | F0.2 y primera integración de F3 | D-153 (un pack base + recolor + accesorios; registro obligatorio), snap a la grilla de píxel (§2.9), VR acepta rehacer el arte (D-139) |
+| R16 | **Personajes de la maqueta** (D-207): no hay 14 aldeanos de campo CC0 listos; retargeting entre autores; costo de animar en `low` | Media / medio | Plan estetica-c M3 y M6 | Un cuerpo base repintado + cabeza por código + `apariencia` por ficha; un solo esqueleto de destino; congelado fuera de pantalla y tope por tier (§2.7.1) |
 | R17 | **Precios de voz que se duplican** (Gemini, 2027-01-01) o retiro de un modelo | Alta / medio | Tabla de precios con fecha | Adaptador de cascada desde F5.1 (§5.11), ledger por adaptador, modelos en configuración |
 
 ---
 
 ## 11. ADRs (registro de decisiones de arquitectura)
 
-Estado: **Propuesto** = decisión de la revisión de arquitectura que el operador valida; vale como contrato para corridas headless hasta que el operador la cambie. Cada ADR vive en `docs/adr/ADR-NNN-<slug>.md` (F1.1b copia ADR-001…026); un ADR respaldado por una fila `decidida` de `00-decisiones.md` se copia como **Aceptado** (ADR-001/003 por D-086/D-136, ADR-002 por D-087, ADR-022 por D-139, ADR-023 por D-092); los ADR nuevos que propongan corridas futuras toman el siguiente número con el mismo formato.
+Estado: **Propuesto** = decisión de la revisión de arquitectura que el operador valida; vale como contrato para corridas headless hasta que el operador la cambie. Cada ADR vive en `docs/adr/ADR-NNN-<slug>.md` (F1.1b copia ADR-001…026); un ADR respaldado por una fila `decidida` de `00-decisiones.md` se copia como **Aceptado** (ADR-001/003 por D-086/D-136, ADR-002 por D-087, ADR-022 por D-139, ADR-023 por D-092, ADR-028 por D-207; ADR-022 queda reemplazado por ADR-028); los ADR nuevos que propongan corridas futuras toman el siguiente número con el mismo formato.
 
 | ADR | Decisión | Alternativas descartadas | Qué se resigna | Estado |
 |---|---|---|---|---|
@@ -1595,7 +1598,7 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | ADR-008 | Observador de texto separado del NPC + política del compañero determinística en el núcleo, ejecutada en el servidor; líneas de Lumi por plantillas (§5.6, §3.5.2) | Que el NPC corrija; que un LLM decida las intervenciones; Lumi generada libremente | Espontaneidad de Lumi | Propuesto |
 | ADR-009 | Contenido en YAML con claves del GDD, schemas zod, compilado a JSON, validaciones cruzadas como gate (§6.1) | JSON a mano, TS como contenido, CMS | Ergonomía de un editor visual | Propuesto |
 | ADR-010 | Pipeline glTF con gltf-transform y meshopt, registro de licencias obligatorio, instancias y fusión en build, layout como datos (§6.4) | Draco, assets sin registro, editor de niveles | Edición visual de niveles | Propuesto |
-| ADR-011 | Toon material único con rampa de 2-3 bandas para los **volúmenes** que lo necesiten; contornos solo en interactivos; el postprocesado pasa a ser efecto de tier (enmendado por ADR-022) (§2.8) | Contorno por postproceso; materiales PBR | Contornos perfectos en todo | Propuesto (enmendado 2026-10-06) |
+| ADR-011 | Toon material único con rampa de 2-3 bandas para los **volúmenes** que lo necesiten; contornos solo en interactivos; el postprocesado pasa a ser efecto de tier (enmendado por ADR-022; enmendado por ADR-028: toon de 4 bandas con pincelada para todo el mundo, sin contornos en v1) (§2.8) | Contorno por postproceso; materiales PBR | Contornos perfectos en todo | Propuesto (enmendado 2026-10-06; enmendado 2026-10-13 por ADR-028) |
 | ADR-012 | Tiers `low/medium/high/dialog-only` con detección propia y degradación en caliente; 30 FPS en conversación (§2.7) | Un solo nivel de calidad; base de datos de GPUs de terceros | Máxima fidelidad automática | Propuesto |
 | ADR-013 | Monorepo con npm workspaces (`apps/web`, `apps/server`, `packages/core`, `packages/content-schema`, `packages/protocol`) (§4) | Paquete único; pnpm + turborepo | Simplicidad de un solo `package.json` | Propuesto |
 | ADR-014 | Un proceso Node (estático + API + WS + jobs) y Postgres administrado con migraciones SQL a mano verificadas; auth propia con login de clase para menores (§7) | Supabase Auth (exige email), Firebase, archivos JSON (como LT) | Auth gestionada por terceros | Propuesto |
@@ -1606,13 +1609,14 @@ Estado: **Propuesto** = decisión de la revisión de arquitectura que el operado
 | ADR-019 | i18n con helper propio mínimo (`Intl.PluralRules`) sobre JSON por locale | i18next/FormatJS | Funciones avanzadas de formato | Propuesto |
 | ADR-020 | Repaso con Leitner de 6 cajas e intervalos del GDD (§3.5.4) | SM-2, FSRS | Ajuste fino por ítem | Propuesto |
 | ADR-021 | Máquinas de estado como tablas de transición puras en el núcleo, sin XState (§3.5) | XState | Visualizador y herramientas de XState | Propuesto |
-| ADR-022 | Render **HD-2D dentro de R3F**: tiles fusionados por chunk con atlas pixel (`nearest`), volúmenes simples, personajes como billboards, cámara ortográfica inclinada por presets, postprocesado por tier (§2.9) | 2D puro (Phaser/Pixi); mundo 3D low-poly (default anterior de la revisión de arquitectura, `07` opción B); motor aparte | Personajes 3D reutilizables en VR (el arte de personajes se rehace si se llega a VR) | Aceptado (D-139, decidida) |
+| ADR-022 | Render **HD-2D dentro de R3F**: tiles fusionados por chunk con atlas pixel (`nearest`), volúmenes simples, personajes como billboards, cámara ortográfica inclinada por presets, postprocesado por tier (§2.9) | 2D puro (Phaser/Pixi); mundo 3D low-poly (default anterior de la revisión de arquitectura, `07` opción B); motor aparte | Personajes 3D reutilizables en VR (el arte de personajes se rehace si se llega a VR) | Aceptado (D-139, decidida); **reemplazado por ADR-028** (D-207, 2026-10-13) |
 | ADR-023 | Voz **híbrida**: `RealtimeVoiceProvider` con adaptadores Live y cascada que emiten los mismos eventos, elegidos por configuración; observador siempre con audio; ledger por adaptador (§5.11) | Solo Live; solo cascada; WebRTC propio | Una sola vía de voz más simple | Aceptado (D-092, decidida; el adaptador del piloto lo decide D-149) |
 | ADR-024 | Servicio de **pronunciación** en el servidor: `ScriptedAssessor` (Azure PA) + `RealizationRecognizer` (ZIPA ONNX) con tabla de confusiones L1; núcleo puro de recurrencia y habilitación por tipo; LLM nunca juez; sin audio en el servidor (§5.12) | LLM multimodal como juez; ELSA/SpeechSuper como única fuente; reconocimiento en el navegador | Cobertura de todos los tipos de error desde el día 1 | Propuesto (D-150) |
 | ADR-025 | **Costuras del día 1 R10-R15** (input semántico, cámara por presets, tiers como contrato, audio y voz detrás de interfaces, UI como view-models, plataforma detrás de un adaptador), con lint y tests (§3.1) | Agregarlas cuando llegue cada destino | Algo de indirección temprana | Propuesto (D-145) |
 | ADR-026 | **Modo director solo de desarrollo** (§6.5): estado vivo por el canal de HMR de Vite a `.director/`, CLI + MCP para Claude Code, recarga en caliente del contenido, diario de sesiones; v1 con panel DOM con store propio, `pickTile` por `bridge.ts`, copiloto con Claude Agent SDK en un proceso de Node de desarrollo, cambios solo de contenido, validados y commiteados; doble llave `DEV && VITE_LG_DIRECTOR` + `check:dev-only` | Feature dentro del juego con bandera de runtime; editor visual de niveles; copiloto dentro de `apps/server`; llamar al modelo desde el navegador | Un poco de tooling propio que no se reusa en producción | Propuesto (D-187 decidida; forma: planificación, revisión de la revisión de arquitectura pendiente) |
+| ADR-028 | Render **maqueta pintada dentro de R3F** (D-207, D-208): terreno por alturas, props redondeados por código y modelos CC0 repintados, personajes chibi con esqueleto, todo con un solo material toon de 4 bandas con pincelada y color por vértice; cámara `perspective3D` de lente largo y `dialogueFrame` de a dos; postprocesado por tier en chunk aparte (§2.8, §2.9). Reemplaza a ADR-022 y enmienda a ADR-011 | HD-2D (ADR-022, D-139); propuestas A y B de `docs/estetica/`; 3D low-poly genérico sin bisel ni pintura | La lectura de píxel de HD-2D; texturas pintadas a mano por pieza; contornos en v1 | Aceptado (D-207, decidida) |
 
-**Enmiendas de P0 (`docs/reports/P0-2026-10-06.md` §1).** Son de "cómo" y no cambian ninguna decisión. Con el default de D-196 rigen como contrato y F1.1b las copia a `docs/adr/` marcadas "enmendado (P0)": ADR-003 y ADR-025 (lint con rutas resueltas y zonas exactas, §4.3.1), ADR-004 (`EvidenceStore` con adaptador de archivo, D-157), ADR-005 (pedir transcripciones de entrada y salida, actividad manual, audio binario, no loguear contenido), ADR-006 (inyección por `clientContent` con test contra el falso), ADR-007 (sonda F0.1 en modo manual), ADR-008 (observador multimodal), ADR-009 (`retired-ids`, `lint-allowlist`, salida fuera de git, D-159), ADR-010 (dos caminos: PNG para tiles y sprites, glTF para volúmenes), ADR-012 (`xr` reservado; render a resolución interna baja como opción a medir en F0.2), ADR-013 (nombres `@lg/*`; `test.projects` si `vitest.workspace.ts` está deprecado), ADR-014 (modo operador local, D-158), ADR-015 (holdback en `scene-runtime`; en cascada se modera antes del TTS), ADR-016 ("CI" = `verify`; DSP puro fuera del worklet; lint probado con `lintText`), ADR-018 (validación de modelos al arranque salteada en tests y sin clave), ADR-022 (post en chunk diferido como implementación; la fila de presupuesto la decide D-160), ADR-023 (contrato completo de P0 §4.3: `turnId` en todo evento, `npcTextFinal`, `interrupted`, `sessionEnding`, uso como unión discriminada; métodos `startTurn`, `endTurn`, `sendAudio`, `injectContext`, `interrupt`, `close`), ADR-024 (ZIPA en `worker_threads`, runtime probado desde Node en F0.1, D-163).
+**Enmiendas de P0 (`docs/reports/P0-2026-10-06.md` §1).** Son de "cómo" y no cambian ninguna decisión. Con el default de D-196 rigen como contrato y F1.1b las copia a `docs/adr/` marcadas "enmendado (P0)": ADR-003 y ADR-025 (lint con rutas resueltas y zonas exactas, §4.3.1), ADR-004 (`EvidenceStore` con adaptador de archivo, D-157), ADR-005 (pedir transcripciones de entrada y salida, actividad manual, audio binario, no loguear contenido), ADR-006 (inyección por `clientContent` con test contra el falso), ADR-007 (sonda F0.1 en modo manual), ADR-008 (observador multimodal), ADR-009 (`retired-ids`, `lint-allowlist`, salida fuera de git, D-159), ADR-010 (dos caminos: PNG para tiles y sprites (histórico; desde D-207 no hay tiles ni sprites de personajes), glTF para volúmenes), ADR-012 (`xr` reservado; render a resolución interna baja como opción a medir en F0.2), ADR-013 (nombres `@lg/*`; `test.projects` si `vitest.workspace.ts` está deprecado), ADR-014 (modo operador local, D-158), ADR-015 (holdback en `scene-runtime`; en cascada se modera antes del TTS), ADR-016 ("CI" = `verify`; DSP puro fuera del worklet; lint probado con `lintText`), ADR-018 (validación de modelos al arranque salteada en tests y sin clave), ADR-022 (post en chunk diferido como implementación; la fila de presupuesto la decide D-160), ADR-023 (contrato completo de P0 §4.3: `turnId` en todo evento, `npcTextFinal`, `interrupted`, `sessionEnding`, uso como unión discriminada; métodos `startTurn`, `endTurn`, `sendAudio`, `injectContext`, `interrupt`, `close`), ADR-024 (ZIPA en `worker_threads`, runtime probado desde Node en F0.1, D-163).
 
 ---
 

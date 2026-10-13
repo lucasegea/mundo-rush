@@ -3,7 +3,7 @@
 // tinte), árboles y pinos (los del layout y los del borde), detalle instanciado y las anclas de sombra blob de los
 // troncos. Diorama.tsx lo monta tal cual; el estimador de presupuesto (A15) y el auditor de materiales (A4) miden ESTE
 // mismo grafo, así lo medido es lo dibujado. Plan estetica-c M5: lee el formato de la maqueta (caminos y ríos por
-// curvas, agua por polígonos, detalle por zonas, props con giro y tinte) y sigue leyendo el de tiles de M1 hasta M7.
+// curvas, agua por polígonos, detalle por zonas, props con giro y tinte); desde M7 es el único formato (D-207).
 // Plan estetica-c M6: se arma con la densidad del tier (DENSITY de @lg/art): en `low`, terreno más grueso, props y
 // árboles de geometría reducida, menos pinos en la falda y una de cada tres instancias de detalle; el estimador de
 // validate:content cuenta con la misma tabla.
@@ -19,7 +19,7 @@ import { buildProp, isTreeAsset, TREE_CANOPY_RADIUS, TREE_HEIGHT } from "../prop
 import { isModelAsset } from "../props/gltf";
 import type { ModelSlot } from "../props/ModelProps";
 import {
-  borderPines, buildTerrain, curveDetailScatter, detailScatter, TILE, type DetailScatter, type Scatter, type Terrain,
+  borderPines, buildTerrain, curveDetailScatter, type DetailScatter, type Scatter, type Terrain,
 } from "../terrain/buildTerrain";
 import { waterMaterial } from "../water/waterMaterial";
 import { rng } from "../materials/rng";
@@ -79,24 +79,14 @@ function terrainMesh(t: Terrain): Mesh {
 
 interface Box2 { minX: number; maxX: number; minZ: number; maxZ: number }
 
-/** Caja de todo el agua: los tiles 4 de la capa de suelo (M1) o los estanques y ríos (M5). null si no hay agua. */
+/** Caja de todo el agua: los estanques y ríos del diorama. null si no hay agua. */
 function waterBox(diorama: DioramaRuntime): Box2 | null {
   const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
   const add = (x0: number, x1: number, z0: number, z1: number): void => {
     b.minX = Math.min(b.minX, x0); b.maxX = Math.max(b.maxX, x1); b.minZ = Math.min(b.minZ, z0); b.maxZ = Math.max(b.maxZ, z1);
   };
-  if (diorama.ground.format === "maqueta") {
-    for (const poly of diorama.ground.ponds) for (const [x, z] of poly) add(x, x, z, z);
-    for (const r of diorama.ground.rivers) for (const p of r.line) add(p.x - r.width / 2, p.x + r.width / 2, p.z - r.width / 2, p.z + r.width / 2);
-  } else {
-    const suelo = diorama.layers.find((l) => l.name === "suelo");
-    suelo?.tiles.forEach((id, k) => {
-      if (id !== TILE.agua) return;
-      const x = suelo.originX + (k % suelo.width);
-      const z = suelo.originZ + Math.floor(k / suelo.width);
-      add(x, x + 1, z, z + 1);
-    });
-  }
+  for (const poly of diorama.ground.ponds) for (const [x, z] of poly) add(x, x, z, z);
+  for (const r of diorama.ground.rivers) for (const p of r.line) add(p.x - r.width / 2, p.x + r.width / 2, p.z - r.width / 2, p.z + r.width / 2);
   return Number.isFinite(b.minX) ? b : null;
 }
 
@@ -138,18 +128,16 @@ function detailGeometries() {
   };
 }
 
-/** El detalle del suelo según el formato del diorama. */
+/** El detalle del suelo: las zonas de `detalle` y las piedras de los caminos empedrados. */
 export function dioramaDetail(diorama: DioramaRuntime): DetailScatter {
-  return diorama.ground.format === "maqueta"
-    ? curveDetailScatter(diorama.ground, diorama.grid, diorama.ground.terrain.seed ?? ART_SEED)
-    : detailScatter(diorama.layers);
+  return curveDetailScatter(diorama.ground, diorama.grid, diorama.ground.terrain.seed ?? ART_SEED);
 }
 
 export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity = "full"): DioramaScene {
   const root = new Group();
   root.name = `diorama:${diorama.id}`;
   const spec = DENSITY[density];
-  const terrain = buildTerrain({ bounds: diorama.bounds, layers: diorama.layers, ground: diorama.ground, density });
+  const terrain = buildTerrain({ bounds: diorama.bounds, ground: diorama.ground, density });
   root.add(terrainMesh(terrain));
   const water = waterMesh(diorama);
   if (water) root.add(water);

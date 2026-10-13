@@ -87,9 +87,10 @@ describe("carga del diorama de prueba", () => {
     const view = selectMapView(gameStore.getState());
     expect(view.status).toBe("ready");
     expect(view.diorama?.id).toBe("test");
-    // Plan estetica-c M5: test.yaml va en el formato de la maqueta (curvas, agua, detalle por zonas), sin tiles.
-    expect(view.diorama?.layers).toEqual([]);
-    expect(view.diorama?.ground.format).toBe("maqueta");
+    // Plan estetica-c M5: test.yaml va en el formato de la maqueta (curvas, agua, detalle por zonas). M7: el runtime ya
+    // no tiene capas de tiles ni atlas.
+    expect(view.diorama).not.toHaveProperty("layers");
+    expect(view.diorama).not.toHaveProperty("atlas");
     expect(view.diorama?.ground.paths.length).toBeGreaterThan(0);
     expect(view.diorama?.boxes.length).toBeGreaterThan(4);
     expect(view.actors.map((a) => a.id).sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-NELL"]);

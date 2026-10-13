@@ -55,31 +55,18 @@ export interface EstimadoDiorama {
   faltan: string[];
 }
 
-const contarTiles = (filas: readonly string[], cuenta: (id: number, x: number, z: number) => number, origen: readonly [number, number]): number =>
-  filas.reduce((n, fila, row) => n + fila.trim().split(/\s+/).reduce((m, c, col) => m + cuenta(Number(c), origen[0] + col, origen[1] + row), 0), 0);
-
 /**
- * Instancias de detalle por tipo, como las siembra world/terrain/ (tiles de M1 o zonas del formato de la maqueta) y las
+ * Instancias de detalle por tipo, como las siembra world/terrain/ (zonas del formato de la maqueta) y las
  * deja la densidad (M6: en la reducida queda una de cada tres flores, matas y piedritas; el empedrado queda entero).
  */
 function detalleDe(d: Diorama, densidad: SceneDensity): Record<keyof typeof DETAIL_TRIANGLES, number> {
   const out = { flores: 0, matas: 0, piedritas: 0, empedrado: 0 };
-  for (const capa of d.tiles ?? []) {
-    if (capa.capa === "suelo") {
-      out.empedrado += contarTiles(capa.filas, (id) => (id === 5 ? 2 : 0), capa.origen);
-      continue;
-    }
-    out.flores += contarTiles(capa.filas, (id) => (id === 6 ? 1 : 0), capa.origen);
-    out.matas += contarTiles(capa.filas, (id, x, z) => (id === 7 && ((((x + z) % 2) + 2) % 2) === 0 ? 1 : 0), capa.origen);
-    out.piedritas += contarTiles(capa.filas, (id) => (id === 8 ? 1 : 0), capa.origen);
-  }
   for (const z of d.detalle ?? []) out[z.tipo] += z.cantidad;
   for (const c of d.caminos ?? []) if (c.superficie === "empedrado") out.empedrado += pavingStoneCount(c.puntos, c.ancho);
   return { flores: keptDetail(out.flores, densidad), matas: keptDetail(out.matas, densidad), piedritas: keptDetail(out.piedritas, densidad), empedrado: out.empedrado };
 }
 
-const tieneAgua = (d: Diorama): boolean =>
-  (d.agua?.length ?? 0) > 0 || (d.rio?.length ?? 0) > 0 || (d.tiles ?? []).some((c) => c.capa === "suelo" && c.filas.some((f) => /(^|\s)4(\s|$)/.test(f.trim())));
+const tieneAgua = (d: Diorama): boolean => (d.agua?.length ?? 0) > 0 || (d.rio?.length ?? 0) > 0;
 
 /**
  * Estimado estático de llamadas y triángulos del diorama en un tier (por defecto `medium`), con su densidad y con todo a

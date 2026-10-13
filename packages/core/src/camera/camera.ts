@@ -1,14 +1,12 @@
-// Reglas de cámara que no dependen del render (R11, D-053, D-154, D-197, D-208): ids de presets, ángulos, pasos de
+// Reglas de cámara que no dependen del render (R11, D-053, D-197, D-207, D-208): ids de presets, ángulos, pasos de
 // zoom y la dirección "arriba en pantalla" en el mundo. La cámara misma vive en apps/web/src/world/camera/.
 
-/** Presets de R11. Los dos últimos están declarados para el futuro y no se implementan todavía. */
-export const CAMERA_PRESET_IDS = ["topdownOrtho", "isoOrtho", "dialogueFrame", "perspective3D", "xrTabletop"] as const;
+/**
+ * Presets de R11. Plan estetica-c M7 (D-207, revisión de arquitectura 2026-10-12): los dos ortográficos de HD-2D (cenital e
+ * isométrico) salieron; `xrTabletop` queda declarado para el futuro (E-XR) y no se implementa todavía.
+ */
+export const CAMERA_PRESET_IDS = ["dialogueFrame", "perspective3D", "xrTabletop"] as const;
 export type CameraPresetId = (typeof CAMERA_PRESET_IDS)[number];
-
-/** Pitch de `topdownOrtho` (D-154: 55-60°; F0.2 propuso 57° y el operador cerró el spike sin cambiarlo). */
-export const TOPDOWN_PITCH_DEG = 57;
-/** Elevación isométrica real, atan(1/√2). */
-export const ISO_PITCH_DEG = 35.264;
 
 export interface CameraAngles {
   pitchDeg: number;
@@ -23,13 +21,12 @@ export const DIALOGUE_PITCH_DEG = 20;
 
 /**
  * Ángulos de los presets. `dialogueFrame` da su inclinación con el giro del mapa (el giro real lo calcula el
- * encuadre de a dos en world/camera/rig.ts). Los ortográficos quedan hasta M7 (el rig ya no los usa).
+ * encuadre de a dos en world/camera/rig.ts). `xrTabletop` está solo declarado: hasta que exista (E-XR) da los del
+ * lente largo. M7 SEAM: xrTabletop define sus propios ángulos cuando se implemente.
  */
 export function presetAngles(preset: CameraPresetId): CameraAngles {
-  if (preset === "perspective3D") return { pitchDeg: PERSPECTIVE_PITCH_DEG, yawDeg: PERSPECTIVE_YAW_DEG };
   if (preset === "dialogueFrame") return { pitchDeg: DIALOGUE_PITCH_DEG, yawDeg: PERSPECTIVE_YAW_DEG };
-  if (preset === "isoOrtho") return { pitchDeg: ISO_PITCH_DEG, yawDeg: 45 };
-  return { pitchDeg: TOPDOWN_PITCH_DEG, yawDeg: 0 };
+  return { pitchDeg: PERSPECTIVE_PITCH_DEG, yawDeg: PERSPECTIVE_YAW_DEG };
 }
 
 /**
