@@ -33,6 +33,12 @@ export const Saber = z
     rama: z.boolean(),
     ficcion: z.boolean(),
     usable_como_argumento: z.boolean(),
+    // book-mode slice-1 (D-802): etiqueta de grounding de un saber de universo generado. `.optional()` INSIDE
+    //   el strictObject (D-801): la campesino la omite y el strictObject acepta la clave ausente. `book_fact`
+    //   es un hecho del mundo citable; `book_thesis` es un argumento del autor (p. ej. Galeano), que el gate de
+    //   M4 (grounding) exige marcado como tal y nunca presentado como hecho. La cita reusa el `fuente` de arriba
+    //   (D-802: no se agrega un campo de cita nuevo). M4 SEAM: scripts/content/grounding.ts lee este campo.
+    clasificacion: z.enum(["book_thesis", "book_fact"]).optional(),
   })
   .refine((s) => (s.dicho_por === "LUMI") === (s.plantilla !== null) && (s.linea_en !== null || s.plantilla !== null), {
     message: "dicho_por LUMI exige plantilla; un NPC exige linea_en",

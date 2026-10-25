@@ -1,0 +1,18 @@
+{
+  "name": "@lg/book-analyzer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Analizador libro → universo (offline, build-time; ADR-029, book-mode slice-1). Pipeline INGEST→EXTRACT→DESIGN→LANG-FIT→EMIT. En slice-1 las 4 primeras etapas son stubs honestos que pasan un intermedio hecho a mano; EMIT es real y escribe YAML válido en los subpaths canónicos de un universo. Nadie del producto lo importa.",
+  "scripts": {
+    "analyze": "node src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "@lg/content-schema": "*",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  }
+}

@@ -1,0 +1,228 @@
+# Intermedio de MUESTRA para book-mode slice-1 / M2 (NO es el dataset Galeano).
+#
+# Prueba que EMIT escribe UN archivo válido por campo del contrato (manifiesto, mundo=regiones+lugares,
+# dioramas, npcs, red, missions, conversaciones, saberes, glossary) y que cada uno valida contra su esquema
+# de @lg/content-schema. Es deliberadamente mínimo: un ítem por campo, con los campos obligatorios al mínimo.
+#
+# M3 SEAM: el intermedio Galeano COMPLETO (R1 Potosí: 1 región, 1-2 dioramas, 4 figuras, 2 misiones, CONV-C1,
+# glosario draft y los saberes de la deducción, cada saber con su clasificacion y fuente) se autora en M3 y
+# reemplaza a esta muestra. EMIT no cambia: ya es el contrato.
+
+manifiesto:
+  id: U-SAMPLE
+  titulo: "Universo de muestra (book-mode M2)"
+  libro_fuente: "Muestra — prueba de EMIT (no es un libro real)"
+  par_idioma: { l1: es-AR, l2: en }
+
+mundo:
+  regiones:
+    - id: R1
+      nombre: { es-AR: "Región de muestra" }
+      dioramas: [test]
+      capitulos: [1]
+      elenco: [NPC-SAMPLE]
+      saberes: [SAB-SAMPLE]
+  lugares:
+    - id: campos.sample
+      nombre: { es-AR: "Lugar de muestra" }
+      en: "Sample Place"
+      region: R1
+      diorama: test
+      publico: true
+      descripcion: "Un lugar de muestra para probar el EMIT."
+
+dioramas:
+  - id: test
+    bounds: { minX: 0, maxX: 10, minZ: 0, maxZ: 10 }
+
+npcs:
+  - id: NPC-SAMPLE
+    nombre: "Figura de muestra"
+    rol: "Portador del argumento de muestra."
+    lugar: campos.sample
+    edad_aparente: "40s"
+    es_menor: false
+    personalidad: ["de muestra"]
+    registro: "A1, frases cortas."
+    bandas_mcer: { region_1: "A1", max: A1 }
+    frases_firma: []
+    voz: { descripcion: "De muestra.", voice_id: "TBD" }
+    representacion: null
+    sabe: []
+    no_sabe: []
+    relaciones: {}
+    necesidad_arco: "Que la muestra valide."
+    funciones_lengua: ["saludos"]
+    postura: null
+    requiere_presentacion: false
+    presentado_por: []
+    presenta_a: []
+    hechos_que_puede_decir: []
+    quien_sabe_mas: {}
+    pistas_misterio: []
+    timido_hasta: null
+    persona_prompt: |
+      === PERSONA: SAMPLE ===
+      You are a sample figure used to prove the EMIT stage. Keep it short.
+      === END PERSONA ===
+    estado: draft
+
+red:
+  presentaciones:
+    - id: INTRO-SAMPLE-CERRO
+      npc: NPC-SAMPLE
+      presentado_por: NPC-CERRO
+      mision: M1.1
+      linea_presentador_en: "Talk to the sample figure."
+      linea_reconocimiento_en: null
+      caminos_alternativos: []
+      bicho_de_luz: true
+
+missions:
+  - id: M1.1
+    titulo: { es-AR: "Misión de muestra" }
+    capitulo: 1
+    region: R1
+    mcer: A1
+    tipo_tarea: info_gap
+    can_do: { es-AR: "Puedo probar el EMIT." }
+    requiere: []
+    meta: "Probar que EMIT escribe una misión válida."
+    consigue: "Una misión de muestra en disco."
+    red: { altas: [], presenta: [], nombra: [] }
+    fundacion: "ninguna"
+    saberes:
+      - { saber: SAB-SAMPLE, rama: false }
+    hechos_verificables: []
+    resultado_mundo: "La muestra validó."
+    contagio: null
+    npcs: [NPC-SAMPLE]
+    lenguaje_objetivo: { funciones: [], estructuras: [], chunks: [], vocabulario: [] }
+    pre_tarea: { no_aplica: "muestra" }
+    beats: ["La figura de muestra dice algo."]
+    escenas:
+      - escena_id: M1.1-E1
+        npc: NPC-SAMPLE
+        lugar: campos.sample
+        hora: tarde
+        situacion: "El jugador habla con la figura de muestra."
+        necesidad_npc: "ninguna"
+        banda: A1
+        andamiaje_npc: ["Sample scaffold line."]
+        vocabulario_nivel: ["sample"]
+        max_palabras_nuevas_por_turno: 3
+        hechos_escena: []
+        apertura_guionada: { no_aplica: "muestra" }
+        ramas: { no_aplica: "muestra" }
+        criterios_exito:
+          - { id: C1, texto: "El jugador saluda." }
+        errores_de_objetivo: []
+        cierre_guionado:
+          - { quien: NPC-SAMPLE, en: "Bye.", es_glosa: "Chau." }
+        salida_si_no_converge: { no_aplica: "muestra" }
+        eventos: []
+        resumen_para_siguiente: "El jugador saludó a la figura de muestra."
+        temas_permitidos: ["saludos"]
+        temas_vedados_extra: []
+    lumi_marca: "muestra"
+    pociones: []
+    desbloqueos: []
+    repaso: { resurfaces: [], planta: [], reaparece_en: [] }
+    mundo: []
+    modo_texto: "Modo texto de muestra."
+    efectos: []
+    duracion_objetivo_min: 10
+    estado: draft
+
+conversaciones:
+  - id: CONV-SAMPLE
+    npc: NPC-SAMPLE
+    persona_extra_en: "You are a sample figure in free conversation. Keep answers short."
+    mundo_en: "A sample afternoon used to prove EMIT."
+    hechos:
+      - { id: dato, nivel: 1, valor_en: "You are a sample figure.", etiqueta_es: "Es una figura de muestra" }
+    jugador:
+      - { id: nombre, descripcion_en: "the player's character name", etiqueta_es: "tu nombre en el juego" }
+    secretos: []
+    medidores:
+      - tipo: rapport
+        id: conocer
+        etiqueta_es: "Conocer a la figura"
+        reglas:
+          objetivo: 10
+          puntos_hecho: [2, 3, 4]
+          seguimiento: 1
+          pregunta_nueva: 1
+          revelacion: 1
+          bono_reciprocidad: 1
+          empatia: 1
+          max_preguntas_sin_compartir: 2
+          max_puntos_turno: 6
+          min_hechos: 1
+          min_compartidos: 1
+          min_niveles: 1
+          apertura:
+            nivel_2: { hechos: 1, compartidos: 1 }
+            nivel_3: { hechos: 1, compartidos: 1 }
+      - tipo: pedir
+        id: recado
+        etiqueta_es: "Conseguir lo de muestra"
+        pista_es: null
+        tema_en: "The player wants the sample deduction."
+        lo_que_el_npc_quiere_en: "You want to know the player a little first."
+        puente_en: "Ask the player what brings them here."
+        objeciones: []
+        pasos:
+          - { id: contar, etiqueta_es: "contar a qué viniste", puntos: 1, obligatorio: true, senal: { acto: states_errand }, pista_es: null, frases_en: [] }
+    ayuda:
+      conocer:
+        pista_es: "Preguntale por su vida y contale de tu personaje."
+        frases_por_nivel: { "1": [], "2": [], "3": [] }
+      reciprocidad:
+        pista_es: "Contale algo de tu personaje."
+        frases_en: []
+      recado_temprano:
+        pista_es: "Primero conocela un poco."
+      l1:
+        pista_es: "Probá decirlo en inglés."
+      dato_real:
+        pista_es: "Contá cosas de tu personaje, no datos reales."
+    ayuda_tras_turnos: [2, 3]
+    ejemplos_juez: []
+    deduccion_objetivo: SAB-SAMPLE
+    estado: draft
+
+saberes:
+  - id: SAB-SAMPLE
+    titulo_corto: { es-AR: "Saber de muestra" }
+    linea_en: "This is a sample saber."
+    plantilla: null
+    linea_sin_dato: "This is a sample saber."
+    explicacion_es: "Un saber de muestra para probar el EMIT y la clasificacion de grounding."
+    hechos:
+      - id: HV-M1.1-01
+        texto_es: "Un hecho de muestra."
+        fuente_sugerida: "Fuente de muestra"
+        rama: false
+    fuente: "[FUENTE-PENDIENTE: muestra]"
+    estado: sin_verificar
+    dicho_por: NPC-SAMPLE
+    mision: M1.1
+    rama: false
+    ficcion: false
+    usable_como_argumento: true
+    clasificacion: book_thesis
+
+glossary:
+  l2: en
+  l1: es-AR
+  entradas:
+    - id: gl.sample.n
+      en: "sample"
+      pos: "n"
+      traducciones:
+        es-AR: { texto: "muestra", notas: null }
+      cefr: A0
+      usado_en: [M1.1]
+      estado: draft
+      revision: { rol: "revisor bilingüe", fecha: null }

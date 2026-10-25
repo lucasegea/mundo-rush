@@ -46,6 +46,8 @@ export default defineConfig({
       { test: { name: "integration", root: "./scripts/integration", include: ["**/*.test.ts"], testTimeout: 60000 } },
       // FD0: modo director (plugin, diario, CLI, MCP y config fusionada), solo desarrollo.
       { test: { name: "director", root: "./tooling/director", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
+      // book-mode slice-1 (M2): analizador libro → universo; EMIT escribe YAML válido en subpaths canónicos.
+      { test: { name: "book-analyzer", root: "./tooling/book-analyzer", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
     ],
   },
 });

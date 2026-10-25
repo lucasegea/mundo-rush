@@ -10,6 +10,7 @@
     { "path": "./tsconfig.tooling.json" },
     { "path": "./scripts/eval" },
     { "path": "./scripts/integration" },
-    { "path": "./tooling/director" }
+    { "path": "./tooling/director" },
+    { "path": "./tooling/book-analyzer" }
   ]
 }

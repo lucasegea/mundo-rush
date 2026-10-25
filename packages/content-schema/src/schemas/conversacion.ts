@@ -4,7 +4,7 @@
 // prompt del NPC y del juez; el español (`*_es`) es lo que el HUD muestra (llega al cliente por el protocolo).
 // Lo del objetivo (recado, objeciones) entra al prompt del NPC RECIÉN cuando el medidor de conocerse se llena.
 import { z } from "zod";
-import { idOf, NpcId } from "../ids.ts";
+import { idOf, NpcId, SaberId } from "../ids.ts";
 import { EstadoRevision } from "./common.ts";
 
 /** Actos del juez que un paso del objetivo puede pedir (= DIALOGUE_ACTS de @lg/core, que content-schema no importa). */
@@ -131,6 +131,11 @@ export const FichaConversacion = z.strictObject({
   ayuda_tras_turnos: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
   /** Ejemplos calibrados para el juez (turnos de aprendices con su etiqueta correcta, informe 2.3). */
   ejemplos_juez: z.array(z.strictObject({ jugador: Texto, npc: Texto, etiquetas: Texto })).max(15),
+  // book-mode slice-1 (D-803): nombra el `saber` que el medidor de objetivo (pedir/convencer) representa, para que
+  //   un fixture pueda afirmar qué deducción cierra esta conversación (AC11). `.optional()` INSIDE el strictObject
+  //   (D-801): la campesino la omite. NO es un tipo de conversación nuevo (ADR-027 sigue); el estado terminal es el
+  //   medidor de objetivo llenándose, y este campo solo lo *nombra*. M4 SEAM: el gate exige que resuelva a un saber.
+  deduccion_objetivo: SaberId.optional(),
   estado: EstadoRevision,
 }).superRefine((f, ctx) => {
   const hechos = new Set<string>();
