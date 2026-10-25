@@ -1,0 +1,59 @@
+l2: en
+l1: es-AR
+entradas:
+  - id: gl.silver.n
+    en: silver
+    pos: n
+    traducciones:
+      es-AR:
+        texto: plata
+        notas: null
+    cefr: B1
+    usado_en:
+      - M1.1
+    estado: draft
+    revision:
+      rol: revisor bilingüe
+      fecha: null
+  - id: gl.mountain.n
+    en: mountain
+    pos: n
+    traducciones:
+      es-AR:
+        texto: montaña
+        notas: null
+    cefr: A2
+    usado_en:
+      - M1.2
+    estado: draft
+    revision:
+      rol: revisor bilingüe
+      fecha: null
+  - id: gl.mine.n
+    en: mine
+    pos: n
+    traducciones:
+      es-AR:
+        texto: mina
+        notas: null
+    cefr: A2
+    usado_en:
+      - M1.2
+    estado: draft
+    revision:
+      rol: revisor bilingüe
+      fecha: null
+  - id: gl.ledger.n
+    en: ledger
+    pos: n
+    traducciones:
+      es-AR:
+        texto: libro de cuentas
+        notas: null
+    cefr: B1
+    usado_en:
+      - M1.1
+    estado: draft
+    revision:
+      rol: revisor bilingüe
+      fecha: null

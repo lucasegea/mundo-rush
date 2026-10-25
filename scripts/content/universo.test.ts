@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { compilarContenido } from "@lg/content-schema";
 import { afterAll, describe, expect, test } from "vitest";
 import { construir, leerContenido } from "./build.ts";
 
@@ -74,9 +75,12 @@ describe("M1 build: scaffold de un universo con solo cabeza (AC2)", () => {
     expect(construir({ root, modo: "dev", universe: "U-GALEANO", log })).toBe(1);
   });
 
-  // El repo real: la cabeza U-GALEANO versionada sale 0 como scaffold. Scaffold NO escribe salida, así que
-  // esto no toca los stores reales del operador (lección 2026-10-08: los checks no escriben a stores reales).
-  test("el repo real con --universe=U-GALEANO compila la cabeza versionada (exit 0, sin escribir)", () => {
-    expect(construir({ root: REPO, modo: "dev", universe: "U-GALEANO", log })).toBe(0);
+  // M3 (AC6): el repo real ya tiene el dataset Galeano R1 completo, así que --universe=U-GALEANO routea al
+  // compilador completo (no al scaffold de M1). Se verifica con el compilador PURO (compilarContenido), que no
+  // escribe salida, para no tocar los stores reales del operador (lección 2026-10-08). `construir` sí escribiría.
+  test("el repo real con --universe=U-GALEANO compila el dataset completo (AC6, sin escribir)", () => {
+    const r = compilarContenido(leerContenido(REPO, "U-GALEANO"), "dev");
+    expect(r.errores).toEqual([]);
+    expect(r.conjunto.universo?.id).toBe("U-GALEANO");
   });
 });

@@ -1,0 +1,36 @@
+regiones:
+  - id: R1
+    nombre:
+      es-AR: Potosí — el cerro que comía hombres
+    dioramas:
+      - muelle
+      - plaza
+    capitulos:
+      - 1
+    elenco:
+      - NPC-MITAYO
+      - NPC-CERRO
+      - NPC-FACTOR
+      - NPC-TUPAC
+    saberes:
+      - SAB-VACA-LECHE
+      - SAB-METAL-FUGA
+      - SAB-CERRO-RUINA
+      - SAB-MITA
+lugares:
+  - id: campos.cerro
+    nombre:
+      es-AR: El Cerro Rico
+    en: Cerro Rico
+    region: R1
+    diorama: muelle
+    publico: true
+    descripcion: La montaña de plata que se alza sobre Potosí.
+  - id: cruce.villa
+    nombre:
+      es-AR: La Villa Imperial
+    en: The Imperial Town
+    region: R1
+    diorama: plaza
+    publico: true
+    descripcion: La ciudad de la plata en pleno auge, al pie del cerro.

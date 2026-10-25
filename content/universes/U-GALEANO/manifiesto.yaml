@@ -1,9 +1,6 @@
-# Cabeza del universo U-GALEANO (book-mode slice-1, D-804).
-# M1 solo necesita esta cabeza; el dataset (regiones/dioramas/figuras/misiones/CONV-C1/saberes/glosario)
-# lo EMITe el analizador en M3 bajo content/universes/U-GALEANO/<subpath canónico>.
 id: U-GALEANO
-titulo: "Mundo Rush — Las venas abiertas (Potosí)"
-libro_fuente: "Eduardo Galeano, Las venas abiertas de América Latina (1971)"
+titulo: Mundo Rush — Las venas abiertas (Potosí)
+libro_fuente: Eduardo Galeano, Las venas abiertas de América Latina (1971)
 par_idioma:
   l1: es-AR
   l2: en

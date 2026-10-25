@@ -1,0 +1,95 @@
+id: M1.1
+titulo:
+  es-AR: ¿De quién es la leche?
+capitulo: 1
+region: R1
+mcer: B1
+tipo_tarea: info_gap
+can_do:
+  es-AR: Puedo preguntar a dónde fue a parar la plata.
+requiere: []
+meta: Entender por qué España, dueña de la mina, también quedó pobre.
+consigue: "La deducción de la vaca y la leche: la plata financió a otras tierras."
+red:
+  altas: []
+  presenta: []
+  nombra: []
+fundacion: ninguna
+saberes:
+  - saber: SAB-VACA-LECHE
+    rama: false
+  - saber: SAB-METAL-FUGA
+    rama: false
+hechos_verificables: []
+resultado_mundo: El jugador ve la plata cruzar el mar hacia otras tierras.
+contagio: null
+npcs:
+  - NPC-FACTOR
+lenguaje_objetivo:
+  funciones: []
+  estructuras: []
+  chunks: []
+  vocabulario: []
+pre_tarea:
+  no_aplica: slice-1 corre en modo texto
+beats:
+  - El contador abre sus libros de cuentas.
+  - La plata no se queda en España.
+escenas:
+  - escena_id: M1.1-E1
+    npc: NPC-FACTOR
+    lugar: cruce.villa
+    hora: tarde
+    situacion: El jugador llega a la Villa Imperial, en su auge de plata, y busca al
+      contador.
+    necesidad_npc:
+      no_aplica: conversación por medidores (ADR-027)
+    banda: B1
+    andamiaje_npc:
+      no_aplica: conversación libre; el andamiaje lo da la ficha
+    vocabulario_nivel:
+      - silver
+      - ledger
+      - ship
+    max_palabras_nuevas_por_turno: 3
+    hechos_escena: []
+    apertura_guionada:
+      no_aplica: la abre la ficha de conversación
+    ramas:
+      no_aplica: conversación por medidores
+    criterios_exito:
+      - id: C1
+        texto: El jugador llega a la deducción de la leche.
+        opcional: false
+    errores_de_objetivo: []
+    cierre_guionado:
+      - quien: NPC-FACTOR
+        en: You see it now. The milk was never ours.
+        es_glosa: "Ahora lo ves: la leche nunca fue nuestra."
+        audio: cache
+    salida_si_no_converge:
+      no_aplica: la cierra el medidor de objetivo
+    efectos: []
+    eventos: []
+    resumen_para_siguiente: El jugador dedujo que la plata financió a otras tierras.
+    temas_permitidos:
+      - the mountain
+      - the town
+      - work
+    temas_vedados_extra: []
+    modo_escritura: false
+    cifras_permitidas: []
+    pronunciacion: []
+    conversacion: CONV-POTOSI
+lumi_marca: galeano
+pociones: []
+desbloqueos: []
+repaso:
+  resurfaces: []
+  planta: []
+  reaparece_en: []
+mundo: []
+modo_texto: Conversación estratégica en modo texto con el contador de la corona.
+efectos: []
+duracion_objetivo_min: 15
+estado: draft

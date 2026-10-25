@@ -1,0 +1,531 @@
+# Intermedio Galeano — Región R1 (Potosí). book-mode slice-1 / M3 (T3.1).
+#
+# La INTERPRETACIÓN a mano del libro (docs/research/book-mode/galeano-universe-interpretation.md, Parte 3,
+# Acto I / Potosí), ya organizada por campo del contrato del engine. Las etapas INGEST/EXTRACT/DESIGN/LANG-FIT
+# son stubs honestos que pasan esto tal cual; EMIT (la única etapa real) lo valida contra @lg/content-schema y
+# escribe los YAML canónicos bajo content/universes/U-GALEANO/.
+#
+# Seam S5 (default headless): 4 figuras, 2 misiones modo-texto. La conversación estratégica del research "C1 —
+# Whose cow, whose milk?" se emite como CONV-POTOSI (ConversacionId sólo admite letras: /^CONV-[A-Z]+$/), con
+# deduccion_objetivo = SAB-VACA-LECHE (D-803).
+#
+# M3 SEAM (analizador real): cuando INGEST lea el libro crudo y EXTRACT→LANG-FIT generen este intermedio, esta
+# mano-de-obra desaparece; la FORMA (las claves de contrato de abajo) es el límite estable que EMIT ya sabe escribir.
+
+manifiesto:
+  id: U-GALEANO
+  titulo: "Mundo Rush — Las venas abiertas (Potosí)"
+  libro_fuente: "Eduardo Galeano, Las venas abiertas de América Latina (1971)"
+  par_idioma: { l1: es-AR, l2: en }
+
+mundo:
+  regiones:
+    - id: R1
+      nombre: { es-AR: "Potosí — el cerro que comía hombres" }
+      dioramas: [muelle, plaza]
+      capitulos: [1]
+      elenco: [NPC-MITAYO, NPC-CERRO, NPC-FACTOR, NPC-TUPAC]
+      saberes: [SAB-VACA-LECHE, SAB-METAL-FUGA, SAB-CERRO-RUINA, SAB-MITA]
+  lugares:
+    - id: campos.cerro
+      nombre: { es-AR: "El Cerro Rico" }
+      en: "Cerro Rico"
+      region: R1
+      diorama: muelle
+      publico: true
+      descripcion: "La montaña de plata que se alza sobre Potosí."
+    - id: cruce.villa
+      nombre: { es-AR: "La Villa Imperial" }
+      en: "The Imperial Town"
+      region: R1
+      diorama: plaza
+      publico: true
+      descripcion: "La ciudad de la plata en pleno auge, al pie del cerro."
+
+dioramas:
+  - id: muelle
+    bounds: { minX: 0, maxX: 20, minZ: 0, maxZ: 20 }
+    spawn: [10, 0, 10]
+  - id: plaza
+    bounds: { minX: 0, maxX: 24, minZ: 0, maxZ: 24 }
+    spawn: [12, 0, 12]
+
+npcs:
+  - id: NPC-MITAYO
+    nombre: "El mitayo"
+    rol: "Trabajador forzado de la mina; carga el costo humano de la plata."
+    lugar: campos.cerro
+    edad_aparente: "30s"
+    es_menor: false
+    personalidad: ["callado", "resistente", "digno"]
+    registro: "B1, frases cortas y directas."
+    bandas_mcer: { region_1: "B1", max: B1 }
+    frases_firma: []
+    voz: { descripcion: "Grave, cansado.", voice_id: "TBD" }
+    representacion: null
+    sabe: ["lo que cuesta la plata en vidas"]
+    no_sabe: ["a dónde va a parar la plata"]
+    relaciones: {}
+    necesidad_arco: "Que alguien escuche lo que la plata le cuesta a su gente."
+    funciones_lengua: ["narrar lo vivido"]
+    postura: null
+    requiere_presentacion: false
+    presentado_por: []
+    presenta_a: []
+    hechos_que_puede_decir: [SAB-MITA]
+    quien_sabe_mas: {}
+    pistas_misterio: []
+    timido_hasta: null
+    persona_prompt: |
+      === PERSONA: MITAYO ===
+      You are a forced mine worker in Potosi. You speak plainly about the mountain and the shifts.
+      You know the human cost of the silver, not where it goes. Keep sentences short.
+      === END PERSONA ===
+    estado: draft
+  - id: NPC-CERRO
+    nombre: "El Cerro Rico"
+    rol: "Genius loci: la montaña de plata que dio esplendor y después ruina."
+    lugar: campos.cerro
+    edad_aparente: "ancient"
+    es_menor: false
+    personalidad: ["imponente", "irónico", "melancólico"]
+    registro: "B1, tono solemne."
+    bandas_mcer: { region_1: "B1", max: B1 }
+    frases_firma: []
+    voz: { descripcion: "Profunda, de piedra.", voice_id: "TBD" }
+    representacion: null
+    sabe: ["el esplendor y la ruina de Potosí"]
+    no_sabe: ["quién se quedó con la plata al final"]
+    relaciones: {}
+    necesidad_arco: "Que el jugador vea el esplendor y la ruina como una sola historia."
+    funciones_lengua: ["evocar el pasado"]
+    postura: null
+    requiere_presentacion: false
+    presentado_por: []
+    presenta_a: [NPC-FACTOR]
+    hechos_que_puede_decir: [SAB-CERRO-RUINA]
+    quien_sabe_mas: {}
+    pistas_misterio: []
+    timido_hasta: null
+    persona_prompt: |
+      === PERSONA: CERRO ===
+      You are the silver mountain of Potosi speaking as a voice. You remember splendor and ruin.
+      You do not know who finally kept the silver. Speak slowly, with irony. Short sentences.
+      === END PERSONA ===
+    estado: draft
+  - id: NPC-FACTOR
+    nombre: "El contador de la corona"
+    rol: "Lleva los libros de cuentas; sabe a dónde va a parar la plata."
+    lugar: cruce.villa
+    edad_aparente: "50s"
+    es_menor: false
+    personalidad: ["meticuloso", "cínico", "lúcido"]
+    registro: "B1, preciso."
+    bandas_mcer: { region_1: "B1", max: B1 }
+    frases_firma: []
+    voz: { descripcion: "Seca, de oficina.", voice_id: "TBD" }
+    representacion: null
+    sabe: ["que la plata no se queda en España"]
+    no_sabe: ["el costo humano en la mina"]
+    relaciones: {}
+    necesidad_arco: "Que el jugador formule la pregunta correcta antes de darle la respuesta."
+    funciones_lengua: ["explicar con datos"]
+    postura: null
+    requiere_presentacion: true
+    presentado_por: [NPC-CERRO]
+    presenta_a: []
+    hechos_que_puede_decir: [SAB-VACA-LECHE, SAB-METAL-FUGA]
+    quien_sabe_mas: {}
+    pistas_misterio: []
+    timido_hasta: null
+    persona_prompt: |
+      === PERSONA: FACTOR ===
+      You are the crown's accountant in the Imperial Town. You keep the ledgers and you watch the silver leave.
+      You answer only after the player forms the right question. Keep sentences short and precise.
+      === END PERSONA ===
+    estado: draft
+  - id: NPC-TUPAC
+    nombre: "Túpac Amaru"
+    rol: "Figura nombrada en el texto; la postura de que el orden puede rechazarse."
+    lugar: cruce.villa
+    edad_aparente: "40s"
+    es_menor: false
+    personalidad: ["firme", "grave", "esperanzado"]
+    registro: "B1, enfático."
+    bandas_mcer: { region_1: "B1", max: B1 }
+    frases_firma: []
+    voz: { descripcion: "Firme, clara.", voice_id: "TBD" }
+    representacion: null
+    sabe: ["que el orden colonial puede desafiarse"]
+    no_sabe: ["la maquinaria económica detrás del despojo"]
+    relaciones: {}
+    necesidad_arco: "Mostrar que la plata también despierta la nostalgia peleadora."
+    funciones_lengua: ["afirmar una postura"]
+    postura: null
+    requiere_presentacion: false
+    presentado_por: []
+    presenta_a: []
+    hechos_que_puede_decir: []
+    quien_sabe_mas: {}
+    pistas_misterio: []
+    timido_hasta: null
+    persona_prompt: |
+      === PERSONA: TUPAC ===
+      You are Tupac Amaru as a named voice in this region. You hold that the colonial order can be refused.
+      You do not explain the economic machinery; that is for others. Keep sentences short and firm.
+      === END PERSONA ===
+    estado: draft
+
+red:
+  presentaciones:
+    - id: INTRO-FACTOR-CERRO
+      npc: NPC-FACTOR
+      presentado_por: NPC-CERRO
+      mision: M1.1
+      linea_presentador_en: "Come. The accountant keeps the ledgers. Ask him where the silver goes."
+      linea_reconocimiento_en: null
+      caminos_alternativos: []
+      bicho_de_luz: true
+
+missions:
+  - id: M1.1
+    titulo: { es-AR: "¿De quién es la leche?" }
+    capitulo: 1
+    region: R1
+    mcer: B1
+    tipo_tarea: info_gap
+    can_do: { es-AR: "Puedo preguntar a dónde fue a parar la plata." }
+    requiere: []
+    meta: "Entender por qué España, dueña de la mina, también quedó pobre."
+    consigue: "La deducción de la vaca y la leche: la plata financió a otras tierras."
+    red: { altas: [], presenta: [], nombra: [] }
+    fundacion: "ninguna"
+    saberes:
+      - { saber: SAB-VACA-LECHE, rama: false }
+      - { saber: SAB-METAL-FUGA, rama: false }
+    hechos_verificables: []
+    resultado_mundo: "El jugador ve la plata cruzar el mar hacia otras tierras."
+    contagio: null
+    npcs: [NPC-FACTOR]
+    lenguaje_objetivo: { funciones: [], estructuras: [], chunks: [], vocabulario: [] }
+    pre_tarea: { no_aplica: "slice-1 corre en modo texto" }
+    beats:
+      - "El contador abre sus libros de cuentas."
+      - "La plata no se queda en España."
+    escenas:
+      - escena_id: M1.1-E1
+        npc: NPC-FACTOR
+        lugar: cruce.villa
+        hora: tarde
+        situacion: "El jugador llega a la Villa Imperial, en su auge de plata, y busca al contador."
+        necesidad_npc: { no_aplica: "conversación por medidores (ADR-027)" }
+        banda: B1
+        andamiaje_npc: { no_aplica: "conversación libre; el andamiaje lo da la ficha" }
+        vocabulario_nivel: ["silver", "ledger", "ship"]
+        max_palabras_nuevas_por_turno: 3
+        hechos_escena: []
+        apertura_guionada: { no_aplica: "la abre la ficha de conversación" }
+        ramas: { no_aplica: "conversación por medidores" }
+        criterios_exito:
+          - { id: C1, texto: "El jugador llega a la deducción de la leche." }
+        errores_de_objetivo: []
+        cierre_guionado:
+          - { quien: NPC-FACTOR, en: "You see it now. The milk was never ours.", es_glosa: "Ahora lo ves: la leche nunca fue nuestra." }
+        salida_si_no_converge: { no_aplica: "la cierra el medidor de objetivo" }
+        efectos: []
+        eventos: []
+        resumen_para_siguiente: "El jugador dedujo que la plata financió a otras tierras."
+        temas_permitidos: ["the mountain", "the town", "work"]
+        temas_vedados_extra: []
+        conversacion: CONV-POTOSI
+    lumi_marca: "galeano"
+    pociones: []
+    desbloqueos: []
+    repaso: { resurfaces: [], planta: [], reaparece_en: [] }
+    mundo: []
+    modo_texto: "Conversación estratégica en modo texto con el contador de la corona."
+    efectos: []
+    duracion_objetivo_min: 15
+    estado: draft
+  - id: M1.2
+    titulo: { es-AR: "El cerro que comía hombres" }
+    capitulo: 1
+    region: R1
+    mcer: B1
+    tipo_tarea: info_gap
+    can_do: { es-AR: "Puedo escuchar lo que la plata le cuesta a su gente." }
+    requiere: []
+    meta: "Oír el costo humano de la mina y ver el esplendor vuelto ruina."
+    consigue: "Los saberes de la mita y de la ruina de Potosí."
+    red: { altas: [], presenta: [], nombra: [] }
+    fundacion: "ninguna"
+    saberes:
+      - { saber: SAB-MITA, rama: false }
+      - { saber: SAB-CERRO-RUINA, rama: false }
+    hechos_verificables: []
+    resultado_mundo: "El jugador entiende que la plata y la ruina son una sola historia."
+    contagio: null
+    npcs: [NPC-MITAYO, NPC-CERRO]
+    lenguaje_objetivo: { funciones: [], estructuras: [], chunks: [], vocabulario: [] }
+    pre_tarea: { no_aplica: "slice-1 corre en modo texto" }
+    beats:
+      - "El mitayo cuenta los turnos en la mina."
+      - "El cerro recuerda su esplendor y su ruina."
+    escenas:
+      - escena_id: M1.2-E1
+        npc: NPC-MITAYO
+        lugar: campos.cerro
+        hora: manana
+        situacion: "El jugador sube al Cerro Rico y encuentra a un mitayo al salir de un turno."
+        necesidad_npc: "Que alguien escuche lo que cuesta la plata."
+        banda: B1
+        andamiaje_npc: ["Tell me about the mine.", "What is a shift like?"]
+        vocabulario_nivel: ["shift", "mine", "mountain"]
+        max_palabras_nuevas_por_turno: 3
+        hechos_escena: []
+        apertura_guionada: { no_aplica: "entrada libre en modo texto" }
+        ramas: { no_aplica: "modo texto" }
+        criterios_exito:
+          - { id: C1, texto: "El jugador escucha al mitayo." }
+        errores_de_objetivo: []
+        cierre_guionado:
+          - { quien: NPC-MITAYO, en: "Shift after shift, the mountain takes us in.", es_glosa: "Turno tras turno, la montaña nos traga." }
+        salida_si_no_converge: { no_aplica: "modo texto" }
+        efectos: []
+        eventos: []
+        resumen_para_siguiente: "El jugador escuchó el costo humano de la mina."
+        temas_permitidos: ["the mountain", "work"]
+        temas_vedados_extra: []
+      - escena_id: M1.2-E2
+        npc: NPC-CERRO
+        lugar: campos.cerro
+        hora: atardecer
+        situacion: "Al caer la tarde, la voz del cerro le habla al jugador del esplendor y la ruina."
+        necesidad_npc: { no_aplica: "voz del lugar" }
+        banda: B1
+        andamiaje_npc: { no_aplica: "voz del lugar" }
+        vocabulario_nivel: ["splendor", "ruin"]
+        max_palabras_nuevas_por_turno: 3
+        hechos_escena: []
+        apertura_guionada: { no_aplica: "entrada libre en modo texto" }
+        ramas: { no_aplica: "modo texto" }
+        criterios_exito:
+          - { id: C1, texto: "El jugador oye al cerro." }
+        errores_de_objetivo: []
+        cierre_guionado:
+          - { quien: NPC-CERRO, en: "First I gave splendor. Then I gave only ruin.", es_glosa: "Primero di esplendor. Después, sólo ruina." }
+        salida_si_no_converge: { no_aplica: "modo texto" }
+        efectos: []
+        eventos: []
+        resumen_para_siguiente: "El jugador vio el esplendor y la ruina como una sola historia."
+        temas_permitidos: ["the mountain"]
+        temas_vedados_extra: []
+    lumi_marca: "galeano"
+    pociones: []
+    desbloqueos: []
+    repaso: { resurfaces: [], planta: [], reaparece_en: [] }
+    mundo: []
+    modo_texto: "Dos escenas en modo texto: el mitayo y la voz del cerro."
+    efectos: []
+    duracion_objetivo_min: 12
+    estado: draft
+
+conversaciones:
+  # CONV-POTOSI = la unidad estratégica "C1 — Whose cow, whose milk?" del research (Parte 3). El id usa sólo letras
+  # porque ConversacionId es /^CONV-[A-Z]+$/. deduccion_objetivo nombra el saber que cierra la conversación (D-803).
+  # Este texto NO lo lintea el compilador (las fichas de conversación no pasan por extraerLineas): por eso puede
+  # llevar los nombres propios y la cita del libro. Las citas con página viven en Saber.fuente.
+  - id: CONV-POTOSI
+    npc: NPC-FACTOR
+    persona_extra_en: |
+      You are the crown's accountant in the Imperial Town of Potosi, at the height of the silver boom. You are
+      precise and a little cynical. You will not hand the player the answer: you want them to form the real
+      question first. If they ask why the silver "ran out" or why Spain was "lazy", gently push back and point
+      them to the ledgers. Only when they ask where the silver ultimately goes do you say it plainly, in the
+      book's own figure: Spain had the cow, but others drank the milk.
+    mundo_en: |
+      The Imperial Town is loud with mule trains and loaded ships. You have watched the silver leave Potosi for
+      years. The crown owns the mine, yet the crown's debts grow. The metal passes through Spain and ends up with
+      foreign lenders and makers in the north of Europe.
+    hechos:
+      - { id: libros, nivel: 1, valor_en: "You keep the crown's ledgers here in the Imperial Town.", etiqueta_es: "Lleva los libros de cuentas de la corona" }
+      - { id: plata_sale, nivel: 1, valor_en: "You watch the silver leave Potosi on the mule trains and the ships.", etiqueta_es: "Ve salir la plata de Potosí" }
+      - { id: espana_pobre, nivel: 2, valor_en: "You know Spain stays poor even though the crown owns the mine.", etiqueta_es: "Sabe que España sigue pobre aunque es dueña de la mina" }
+      - { id: otros_cobran, nivel: 2, valor_en: "You know foreign lenders and makers end up with the silver.", etiqueta_es: "Sabe que prestamistas y fabricantes extranjeros se quedan con la plata" }
+      - { id: vaca_leche, nivel: 3, valor_en: "You say it plainly when asked well: Spain had the cow, but others drank the milk.", etiqueta_es: "Lo dice claro: España tenía la vaca, pero otros tomaban la leche" }
+    jugador:
+      - { id: nombre, descripcion_en: "the name of the player's character", etiqueta_es: "tu nombre en el juego" }
+      - { id: origen, descripcion_en: "where the player's character comes from (any game answer)", etiqueta_es: "de dónde viene tu personaje" }
+      - { id: interes, descripcion_en: "why the character wants to understand Potosi and the silver", etiqueta_es: "por qué te interesa Potosí" }
+    secretos: []
+    medidores:
+      - tipo: rapport
+        id: conocer
+        etiqueta_es: "Conocer al contador"
+        reglas:
+          objetivo: 12
+          puntos_hecho: [2, 3, 4]
+          seguimiento: 1
+          pregunta_nueva: 1
+          revelacion: 1
+          bono_reciprocidad: 1
+          empatia: 1
+          max_preguntas_sin_compartir: 2
+          max_puntos_turno: 6
+          min_hechos: 3
+          min_compartidos: 1
+          min_niveles: 2
+          apertura:
+            nivel_2: { hechos: 1, compartidos: 1 }
+            nivel_3: { hechos: 1, compartidos: 1 }
+      - tipo: pedir
+        id: deducir
+        etiqueta_es: "Llegar a la deducción de la leche"
+        pista_es: "Ya te escucha. Formulá la pregunta del libro: ¿a dónde fue a parar la plata?"
+        tema_en: "The player wants to understand why Spain, owner of the mine, also ended up poor."
+        lo_que_el_npc_quiere_en: "You want the player to form the real question before you answer with the book's figure."
+        puente_en: "Once you trust the player a little, ask them what they really came to understand."
+        objeciones:
+          - { id: pregunta, npc_en: "You want the player to ask where the silver ultimately goes, not why it ran out.", la_resuelve_en: "The player asks where all the silver finally ends up." }
+        pasos:
+          - { id: contar, etiqueta_es: "contar qué querés entender", puntos: 1, obligatorio: true, senal: { acto: states_errand }, pista_es: "Contale qué viniste a entender.", frases_en: ["I want to understand why Spain stayed poor.", "I came to learn about the silver."] }
+          - { id: preguntar, etiqueta_es: "formular la pregunta del libro", puntos: 2, obligatorio: true, senal: { objecion: pregunta }, pista_es: "Preguntá a dónde fue a parar la plata.", frases_en: ["Where did all the silver really go?", "Who finally kept the silver?"] }
+    ayuda:
+      conocer:
+        pista_es: "Preguntale por sus libros de cuentas y por lo que ve salir de Potosí; contale algo de tu personaje."
+        frases_por_nivel:
+          "1": ["What do you keep in those ledgers?", "What leaves the town?"]
+          "2": ["Does the silver stay in Spain?", "Who owns the mine?"]
+          "3": ["Then who ends up with the silver?"]
+      reciprocidad:
+        pista_es: "Contale algo de tu personaje para que se abra."
+        frases_en: ["I came a long way to understand this.", "I work far from here."]
+      recado_temprano:
+        pista_es: "Primero conocelo un poco; no suelta la respuesta de entrada."
+      l1:
+        pista_es: "Probá decirlo en inglés, aunque sea simple."
+      dato_real:
+        pista_es: "Contá cosas de tu personaje del juego, no datos reales tuyos."
+    ayuda_tras_turnos: [2, 3]
+    ejemplos_juez: []
+    deduccion_objetivo: SAB-VACA-LECHE
+    estado: draft
+
+saberes:
+  - id: SAB-VACA-LECHE
+    titulo_corto: { es-AR: "La vaca y la leche" }
+    linea_en: "Spain had the cow, but other lands drank the milk."
+    plantilla: null
+    linea_sin_dato: "Spain had the cow, but others drank the milk."
+    explicacion_es: "Galeano sostiene que la plata de Potosí no enriqueció a España sino a las potencias que le vendían y le prestaban: tenía la vaca, pero otros tomaban la leche."
+    hechos:
+      - id: HV-M1.1-01
+        texto_es: "La plata americana terminó financiando a banqueros y fabricantes de otras tierras."
+        fuente_sugerida: "Ensayo de historia económica latinoamericana"
+        rama: false
+    fuente: "Galeano, Las venas abiertas, cap. «Fiebre del oro, fiebre de la plata», pp. 40 y 78."
+    estado: sin_verificar
+    dicho_por: NPC-FACTOR
+    mision: M1.1
+    rama: false
+    ficcion: false
+    usable_como_argumento: true
+    clasificacion: book_thesis
+  - id: SAB-METAL-FUGA
+    titulo_corto: { es-AR: "La plata que se fuga" }
+    linea_en: "The silver did not stay. It crossed the sea to other lands."
+    plantilla: null
+    linea_sin_dato: "The silver did not stay here."
+    explicacion_es: "Galeano describe cómo el metal cruzaba España casi sin tocarla, rumbo a los centros industriales del norte de Europa."
+    hechos:
+      - id: HV-M1.1-02
+        texto_es: "El metal pasaba por España hacia los centros fabriles del norte de Europa."
+        fuente_sugerida: "Historia económica del período colonial"
+        rama: false
+    fuente: "Galeano, Las venas abiertas, cap. «Fiebre del oro, fiebre de la plata», p. 78."
+    estado: sin_verificar
+    dicho_por: NPC-FACTOR
+    mision: M1.1
+    rama: false
+    ficcion: false
+    usable_como_argumento: true
+    clasificacion: book_thesis
+  - id: SAB-CERRO-RUINA
+    titulo_corto: { es-AR: "Esplendor y ruina" }
+    linea_en: "First the mountain gave splendor. Then it gave only ruin."
+    plantilla: null
+    linea_sin_dato: "The mountain gave splendor and then ruin."
+    explicacion_es: "El Cerro Rico levantó una ciudad deslumbrante que, agotada la plata, quedó en ruinas: el esplendor y la ruina de Potosí."
+    hechos:
+      - id: HV-M1.2-01
+        texto_es: "Potosí pasó de ciudad deslumbrante a ciudad en ruinas cuando la plata menguó."
+        fuente_sugerida: "Crónica histórica de Potosí"
+        rama: false
+    fuente: "Galeano, Las venas abiertas, cap. «Fiebre del oro, fiebre de la plata», pp. 37 y 50."
+    estado: sin_verificar
+    dicho_por: NPC-CERRO
+    mision: M1.2
+    rama: false
+    ficcion: false
+    usable_como_argumento: true
+    clasificacion: book_thesis
+  - id: SAB-MITA
+    titulo_corto: { es-AR: "La mita" }
+    linea_en: "Men were forced into the mountain, shift after shift."
+    plantilla: null
+    linea_sin_dato: "Men were forced into the mountain to work."
+    explicacion_es: "La mita obligaba a los indígenas a trabajar en la mina por turnos; Galeano la cuenta como el costo humano de la plata."
+    hechos:
+      - id: HV-M1.2-02
+        texto_es: "La mita era el sistema de trabajo forzado indígena en las minas de Potosí."
+        fuente_sugerida: "Historia colonial andina"
+        rama: false
+    fuente: "Galeano, Las venas abiertas, cap. «Fiebre del oro, fiebre de la plata», p. 58."
+    estado: sin_verificar
+    dicho_por: NPC-MITAYO
+    mision: M1.2
+    rama: false
+    ficcion: false
+    usable_como_argumento: true
+    clasificacion: book_fact
+
+glossary:
+  l2: en
+  l1: es-AR
+  entradas:
+    - id: gl.silver.n
+      en: "silver"
+      pos: "n"
+      traducciones:
+        es-AR: { texto: "plata", notas: null }
+      cefr: B1
+      usado_en: [M1.1]
+      estado: draft
+      revision: { rol: "revisor bilingüe", fecha: null }
+    - id: gl.mountain.n
+      en: "mountain"
+      pos: "n"
+      traducciones:
+        es-AR: { texto: "montaña", notas: null }
+      cefr: A2
+      usado_en: [M1.2]
+      estado: draft
+      revision: { rol: "revisor bilingüe", fecha: null }
+    - id: gl.mine.n
+      en: "mine"
+      pos: "n"
+      traducciones:
+        es-AR: { texto: "mina", notas: null }
+      cefr: A2
+      usado_en: [M1.2]
+      estado: draft
+      revision: { rol: "revisor bilingüe", fecha: null }
+    - id: gl.ledger.n
+      en: "ledger"
+      pos: "n"
+      traducciones:
+        es-AR: { texto: "libro de cuentas", notas: null }
+      cefr: B1
+      usado_en: [M1.1]
+      estado: draft
+      revision: { rol: "revisor bilingüe", fecha: null }

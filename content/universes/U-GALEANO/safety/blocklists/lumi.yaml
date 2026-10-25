@@ -1,0 +1,35 @@
+# Lo que Lumi nunca dice (02 §2.2, lista de bloqueo sobre las plantillas de §2.7).
+id: lumi
+regla: lumi
+fuente: "02 §2.2"
+aplica_a: lumi
+sin_mayusculas: true
+excepto: []
+terminos:
+  - incorrecto
+  - incorrecta
+  - mal
+  - error
+  - otra vez lo mismo
+  - fácil
+  - deberías saber
+  - rápido
+  - apurate
+  - se acaba el tiempo
+  - los demás
+  - ganaste
+  - premio
+  - puntos
+  - nivel superado
+  - racha
+  - perfecto
+  - excelente
+  - te extrañamos
+  - no te vayas
+  - según tu historial
+  - según tu perfil
+  - veneno
+  - envenenar
+  - tóxico
+  - agrotóxico
+  - culpa

@@ -1,0 +1,23 @@
+id: SAB-CERRO-RUINA
+titulo_corto:
+  es-AR: Esplendor y ruina
+linea_en: First the mountain gave splendor. Then it gave only ruin.
+plantilla: null
+linea_sin_dato: The mountain gave splendor and then ruin.
+explicacion_es: "El Cerro Rico levantó una ciudad deslumbrante que, agotada la
+  plata, quedó en ruinas: el esplendor y la ruina de Potosí."
+hechos:
+  - id: HV-M1.2-01
+    texto_es: Potosí pasó de ciudad deslumbrante a ciudad en ruinas cuando la plata
+      menguó.
+    fuente_sugerida: Crónica histórica de Potosí
+    rama: false
+fuente: Galeano, Las venas abiertas, cap. «Fiebre del oro, fiebre de la plata»,
+  pp. 37 y 50.
+estado: sin_verificar
+dicho_por: NPC-CERRO
+mision: M1.2
+rama: false
+ficcion: false
+usable_como_argumento: true
+clasificacion: book_thesis

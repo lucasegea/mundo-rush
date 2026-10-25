@@ -1,0 +1,21 @@
+id: SAB-METAL-FUGA
+titulo_corto:
+  es-AR: La plata que se fuga
+linea_en: The silver did not stay. It crossed the sea to other lands.
+plantilla: null
+linea_sin_dato: The silver did not stay here.
+explicacion_es: Galeano describe cómo el metal cruzaba España casi sin tocarla,
+  rumbo a los centros industriales del norte de Europa.
+hechos:
+  - id: HV-M1.1-02
+    texto_es: El metal pasaba por España hacia los centros fabriles del norte de Europa.
+    fuente_sugerida: Historia económica del período colonial
+    rama: false
+fuente: Galeano, Las venas abiertas, cap. «Fiebre del oro, fiebre de la plata», p. 78.
+estado: sin_verificar
+dicho_por: NPC-FACTOR
+mision: M1.1
+rama: false
+ficcion: false
+usable_como_argumento: true
+clasificacion: book_thesis

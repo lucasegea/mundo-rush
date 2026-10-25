@@ -1,0 +1,8 @@
+# Sin dinero, precios, compras ni ventas en el modo 1 (02 §3.2 S8, §6.6 #6; D-018). `*` = cualquier sufijo.
+id: dinero
+regla: dinero
+fuente: "02 §3.2 S8; §6.6 #6"
+aplica_a: todo
+sin_mayusculas: true
+excepto: []
+terminos: [money, price*, buy*, bought, sell*, sold, pay, pays, paid, paying, payment*, cost, costs, costly, dollar*, cheap*, expensive, wage*, salary, profit*]

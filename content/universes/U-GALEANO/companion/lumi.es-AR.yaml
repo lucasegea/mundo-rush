@@ -1,0 +1,59 @@
+# Catálogo mínimo de Lumi para U-GALEANO (book-mode slice-1, M3).
+# Sólo las señales genéricas (02 §2.7.2) que el chequeo de catálogo exige (chequearCatalogoLumi): una señal de
+# tipo `any` por escalón 2-5 que cubra A0 y A1. mision/saber en null para no cruzar referencias con el dataset.
+# M3/M4 SEAM: el catálogo propio del universo (señales por tipo de error, plantillas de misión) lo generaría
+# LANG-FIT cuando el analizador sea real; en slice-1 alcanza con las genéricas para que el compilador mida.
+idioma_l1: es-AR
+plantillas:
+  - id: LUMI-SEN-2-01
+    funcion: senal
+    escalon: 2
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "¿***{forma_jugador}***…?"
+    slots: [forma_jugador]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "sube el tono en la parte del error"
+    estado: draft
+  - id: LUMI-SEN-3-01
+    funcion: senal
+    escalon: 3
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "Mmm… mirá ***{foco_l2}***. ¿Cómo era?"
+    slots: [foco_l2]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft
+  - id: LUMI-SEN-4-01
+    funcion: senal
+    escalon: 4
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "{glosa_l1}… ***{forma_abierta}…***"
+    slots: [glosa_l1, forma_abierta]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: "deja la frase abierta"
+    estado: draft
+  - id: LUMI-SEN-5-01
+    funcion: senal
+    escalon: 5
+    modos: [accompanied, moreHelp]
+    bandas: [A0, A1, A2, B1]
+    tipo_error: [any]
+    texto: "***{forma_correcta}*** Eso. Seguí, {npc} te escucha."
+    slots: [forma_correcta, npc]
+    audio: al_vuelo
+    mision: null
+    saber: null
+    nota: null
+    estado: draft

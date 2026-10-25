@@ -1,0 +1,11 @@
+id: muelle
+bounds:
+  minX: 0
+  maxX: 20
+  minZ: 0
+  maxZ: 20
+spawn:
+  - 10
+  - 0
+  - 10
+sitios: []

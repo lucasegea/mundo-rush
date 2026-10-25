@@ -1,0 +1,10 @@
+# Nombres reales prohibidos en lo que el juego dice (02 §1.5 regla 4, §0.2 regla 10).
+# 02 §6.6 #16 pide no versionar nombres COMERCIALES: esta lista lleva solo nombres comunes de principios activos
+# (no son marcas). El revisor completa marcas y empresas fuera del repo (ver el reporte de F1.2, desacuerdos).
+id: nombres_reales
+regla: nombres_reales
+fuente: "02 §1.5 regla 4; §6.6 #16"
+aplica_a: todo
+sin_mayusculas: true
+excepto: []
+terminos: [glyphosate, glifosato, atrazine, atrazina, paraquat, chlorpyrifos, clorpirifos, "2,4-D", dicamba, imidacloprid, neonicotinoid*, neonicotinoide*]

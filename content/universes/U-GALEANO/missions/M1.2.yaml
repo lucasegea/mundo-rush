@@ -1,0 +1,134 @@
+id: M1.2
+titulo:
+  es-AR: El cerro que comía hombres
+capitulo: 1
+region: R1
+mcer: B1
+tipo_tarea: info_gap
+can_do:
+  es-AR: Puedo escuchar lo que la plata le cuesta a su gente.
+requiere: []
+meta: Oír el costo humano de la mina y ver el esplendor vuelto ruina.
+consigue: Los saberes de la mita y de la ruina de Potosí.
+red:
+  altas: []
+  presenta: []
+  nombra: []
+fundacion: ninguna
+saberes:
+  - saber: SAB-MITA
+    rama: false
+  - saber: SAB-CERRO-RUINA
+    rama: false
+hechos_verificables: []
+resultado_mundo: El jugador entiende que la plata y la ruina son una sola historia.
+contagio: null
+npcs:
+  - NPC-MITAYO
+  - NPC-CERRO
+lenguaje_objetivo:
+  funciones: []
+  estructuras: []
+  chunks: []
+  vocabulario: []
+pre_tarea:
+  no_aplica: slice-1 corre en modo texto
+beats:
+  - El mitayo cuenta los turnos en la mina.
+  - El cerro recuerda su esplendor y su ruina.
+escenas:
+  - escena_id: M1.2-E1
+    npc: NPC-MITAYO
+    lugar: campos.cerro
+    hora: manana
+    situacion: El jugador sube al Cerro Rico y encuentra a un mitayo al salir de un turno.
+    necesidad_npc: Que alguien escuche lo que cuesta la plata.
+    banda: B1
+    andamiaje_npc:
+      - Tell me about the mine.
+      - What is a shift like?
+    vocabulario_nivel:
+      - shift
+      - mine
+      - mountain
+    max_palabras_nuevas_por_turno: 3
+    hechos_escena: []
+    apertura_guionada:
+      no_aplica: entrada libre en modo texto
+    ramas:
+      no_aplica: modo texto
+    criterios_exito:
+      - id: C1
+        texto: El jugador escucha al mitayo.
+        opcional: false
+    errores_de_objetivo: []
+    cierre_guionado:
+      - quien: NPC-MITAYO
+        en: Shift after shift, the mountain takes us in.
+        es_glosa: Turno tras turno, la montaña nos traga.
+        audio: cache
+    salida_si_no_converge:
+      no_aplica: modo texto
+    efectos: []
+    eventos: []
+    resumen_para_siguiente: El jugador escuchó el costo humano de la mina.
+    temas_permitidos:
+      - the mountain
+      - work
+    temas_vedados_extra: []
+    modo_escritura: false
+    cifras_permitidas: []
+    pronunciacion: []
+  - escena_id: M1.2-E2
+    npc: NPC-CERRO
+    lugar: campos.cerro
+    hora: atardecer
+    situacion: Al caer la tarde, la voz del cerro le habla al jugador del esplendor
+      y la ruina.
+    necesidad_npc:
+      no_aplica: voz del lugar
+    banda: B1
+    andamiaje_npc:
+      no_aplica: voz del lugar
+    vocabulario_nivel:
+      - splendor
+      - ruin
+    max_palabras_nuevas_por_turno: 3
+    hechos_escena: []
+    apertura_guionada:
+      no_aplica: entrada libre en modo texto
+    ramas:
+      no_aplica: modo texto
+    criterios_exito:
+      - id: C1
+        texto: El jugador oye al cerro.
+        opcional: false
+    errores_de_objetivo: []
+    cierre_guionado:
+      - quien: NPC-CERRO
+        en: First I gave splendor. Then I gave only ruin.
+        es_glosa: Primero di esplendor. Después, sólo ruina.
+        audio: cache
+    salida_si_no_converge:
+      no_aplica: modo texto
+    efectos: []
+    eventos: []
+    resumen_para_siguiente: El jugador vio el esplendor y la ruina como una sola historia.
+    temas_permitidos:
+      - the mountain
+    temas_vedados_extra: []
+    modo_escritura: false
+    cifras_permitidas: []
+    pronunciacion: []
+lumi_marca: galeano
+pociones: []
+desbloqueos: []
+repaso:
+  resurfaces: []
+  planta: []
+  reaparece_en: []
+mundo: []
+modo_texto: "Dos escenas en modo texto: el mitayo y la voz del cerro."
+efectos: []
+duracion_objetivo_min: 12
+estado: draft

@@ -1,0 +1,151 @@
+id: CONV-POTOSI
+npc: NPC-FACTOR
+persona_extra_en: >-
+  You are the crown's accountant in the Imperial Town of Potosi, at the height
+  of the silver boom. You are
+
+  precise and a little cynical. You will not hand the player the answer: you
+  want them to form the real
+
+  question first. If they ask why the silver "ran out" or why Spain was "lazy",
+  gently push back and point
+
+  them to the ledgers. Only when they ask where the silver ultimately goes do
+  you say it plainly, in the
+
+  book's own figure: Spain had the cow, but others drank the milk.
+mundo_en: >-
+  The Imperial Town is loud with mule trains and loaded ships. You have watched
+  the silver leave Potosi for
+
+  years. The crown owns the mine, yet the crown's debts grow. The metal passes
+  through Spain and ends up with
+
+  foreign lenders and makers in the north of Europe.
+hechos:
+  - id: libros
+    nivel: 1
+    valor_en: You keep the crown's ledgers here in the Imperial Town.
+    etiqueta_es: Lleva los libros de cuentas de la corona
+  - id: plata_sale
+    nivel: 1
+    valor_en: You watch the silver leave Potosi on the mule trains and the ships.
+    etiqueta_es: Ve salir la plata de Potosí
+  - id: espana_pobre
+    nivel: 2
+    valor_en: You know Spain stays poor even though the crown owns the mine.
+    etiqueta_es: Sabe que España sigue pobre aunque es dueña de la mina
+  - id: otros_cobran
+    nivel: 2
+    valor_en: You know foreign lenders and makers end up with the silver.
+    etiqueta_es: Sabe que prestamistas y fabricantes extranjeros se quedan con la plata
+  - id: vaca_leche
+    nivel: 3
+    valor_en: "You say it plainly when asked well: Spain had the cow, but others
+      drank the milk."
+    etiqueta_es: "Lo dice claro: España tenía la vaca, pero otros tomaban la leche"
+jugador:
+  - id: nombre
+    descripcion_en: the name of the player's character
+    etiqueta_es: tu nombre en el juego
+  - id: origen
+    descripcion_en: where the player's character comes from (any game answer)
+    etiqueta_es: de dónde viene tu personaje
+  - id: interes
+    descripcion_en: why the character wants to understand Potosi and the silver
+    etiqueta_es: por qué te interesa Potosí
+secretos: []
+medidores:
+  - tipo: rapport
+    id: conocer
+    etiqueta_es: Conocer al contador
+    reglas:
+      objetivo: 12
+      puntos_hecho:
+        - 2
+        - 3
+        - 4
+      seguimiento: 1
+      pregunta_nueva: 1
+      revelacion: 1
+      bono_reciprocidad: 1
+      empatia: 1
+      max_preguntas_sin_compartir: 2
+      max_puntos_turno: 6
+      min_hechos: 3
+      min_compartidos: 1
+      min_niveles: 2
+      apertura:
+        nivel_2:
+          hechos: 1
+          compartidos: 1
+        nivel_3:
+          hechos: 1
+          compartidos: 1
+  - tipo: pedir
+    id: deducir
+    etiqueta_es: Llegar a la deducción de la leche
+    pista_es: "Ya te escucha. Formulá la pregunta del libro: ¿a dónde fue a parar la
+      plata?"
+    tema_en: The player wants to understand why Spain, owner of the mine, also ended
+      up poor.
+    lo_que_el_npc_quiere_en: You want the player to form the real question before
+      you answer with the book's figure.
+    puente_en: Once you trust the player a little, ask them what they really came to
+      understand.
+    objeciones:
+      - id: pregunta
+        npc_en: You want the player to ask where the silver ultimately goes, not why it
+          ran out.
+        la_resuelve_en: The player asks where all the silver finally ends up.
+    pasos:
+      - id: contar
+        etiqueta_es: contar qué querés entender
+        puntos: 1
+        obligatorio: true
+        senal:
+          acto: states_errand
+        pista_es: Contale qué viniste a entender.
+        frases_en:
+          - I want to understand why Spain stayed poor.
+          - I came to learn about the silver.
+      - id: preguntar
+        etiqueta_es: formular la pregunta del libro
+        puntos: 2
+        obligatorio: true
+        senal:
+          objecion: pregunta
+        pista_es: Preguntá a dónde fue a parar la plata.
+        frases_en:
+          - Where did all the silver really go?
+          - Who finally kept the silver?
+ayuda:
+  conocer:
+    pista_es: Preguntale por sus libros de cuentas y por lo que ve salir de Potosí;
+      contale algo de tu personaje.
+    frases_por_nivel:
+      "1":
+        - What do you keep in those ledgers?
+        - What leaves the town?
+      "2":
+        - Does the silver stay in Spain?
+        - Who owns the mine?
+      "3":
+        - Then who ends up with the silver?
+  reciprocidad:
+    pista_es: Contale algo de tu personaje para que se abra.
+    frases_en:
+      - I came a long way to understand this.
+      - I work far from here.
+  recado_temprano:
+    pista_es: Primero conocelo un poco; no suelta la respuesta de entrada.
+  l1:
+    pista_es: Probá decirlo en inglés, aunque sea simple.
+  dato_real:
+    pista_es: Contá cosas de tu personaje del juego, no datos reales tuyos.
+ayuda_tras_turnos:
+  - 2
+  - 3
+ejemplos_juez: []
+deduccion_objetivo: SAB-VACA-LECHE
+estado: draft

@@ -1,0 +1,30 @@
+# Temas globales vedados (02 §3.2 regla S1; 01 §2.17.1). Ninguna escena los declara en temas_permitidos (03 §6.1 #6).
+fuente: "02 §3.2 S1; 01 §2.17.1"
+vedados:
+  - violence
+  - weapons
+  - injuries
+  - illness or symptoms
+  - medical advice
+  - sexuality
+  - romance or flirting
+  - dating
+  - drugs
+  - alcohol
+  - smoking
+  - gambling
+  - self-harm
+  - hate
+  - real-world politics
+  - religion as debate
+  - scary content
+  - money
+  - prices
+  - wages
+  - costs
+  - profits
+  - buying or selling
+  - personal data
+  - meeting outside the game
+  - social media
+  - other apps or websites
