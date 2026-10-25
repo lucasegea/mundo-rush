@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { createContentLoader, type WatchDir } from "../src/content/loader.ts";
+import { mkdirSync } from "node:fs";
+import { createContentLoader, resolverDirUniverso, UNIVERSO_DEFECTO, type WatchDir } from "../src/content/loader.ts";
 
 let dir: string;
 const write = (name: string, data: unknown): void => writeFileSync(join(dir, name), JSON.stringify(data));
@@ -56,6 +57,28 @@ describe("apps/server/src/content/loader.ts", () => {
     expect(sceneB["npcs.json"]).toEqual([{ id: "NPC-NELL", nombre: "Nelly" }]);
     expect(loader.forNextScene()).toBe(sceneB);
     loader.close();
+  });
+
+  // M1 AC3 (D-806): el loader selecciona el universo por session.universeId; unset ⇒ U-CAMPESINO.
+  test("resolverDirUniverso: unset y U-CAMPESINO caen en la raíz legacy; otro id en su subcarpeta", () => {
+    expect(resolverDirUniverso("/base")).toBe("/base");
+    expect(resolverDirUniverso("/base", UNIVERSO_DEFECTO)).toBe("/base");
+    expect(resolverDirUniverso("/base", "U-GALEANO")).toBe(join("/base", "U-GALEANO"));
+  });
+
+  test("carga el id correcto según universeId (unset = campesino raíz, U-GALEANO = su namespace)", () => {
+    // Raíz = U-CAMPESINO (verbatim). Subcarpeta U-GALEANO/ = el build con --universe=U-GALEANO.
+    write("npcs.json", [{ id: "NPC-HARLAN", universo: "campesino" }]);
+    write("indice.json", { modo: "dev" });
+    mkdirSync(join(dir, "U-GALEANO"));
+    writeFileSync(join(dir, "U-GALEANO", "npcs.json"), JSON.stringify([{ id: "NPC-POTOSI", universo: "galeano" }]));
+    writeFileSync(join(dir, "U-GALEANO", "indice.json"), JSON.stringify({ modo: "dev" }));
+
+    const campesino = createContentLoader({ dir, env: {} }).forNextScene();
+    expect(campesino["npcs.json"]).toEqual([{ id: "NPC-HARLAN", universo: "campesino" }]);
+
+    const galeano = createContentLoader({ dir: join(dir, "U-GALEANO"), env: {} }).forNextScene();
+    expect(galeano["npcs.json"]).toEqual([{ id: "NPC-POTOSI", universo: "galeano" }]);
   });
 
   test("si la relectura falla a mitad de una escritura, sigue el último bueno y reintenta", () => {

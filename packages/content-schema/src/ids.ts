@@ -21,6 +21,8 @@ export const ID_PATTERNS = {
   pronunciacion: /^M\d+\.\d+-E\d+-PRON-\d+$/,
   /** Ficha de conversación por medidores (ADR-027). */
   conversacion: /^CONV-[A-Z]+$/,
+  /** Universo (dataset de un libro; book-mode slice-1, D-804). `U-CAMPESINO` es el fallback curado. */
+  universo: /^U-[A-Z]+$/,
 } as const;
 
 export type IdKind = keyof typeof ID_PATTERNS;
@@ -44,3 +46,4 @@ export const GlosarioId = idOf("glosario");
 export const RegionId = idOf("region");
 export const LugarId = idOf("lugar");
 export const ConversacionId = idOf("conversacion");
+export const UniversoId = idOf("universo");

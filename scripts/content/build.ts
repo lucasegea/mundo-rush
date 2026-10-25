@@ -7,7 +7,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compilarContenido, compilarIncremental, formatearHallazgo } from "@lg/content-schema";
+import { compilarContenido, compilarIncremental, compilarManifiesto, formatearHallazgo } from "@lg/content-schema";
 import type { ArchivoFuente, Hallazgo, Modo, Resultado } from "@lg/content-schema";
 
 export const SALIDA_CLIENTE = "apps/web/public/content";
@@ -15,26 +15,46 @@ export const SALIDA_SERVIDOR = "apps/server/generated/content";
 
 const aPosix = (p: string): string => p.split(sep).join("/");
 
-/** Todos los archivos de <root>/content con su ruta relativa a root (`content/missions/M0.1.yaml`). */
-export const leerContenido = (root: string): ArchivoFuente[] => {
+/** content/universes/<id>/ de un universo namespaceado (S1/D-804). */
+export const dirUniverso = (root: string, universe: string): string => join(root, "content", "universes", universe);
+
+/**
+ * Todos los archivos de un universo con su ruta CANÓNICA `content/<subpath>`.
+ * Sin `universe`: lee la campesino legacy (`<root>/content/`), tal cual hoy (D-805, camino por defecto verbatim).
+ * Con `universe`: lee `<root>/content/universes/<id>/` y normaliza cada ruta a `content/<subpath>`, así los 23
+ * regexes de RUTAS en conjunto.ts matchean sin cambios (D-804: el lever es el reader, no el clasificador).
+ */
+export const leerContenido = (root: string, universe?: string): ArchivoFuente[] => {
+  const base = universe ? dirUniverso(root, universe) : join(root, "content");
+  const canonica = universe
+    ? (p: string): string => aPosix(join("content", relative(base, p)))
+    : (p: string): string => aPosix(relative(root, p));
+  // El lector legacy (sin universo) NO desciende a content/universes/: esos árboles son otros universos y
+  // sus rutas no son canónicas de la campesino, así que colarlos rompería la compilación (AC1/C-B).
+  const saltar = universe ? null : join(root, "content", "universes");
   const out: ArchivoFuente[] = [];
   const recorrer = (dir: string): void => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
       const p = join(dir, e.name);
-      if (e.isDirectory()) recorrer(p);
-      else out.push({ ruta: aPosix(relative(root, p)), texto: readFileSync(p, "utf8") });
+      if (e.isDirectory()) {
+        if (p !== saltar) recorrer(p);
+      } else out.push({ ruta: canonica(p), texto: readFileSync(p, "utf8") });
     }
   };
-  recorrer(join(root, "content"));
+  recorrer(base);
   return out;
 };
 
-/** Escribe las dos salidas desde cero (borra lo viejo para no dejar JSON huérfano). Solo se llama sin errores. */
-const escribirSalida = (root: string, r: Resultado, modo: Modo): void => {
+/**
+ * Escribe las dos salidas desde cero (borra lo viejo para no dejar JSON huérfano). Solo se llama sin errores.
+ * Sin `universe`: campesino → `apps/.../content/` (verbatim, lo que lee el loader con universeId unset, D-806).
+ * Con `universe`: → `apps/.../content/<id>/`, el namespace que resuelve el loader para ese universeId.
+ */
+const escribirSalida = (root: string, r: Resultado, modo: Modo, universe?: string): void => {
   if (!r.salida) throw new Error("escribirSalida sin salida: hubo errores");
   const ids = Object.fromEntries([...r.conjunto.idsPorArchivo].map(([archivo, lista]) => [archivo, lista]));
   for (const [dir, archivos] of [[SALIDA_CLIENTE, r.salida.cliente], [SALIDA_SERVIDOR, r.salida.servidor]] as const) {
-    const abs = join(root, dir);
+    const abs = universe ? join(root, dir, universe) : join(root, dir);
     rmSync(abs, { recursive: true, force: true });
     mkdirSync(abs, { recursive: true });
     for (const [nombre, data] of Object.entries(archivos)) writeFileSync(join(abs, nombre), `${JSON.stringify(data, null, 2)}\n`);
@@ -50,19 +70,47 @@ const imprimir = (hallazgos: readonly Hallazgo[], log: (s: string) => void): voi
 export interface Opciones {
   root: string;
   modo: Modo;
+  /** Universo a compilar (D-804). Unset = campesino legacy (U-CAMPESINO), camino por defecto verbatim. */
+  universe?: string | undefined;
   log: (s: string) => void;
 }
 
+const CABEZA_UNIVERSO = "content/manifiesto.yaml";
+
+/**
+ * Universo recién namespaceado (slice-1 M1): solo cabeza, sin dataset todavía. Valida el manifiesto y sale 0.
+ * M3 SEAM: cuando el analizador EMITe el dataset Galeano, `contenido` deja de estar vacío y se corre el
+ * compilador completo (OBLIGATORIOS, cruzados, lints, y el grounding gate de M4) — ver `construir`.
+ */
+const construirScaffold = (universe: string, archivos: readonly ArchivoFuente[], log: (s: string) => void): number => {
+  const manifiesto = archivos.find((a) => a.ruta === CABEZA_UNIVERSO);
+  if (!manifiesto) {
+    log(`build:content: falta content/universes/${universe}/manifiesto.yaml (cabeza del universo)`);
+    return 1;
+  }
+  const { universo, errores } = compilarManifiesto(manifiesto);
+  imprimir(errores, log);
+  if (!universo || errores.length > 0) {
+    log(`build:content: manifiesto de ${universe} inválido (${errores.length} error(es)); no se escribió nada`);
+    return 1;
+  }
+  log(`build:content OK (${universe}): universo "${universo.titulo}" — ${universo.libro_fuente}; sin dataset todavía (scaffold)`);
+  return 0;
+};
+
 /** Compilación completa. Devuelve el código de salida. */
-export const construir = ({ root, modo, log }: Opciones): number => {
-  const r = compilarContenido(leerContenido(root), modo);
+export const construir = ({ root, modo, universe, log }: Opciones): number => {
+  const archivos = leerContenido(root, universe);
+  // D-804/D-805: un universo con solo cabeza compila como scaffold (M1); con dataset, el compilador completo (M3).
+  if (universe && archivos.every((a) => a.ruta === CABEZA_UNIVERSO)) return construirScaffold(universe, archivos, log);
+  const r = compilarContenido(archivos, modo);
   imprimir(r.hallazgos, log);
   const avisos = r.hallazgos.length - r.errores.length;
   if (!r.salida) {
     log(`validate:content: ${r.errores.length} error(es), ${avisos} aviso(s); no se escribió nada`);
     return 1;
   }
-  escribirSalida(root, r, modo);
+  escribirSalida(root, r, modo, universe);
   const c = r.conjunto;
   log(`validate:content OK (${modo}): ${c.misiones.length} misiones, ${c.npcs.length} NPCs, ${c.saberes.length} saberes, ${c.plantillas.length} plantillas de Lumi, ${c.glosario.length} entradas de glosario, ${avisos} aviso(s)`);
   log(`  → ${SALIDA_CLIENTE}/ (${Object.keys(r.salida.cliente).length + 1} archivos) · ${SALIDA_SERVIDOR}/ (${Object.keys(r.salida.servidor).length + 1} archivos)`);
@@ -94,17 +142,20 @@ export const crearCompiladorIncremental = (root: string, modo: Modo = "dev") => 
   };
 };
 
-const leerArgs = (argv: readonly string[]): { root: string; modo: Modo } => {
+const leerArgs = (argv: readonly string[]): { root: string; modo: Modo; universe?: string | undefined } => {
   const valor = (flag: string): string | undefined => {
     const i = argv.indexOf(flag);
     return i >= 0 ? argv[i + 1] : undefined;
   };
   const modo = valor("--mode") ?? "dev";
   if (modo !== "dev" && modo !== "fv" && modo !== "release") throw new Error(`--mode inválido: ${modo}`);
-  return { root: resolve(valor("--root") ?? "."), modo };
+  // Acepta `--universe=U-GALEANO` y `--universe U-GALEANO`; unset = campesino legacy (D-806).
+  const igual = argv.find((a) => a.startsWith("--universe="))?.slice("--universe=".length);
+  const universe = igual ?? valor("--universe");
+  return { root: resolve(valor("--root") ?? "."), modo, universe };
 };
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { root, modo } = leerArgs(process.argv.slice(2));
-  process.exitCode = construir({ root, modo, log: (s) => console.log(s) });
+  const { root, modo, universe } = leerArgs(process.argv.slice(2));
+  process.exitCode = construir({ root, modo, universe, log: (s) => console.log(s) });
 }

@@ -8,6 +8,19 @@ import { fileURLToPath } from "node:url";
 
 export const GENERATED_CONTENT_DIR = fileURLToPath(new URL("../../generated/content/", import.meta.url));
 
+/** Universo por defecto cuando `session.universeId` no está (D-806: el fallback curado). */
+export const UNIVERSO_DEFECTO = "U-CAMPESINO";
+
+/**
+ * Directorio compilado de un universo (D-806: un concepto de selección entre build y run).
+ * unset / U-CAMPESINO → la raíz legacy (`baseDir`), que es donde el build sin flag escribe (verbatim).
+ * Otro id → `baseDir/<id>/`, que es donde el build con `--universe=<id>` escribe.
+ */
+export const resolverDirUniverso = (baseDir: string, universeId?: string): string => {
+  const id = universeId ?? UNIVERSO_DEFECTO;
+  return id === UNIVERSO_DEFECTO ? baseDir : join(baseDir, id);
+};
+
 /** Archivo compilado → su JSON. */
 export type ServerContent = Readonly<Record<string, unknown>>;
 
@@ -16,6 +29,8 @@ export type WatchDir = (dir: string, onChange: () => void) => { close(): void };
 
 export interface LoaderOptions {
   dir?: string;
+  /** Universo a cargar (D-806). Ignorado si se pasa `dir` explícito. unset ⇒ U-CAMPESINO. */
+  universeId?: string;
   env?: Record<string, string | undefined>;
   watch?: WatchDir;
 }
@@ -39,7 +54,8 @@ export function readGeneratedContent(dir: string): ServerContent {
 }
 
 export function createContentLoader(options: LoaderOptions = {}): ContentLoader {
-  const dir = options.dir ?? GENERATED_CONTENT_DIR;
+  // M5 SEAM: el boot de sesión (T5.1) pasa `universeId` desde `session.universeId` / el flag `--universe` de dev:play.
+  const dir = options.dir ?? resolverDirUniverso(GENERATED_CONTENT_DIR, options.universeId);
   const watching = (options.env ?? process.env)["LG_DEV_CONTENT_WATCH"] === "1";
   let current = readGeneratedContent(dir);
   let stale = false;

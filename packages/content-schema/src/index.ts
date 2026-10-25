@@ -14,8 +14,9 @@ export * from "./schemas/aprendizaje.ts";
 export * from "./schemas/control.ts";
 export * from "./schemas/pedido.ts";
 export * from "./schemas/conversacion.ts";
+export * from "./schemas/universo.ts";
 
-export { compilarContenido, compilarIncremental } from "./compile/compilar.ts";
+export { compilarContenido, compilarIncremental, compilarManifiesto } from "./compile/compilar.ts";
 export type { Resultado, ResultadoIncremental } from "./compile/compilar.ts";
 export { filtrarGlosario, filtrarSaberes } from "./compile/vistas.ts";
 export type { Salida } from "./compile/vistas.ts";

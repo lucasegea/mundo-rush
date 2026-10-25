@@ -16,6 +16,7 @@ import { ArchivoPistas, ArchivoPresentaciones, ArchivoSobres } from "../schemas/
 import type { Pista, Presentacion, Sobre } from "../schemas/red.ts";
 import { Saber } from "../schemas/saber.ts";
 import { FichaConversacion } from "../schemas/conversacion.ts";
+import { Universo } from "../schemas/universo.ts";
 import type { ArchivoFuente, Entrada, Hallazgo } from "./tipos.ts";
 import { clave } from "./tipos.ts";
 
@@ -41,6 +42,8 @@ export interface Conjunto {
   dioramas: Entrada<Infer<typeof Diorama>>[];
   /** Fichas de conversación por medidores (ADR-027), solo servidor. */
   conversaciones: Entrada<Infer<typeof FichaConversacion>>[];
+  /** Cabeza del universo (book-mode slice-1, D-804). null en la campesino legacy (no tiene manifiesto). */
+  universo: Infer<typeof Universo> | null;
   bloqueos: Entrada<Infer<typeof ListaBloqueo>>[];
   temas: Infer<typeof TemasGlobales> | null;
   /** Contención y línea segura (F4.2, D-112). */
@@ -56,16 +59,19 @@ export interface Conjunto {
 export const conjuntoVacio = (): Conjunto => ({
   misiones: [], npcs: [], pedidos: [], fundaciones: [], saberes: [], presentaciones: [], sobres: [], pistas: [],
   plantillas: [], glosario: [], habilidades: [], ramas: [], regiones: [], lugares: [], niveles: [], dioramas: [], conversaciones: [],
-  bloqueos: [], temas: null, contencion: null, retirados: null, allowlist: null, prompts: {}, idsPorArchivo: new Map(),
+  universo: null, bloqueos: [], temas: null, contencion: null, retirados: null, allowlist: null, prompts: {}, idsPorArchivo: new Map(),
 });
 
 type Tipo =
   | "mision" | "npc" | "pedido" | "fundacion" | "saber" | "presentaciones" | "sobres" | "pistas" | "lumi"
   | "glosario" | "habilidades" | "lugares" | "nivel" | "diorama" | "bloqueo" | "temas" | "contencion" | "retirados"
-  | "allowlist" | "prompt" | "conversacion" | "ignorado";
+  | "allowlist" | "prompt" | "conversacion" | "manifiesto" | "ignorado";
 
 /** Ruta canónica → tipo (03 §4.2.1). Lo que no matchea es un error: nada se ignora en silencio. */
 const RUTAS: [RegExp, Tipo][] = [
+  // Cabeza del universo (D-804). El reader de build.ts normaliza content/universes/<id>/manifiesto.yaml
+  // a content/manifiesto.yaml; la campesino legacy no tiene manifiesto, así que esta fila nunca la toca.
+  [/^content\/manifiesto\.yaml$/, "manifiesto"],
   [/^content\/missions\/[^/]+\.yaml$/, "mision"],
   [/^content\/npcs\/[^/]+\.yaml$/, "npc"],
   [/^content\/board\/[^/]+\.yaml$/, "pedido"],
@@ -228,6 +234,7 @@ export const agregarArchivo = (c: Conjunto, f: ArchivoFuente, h: Hallazgo[]): vo
       }
       break;
     }
+    case "manifiesto": c.universo = validar(Universo, f.ruta, raw, h); break;
     case "temas": c.temas = validar(TemasGlobales, f.ruta, raw, h); break;
     case "contencion": c.contencion = validar(ArchivoContencion, f.ruta, raw, h); break;
     case "retirados": {

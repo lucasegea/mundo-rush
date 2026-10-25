@@ -62,6 +62,19 @@ export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo
   };
 };
 
+/**
+ * Valida SOLO la cabeza de un universo (content/universes/<id>/manifiesto.yaml), sin los chequeos del contenido
+ * completo (OBLIGATORIOS, cruzados, lints). book-mode slice-1 (D-804): un universo recién namespaceado tiene
+ * cabeza pero todavía no dataset; el build sale 0 con esto mientras `contenido` esté vacío.
+ * M3 SEAM: una vez que el analizador EMITe el dataset, el build corre `compilarContenido` completo, no esto.
+ */
+export const compilarManifiesto = (archivo: ArchivoFuente): { universo: Conjunto["universo"]; errores: Hallazgo[] } => {
+  const c = conjuntoVacio();
+  const h: Hallazgo[] = [];
+  agregarArchivo(c, archivo, h);
+  return { universo: c.universo, errores: h.filter((x) => x.nivel === "error") };
+};
+
 export interface ResultadoIncremental extends Resultado {
   /** Ids definidos por los archivos cambiados, antes y después del cambio (para la recarga de FD0). */
   tocados: string[];
