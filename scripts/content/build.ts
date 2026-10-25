@@ -9,6 +9,7 @@ import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compilarContenido, compilarIncremental, compilarManifiesto, formatearHallazgo } from "@lg/content-schema";
 import type { ArchivoFuente, Hallazgo, Modo, Resultado } from "@lg/content-schema";
+import { chequearGrounding } from "./grounding.ts";
 
 export const SALIDA_CLIENTE = "apps/web/public/content";
 export const SALIDA_SERVIDOR = "apps/server/generated/content";
@@ -109,6 +110,16 @@ export const construir = ({ root, modo, universe, log }: Opciones): number => {
   if (!r.salida) {
     log(`validate:content: ${r.errores.length} error(es), ${avisos} aviso(s); no se escribió nada`);
     return 1;
+  }
+  // book-mode slice-1 M4 (D-807): fact-grounding gate, SCOPEADO a universos generados — solo cuando hay `--universe`.
+  // La campesino sin flag NUNCA pasa por acá (sus saberes no llevan clasificacion y no deben re-clasificarse ni fallar).
+  if (universe) {
+    const erroresGrounding = chequearGrounding(r.conjunto);
+    if (erroresGrounding.length > 0) {
+      imprimir(erroresGrounding, log);
+      log(`validate:content: grounding gate — ${erroresGrounding.length} error(es) en ${universe}; no se escribió nada`);
+      return 1;
+    }
   }
   escribirSalida(root, r, modo, universe);
   const c = r.conjunto;
