@@ -5,7 +5,7 @@
 import type { GameActions } from "../state/actions";
 import { selectMapActive } from "../state/selectors";
 import type { GameStore } from "../state/store";
-import { loadDialogOnlyCatalog, loadDiorama, type FetchJson } from "../services/content";
+import { loadDialogOnlyCatalog, loadDiorama, UNIVERSO_DEFECTO, WORLD_DIORAMA, type FetchJson } from "../services/content";
 import { startInput } from "../services/input";
 import { loadSavedSettings, persistSettings } from "../services/persistence";
 import type { Platform } from "../services/platform";
@@ -24,6 +24,12 @@ export interface BootDeps {
   prefersReducedMotion: boolean;
   /** Base de la app (import.meta.env.BASE_URL). */
   baseUrl: string;
+  /**
+   * Universo a jugar (S4/D-806): el cliente pide el contenido compilado de ese namespace y entra a su diorama de
+   * arranque. unset / U-CAMPESINO ⇒ el árbol legacy y el diorama de prueba, verbatim (sin regresión de la campesino).
+   * En dev lo setea main.tsx desde `?universe=<id>`; el servidor usa el mismo id por LG_UNIVERSE.
+   */
+  universeId?: string;
   fetchJson?: FetchJson;
   /** Dispositivos y reloj del mapa (F2). Sin esto (tests del shell) no se escucha input ni corre la simulación. */
   world?: { inputTarget: EventTarget; scheduler?: FrameScheduler };
@@ -56,12 +62,19 @@ export async function boot(deps: BootDeps): Promise<() => void> {
     () => actions.announce("announce.storageUnavailable"),
   );
 
-  await loadDialogOnlyCatalog(actions, deps.baseUrl, deps.fetchJson);
+  await loadDialogOnlyCatalog(actions, deps.baseUrl, deps.universeId, deps.fetchJson);
+
+  // Diorama de arranque: la campesino entra al de prueba (verbatim); un universo generado entra al diorama de su
+  // primer lugar (dato, no un mapa universo→diorama cableado), p. ej. U-GALEANO → el Cerro Rico de Potosí.
+  const entryDiorama = (): string =>
+    !deps.universeId || deps.universeId === UNIVERSO_DEFECTO
+      ? WORLD_DIORAMA
+      : store.getState().world.places[0]?.diorama ?? WORLD_DIORAMA;
 
   // El diorama se pide la primera vez que se entra al mapa (el modo solo-diálogo nunca lo descarga).
   const playing = (): boolean => selectMapActive(store.getState());
   const stopMapLoad = store.subscribe((s) => s.session.phase, (phase) => {
-    if (phase === "world" && store.getState().world.dioramaStatus === "idle") void loadDiorama(actions, deps.baseUrl, undefined, deps.fetchJson);
+    if (phase === "world" && store.getState().world.dioramaStatus === "idle") void loadDiorama(actions, deps.baseUrl, entryDiorama(), deps.universeId, deps.fetchJson);
   }, { fireImmediately: true });
   const stops = [stopPersisting, stopMapLoad];
   if (deps.world) {

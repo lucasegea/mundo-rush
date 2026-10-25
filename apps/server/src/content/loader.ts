@@ -11,6 +11,13 @@ export const GENERATED_CONTENT_DIR = fileURLToPath(new URL("../../generated/cont
 /** Universo por defecto cuando `session.universeId` no está (D-806: el fallback curado). */
 export const UNIVERSO_DEFECTO = "U-CAMPESINO";
 
+/** Variable de entorno con la que el boot (dev:play --universe) elige el universo de la sesión del servidor (S4/D-806). */
+export const LG_UNIVERSE_VAR = "LG_UNIVERSE";
+
+/** El universo de la sesión según el entorno: vacío o ausente ⇒ undefined (el loader cae en U-CAMPESINO, D-806). */
+export const universeIdFromEnv = (env: Record<string, string | undefined>): string | undefined =>
+  (env[LG_UNIVERSE_VAR] ?? "") === "" ? undefined : env[LG_UNIVERSE_VAR];
+
 /**
  * Directorio compilado de un universo (D-806: un concepto de selección entre build y run).
  * unset / U-CAMPESINO → la raíz legacy (`baseDir`), que es donde el build sin flag escribe (verbatim).

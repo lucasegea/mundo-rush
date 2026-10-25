@@ -34,9 +34,31 @@ export const fakeQualityEnv = ({ webgl2, memory = 8, cores = 8 }: { webgl2: bool
 const RAW = import.meta.glob("../../../content/**/*.{yaml,txt}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 export function compiledClientContent(): Record<string, unknown> {
-  const files: ArchivoFuente[] = Object.entries(RAW).map(([path, texto]) => ({ ruta: path.replace(/^(\.\.\/)+/, ""), texto }));
+  const files: ArchivoFuente[] = Object.entries(RAW)
+    .map(([path, texto]) => ({ ruta: path.replace(/^(\.\.\/)+/, ""), texto }))
+    // Igual que el reader legacy de scripts/content/build.ts (D-805): la campesino NO desciende a content/universes/;
+    // esos árboles son otros universos y sus rutas no son canónicas de la campesino (colarlos rompería la compilación).
+    .filter((f) => !f.ruta.startsWith("content/universes/"));
   const r = compilarContenido(files, "dev");
   if (!r.salida) throw new Error(`el contenido real no compila:\n${r.errores.map(formatearHallazgo).join("\n")}`);
+  return r.salida.cliente;
+}
+
+// Universos namespaceados (book-mode slice-1): content/universes/<id>/** compilado en memoria. Cada ruta se normaliza
+// a su canónica `content/<subpath>` (igual que el reader de scripts/content/build.ts, D-804) para que el compilador
+// —los mismos 23 regexes de RUTAS— la clasifique sin cambios. Es la salida del cliente que escribe build:content
+// --universe=<id> en apps/web/public/content/<id>/ (fuera de git, puede no existir aún).
+const RAW_UNIVERSES = import.meta.glob("../../../content/universes/**/*.{yaml,txt}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+
+export function compiledUniverseClientContent(universe: string): Record<string, unknown> {
+  const prefijo = `content/universes/${universe}/`;
+  const files: ArchivoFuente[] = Object.entries(RAW_UNIVERSES)
+    .map(([path, texto]) => ({ path: path.replace(/^(\.\.\/)+/, ""), texto }))
+    .filter(({ path }) => path.startsWith(prefijo))
+    .map(({ path, texto }) => ({ ruta: `content/${path.slice(prefijo.length)}`, texto }));
+  if (files.length === 0) throw new Error(`no hay contenido para el universo ${universe} en content/universes/`);
+  const r = compilarContenido(files, "dev");
+  if (!r.salida) throw new Error(`el universo ${universe} no compila:\n${r.errores.map(formatearHallazgo).join("\n")}`);
   return r.salida.cliente;
 }
 
@@ -55,6 +77,8 @@ export interface BootOptions {
   world?: NonNullable<BootDeps["world"]>;
   /** F4.2: servidor de escenas (falso en los tests del HUD). */
   scene?: NonNullable<BootDeps["scene"]>;
+  /** book-mode slice-1 (S4/D-806): universo a jugar; unset ⇒ U-CAMPESINO (el árbol legacy). */
+  universeId?: string;
 }
 
 /** Arranca la app con el store y las acciones reales y un navegador simulado. */
@@ -67,6 +91,7 @@ export const bootApp = (o: BootOptions) =>
     prefersReducedMotion: o.prefersReducedMotion ?? false,
     baseUrl: "/",
     fetchJson: o.fetchJson ?? fetchFromContent(compiledClientContent()),
+    ...(o.universeId ? { universeId: o.universeId } : {}),
     ...(o.world ? { world: o.world } : {}),
     ...(o.scene ? { scene: o.scene } : {}),
   });

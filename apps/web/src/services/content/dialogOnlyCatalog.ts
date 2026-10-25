@@ -4,6 +4,7 @@
 // falla claro, sin datos inventados.
 import type { DialogOnlyCatalog } from "../../state/actions";
 import type { NpcInfo, PlaceInfo } from "../../state/slices";
+import { universeContentBase } from "./universe";
 
 export const CONTENT_FILES = { places: "lugares.json", npcs: "npcs.json" } as const;
 const LOCALE = "es-AR";
@@ -71,13 +72,14 @@ export interface CatalogSink {
   contentFailed(): void;
 }
 
-/** Carga el catálogo y lo entrega al store. Devuelve true si cargó. */
-export async function loadDialogOnlyCatalog(sink: CatalogSink, baseUrl: string, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
+/** Carga el catálogo y lo entrega al store. Devuelve true si cargó. `universeId` namespacea la ruta (S4/D-806). */
+export async function loadDialogOnlyCatalog(sink: CatalogSink, baseUrl: string, universeId?: string, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
   sink.contentLoading();
   try {
+    const base = universeContentBase(baseUrl, universeId);
     const [places, npcs] = await Promise.all([
-      fetchJson(`${baseUrl}content/${CONTENT_FILES.places}`),
-      fetchJson(`${baseUrl}content/${CONTENT_FILES.npcs}`),
+      fetchJson(`${base}${CONTENT_FILES.places}`),
+      fetchJson(`${base}${CONTENT_FILES.npcs}`),
     ]);
     sink.contentLoaded(parseDialogOnlyCatalog(places, npcs));
     return true;

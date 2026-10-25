@@ -3,6 +3,7 @@
 // donde el núcleo arma la grilla y las capas. Si algo falla, el mapa avisa y el modo solo-diálogo sigue.
 import type { DioramaLayout } from "@lg/core";
 import { browserFetchJson, ContentShapeError, type FetchJson } from "./dialogOnlyCatalog";
+import { universeContentBase } from "./universe";
 
 export const DIORAMAS_FILE = "dioramas.json";
 /** El diorama del mapa en F2 (03 §4.2.1): el de prueba. F3.1 pasa a `muelle`. */
@@ -26,11 +27,11 @@ export interface DioramaSink {
   dioramaFailed(): void;
 }
 
-/** Carga un diorama y lo entrega al store. Devuelve true si cargó. */
-export async function loadDiorama(sink: DioramaSink, baseUrl: string, id = WORLD_DIORAMA, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
+/** Carga un diorama y lo entrega al store. Devuelve true si cargó. `universeId` namespacea la ruta (S4/D-806). */
+export async function loadDiorama(sink: DioramaSink, baseUrl: string, id = WORLD_DIORAMA, universeId?: string, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
   sink.dioramaLoading();
   try {
-    sink.dioramaLoaded(pickDiorama(await fetchJson(`${baseUrl}content/${DIORAMAS_FILE}`), id));
+    sink.dioramaLoaded(pickDiorama(await fetchJson(`${universeContentBase(baseUrl, universeId)}${DIORAMAS_FILE}`), id));
     return true;
   } catch (err) {
     console.warn("[content] no se pudo cargar el diorama:", err instanceof Error ? err.message : err);

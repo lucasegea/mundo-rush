@@ -111,7 +111,7 @@ describe("carga del diorama de prueba", () => {
   test("si el diorama no carga: estado error, anuncio y el HUD ofrece solo-diálogo", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await act(async () => {
-      await loadDiorama(actions, "/", "test", () => Promise.reject(new Error("404")));
+      await loadDiorama(actions, "/", "test", undefined, () => Promise.reject(new Error("404")));
     });
     warn.mockRestore();
     expect(gameStore.getState().world.dioramaStatus).toBe("error");

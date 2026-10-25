@@ -40,12 +40,12 @@ describe("catálogo de solo-diálogo sobre la salida real de F1.2", () => {
 
   test("loadDialogOnlyCatalog: carga, o falla claro con aviso en consola", async () => {
     const ok = sink();
-    expect(await loadDialogOnlyCatalog(ok, "/", fetchFromContent(content))).toBe(true);
+    expect(await loadDialogOnlyCatalog(ok, "/", undefined, fetchFromContent(content))).toBe(true);
     expect(ok.calls).toEqual(["loading", "loaded"]);
 
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const bad = sink();
-    expect(await loadDialogOnlyCatalog(bad, "/", fetchFromContent({}))).toBe(false);
+    expect(await loadDialogOnlyCatalog(bad, "/", undefined, fetchFromContent({}))).toBe(false);
     expect(bad.calls).toEqual(["loading", "failed"]);
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
@@ -53,7 +53,7 @@ describe("catálogo de solo-diálogo sobre la salida real de F1.2", () => {
 
   test("pide los archivos bajo <base>content/", async () => {
     const urls: string[] = [];
-    await loadDialogOnlyCatalog(sink(), "/juego/", (u) => { urls.push(u); return fetchFromContent(content)(u); });
+    await loadDialogOnlyCatalog(sink(), "/juego/", undefined, (u) => { urls.push(u); return fetchFromContent(content)(u); });
     expect(urls.sort()).toEqual(["/juego/content/lugares.json", "/juego/content/npcs.json"]);
   });
 });

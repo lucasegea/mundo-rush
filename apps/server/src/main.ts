@@ -9,7 +9,7 @@ import type { AddressInfo } from "node:net";
 import { createGameServer, storesFromEnv, textProvidersFromEnv } from "./app.ts";
 import { hasGeminiKey, GEMINI_KEY_VAR, loadModelsConfig, moderationProviderFromConfig } from "./config/models.ts";
 import { assertOperatorHost } from "./config/operator.ts";
-import { createContentLoader, type ContentLoader } from "./content/loader.ts";
+import { createContentLoader, universeIdFromEnv, type ContentLoader } from "./content/loader.ts";
 import { listenOptions, SERVICE_NAME } from "./http.ts";
 import { FAKE_MODELS_VAR } from "./providers/scripted.ts";
 import { voiceProviderFromConfig } from "./providers/voice.ts";
@@ -21,11 +21,13 @@ const { host, port } = listenOptions(env);
 assertOperatorHost(host, env);
 const models = loadModelsConfig();
 // El contenido se carga con la primera escena: /health anda aunque la salida compilada todavía no exista.
+// S4/D-806: el universo de la sesión sale del entorno (dev:play --universe → LG_UNIVERSE); unset ⇒ U-CAMPESINO.
+const sessionUniverse = universeIdFromEnv(env);
 let loader: ContentLoader | null = null;
 const stores = storesFromEnv(env, {}, models);
 const voice = voiceProviderFromConfig(models, env);
 const game = createGameServer({
-  env, models, content: () => (loader ??= createContentLoader({ env })).forNextScene(), evidence: stores.evidence, ...textProvidersFromEnv(models, env),
+  env, models, content: () => (loader ??= createContentLoader({ env, ...(sessionUniverse ? { universeId: sessionUniverse } : {}) })).forNextScene(), evidence: stores.evidence, ...textProvidersFromEnv(models, env),
   moderation: moderationProviderFromConfig(models), safety: stores.safety, encounters: stores.encounters,
   onConversationLog: (m) => console.warn(`${SERVICE_NAME}: ${m}`),
   voice: voice.factory, ...(stores.ledger ? { ledger: stores.ledger } : {}),
@@ -43,7 +45,7 @@ server.listen(port, host, () => {
   const { port: actual } = server.address() as AddressInfo;
   console.log(`${SERVICE_NAME} escuchando en http://${host}:${actual}`);
   // Solo presencia, nunca valores (contrato de secretos).
-  console.log(`${SERVICE_NAME}: modo operador ${game.operatorMode ? "sí" : "no"} · LG_DEV_CONTENT_WATCH ${env["LG_DEV_CONTENT_WATCH"] === "1" ? "sí" : "no"} · ${GEMINI_KEY_VAR} presente: ${hasGeminiKey(env) ? "sí" : "no"} · modelos guionados (${FAKE_MODELS_VAR}) ${env[FAKE_MODELS_VAR] === "1" && game.operatorMode ? "sí" : "no"} · clasificador de moderación: ${models.moderation.classifier} · evidencia ${stores.persistent ? "en apps/server/data/" : "en memoria (se pierde al cerrar)"} · voz: ${voice.adapter}${voice.factory ? "" : ` (no disponible: ${voice.reason ?? "?"})`}`);
+  console.log(`${SERVICE_NAME}: universo ${sessionUniverse ?? "U-CAMPESINO (por defecto)"} · modo operador ${game.operatorMode ? "sí" : "no"} · LG_DEV_CONTENT_WATCH ${env["LG_DEV_CONTENT_WATCH"] === "1" ? "sí" : "no"} · ${GEMINI_KEY_VAR} presente: ${hasGeminiKey(env) ? "sí" : "no"} · modelos guionados (${FAKE_MODELS_VAR}) ${env[FAKE_MODELS_VAR] === "1" && game.operatorMode ? "sí" : "no"} · clasificador de moderación: ${models.moderation.classifier} · evidencia ${stores.persistent ? "en apps/server/data/" : "en memoria (se pierde al cerrar)"} · voz: ${voice.adapter}${voice.factory ? "" : ` (no disponible: ${voice.reason ?? "?"})`}`);
 });
 
 const stop = (): void => {
