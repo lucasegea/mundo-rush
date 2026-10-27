@@ -125,11 +125,44 @@ export function storesFromEnv(
       encounters: createMemoryEncounterStore(), persistent: false,
     };
   }
+  const defaults = progressPaths(env);
   return {
-    evidence: createFileEvidenceStore(paths.evidence ?? DEFAULT_EVIDENCE_PATH),
-    safety: createFileSafetyStore(paths.safety ?? DEFAULT_SAFETY_PATH),
-    ledger: policy ? createFileCostLedger(policy, paths.costLedger ?? DEFAULT_COST_LEDGER_PATH) : null,
-    encounters: createFileEncounterStore(paths.encounters ?? DEFAULT_ENCOUNTERS_PATH),
+    evidence: createFileEvidenceStore(paths.evidence ?? defaults.evidence),
+    safety: createFileSafetyStore(paths.safety ?? defaults.safety),
+    ledger: policy ? createFileCostLedger(policy, paths.costLedger ?? defaults.costLedger) : null,
+    encounters: createFileEncounterStore(paths.encounters ?? defaults.encounters),
     persistent: true,
   };
+}
+
+/**
+ * Rutas por defecto de los archivos de progreso (D-812). Sin universo, o con U-CAMPESINO, las de siempre; con otro,
+ * el id va antes de la extensión. El libro de costos es gasto, no progreso: no se parte por universo.
+ */
+export function progressPaths(env: Record<string, string | undefined>): { evidence: string; safety: string; costLedger: string; encounters: string } {
+  const universe = universeSuffix(env);
+  return {
+    evidence: withUniverse(DEFAULT_EVIDENCE_PATH, universe),
+    safety: withUniverse(DEFAULT_SAFETY_PATH, universe),
+    costLedger: DEFAULT_COST_LEDGER_PATH,
+    encounters: withUniverse(DEFAULT_ENCOUNTERS_PATH, universe),
+  };
+}
+
+const UNIVERSE_ID = /^U-[A-Z0-9][A-Z0-9-]*$/;
+const DEFAULT_UNIVERSE = "U-CAMPESINO";
+
+/** D-812: universo no por defecto de `LG_UNIVERSE`, validado antes de tocar una ruta; undefined si hay que usar los archivos de siempre. */
+function universeSuffix(env: Record<string, string | undefined>): string | undefined {
+  const id = env["LG_UNIVERSE"] ?? "";
+  if (id === "" || id === DEFAULT_UNIVERSE) return undefined;
+  if (!UNIVERSE_ID.test(id)) throw new Error(`LG_UNIVERSE inválido: "${id}" (se espera U-<MAYÚSCULAS, dígitos o guiones>)`);
+  return id;
+}
+
+/** `dir/evidence.jsonl` + `U-X` → `dir/evidence.U-X.jsonl` (el sufijo va antes de la extensión). */
+function withUniverse(path: string, universe: string | undefined): string {
+  if (!universe) return path;
+  const dot = path.lastIndexOf(".");
+  return `${path.slice(0, dot)}.${universe}${path.slice(dot)}`;
 }

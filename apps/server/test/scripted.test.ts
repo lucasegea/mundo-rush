@@ -3,7 +3,8 @@ import { describe, expect, test } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { storesFromEnv, textProvidersFromEnv } from "../src/app.ts";
+import { fileURLToPath } from "node:url";
+import { progressPaths, storesFromEnv, textProvidersFromEnv } from "../src/app.ts";
 import { GEMINI_KEY_VAR, loadModelsConfig } from "../src/config/models.ts";
 import { readCatalog, renderScriptedText } from "../src/scene-runtime/catalog.ts";
 import { createSceneSession } from "../src/scene-runtime/runtime.ts";
@@ -68,6 +69,38 @@ describe("LG_FAKE_MODELS no escribe en el log real del operador (F7 lo lee como 
       expect(real.evidence.list("op-local")).toEqual([]);
       real.evidence.append(event);
       expect(existsSync(paths.evidence)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("almacenes por universo (D-812, AC8)", () => {
+  const data = (name: string) => fileURLToPath(new URL(`../data/${name}`, import.meta.url));
+  const defaults = { evidence: data("evidence.jsonl"), safety: data("safety.jsonl"), costLedger: data("cost-ledger.jsonl"), encounters: data("encounters.json") };
+
+  test.each([[{}], [{ LG_UNIVERSE: "" }], [{ LG_UNIVERSE: "U-CAMPESINO" }]])("sin universo o U-CAMPESINO (%j): las rutas de siempre, literales", (env) => {
+    expect(progressPaths(env)).toEqual(defaults);
+  });
+
+  test("con LG_UNIVERSE=U-GALEANO: evidencia, seguridad y encuentros llevan el sufijo antes de la extensión; el libro de costos no", () => {
+    expect(progressPaths({ LG_UNIVERSE: "U-GALEANO" })).toEqual({
+      evidence: data("evidence.U-GALEANO.jsonl"), safety: data("safety.U-GALEANO.jsonl"),
+      costLedger: defaults.costLedger, encounters: data("encounters.U-GALEANO.json"),
+    });
+  });
+
+  test.each(["../x", "U-", "u-galeano", "U-GALEANO/../..", "GALEANO", "U-A B"])("un id inválido (%j) falla claro antes de tocar una ruta", (id) => {
+    expect(() => progressPaths({ LG_UNIVERSE: id })).toThrow(/LG_UNIVERSE inválido/);
+    expect(() => storesFromEnv({ LG_UNIVERSE: id }, {})).toThrow(/LG_UNIVERSE inválido/);
+  });
+
+  test("las rutas explícitas siguen ganando y con modelos guionados el universo no importa (memoria)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "lg-uni-stores-"));
+    try {
+      const paths = { evidence: join(dir, "e.jsonl"), safety: join(dir, "s.jsonl"), encounters: join(dir, "x.json") };
+      expect(storesFromEnv({ LG_UNIVERSE: "U-GALEANO" }, paths).persistent).toBe(true);
+      expect(storesFromEnv({ LG_UNIVERSE: "U-GALEANO", LG_FAKE_MODELS: "1", LG_OPERATOR_MODE: "1" }, {}).persistent).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

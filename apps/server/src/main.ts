@@ -1,7 +1,7 @@
 // Arranque del proceso: `npm start --workspace @lg/server` (node con type stripping, Node >= 22.18).
 // Escucha solo en 127.0.0.1 (D-158); el puerto sale de LG_PORT (por defecto 8787). Con LG_OPERATOR_MODE=1 sirve
 // escenas (token + WebSocket) para la cuenta op-local; con LG_DEV_CONTENT_WATCH=1 (modo director) relee el contenido
-// compilado entre escenas. La evidencia va a apps/server/data/evidence.jsonl (gitignored, D-157); con LG_FAKE_MODELS=1
+// compilado entre escenas. La evidencia va a apps/server/data/evidence.jsonl (gitignored, D-157; con LG_UNIVERSE distinto de U-CAMPESINO, evidence.<id>.jsonl, D-812); con LG_FAKE_MODELS=1
 // va a memoria (storesFromEnv): una corrida guionada nunca escribe progreso falso en el log real.
 // F5.1a: voz por el adaptador de `voice.npc.adapter` (models.yaml); el costo de voz va a apps/server/data/cost-ledger.jsonl
 // y una alerta (promedio > US$0,05/min, D-027) se imprime sin cortar nada. Nunca se imprimen transcripciones ni prompts.
