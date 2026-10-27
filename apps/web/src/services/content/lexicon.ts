@@ -3,6 +3,7 @@
 // catálogo de solo-diálogo: una forma inesperada falla claro y el HUD sigue sin glosario (nunca inventa traducciones).
 import type { Lexicon, GlossaryEntryInfo } from "../../state/slices";
 import { browserFetchJson, ContentShapeError, type FetchJson } from "./dialogOnlyCatalog";
+import { universeContentBase } from "./universe";
 
 export const LEXICON_FILES = { manifest: "manifiesto.json", glossary: "glosario.json", lumi: "lumi.json" } as const;
 const LOCALE = "es-AR";
@@ -40,13 +41,15 @@ export interface LexiconSink {
   lexiconFailed(): void;
 }
 
-export async function loadLexicon(sink: LexiconSink, baseUrl: string, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
+/** `universeId` (D-814): sin él (o U-CAMPESINO) las URLs son las legacy de siempre. */
+export async function loadLexicon(sink: LexiconSink, baseUrl: string, fetchJson: FetchJson = browserFetchJson, universeId?: string): Promise<boolean> {
   sink.lexiconLoading();
+  const base = universeContentBase(baseUrl, universeId);
   try {
     const [manifest, glossary, lumi] = await Promise.all([
-      fetchJson(`${baseUrl}content/${LEXICON_FILES.manifest}`),
-      fetchJson(`${baseUrl}content/${LEXICON_FILES.glossary}`),
-      fetchJson(`${baseUrl}content/${LEXICON_FILES.lumi}`),
+      fetchJson(`${base}${LEXICON_FILES.manifest}`),
+      fetchJson(`${base}${LEXICON_FILES.glossary}`),
+      fetchJson(`${base}${LEXICON_FILES.lumi}`),
     ]);
     sink.lexiconLoaded(parseLexicon(manifest, glossary, lumi));
     return true;

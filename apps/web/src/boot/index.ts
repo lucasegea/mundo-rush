@@ -93,7 +93,7 @@ export async function boot(deps: BootDeps): Promise<() => void> {
         if (cancelled) return;
         stopScene = startSceneService({
           store, actions, connector, baseUrl: deps.baseUrl,
-          ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}), ...(audio ? { audio } : {}),
+          ...(deps.fetchJson ? { fetchJson: deps.fetchJson } : {}), ...(deps.universeId ? { universeId: deps.universeId } : {}), ...(audio ? { audio } : {}),
         });
       });
     }, { fireImmediately: true });

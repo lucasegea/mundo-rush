@@ -27,6 +27,8 @@ export interface SceneServiceDeps {
   connector: SceneConnector;
   baseUrl: string;
   fetchJson?: FetchJson;
+  /** D-814: universo del contenido (glosario, manifiesto, Lumi). Sin esto, el árbol legacy. */
+  universeId?: string;
   /** F5.2: voz. Sin esto (tests de texto, `?voz=0`) las escenas se piden por texto. */
   audio?: { createEngine: () => Promise<AudioEngine> };
 }
@@ -93,7 +95,7 @@ export function startSceneService(deps: SceneServiceDeps): () => void {
     const gen = ++generation;
     closeSocket();
     actions.sceneConnecting();
-    if (selectLexiconStatus(store.getState()) === "idle") void loadLexicon(actions, deps.baseUrl, deps.fetchJson);
+    if (selectLexiconStatus(store.getState()) === "idle") void loadLexicon(actions, deps.baseUrl, deps.fetchJson, deps.universeId);
     // El micrófono se pide ANTES del token (vence en 60 s; el permiso puede tardar lo que tarde el jugador).
     const modality = audio ? await audio.prepare() : null;
     if (stopped || gen !== generation) return;
