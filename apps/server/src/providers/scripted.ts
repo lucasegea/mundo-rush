@@ -56,6 +56,7 @@ export function scriptedJudgeProvider(): TextModelProvider {
       const known = new Set((/Facts the player already learned[^:]*: (.*)\.$/m.exec(req.system)?.[1] ?? "").split(", "));
       const facts = [...req.system.matchAll(/^- ([a-z0-9_]+) \(tier (\d)\): /gm)].map((m) => ({ id: m[1] ?? "", tier: m[2] ?? "1" }));
       const goalPhase = /^- [a-z0-9_]+: .* Resolved when: /m.test(req.system);
+      const listed = new Set([...req.system.matchAll(/^- ([a-z0-9_]+): .* Resolved when: /gm)].map((m) => m[1]));
       const p = player.toLowerCase();
       const acts: string[] = [];
       const playerFacts: string[] = [];
@@ -79,13 +80,15 @@ export function scriptedJudgeProvider(): TextModelProvider {
       if (/\b(mother|father|sister|brother|grandma|grandmother|family)\b/.test(p)) playerFacts.push("familia");
       if (playerFacts.length) acts.push("self_disclosure");
       if (/\b(wow|nice|beautiful|cool|great)\b/.test(p)) acts.push("empathy_reaction");
-      if (/\b(posts?|need|sent me)\b/.test(p)) acts.push("states_errand");
+      if (/\b(posts?|need|sent me|understand|came to learn|want to know)\b/.test(p)) acts.push("states_errand");
       if (/\b(please|could|can i|would you)\b/.test(p)) acts.push("polite_request");
       if (/\b(for the|because|garden|fence)\b/.test(p)) acts.push("gives_reason");
       if (goalPhase) {
         if (/\b(garden|fence)\b/.test(p)) objections.push({ id: "para_que", quality: "yes" });
         if (/\bnell\b/.test(p)) objections.push({ id: "quien", quality: "yes" });
         if (/\b(care|bring back|help you)\b/.test(p)) objections.push({ id: "cuidado", quality: "yes" });
+        // D-813 (M6): reglas de palabras de otros libros; su objeción se emite solo si el pedido la lista (no inventa ids).
+        if (listed.has("pregunta") && /\b(silver|where did|who (finally )?kept)\b/.test(p)) objections.push({ id: "pregunta", quality: "yes" });
       }
       return Promise.resolve({
         text: JSON.stringify({ language: "L2", comprehensible: 2, acts, npc_facts: npcFacts, player_facts: playerFacts, objections, safety: "none" }),

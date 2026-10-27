@@ -38,10 +38,10 @@ beats:
 escenas:
   - escena_id: M1.1-E1
     npc: NPC-FACTOR
-    lugar: cruce.villa
+    lugar: campos.cerro
     hora: tarde
-    situacion: El jugador llega a la Villa Imperial, en su auge de plata, y busca al
-      contador.
+    situacion: El jugador sube por el camino del Cerro Rico y busca al contador de
+      la corona, que lleva sus libros junto a la mina.
     necesidad_npc:
       no_aplica: conversación por medidores (ADR-027)
     banda: B1

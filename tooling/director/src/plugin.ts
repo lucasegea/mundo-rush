@@ -223,6 +223,8 @@ export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
         if (event !== "add" && event !== "change" && event !== "unlink") return;
         const rel = relative(root, file).split(sep).join("/");
         if (!rel.startsWith("content/")) return;
+        // D-816: los universos de libro (content/universes/) los escribe EMIT y no son contenido campesino; encolarlos rompería la recarga.
+        if (rel.startsWith("content/universes/")) return;
         queued.add(rel);
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {

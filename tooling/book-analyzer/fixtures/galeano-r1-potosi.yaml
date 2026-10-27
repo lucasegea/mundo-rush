@@ -44,8 +44,70 @@ mundo:
 
 dioramas:
   - id: muelle
-    bounds: { minX: 0, maxX: 20, minZ: 0, maxZ: 20 }
-    spawn: [10, 0, 10]
+    bounds: { minX: 0, maxX: 28, minZ: 0, maxZ: 20 }
+    atlas_tiles: test-tiles
+    spawn: [3, 0, 10]
+    tiles:
+      - capa: suelo
+        origen: [0, 0]
+        filas:
+          - "3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 5 3 5 5 3 5 5 5 5 3 5 5 5"
+          - "1 3 1 1 3 1 3 3 2 3 3 3 3 3 3 5 5 1 5 5 3 5 3 5 5 5 5 5"
+          - "3 3 3 3 1 3 3 3 2 3 3 3 3 3 3 5 5 5 2 5 5 5 5 5 5 5 5 5"
+          - "3 3 3 3 3 3 3 1 3 3 3 3 3 3 2 5 3 3 3 5 5 5 5 5 5 5 5 5"
+          - "3 3 1 1 1 3 3 3 1 1 1 3 3 3 3 5 5 5 5 5 3 5 5 5 5 5 5 5"
+          - "2 3 1 3 3 3 3 3 3 2 3 1 3 3 3 3 5 5 5 5 5 5 5 5 5 5 5 5"
+          - "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 1 5 3 5 5 5 5 5 5 5 5 5 5"
+          - "3 3 3 3 3 3 3 3 3 1 2 3 2 1 1 2 3 3 3 3 3 5 5 5 3 3 1 3"
+          - "3 3 3 1 3 1 3 3 3 3 3 3 2 3 3 3 3 3 3 3 3 3 5 3 3 2 3 5"
+          - "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 5 3"
+          - "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3"
+          - "3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3"
+          - "3 3 1 3 3 2 3 1 3 3 3 1 3 3 3 1 1 1 3 3 3 3 3 3 3 3 3 3"
+          - "3 2 3 3 3 3 3 1 3 3 3 3 3 3 3 3 3 3 1 1 3 3 3 3 3 3 3 3"
+          - "1 3 3 3 3 1 3 3 1 1 3 1 1 3 3 3 3 2 3 3 3 3 3 1 3 2 3 3"
+          - "1 2 1 3 1 3 1 3 3 3 1 2 3 1 3 2 3 3 3 3 3 2 3 2 3 3 3 3"
+          - "3 3 2 3 3 3 3 1 3 1 3 3 3 3 3 3 3 3 3 2 3 3 3 3 2 2 1 3"
+          - "3 3 3 3 3 3 3 3 3 3 3 3 3 1 3 2 3 3 3 3 3 3 3 1 1 1 3 3"
+          - "3 3 1 1 3 3 3 1 3 3 3 3 3 3 1 3 2 3 3 3 3 2 3 3 3 3 3 3"
+          - "3 3 3 1 3 3 3 2 3 3 3 3 3 3 3 3 3 3 3 3 3 1 1 3 3 3 2 3"
+      - capa: detalle
+        origen: [0, 0]
+        filas:
+          - "0 8 0 0 0 0 8 0 0 0 0 0 0 0 0 0 0 8 0 0 0 0 0 0 0 0 0 0"
+          - "7 8 0 7 0 0 0 0 0 0 0 0 0 0 0 0 0 8 0 0 0 0 0 0 7 0 0 8"
+          - "0 0 0 0 0 0 0 8 0 8 0 0 0 7 0 0 0 0 0 0 0 0 0 0 8 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 7 0 0 0 0 0 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 7 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 8 0 0 0 0 0 8 0 0 0 0 7 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 7 0 0 0 0 7 0 0 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 8 0 0 0 8 0 0 0 0 0 0 7 0 0 0 0 0 0 0 0"
+          - "7 0 0 0 0 0 0 7 0 0 8 7 6 7 0 0 0 0 0 0 0 0 0 0 0 0 0 7"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+          - "0 0 0 0 0 7 0 0 0 0 8 0 0 0 0 0 0 0 0 8 7 0 0 0 0 0 0 0"
+          - "0 6 0 0 0 0 0 0 7 0 0 0 0 0 0 0 0 7 0 0 7 0 0 0 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 0 0 0"
+          - "7 8 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 0 0 0 0 7 0 0 0 8"
+          - "0 0 6 0 0 0 0 0 8 0 8 0 8 0 0 0 0 0 0 0 0 0 7 0 0 0 0 0"
+          - "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 8 0"
+          - "0 0 0 7 7 0 0 8 0 0 0 0 8 7 0 0 0 0 0 0 0 0 0 0 0 0 8 0"
+          - "0 0 0 0 8 0 0 7 0 0 0 0 0 0 0 8 0 0 0 0 0 0 0 0 0 0 0 0"
+    props:
+      # La bocamina: un galpon-caja al pie de la roca, arriba a la derecha.
+      - { asset: codigo/galpon, pos: [21, 0, 3], tam: [5, 2.5, 3] }
+      # Cargas de mineral junto al mitayo (cajas que se tocan solo por la esquina).
+      - { asset: codigo/caja, pos: [11.5, 0, 6.5], tam: [1, 1, 1] }
+      - { asset: codigo/caja, pos: [12.5, 0, 7.5], tam: [1, 1, 1] }
+      - { asset: codigo/cerco, pos: [8, 0, 15], tam: [8, 1, 0.2] }
+      - { asset: codigo/casa, pos: [20, 0, 16], tam: [4, 3, 3] }
+    npcs:
+      - { id: NPC-MITAYO, spawn: [10, 0, 8.5] }
+      - { id: NPC-CERRO, spawn: [17, 0, 6.5] }
+      - { id: NPC-FACTOR, spawn: [24.5, 0, 12.5] }
+    no_caminable:
+      - { poligono: [[15, 0], [19, 0], [19, 2.5], [15, 2.5]] }
   - id: plaza
     bounds: { minX: 0, maxX: 24, minZ: 0, maxZ: 24 }
     spawn: [12, 0, 12]
@@ -116,7 +178,7 @@ npcs:
   - id: NPC-FACTOR
     nombre: "El contador de la corona"
     rol: "Lleva los libros de cuentas; sabe a dónde va a parar la plata."
-    lugar: cruce.villa
+    lugar: campos.cerro
     edad_aparente: "50s"
     es_menor: false
     personalidad: ["meticuloso", "cínico", "lúcido"]
@@ -181,7 +243,7 @@ red:
     - id: INTRO-FACTOR-CERRO
       npc: NPC-FACTOR
       presentado_por: NPC-CERRO
-      mision: M1.1
+      mision: M1.2
       linea_presentador_en: "Come. The accountant keeps the ledgers. Ask him where the silver goes."
       linea_reconocimiento_en: null
       caminos_alternativos: []
@@ -215,9 +277,9 @@ missions:
     escenas:
       - escena_id: M1.1-E1
         npc: NPC-FACTOR
-        lugar: cruce.villa
+        lugar: campos.cerro
         hora: tarde
-        situacion: "El jugador llega a la Villa Imperial, en su auge de plata, y busca al contador."
+        situacion: "El jugador sube por el camino del Cerro Rico y busca al contador de la corona, que lleva sus libros junto a la mina."
         necesidad_npc: { no_aplica: "conversación por medidores (ADR-027)" }
         banda: B1
         andamiaje_npc: { no_aplica: "conversación libre; el andamiaje lo da la ficha" }
@@ -257,7 +319,7 @@ missions:
     requiere: []
     meta: "Oír el costo humano de la mina y ver el esplendor vuelto ruina."
     consigue: "Los saberes de la mita y de la ruina de Potosí."
-    red: { altas: [], presenta: [], nombra: [] }
+    red: { altas: [], presenta: [{ npc: NPC-FACTOR, por: NPC-CERRO }], nombra: [] }
     fundacion: "ninguna"
     saberes:
       - { saber: SAB-MITA, rama: false }

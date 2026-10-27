@@ -2,7 +2,7 @@ presentaciones:
   - id: INTRO-FACTOR-CERRO
     npc: NPC-FACTOR
     presentado_por: NPC-CERRO
-    mision: M1.1
+    mision: M1.2
     linea_presentador_en: Come. The accountant keeps the ledgers. Ask him where the silver goes.
     linea_reconocimiento_en: null
     caminos_alternativos: []

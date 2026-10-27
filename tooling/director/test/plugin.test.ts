@@ -262,4 +262,25 @@ describe("el watcher del plugin junta los eventos de un guardado", () => {
       vi.useRealTimers();
     }
   });
+
+  test("D-816: un cambio bajo content/universes/ (salida de EMIT) no llega a la recarga", async () => {
+    vi.useFakeTimers();
+    try {
+      root = tempRoot(true);
+      const listeners: ((event: string, file: string) => void)[] = [];
+      const { server } = fakeServer("127.0.0.1");
+      const sends: string[] = [];
+      Object.assign(server.watcher, { on: (_e: string, cb: (event: string, file: string) => void) => listeners.push(cb) });
+      Object.assign(server.ws, { send: (event: unknown) => sends.push(typeof event === "string" ? event : "error") });
+      (directorPlugin({ root, debounceMs: 50 }).configureServer as unknown as (s: unknown) => void)(server);
+      for (const cb of listeners) {
+        cb("change", join(root, "content/universes/U-GALEANO/dioramas/muelle.yaml"));
+        cb("add", join(root, "content/universes/U-GALEANO/npcs/NPC-X.yaml"));
+      }
+      await vi.advanceTimersByTimeAsync(60);
+      expect(sends).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

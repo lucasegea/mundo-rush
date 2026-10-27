@@ -12,7 +12,9 @@ meta: Oír el costo humano de la mina y ver el esplendor vuelto ruina.
 consigue: Los saberes de la mita y de la ruina de Potosí.
 red:
   altas: []
-  presenta: []
+  presenta:
+    - npc: NPC-FACTOR
+      por: NPC-CERRO
   nombra: []
 fundacion: ninguna
 saberes:

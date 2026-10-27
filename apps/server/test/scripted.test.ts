@@ -5,12 +5,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { storesFromEnv, textProvidersFromEnv } from "../src/app.ts";
 import { GEMINI_KEY_VAR, loadModelsConfig } from "../src/config/models.ts";
-import { renderScriptedText } from "../src/scene-runtime/catalog.ts";
+import { readCatalog, renderScriptedText } from "../src/scene-runtime/catalog.ts";
 import { createSceneSession } from "../src/scene-runtime/runtime.ts";
 import { createMemoryEvidenceStore } from "../src/store/evidence.ts";
 import type { ServerMessage } from "@lg/protocol";
 import { createManualClock } from "@lg/core";
-import { manualScheduler, realContent } from "./helpers.ts";
+import { compilarContenido, type FichaConversacion } from "@lg/content-schema";
+import { initialEncounterState } from "@lg/core/conversation";
+import { leerContenido } from "../../../scripts/content/build.ts";
+import { encounterFromSheet } from "../src/conversation/sheet.ts";
+import { judgeRequest, parseJudgeOutput } from "../src/conversation/judge.ts";
+import { scriptedJudgeProvider } from "../src/providers/scripted.ts";
+import { manualScheduler, must, realContent, REPO_ROOT } from "./helpers.ts";
 
 const models = loadModelsConfig();
 
@@ -94,5 +100,37 @@ describe("líneas guionadas con hueco de nombre (02 §2.6)", () => {
     const closing = lines.filter((l) => l.kind === "closing").map((l) => l.text);
     expect(closing).toContain("Nice to meet you!");
     expect(lines.filter((l) => /\[[^\]]*\]|\{[^}]*\}/.test(l.text ?? ""))).toEqual([]);
+  });
+});
+
+describe("juez guionado: reglas de palabras de otros libros (M6, D-813)", () => {
+  const compiled = compilarContenido(leerContenido(REPO_ROOT, "U-GALEANO"), "dev");
+  const sheet = must(((compiled.salida?.servidor["conversaciones.json"] ?? []) as FichaConversacion[]).find((c) => c.id === "CONV-POTOSI"), "CONV-POTOSI");
+  const def = encounterFromSheet(sheet);
+  const role = models.roles.judge;
+  const ask = async (playerText: string, active: number) => {
+    const state = { ...initialEncounterState(def), active };
+    const res = await scriptedJudgeProvider().generate(judgeRequest({ sheet, def, state, npcName: "Factor", playerText, npcText: "Hm.", recent: [] }, role));
+    return parseJudgeOutput(res.text, sheet);
+  };
+
+  test("en la fase del objetivo, 'Where did all the silver really go?' resuelve la objeción pregunta", async () => {
+    expect(await ask("Where did all the silver really go?", 1)).toMatchObject({ ok: true, labels: { objections: [{ id: "pregunta", quality: "yes" }] } });
+  });
+
+  test("'I want to understand why Spain stayed poor.' es states_errand", async () => {
+    expect(await ask("I want to understand why Spain stayed poor.", 1)).toMatchObject({ ok: true, labels: { acts: expect.arrayContaining(["states_errand"]) } });
+  });
+
+  test("fuera de la fase del objetivo no hay objeciones, aunque se diga 'silver'", async () => {
+    expect(await ask("Where did all the silver really go?", 0)).toMatchObject({ ok: true, labels: { objections: [] } });
+  });
+
+  test("una conversación que no lista 'pregunta' no recibe ese id (campesino intacto)", async () => {
+    const harlan = must(readCatalog(realContent()).conversation("CONV-HARLAN"));
+    const hdef = encounterFromSheet(harlan);
+    const req = judgeRequest({ sheet: harlan, def: hdef, state: { ...initialEncounterState(hdef), active: 1 }, npcName: "Harlan", playerText: "Where did the silver go?", npcText: "Hm.", recent: [] }, role);
+    const out = parseJudgeOutput((await scriptedJudgeProvider().generate(req)).text, harlan);
+    expect(out).toMatchObject({ ok: true, labels: { objections: [] } });
   });
 });

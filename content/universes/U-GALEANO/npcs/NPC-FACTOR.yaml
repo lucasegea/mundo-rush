@@ -1,7 +1,7 @@
 id: NPC-FACTOR
 nombre: El contador de la corona
 rol: Lleva los libros de cuentas; sabe a dónde va a parar la plata.
-lugar: cruce.villa
+lugar: campos.cerro
 edad_aparente: 50s
 es_menor: false
 personalidad:
