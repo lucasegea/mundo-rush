@@ -25,10 +25,12 @@ export interface Intermedio {
   conversaciones?: unknown[];
   saberes?: unknown[];
   glossary?: unknown;
+  /** Textos planos del servidor (nombre sin extensión → texto), p. ej. `npc-base`: EMIT los escribe a prompts/<nombre>.txt. */
+  prompts?: unknown;
 }
 
 export const CLAVES_INTERMEDIO = [
-  "manifiesto", "mundo", "dioramas", "npcs", "red", "missions", "conversaciones", "saberes", "glossary",
+  "manifiesto", "mundo", "dioramas", "npcs", "red", "missions", "conversaciones", "saberes", "glossary", "prompts",
 ] as const;
 
 /** Error de forma del intermedio (antes de validar contra los esquemas del engine, que es trabajo de EMIT). */

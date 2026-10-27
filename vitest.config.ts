@@ -40,6 +40,8 @@ export default defineConfig({
       { test: { name: "content", root: "./scripts/content", include: ["**/*.test.ts"], testTimeout: 30000 } },
       // F1.3 A4: contraste de los tokens del HUD.
       { test: { name: "a11y", root: "./scripts/a11y", include: ["**/*.test.ts"] } },
+      // M6.4: lo puro de la caminata de navegador a pedido (D-815).
+      { test: { name: "dev", root: "./scripts/dev", include: ["**/*.test.ts"] } },
       // F4.1: compuerta de la eval en vivo de texto (la eval en sí no corre en tests, D-027).
       { test: { name: "eval", root: "./scripts/eval", include: ["**/*.test.ts"] } },
       // F4.2 A4: el cliente web real contra el servidor de escenas real, sin canvas y con modelos guionados.

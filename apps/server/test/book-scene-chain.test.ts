@@ -12,17 +12,12 @@ import { scriptedJudgeProvider, scriptedNpcProvider, scriptedObserverProvider } 
 import { createSceneSession } from "../src/scene-runtime/runtime.ts";
 import { createMemoryEncounterStore } from "../src/store/encounters.ts";
 import { createMemoryEvidenceStore } from "../src/store/evidence.ts";
-import { manualScheduler, must, realContent, REPO_ROOT } from "./helpers.ts";
+import { manualScheduler, must, REPO_ROOT } from "./helpers.ts";
 
 const models = loadModelsConfig();
 const compiled = compilarContenido(leerContenido(REPO_ROOT, "U-GALEANO"), "dev");
-// SEAM (M6.1): EMIT todavia no escribe prompts/npc-base.txt para el universo, asi que prompts.json sale vacio y
-// readCatalog lo rechaza. Este test aporta SOLO la base del prompt campesino para recorrer la cadena de escenas;
-// el npc-base propio de U-GALEANO es trabajo pendiente (fixture + EMIT), no se oculta aca.
-const content = Object.freeze({
-  ...must(compiled.salida, "U-GALEANO no compila").servidor,
-  "prompts.json": realContent()["prompts.json"],
-});
+// El npc-base sale del propio universo (fixture + EMIT, M6.4): no se inyecta nada de la campesino.
+const content = Object.freeze({ ...must(compiled.salida, "U-GALEANO no compila").servidor });
 
 /** Una "partida": evidencia y encuentros compartidos; cada escena abre una sesión nueva (como cada conexión). */
 function newRun() {

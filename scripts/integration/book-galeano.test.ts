@@ -11,14 +11,13 @@ import { WebSocket } from "ws";
 import { leerContenido } from "../content/build.ts";
 import { createGameServer, storesFromEnv, textProvidersFromEnv, type GameServer } from "../../apps/server/src/app.ts";
 import { loadModelsConfig } from "../../apps/server/src/config/models.ts";
-import { must, realContent, REPO_ROOT } from "../../apps/server/test/helpers.ts";
+import { must, REPO_ROOT } from "../../apps/server/test/helpers.ts";
 
 const env = { LG_OPERATOR_MODE: "1", LG_FAKE_MODELS: "1", LG_UNIVERSE: "U-GALEANO" };
 const models = loadModelsConfig();
 const compiled = compilarContenido(leerContenido(REPO_ROOT, "U-GALEANO"), "dev");
-// SEAM (M6.1): EMIT todavía no escribe prompts/npc-base.txt para el universo; se inyecta SOLO la base campesina del
-// prompt (igual que book-scene-chain.test). El npc-base propio de U-GALEANO es trabajo pendiente (fixture + EMIT).
-const content = Object.freeze({ ...must(compiled.salida, "U-GALEANO no compila").servidor, "prompts.json": realContent()["prompts.json"] });
+// El npc-base sale del propio universo (fixture + EMIT, M6.4): no se inyecta nada de la campesino.
+const content = Object.freeze({ ...must(compiled.salida, "U-GALEANO no compila").servidor });
 
 interface Server { http: string; ws: string }
 

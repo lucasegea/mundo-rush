@@ -107,4 +107,31 @@ describe("book-analyzer EMIT (M2)", () => {
       rmSync(dirRoto, { recursive: true, force: true });
     }
   });
+
+  it("prompts: un texto del intermedio se escribe tal cual a prompts/<nombre>.txt (sin YAML)", () => {
+    const texto = "=== BASE ===\nlinea con {{hueco}} y: dos puntos\n";
+    const dir = mkdtempSync(join(tmpdir(), "ba-emit-prompts-"));
+    try {
+      const { escritos, errores } = emit({ ...intermedio, prompts: { "npc-base": texto } }, dir);
+      expect(errores).toEqual([]);
+      expect(escritos).toContain("prompts/npc-base.txt");
+      expect(readFileSync(join(dir, "prompts/npc-base.txt"), "utf8")).toBe(texto);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("teeth: un prompt con nombre invalido o vacio reporta error y no escribe NADA", () => {
+    for (const prompts of [{ "../npc-base": "x" }, { "npc-base": "  " }, { "npc-base": 3 }, ["npc-base"]]) {
+      const dir = mkdtempSync(join(tmpdir(), "ba-emit-prompts-roto-"));
+      try {
+        const { escritos, errores } = emit({ ...intermedio, prompts }, dir);
+        expect(escritos).toEqual([]);
+        expect(errores.length).toBeGreaterThan(0);
+        expect(readdirSync(dir)).toEqual([]);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
 });

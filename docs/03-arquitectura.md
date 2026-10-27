@@ -60,7 +60,7 @@ Ninguna forma de este documento se justifica sin alguna de estas restricciones. 
 | C8 | Modo 1 sin dinero ni economía; tycoon/construcción solo como candidata del modo 2 | [GDD §1.4.1, DP-15] | No existe slice de economía; el modo 2 se agrega como módulo nuevo sin tocar el núcleo (§3.6) |
 | C9 | Las IA de código no modelan 3D ni dibujan sprites: packs con licencia registrada (glTF CC0 para volúmenes y props; PNG pixel art para tiles y personajes, D-153), ubicados por código | Directiva del operador, [GDD §5.7], D-139 | Pipeline de assets con registro de licencias, layout de dioramas como datos (§6.4) |
 | C10 | Desarrollo headless en muchas corridas | Intención del operador | Contenido como datos validados por schema, núcleo determinístico testeable, gates automáticos sin navegador (§8, §9) |
-| C11 | Sin Playwright ni navegador automatizado; UI = vitest + tsc + lint; el operador mira en el navegador | Regla del operador | Pirámide de pruebas sin E2E de navegador; verificación de presupuestos por scripts (§8) |
+| C11 | Sin Playwright ni navegador automatizado; UI = vitest + tsc + lint; el operador mira en el navegador | Regla del operador | Pirámide de pruebas sin E2E de navegador; verificación de presupuestos por scripts (§8). Excepcion acotada (fila del 2026-10-26 en `00-decisiones.md`, RATIFICADA 2026-10-27): una caminata de navegador a pedido, fuera de `verify`, que siempre cierra el navegador al terminar |
 | C12 | Celular abierto, no es el arranque | [Brief], [GDD DP-31] | HUD responsive y táctil desde el día 1; nada en el núcleo depende de mouse o teclado |
 | C13 | Equipo de 1-2 personas, alcance en semanas | [Negocio §6.7] | Sesgo a menos piezas: sin microservicios, sin colas, un solo servidor, una sola base |
 | C14 | Arte **HD-2D** decidido por el operador: sprites pixel art sobre un escenario 3D, cámara ortográfica desde arriba en ángulo (referencia *Octopath Traveler*) | D-139 (2026-10-06) | Render HD-2D dentro de R3F (§2.9), cámara por presets, postprocesado como efecto de tier, pipeline de tiles y sprites (§6.4) |
@@ -1475,7 +1475,7 @@ Claves solo en el servidor; CSP estricta (sin scripts de terceros, `connect-src`
 
 ## 8. Estrategia de pruebas compatible con corridas headless
 
-**Regla del operador:** nada de Playwright ni navegador automatizado. La UI se verifica con `vitest` + `tsc` + `lint`; el operador revisa en el navegador. Todas las pruebas automáticas corren sin GPU, sin micrófono, sin red y sin claves.
+**Regla del operador:** nada de Playwright ni navegador automatizado. La UI se verifica con `vitest` + `tsc` + `lint`; el operador revisa en el navegador. Excepcion acotada y RATIFICADA 2026-10-27 (con condicion: el navegador siempre se cierra al terminar): `npm run walk:browser` (`scripts/dev/browser-walk.ts`), a pedido, nunca en `verify`, CI ni Vercel, solo con modelos guionados (fila del 2026-10-26 en `00-decisiones.md`). Todas las pruebas automáticas corren sin GPU, sin micrófono, sin red y sin claves.
 
 ### 8.1 Pirámide
 

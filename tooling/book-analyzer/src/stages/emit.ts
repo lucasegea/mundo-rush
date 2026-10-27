@@ -27,6 +27,8 @@ import type { Intermedio } from "../intermediate.ts";
 export interface ArchivoEmitido {
   subpath: string;
   valor: unknown;
+  /** Archivos de texto plano (prompts/*.txt): se escriben tal cual, sin pasar por YAML. */
+  texto?: string;
 }
 
 export interface ResultadoEmit {
@@ -113,7 +115,26 @@ export const planearEmit = (intermedio: Intermedio): ResultadoEmit => {
       if (data !== null) archivos.push({ subpath, valor: data });
     });
   }
+  planearPrompts(intermedio.prompts, archivos, errores);
   return { archivos, errores };
+};
+
+/** Nombre de un prompt: el mismo que `nombreBase` de conjunto.ts saca de content/prompts/<nombre>.txt. */
+const NOMBRE_PROMPT = /^[a-z0-9][a-z0-9-]*$/;
+
+/** `prompts`: { nombre: texto } → prompts/<nombre>.txt (el universo trae su propio `npc-base`, sin heredar el de la campesino). */
+const planearPrompts = (valor: unknown, archivos: ArchivoEmitido[], errores: string[]): void => {
+  if (valor === undefined) return;
+  if (valor === null || typeof valor !== "object" || Array.isArray(valor)) {
+    errores.push("prompts: se esperaba un objeto { nombre: texto }");
+    return;
+  }
+  for (const [nombre, texto] of Object.entries(valor)) {
+    const subpath = `prompts/${nombre}.txt`;
+    if (!NOMBRE_PROMPT.test(nombre)) errores.push(`${subpath}: nombre de prompt inválido (minúsculas, dígitos y guiones)`);
+    else if (typeof texto !== "string" || texto.trim() === "") errores.push(`${subpath}: el texto tiene que ser un string no vacío`);
+    else archivos.push({ subpath, valor: null, texto });
+  }
 };
 
 export interface SalidaEmit {
@@ -132,7 +153,7 @@ export const emit = (intermedio: Intermedio, outDir: string): SalidaEmit => {
   for (const a of archivos) {
     const destino = join(outDir, a.subpath);
     mkdirSync(dirname(destino), { recursive: true });
-    writeFileSync(destino, stringify(a.valor));
+    writeFileSync(destino, a.texto ?? stringify(a.valor));
     escritos.push(a.subpath);
   }
   return { escritos, errores: [] };

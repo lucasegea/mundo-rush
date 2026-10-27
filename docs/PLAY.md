@@ -25,6 +25,42 @@ seguro). `Ctrl+C` en la terminal para los dos procesos; si uno se cae, el script
 La primera línea del script dice qué variables encontró, **solo presencia** (nunca valores):
 `[play] .env leído · LG_GEMINI_API_KEY presente · …`. El servidor repite lo mismo y termina con `voz: live`.
 
+## 1b. Jugar un libro (universo `U-GALEANO`)
+
+```bash
+npm run dev:play -- --universe=U-GALEANO
+```
+
+Compila `content/universes/U-GALEANO/` y abre el cliente en `http://127.0.0.1:5173/?universe=U-GALEANO` (servidor y
+cliente leen el mismo universo). Sin `--universe` se juega la campesino, igual que siempre. El progreso del libro se
+guarda aparte (`apps/server/data/evidence.U-GALEANO.jsonl`, `safety.U-GALEANO.jsonl`, `encounters.U-GALEANO.json`), asi que no
+pisa el de la campesino.
+
+1. En el menu: **Jugar en el mapa** (queda deshabilitado un instante hasta que carga el catalogo).
+2. El mapa es el Cerro Rico: camino de tierra, piedra, arbustos y una bocamina. Tres personas: **El mitayo**, **El Cerro Rico**
+   y **El contador de la corona**. El orden lo fija el motor: primero el mitayo, despues el cerro, y recien
+   ahi el contador te recibe (antes dice que todavia no se conocen). Click sobre la persona o **T** / **E** cerca.
+3. Con el contador se juega la conversacion por medidores hasta el cierre ("The milk was never ours").
+4. Texto: abri la URL con `&voz=0`. Voz con Gemini Live: con `LG_GEMINI_API_KEY` en `.env`, como en la campesino.
+
+## 1c. Caminata de navegador a pedido (excepcion acotada a D-016)
+
+```bash
+npm run walk:browser
+```
+
+Un script (`scripts/dev/browser-walk.ts`), fuera de `npm run verify`, que levanta servidor y Vite propios en puertos
+libres (modo operador, modelos guionados, almacenes en memoria: nunca toca `apps/server/data`), abre el Chromium que ya
+esta en la cache de Playwright (no descarga nada; `LG_CHROMIUM=<ruta>` para elegir otro) y recorre el juego: Galeano
+(AC12..AC16) y la campesino (AC17). Las capturas quedan en
+(documento interno). Termina con codigo distinto de cero si algo falla.
+
+- **El navegador siempre se cierra al terminar** (exito, falla o error lanzado); solo se matan los procesos que el script
+  arranco. `npm run walk:browser -- --fail-on-purpose` falla a proposito con el navegador abierto, para comprobar que no
+  queda ningun chromium vivo.
+- `LG_WALK_HEADED=1` abre la ventana; `LG_WALK_DEBUG=1` imprime los mensajes del WebSocket.
+- Sin Chromium en la cache avisa y sale con 2.
+
 ## 2. Llegar al NPC
 
 1. En el menú: **Jugar en el mapa**.
