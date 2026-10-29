@@ -11,13 +11,14 @@ import type { SceneRole } from "./animState";
 import { Character, type ActorPose } from "./Character";
 import { stepGlide, type GlideState } from "./glide";
 import { PLAYER_LOOK, PLAYER_LOOK_ID } from "./looks";
+import type { RigId } from "./rigs";
 
 /** Fracción [0, 1] del paso fijo que ya pasó desde que cambió el tick. */
 export function interpolationAlpha(elapsedSec: number, stepSec: number): number {
   return stepSec > 0 ? Math.min(1, Math.max(0, elapsedSec / stepSec)) : 1;
 }
 
-export function Player({ conversation, cut, scene = null, lod = "full" }: { conversation: ConversationFrame | null; cut: boolean; scene?: SceneRole; lod?: SceneDensity }) {
+export function Player({ conversation, cut, scene = null, lod = "full", rig = "kaykit" }: { conversation: ConversationFrame | null; cut: boolean; scene?: SceneRole; lod?: SceneDensity; rig?: RigId }) {
   const lastTick = useRef({ tick: -1, at: 0 });
   const glide = useRef<GlideState | null>(null);
 
@@ -41,5 +42,5 @@ export function Player({ conversation, cut, scene = null, lod = "full" }: { conv
     return { x: shown.x, z: shown.z, speed, yaw };
   };
 
-  return <Character id={PLAYER_LOOK_ID} look={PLAYER_LOOK} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} lod={lod} />;
+  return <Character id={PLAYER_LOOK_ID} look={PLAYER_LOOK} pose={pose} cut={cut} scene={scene} initialYaw={Math.PI * 0.25} lod={lod} rig={rig} />;
 }

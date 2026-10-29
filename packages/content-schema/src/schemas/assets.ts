@@ -129,6 +129,11 @@ export const RegistroAsset = z.strictObject({
   url_origen: Url.optional(),
   fecha_descarga: Fecha.optional(),
   sha256_original: Sha256.optional(),
+  /**
+   * Open-world-3d T7: los demás originales de una fila que sale de varios (el .bin de un glTF, los cuatro escaneos de un
+   * atlas). `url_origen` y `sha256_original` son el primero; refetch.ts baja y verifica cada uno.
+   */
+  fuentes_extra: z.array(z.strictObject({ url: Url, sha256: Sha256 })).min(1).optional(),
   modificaciones: z.string().min(1),
   /**
    * open-world-3d T2(c), D-831: sha256 de los bytes SERVIDOS y su procedencia. Opcionales en el esquema (las filas

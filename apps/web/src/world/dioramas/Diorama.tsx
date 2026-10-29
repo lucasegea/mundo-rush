@@ -18,12 +18,13 @@ import { BlobShadows } from "../actors/BlobShadows";
 import { Character, type ActorPose } from "../actors/Character";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
 import { fallbackLook } from "../actors/looks";
+import { actorRig } from "../actors/rigs";
 import { Beacons } from "../labels/Beacons";
 import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
 import { RequestBubble } from "../labels/RequestBubble";
 import { ModelProps } from "../props/ModelProps";
-import { followTarget, worldGround } from "../runtime";
+import { followTarget, worldGround, worldRenderer } from "../runtime";
 import { tickWater, waterMaterial } from "../water/waterMaterial";
 import { ACTOR_LIFT, type DioramaScene } from "./scene";
 
@@ -71,7 +72,7 @@ export function onGroundClick(e: { delta: number; point: { x: number; z: number 
 /** A menos de esto el NPC gira cabeza y cuerpo hacia el jugador (propuesta C §3). */
 const LOOK_AT_PLAYER_M = 6;
 
-function Npc({ actor, cut, activity, lod }: { actor: MapActor; cut: boolean; activity: SceneActivityView; lod: SceneDensity }) {
+function Npc({ actor, cut, activity, lod, openWorld }: { actor: MapActor; cut: boolean; activity: SceneActivityView; lod: SceneDensity; openWorld: boolean }) {
   const pose = useMemo((): (() => ActorPose) => {
     return () => {
       const near = followTarget.ready && Math.hypot(followTarget.x - actor.x, followTarget.z - actor.z) < LOOK_AT_PLAYER_M;
@@ -94,6 +95,9 @@ function Npc({ actor, cut, activity, lod }: { actor: MapActor; cut: boolean; act
       gesture={mine && activity.greet ? "saludar" : null}
       onSelect={onSelect}
       lod={lod}
+      // Open-world-3d T7 (AC47): en el mundo abierto, el personaje de Quaternius con la regla de distancia.
+      rig={actorRig(openWorld)}
+      distanceRules={openWorld}
     />
   );
 }
@@ -107,13 +111,29 @@ function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
 export const labelAnchorY = (heightAt: (x: number, z: number) => number, lift: number, x: number, z: number): number =>
   heightAt(x, z) + lift + LABEL_HEIGHT;
 
-/** El mundo abierto: el suelo baja sus mapas (si fallan, queda el color por vértice) y el cielo sigue a la cámara. */
+/**
+ * El mundo abierto: el suelo baja sus mapas (si fallan, queda el color por vértice), el cielo sigue a la cámara y la
+ * naturaleza (T7) baja sus mallas y mapas, hornea los impostores y sube por cuadro solo lo que se ve.
+ */
 function OpenWorld({ scene, still }: { scene: DioramaScene; still: boolean }) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
+    worldRenderer.gl = gl;
+    return () => {
+      worldRenderer.gl = null;
+    };
+  }, [gl]);
+  useEffect(() => {
     scene.ground?.loadMaps(gl).catch((e: unknown) => console.warn("suelo: sin mapas .ktx2, queda el color por vértice", e));
+    scene.nature?.load(gl).catch((e: unknown) => console.warn("naturaleza: sin árboles ni rocas", e));
   }, [scene, gl]);
-  useFrame(({ camera }, delta) => scene.sky?.follow(camera.position.x, camera.position.y, camera.position.z, delta, still));
+  useFrame(({ camera, scene: three }, delta) => {
+    scene.sky?.follow(camera.position.x, camera.position.y, camera.position.z, delta, still);
+    if (scene.nature && followTarget.ready) {
+      const fog = three.fog as { far?: number } | null;
+      scene.nature.update(camera, followTarget.x, followTarget.z, fog?.far ?? Infinity, delta, still);
+    }
+  });
   return null;
 }
 
@@ -169,7 +189,7 @@ export function Diorama({
       <ModelProps slots={scene.models} />
       <WaterClock reduceMotion={cut || frozen} />
       <AnimationGovernor max={maxAnimated} only={animatedOnly} />
-      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} activity={activity} lod={density} />)}
+      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} activity={activity} lod={density} openWorld={relief} />)}
       {labels.map((l) => {
         const a = actors.find((x) => x.id === l.id) as MapActor; // labelEntries sale de `actors`
         return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={labelAnchorY(heightAt, lift, a.x, a.z)} z={a.z} />;

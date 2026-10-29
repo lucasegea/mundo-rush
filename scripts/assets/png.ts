@@ -1,7 +1,8 @@
 // scripts/assets/png.ts: decodificador de PNG mínimo (plan estetica-c M3) para muestrear por UV la textura de paleta de
 // un pack (KayKit trae un atlas de degradé) antes de descartarla. Sin dependencias nuevas: solo zlib de Node. Cubre lo
 // que traen los packs: 8 bits por canal, sin entrelazado, en RGB, RGBA, gris, gris con alfa o paleta. El resto falla
-// nombrando el formato. `codificarPng` existe para los tests (fixtures con textura).
+// nombrando el formato. `codificarPng` existe para los tests (fixtures con textura). Open-world-3d T7: también 16 bits
+// por canal (los PNG 1k de Poly Haven), redondeados a 8 al decodificar.
 import { deflateSync, inflateSync } from "node:zlib";
 
 export interface Imagen {
@@ -56,11 +57,13 @@ export function decodificarPng(datos: Uint8Array): Imagen {
     o += 12 + largo;
   }
   const canales = CANALES[tipo];
-  if (bits !== 8 || canales === undefined || entrelazado !== 0 || (tipo === 3 && !paleta)) {
+  if ((bits !== 8 && !(bits === 16 && tipo !== 3)) || canales === undefined || entrelazado !== 0 || (tipo === 3 && !paleta)) {
     throw new Error(`png: formato no soportado (bits ${bits}, tipo de color ${tipo}, entrelazado ${entrelazado})`);
   }
   const crudo = inflateSync(Buffer.concat(idat));
-  const paso = ancho * canales;
+  const bps = bits / 8;
+  const bpp = canales * bps;
+  const paso = ancho * bpp;
   if (crudo.length < (paso + 1) * alto) throw new Error("png: datos cortos");
   const rgba = new Uint8Array(ancho * alto * 4);
   let previa = new Uint8Array(paso);
@@ -68,27 +71,29 @@ export function decodificarPng(datos: Uint8Array): Imagen {
   for (let y = 0; y < alto; y++) {
     const filtro = crudo[y * (paso + 1)] as number;
     for (let x = 0; x < paso; x++) {
-      const a = x >= canales ? (fila[x - canales] as number) : 0;
+      const a = x >= bpp ? (fila[x - bpp] as number) : 0;
       const arriba = previa[x] as number;
-      const c = x >= canales ? (previa[x - canales] as number) : 0;
+      const c = x >= bpp ? (previa[x - bpp] as number) : 0;
       const v = crudo[y * (paso + 1) + 1 + x] as number;
       const pred = filtro === 1 ? a : filtro === 2 ? arriba : filtro === 3 ? (a + arriba) >> 1 : filtro === 4 ? paeth(a, arriba, c) : 0;
       if (filtro > 4) throw new Error(`png: filtro ${filtro} desconocido`);
       fila[x] = (v + pred) & 255;
     }
+    // 16 bits: cada muestra a 8 bits redondeada (alto * 256 + bajo) * 255 / 65535.
+    const m = bps === 1 ? fila : Uint8Array.from({ length: ancho * canales }, (_, k) => Math.round((((fila[k * 2] as number) << 8) | (fila[k * 2 + 1] as number)) * 255 / 65535));
     for (let x = 0; x < ancho; x++) {
       const i = (y * ancho + x) * 4;
       const p = x * canales;
       if (tipo === 3) {
-        const k = (fila[p] as number) * 3;
+        const k = (m[p] as number) * 3;
         rgba.set((paleta as Uint8Array).subarray(k, k + 3), i);
         rgba[i + 3] = 255;
       } else if (canales >= 3) {
-        rgba.set(fila.subarray(p, p + 3), i);
-        rgba[i + 3] = canales === 4 ? (fila[p + 3] as number) : 255;
+        rgba.set(m.subarray(p, p + 3), i);
+        rgba[i + 3] = canales === 4 ? (m[p + 3] as number) : 255;
       } else {
-        rgba[i] = rgba[i + 1] = rgba[i + 2] = fila[p] as number;
-        rgba[i + 3] = canales === 2 ? (fila[p + 1] as number) : 255;
+        rgba[i] = rgba[i + 1] = rgba[i + 2] = m[p] as number;
+        rgba[i + 3] = canales === 2 ? (m[p + 1] as number) : 255;
       }
     }
     [previa, fila] = [fila, previa];

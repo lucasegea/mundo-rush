@@ -10,6 +10,7 @@ import { dequantize } from "@gltf-transform/functions";
 import { describe, expect, test } from "vitest";
 import { tokenRgb, withinPaint, type PaletteToken } from "@lg/art";
 import { ATRIBUTO_ROPA, optimizarClips, optimizarCuerpo, PersonajeRechazado, ROPA, type ReglaPintura } from "./characters.ts";
+import { medirPieza } from "./inspect-budgets.ts";
 import { crearIO, leerRegistro, optimizarPersonajeGlb, sha256 } from "./optimize.ts";
 import { codificarPng, decodificarPng, muestrear } from "./png.ts";
 
@@ -133,9 +134,9 @@ describe("characters: cuerpo con esqueleto", () => {
     const nombres = root.listSkins()[0]?.listJoints().map((j) => j.getName()) ?? [];
     const cuenta = { remera: 0, pantalon: 0, piel: 0 };
     for (let i = 0; i < (color?.getCount() ?? 0); i++) {
-      const hueso = nombres[Number((joints?.getElement(i, []) ?? [])[0])];
-      const slot = (ropa?.getElement(i, []) ?? [])[0];
-      const c = color?.getElement(i, []) ?? [];
+      const hueso = nombres[Number((joints?.getElement(i, [] as number[]) ?? [])[0])];
+      const slot = (ropa?.getElement(i, [] as number[]) ?? [])[0];
+      const c = color?.getElement(i, [] as number[]) ?? [];
       const esperado: { token: PaletteToken; slot: number; k: keyof typeof cuenta } =
         hueso === "hand.r" ? { token: "piel", slot: ROPA.fija, k: "piel" }
           : hueso === "upperleg.l" ? { token: "pantalon", slot: ROPA.pantalon, k: "pantalon" }
@@ -171,6 +172,53 @@ describe("characters: cuerpo con esqueleto", () => {
       .rejects.toThrow(/arista dura de .*registrala con bisel/);
     const r = await optimizarCuerpo(await leer(await personajeFixture()), { id: "f", nodos: ["Body"], pintura: REGLAS });
     expect(r.diedroMax).toBeLessThan(80);
+  });
+});
+
+describe("characters: malla rígida colgada de un hueso (open-world-3d T7, AC47)", () => {
+  /** Mundo de un vértice con piel según glTF: hueso · IBM · v (con las matrices del archivo de salida). */
+  const mundo = (m: number[], v: number[]): number[] => [0, 1, 2].map((r) => (m[r] as number) * (v[0] as number) + (m[4 + r] as number) * (v[1] as number) + (m[8 + r] as number) * (v[2] as number) + (m[12 + r] as number));
+  const mul = (a: number[], b: number[]): number[] => {
+    const o = new Array<number>(16).fill(0);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) o[c * 4 + r] = (o[c * 4 + r] as number) + (a[k * 4 + r] as number) * (b[c * 4 + k] as number);
+    return o;
+  };
+
+  test("una malla sin piel hija de hand.r se une con peso 1 en hand.r y queda donde estaba", async () => {
+    const doc = await leer(await personajeFixture());
+    const hand = doc.getRoot().listNodes().find((n) => n.getName() === "hand.r") as Node;
+    const gorro = esfera(doc, "Gorro", 0, 0, 0.75).setTranslation([0, 0.2, 0]);
+    const prim = gorro.getMesh()?.listPrimitives()[0];
+    prim?.setAttribute("JOINTS_0", null).setAttribute("WEIGHTS_0", null);
+    hand.addChild(gorro);
+    const n = prim?.getAttribute("POSITION")?.getCount() ?? 0;
+    await optimizarCuerpo(doc, { id: "fixture/rigido", nodos: ["Body", "Gorro"], pintura: REGLAS, bisel: "aceptado" });
+    const out = await leer(await (await crearIO()).writeBinary(doc));
+    await out.transform(dequantize());
+    const skin = out.getRoot().listSkins()[0];
+    const joints = skin?.listJoints() ?? [];
+    const p = out.getRoot().listMeshes()[0]?.listPrimitives()[0];
+    const pos = p?.getAttribute("POSITION");
+    const jo = p?.getAttribute("JOINTS_0");
+    const we = p?.getAttribute("WEIGHTS_0");
+    let enMano = 0;
+    for (let i = 0; i < (pos?.getCount() ?? 0); i++) {
+      const j = jo?.getElement(i, [] as number[]) ?? [];
+      if (joints[j[0] as number]?.getName() !== "hand.r") continue;
+      enMano += 1;
+      expect((we?.getElement(i, [] as number[]) ?? [])[0]).toBeCloseTo(1, 2);
+      const m = mul(joints[j[0] as number]?.getWorldMatrix() as number[], Array.from(skin?.getInverseBindMatrices()?.getElement(j[0] as number, [] as number[]) ?? []));
+      const w = mundo(m, pos?.getElement(i, [] as number[]) ?? []);
+      // la esfera de radio 0,3 centrada donde estaba: mano (-0,5; 1,4; 0) más (0; 0,2; 0)
+      expect(Math.hypot((w[0] as number) + 0.5, (w[1] as number) - 1.6, w[2] as number)).toBeCloseTo(0.3, 2);
+    }
+    expect(enMano).toBe(n);
+  });
+
+  test("teeth: una malla sin piel que no cuelga de un hueso sigue rechazada", async () => {
+    const doc = await leer(await personajeFixture());
+    doc.getRoot().listScenes()[0]?.addChild(esfera(doc, "Suelta", 1, 0, 0.25));
+    await expect(optimizarCuerpo(doc, { id: "f", nodos: ["Body", "Suelta"], pintura: REGLAS, bisel: "aceptado" })).rejects.toThrow(/la malla "Suelta" no tiene esqueleto/);
   });
 });
 
@@ -265,9 +313,10 @@ describe("png: decodificador mínimo", () => {
 
   test("lo que no es PNG o no está cubierto falla nombrando el formato", () => {
     expect(() => decodificarPng(Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8, 9]))).toThrow(/no es un PNG/);
-    const dieciseis = png(1, 1, 0, [1], 0);
+    // Open-world-3d T7: 16 bits por canal se decodifica (los PNG 1k de Poly Haven); con paleta sigue sin estar cubierto.
+    const dieciseis = png(1, 1, 3, [0], 0, [1, 2, 3]);
     dieciseis[8 + 8 + 8] = 16; // bits por canal en el IHDR
-    expect(() => decodificarPng(dieciseis)).toThrow(/formato no soportado \(bits 16/);
+    expect(() => decodificarPng(dieciseis)).toThrow(/formato no soportado \(bits 16, tipo de color 3/);
   });
 });
 
@@ -278,7 +327,13 @@ describe("personajes reales del registro", () => {
   test("hay tres cuerpos y un archivo de clips servidos, CC0, y cada uno salió del pipeline", async () => {
     const cuerpos = personajes.filter((a) => a.personaje?.tipo === "cuerpo");
     // Plan estetica-c M6: cada cuerpo tiene su versión reducida para `low` (`-bajo`, el mismo esqueleto, menos triángulos).
-    expect(cuerpos).toHaveLength(6);
+    // Cambio registrado (open-world-3d T7, AC47): se suma el personaje de Quaternius del mundo abierto (cuerpo, su -bajo
+    // y su archivo de clips). Antes eran 6 cuerpos y 1 archivo de clips, todos de KayKit; esos siguen iguales.
+    const kaykit = (a: { pack: string }): boolean => a.pack === "kaykit-adventurers-1";
+    expect(cuerpos.filter(kaykit)).toHaveLength(6);
+    expect(cuerpos.filter((a) => a.pack === "quaternius-character-animated").map((a) => a.id).sort())
+      .toEqual(["quaternius-character-animated/cuerpo", "quaternius-character-animated/cuerpo-bajo"]);
+    expect(cuerpos).toHaveLength(8);
     for (const base of cuerpos.filter((a) => !a.id.endsWith("-bajo"))) {
       const bajo = cuerpos.find((a) => a.id === `${base.id}-bajo`);
       expect(bajo, base.id).toBeDefined();
@@ -286,7 +341,9 @@ describe("personajes reales del registro", () => {
       expect(bajo?.triangulos ?? Infinity, base.id).toBeLessThan((base.triangulos ?? 0) * 0.5);
       expect(bajo?.sha256_original, base.id).toBe(base.sha256_original);
     }
-    expect(personajes.filter((a) => a.personaje?.tipo === "animaciones")).toHaveLength(1);
+    expect(personajes.filter((a) => a.personaje?.tipo === "animaciones" && kaykit(a))).toHaveLength(1);
+    expect(personajes.filter((a) => a.personaje?.tipo === "animaciones").map((a) => a.id).sort())
+      .toEqual(["kaykit-adventurers-1/animaciones", "quaternius-character-animated/animaciones"]);
     for (const a of personajes) {
       expect(a.licencia, a.id).toBe("CC0-1.0");
       const doc = await (await crearIO()).read(join(ROOT, a.archivo));
@@ -305,6 +362,55 @@ describe("personajes reales del registro", () => {
         expect(root.listAnimations().map((x) => x.getName()).sort(), a.id).toEqual([...(a.personaje?.clips ?? [])].sort());
       }
     }
+  });
+
+  test("open-world-3d T7 (AC47): el personaje de Quaternius sale del pipeline m7 con la regla de .glb, su -bajo y sus clips", async () => {
+    const fila = (id: string) => personajes.find((a) => a.id === `quaternius-character-animated/${id}`);
+    for (const id of ["cuerpo", "cuerpo-bajo", "animaciones"]) {
+      const a = fila(id);
+      expect(a, id).toMatchObject({ licencia: "CC0-1.0", procedencia: "derived", atribucion_requerida: false });
+      expect(a?.modificaciones, id).toMatch(/characters\.ts/);
+      const bytes = new Uint8Array(readFileSync(join(ROOT, a?.archivo ?? "")));
+      expect(sha256(bytes), id).toBe(a?.sha256);
+      const m = await medirPieza(a?.archivo ?? "", bytes);
+      expect(m, id).toMatchObject({ materiales: 0, texturas: 0, triangulos: a?.triangulos, primitivas: a?.primitivas });
+      if (id !== "animaciones") expect(m.conColor, id).toBe(true);
+    }
+    const cuerpo = fila("cuerpo");
+    expect(cuerpo?.personaje?.tipo === "cuerpo" && cuerpo.personaje.nodos).toEqual(["Rogue", "NurbsPath.001"]);
+    expect(fila("animaciones")?.personaje).toEqual({ tipo: "animaciones", clips: ["Idle", "Walk", "Run", "PickUp"] });
+    // El pelo y la cara (NurbsPath.001, sin piel, hija del hueso Head) quedan en la primitiva con peso 1 en Head, en su
+    // lugar: en reposo el cuerpo mide 2,82 de alto (la punta del pelo), no 2,74 (la de la cabeza sin pelo).
+    const doc = await (await crearIO()).read(join(ROOT, cuerpo?.archivo ?? ""));
+    await doc.transform(dequantize());
+    const skin = doc.getRoot().listSkins()[0];
+    const joints = skin?.listJoints() ?? [];
+    const head = joints.findIndex((j) => j.getName() === "Head");
+    const p = doc.getRoot().listMeshes()[0]?.listPrimitives()[0];
+    const pos = p?.getAttribute("POSITION");
+    let rigidos = 0;
+    let alto = -Infinity;
+    for (let i = 0; i < (pos?.getCount() ?? 0); i++) {
+      const j = p?.getAttribute("JOINTS_0")?.getElement(i, [] as number[]) ?? [];
+      const w = p?.getAttribute("WEIGHTS_0")?.getElement(i, [] as number[]) ?? [];
+      if (j[0] !== head || (w[0] as number) < 0.99) continue;
+      rigidos += 1;
+      const jm = joints[head]?.getWorldMatrix() as number[];
+      const ibm = Array.from(skin?.getInverseBindMatrices()?.getElement(head, [] as number[]) ?? []);
+      const v = pos?.getElement(i, [] as number[]) ?? [];
+      // y del mundo = fila 1 de hueso · IBM aplicada a v
+      let y = 0;
+      for (let k = 0; k < 4; k++) {
+        let col = 0;
+        for (let q = 0; q < 4; q++) col += (jm[q * 4 + 1] as number) * (ibm[k * 4 + q] as number);
+        y += col * (k < 3 ? (v[k] as number) : 1);
+      }
+      alto = Math.max(alto, y);
+    }
+    expect(rigidos).toBeGreaterThan(1000);
+    expect(alto).toBeGreaterThan(2.8);
+    expect(alto).toBeLessThan(2.84);
+    expect(fila("cuerpo-bajo")?.triangulos ?? Infinity).toBeLessThan((cuerpo?.triangulos ?? 0) * 0.5);
   });
 
   // assets-src/ no se versiona (D-099): con la fuente a mano, lo servido es exactamente la salida del pipeline.

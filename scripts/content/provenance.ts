@@ -29,6 +29,8 @@ export interface Fila {
   procedencia?: string | undefined;
   archivo_licencia?: string | undefined;
   atribucion_requerida?: boolean | undefined;
+  /** Solo código editado: su `<archivo>.patch` (open-world-3d T7). */
+  parche?: string | undefined;
 }
 
 export interface Arbol {
@@ -73,6 +75,7 @@ const filas = (registro: Fila["registro"], lista: unknown): Fila[] =>
     procedencia: typeof r.procedencia === "string" ? r.procedencia : undefined,
     archivo_licencia: typeof r.archivo_licencia === "string" ? r.archivo_licencia : undefined,
     atribucion_requerida: typeof r.atribucion_requerida === "boolean" ? r.atribucion_requerida : undefined,
+    parche: typeof r.parche === "string" ? r.parche : undefined,
   }));
 
 /** Lee el árbol de `root`: archivos en disco, filas de los dos registros y créditos. */
@@ -102,6 +105,9 @@ export const sinFila = (a: Arbol): string[] => {
   const de = (registro: Fila["registro"]): Set<string> => new Set(a.filas.filter((f) => f.registro === registro).map((f) => f.archivo));
   const assets = de("assets");
   const codigo = de("codigo");
+  // Open-world-3d T7 (D-830): el `<archivo>.patch` de un archivo editado lo cubre la fila de ese archivo (`parche`);
+  // refetch.ts prueba que el upstream más el parche da los bytes versionados. Un .patch que ninguna fila nombra falla.
+  for (const f of a.filas) if (f.registro === "codigo" && f.parche !== undefined) codigo.add(f.parche);
   const enDisco = new Set(a.archivos.codigo);
   return [
     ...a.archivos.assets.filter((p) => !assets.has(p)).map((p) => `${p}: sin fila en ${RUTA_ASSETS}`),

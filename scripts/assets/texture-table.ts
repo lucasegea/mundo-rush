@@ -19,6 +19,7 @@ import {
   TIER_BUDGETS, WORLD_TIERS, type TextureFormat, type WorldTexture, type WorldTier,
 } from "@lg/art";
 import { loadBudgets } from "../budgets/bundle-size.ts";
+import { DECODIFICADOR_BASIS } from "./inspect-budgets.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MB = 1024 * 1024;
@@ -27,9 +28,8 @@ const MBD = 1_000_000;
 export const MUELLE_NPCS = 3;
 
 /**
- * Lo que el muelle baja en `high` además de las texturas, en bytes. Lo que ya existe se mide en disco; lo que llega en
- * T7 es una estimación marcada como tal (los árboles horneados por ez-tree, las rocas geométricas y el personaje de
- * Quaternius por el pipeline de m7) hasta que existan y check:budgets los cuente de verdad.
+ * Lo que el muelle baja en `high` además de las texturas, en bytes, medido en disco. Desde T7 también los árboles
+ * horneados, las rocas y el personaje de Quaternius (antes estimados); check:budgets los cuenta en la descarga.
  */
 export interface OtherDownload {
   id: string;
@@ -49,19 +49,20 @@ const dirSize = (rel: string): number => {
 };
 
 export function otherDownloads(): OtherDownload[] {
-  const transcoder = (name: string): OtherDownload => {
-    const pub = fileSize(`apps/web/public/decoders/basis/${name}`);
-    const lib = fileSize(`node_modules/three/examples/jsm/libs/basis/${name}`);
-    return { id: `decoders/basis/${name}`, bytes: pub ?? lib ?? 0, measured: pub !== null || lib !== null };
+  // T7: el transcodificador servido es el de DECODIFICADOR_BASIS (apps/web/public/decoders/), el mismo que cuenta
+  // inspect-budgets; el de three en node_modules queda como respaldo si todavía no está copiado.
+  const transcoder = (pub: string): OtherDownload => {
+    const name = pub.slice(pub.lastIndexOf("/") + 1);
+    const bytes = fileSize(pub) ?? fileSize(`node_modules/three/examples/jsm/libs/basis/${name}`);
+    return { id: pub.slice("apps/web/public/".length), bytes: bytes ?? 0, measured: bytes !== null };
   };
   return [
     { id: "decoders/meshopt_decoder.module.js", bytes: fileSize("apps/web/public/decoders/meshopt_decoder.module.js") ?? 0, measured: true },
-    transcoder("basis_transcoder.js"),
-    transcoder("basis_transcoder.wasm"),
+    ...DECODIFICADOR_BASIS.map(transcoder),
     { id: "models/kaykit-adventurers-1 (personajes m7, cota de arriba)", bytes: dirSize("apps/web/public/models/kaykit-adventurers-1"), measured: true },
-    { id: "T7 árboles horneados (7 especies × completo y liviano, estimado)", bytes: 900_000, measured: false },
-    { id: "T7 rocas geométricas (4 × cerca y lejos, estimado)", bytes: 250_000, measured: false },
-    { id: "T7 personaje Quaternius (cuerpo y clips por el pipeline, estimado)", bytes: 300_000, measured: false },
+    { id: "models/generated/trees (T7, 7 especies × completo y liviano)", bytes: dirSize("apps/web/public/models/generated/trees"), measured: true },
+    { id: "models/polyhaven (T7, 4 rocas × cerca y lejos)", bytes: dirSize("apps/web/public/models/polyhaven"), measured: true },
+    { id: "models/quaternius-character-animated (personaje del mundo abierto, T7)", bytes: dirSize("apps/web/public/models/quaternius-character-animated"), measured: true },
   ];
 }
 
@@ -70,18 +71,25 @@ type Variant = (t: WorldTexture) => WorldTexture;
 
 /** El V6 tal cual: normales de 1024 y en UASTC (la calidad del mockup), difusos ETC1S. */
 const v6: Variant = (t) => (t.normal ? { ...t, width: t.v6Px ?? t.width, height: t.v6Px ?? t.height, format: "uastc" } : t);
+/**
+ * El recorte 1 de PD-4 (normales de 1024 a 512) es para los mapas que en V6 son una sola imagen de 1024 (`v6Px`, las
+ * normales del suelo). La normal de roca es un atlas 2 × 2 de escaneos de 512 (desviación T7): cada escaneo ya está en
+ * 512, así que el atlas queda en 1024. Fix 1 de QA (hallazgo 6): antes se lo bajaba a 512 y las filas de los pasos no
+ * describían lo servido (19,9 / 23,9 MB contra 20,9 / 24,9 del inventario, y el paso 1 parecía entrar).
+ */
+const to512: Variant = (t) => (t.v6Px ? { ...v6(t), width: 512, height: 512 } : v6(t));
 /** Los pasos de PD-4, acumulativos (cada uno sobre el anterior). */
 export const CUT_STEPS: readonly { step: number; label: string; apply: Variant }[] = [
   { step: 0, label: "V6 tal cual (normales 1024 UASTC)", apply: v6 },
-  { step: 1, label: "normales de 1024 a 512", apply: (t) => (t.normal ? { ...v6(t), width: 512, height: 512 } : t) },
-  { step: 2, label: "normales en ETC1S", apply: (t) => (t.normal ? { ...v6(t), width: 512, height: 512, format: "etc1s" } : t) },
+  { step: 1, label: "normales de 1024 a 512", apply: (t) => (t.normal ? to512(t) : t) },
+  { step: 2, label: "normales en ETC1S", apply: (t) => (t.normal ? { ...to512(t), format: "etc1s" } : t) },
   {
     step: 3, label: "sin normales de roca en medium",
-    apply: (t) => (t.normal ? { ...v6(t), width: 512, height: 512, format: "etc1s", count: t.group === "rocas" ? { ...t.count, medium: 0 } : t.count } : t),
+    apply: (t) => (t.normal ? { ...to512(t), format: "etc1s", count: t.group === "rocas" ? { ...t.count, medium: 0 } : t.count } : t),
   },
   {
     step: 4, label: "sin normales del suelo en medium",
-    apply: (t) => (t.normal ? { ...v6(t), width: 512, height: 512, format: "etc1s", count: { ...t.count, medium: 0 } } : t),
+    apply: (t) => (t.normal ? { ...to512(t), format: "etc1s", count: { ...t.count, medium: 0 } } : t),
   },
 ];
 

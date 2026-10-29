@@ -80,11 +80,12 @@ export const OPEN_WORLD_TEXTURES: readonly WorldTexture[] = [
     count: tiers(...WORLD_TIERS.map((t) => (OPEN_WORLD_DENSITY[t].groundNormals ? 1 : 0)) as [number, number, number]),
     file: groundTextureFile(m, "nor"), task: "T6", normal: true, v6Px: GROUND_NORMAL_V6_PX,
   })),
-  // T7 (por venir): 4 juegos de roca (difuso en todo tier, normal en medium y high), hoja y corteza (PD-9).
-  { id: "rocas/difuso", group: "rocas", width: 512, height: 512, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc"], count: all(4), task: "T7" },
-  { id: "rocas/normal", group: "rocas", width: 512, height: 512, mips: true, alpha: false, format: "etc1s", candidates: ["uastc", "etc1s"], count: tiers(0, 4, 4), task: "T7", normal: true },
-  { id: "arboles/hoja", group: "árboles", width: 512, height: 512, mips: true, alpha: true, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), task: "T7" },
-  { id: "arboles/corteza", group: "árboles", width: 512, height: 512, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), task: "T7" },
+  // T7: un atlas 2 × 2 de los 4 escaneos de roca (difuso en todo tier, normal en medium y high: un material por banda,
+  // AC71), hoja y corteza (PD-9). Archivos de scripts/assets/nature.ts.
+  { id: "rocas/difuso", group: "rocas", width: 1024, height: 1024, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc"], count: all(1), file: `${TEXTURES_DIR}/rocas-diff.ktx2`, task: "T7" },
+  { id: "rocas/normal", group: "rocas", width: 1024, height: 1024, mips: true, alpha: false, format: "etc1s", candidates: ["uastc", "etc1s"], count: tiers(0, 1, 1), file: `${TEXTURES_DIR}/rocas-nor.ktx2`, task: "T7", normal: true },
+  { id: "arboles/hoja", group: "árboles", width: 512, height: 512, mips: true, alpha: true, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), file: `${TEXTURES_DIR}/hoja-diff.ktx2`, task: "T7" },
+  { id: "arboles/corteza", group: "árboles", width: 512, height: 512, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), file: `${TEXTURES_DIR}/corteza-diff.ktx2`, task: "T7" },
   {
     id: "impostores", group: "impostores", width: RUNTIME_TEXTURE_PX.impostor[0], height: RUNTIME_TEXTURE_PX.impostor[1], mips: true, alpha: true,
     format: "rgba8", candidates: ["rgba8"], count: all(IMPOSTOR_SPECIES), task: "T7",

@@ -19,7 +19,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { OPEN_WORLD_TEXTURES } from "@lg/art";
+import { natureModelFiles, OPEN_WORLD_TEXTURES } from "@lg/art";
 import { archivoDeModelo, compilarContenido, PREFIJO_MODELO } from "@lg/content-schema";
 import { loadBudgets, type Budgets } from "../budgets/bundle-size.ts";
 import { leerContenido } from "../content/build.ts";
@@ -40,7 +40,7 @@ export interface PiezaMedida {
   conColor: boolean;
 }
 
-/** Un archivo que no es .glb en la carga de un diorama (texturas .ktx2, el transcodificador). */
+/** Un archivo de la carga de un diorama que no es un prop (texturas .ktx2, el transcodificador, T7: árboles y rocas). */
 export interface ArchivoCarga {
   archivo: string;
   bytes: number;
@@ -51,10 +51,11 @@ export const DECODIFICADOR_BASIS = ["apps/web/public/decoders/basis_transcoder.j
 /** El universo cuyo muelle es el mundo abierto (open-world-3d): su carga entra en `assets_muelle_mb`. */
 export const UNIVERSO_MUELLE = "U-GALEANO";
 
-/** Los archivos (no .glb) que baja un diorama con relieve en `high`: los .ktx2 del inventario y el transcodificador. */
+/** Lo que baja un diorama con relieve en `high` además de sus props: los .ktx2 del inventario, el transcodificador y (T7) los árboles y las rocas. */
 export function cargaMundoAbierto(): string[] {
   const ktx2 = OPEN_WORLD_TEXTURES.flatMap((t) => (t.file && t.count.high > 0 ? [t.file] : []));
-  return [...new Set([...ktx2, ...DECODIFICADOR_BASIS])].sort();
+  // T7: los árboles horneados y las rocas (el mundo los baja enteros: el tier cambia cuántos se dibujan, no cuáles).
+  return [...new Set([...ktx2, ...natureModelFiles(), ...DECODIFICADOR_BASIS])].sort();
 }
 
 export interface DioramaMedido {
@@ -140,7 +141,7 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
     const bytes = modelos + otros;
     const pasa = bytes / MB <= capMb;
     if (!pasa) ok = false;
-    const detalle = extras.size > 0 ? ` (${mb(modelos)} de modelos y ${mb(otros)} de ${extras.size} archivo(s) más: texturas y transcodificador)` : "";
+    const detalle = extras.size > 0 ? ` (${mb(modelos)} de modelos y ${mb(otros)} de ${extras.size} archivo(s) más: texturas, transcodificador, árboles y rocas)` : "";
     lineas.push(`${pasa ? "OK  " : "FAIL"} ${nombre}: ${mb(bytes)} MB${extras.size > 0 ? "" : " de modelos"}${detalle} (tope ${capMb} MB, ${clave})`);
   };
   tope("assets del primer diorama", ["muelle"], b.assets_muelle_mb, "assets_muelle_mb");

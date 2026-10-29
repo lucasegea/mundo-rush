@@ -21,3 +21,4 @@ export * from "./relief.ts";
 export * from "./textures.ts";
 // Open-world-3d T6 (D-823): las medidas del cielo (cúpula y nubes) que dibuja world/sky y cuenta el estimador.
 export * from "./sky.ts";
+export * from "./vegetation.ts";

@@ -47,6 +47,21 @@ packs:
       cuerpos (Mage, Rogue y Barbarian, sin cabeza ni armas) repintados a la paleta y los clips de un solo archivo
       (Knight), que comparte el esqueleto. La 2.0 de itch.io queda diferida (fila kaykit-adventurers).
     fuente_investigacion: investigación 2026-10-13, V1 (KayKit, descarga por script de GitHub) y V4 (esqueleto de destino)
+  # open-world-3d M3 (T7, AC47, D3): el personaje de la maqueta V6, para el jugador y los NPCs del mundo abierto.
+  - id: quaternius-character-animated
+    nombre: Quaternius Character Animated (poly.pizza)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://poly.pizza/m/DgOCW9ZCRJ
+    fecha_acceso: 2026-10-29
+    verificacion: [D1]
+    estado: usado
+    razon: >-
+      El personaje con esqueleto de la maqueta V6 (cuerpo, pelo y cara, clips Idle, Walk y Run). La página de poly.pizza
+      dice "CC0 1.0" y autor Quaternius (vuelto a leer el 2026-10-29); el .glb se baja sin login del CDN estático que la
+      página enlaza. Colores por material, sin texturas. Lo usan el jugador y los NPCs del mundo abierto (relieve); los
+      dioramas planos (campesino) siguen con los cuerpos de KayKit.
+    fuente_investigacion: maqueta V6 (assets/LICENSES.json) y operador 2026-10-28 (D3)
   # ---------- descartados ----------
   - id: quaternius-medieval-village-megakit
     nombre: Quaternius Medieval Village MegaKit (Standard)
@@ -257,6 +272,21 @@ packs:
       fijado; la tabla del paso 0 (npm run assets:texture-table) eligió ETC1S 1024 los difusos y ETC1S 512 los normales
       (corte PD-4 paso 2).
     fuente_investigacion: open-world-3d T6 2026-10-29, licencia D1 (polyhaven.com/license y api.polyhaven.com/info)
+    # Open-world-3d T7: también los modelos del mockup V6 (hoja y corteza del jacarandá, cuatro escaneos de roca): los PNG
+    # 1k y el glTF 1k con su .bin, en assets-src/polyhaven/models/, derivados por scripts/assets/nature.ts.
+  # ---------- open-world-3d M3 (T7): árboles horneados con ez-tree (PD-3, D-830, D-831) ----------
+  - id: ez-tree
+    nombre: Árboles horneados con ez-tree 1.1.0 (tooling/vendor/ez-tree, filas de código en content/code-registry.yaml)
+    autor: Daniel Greenheck (ez-tree); los presets y el horneado, learning-game
+    licencia: MIT
+    url: https://github.com/dgreenheck/ez-tree
+    fecha_acceso: 2026-10-29
+    verificacion: [D1]
+    estado: usado
+    razon: >-
+      ez-tree es MIT (LICENSE versionado en tooling/vendor/ez-tree/). Corre solo en Node, en scripts/assets/bake-trees.ts,
+      con los presets y semillas del mockup V6; el cliente recibe .glb sin texturas ni materiales (D-829), nunca el código.
+    fuente_investigacion: open-world-3d T7 2026-10-29, licencia D1 (npm @dgreenheck/ez-tree@1.1.0, LICENSE)
 assets:
   - id: quaternius-farm-buildings/gallinero
     archivo: apps/web/public/models/quaternius-farm-buildings/gallinero.glb
@@ -523,6 +553,93 @@ assets:
     personaje:
       tipo: animaciones
       clips: [Idle, Walking_A, Running_A, Sit_Chair_Idle, Interact, PickUp]
+  # ---------- open-world-3d M3 (T7, AC47): el personaje de Quaternius (mundo abierto) ----------
+  - id: quaternius-character-animated/cuerpo
+    archivo: apps/web/public/models/quaternius-character-animated/cuerpo.glb
+    triangulos: 3264
+    primitivas: 1
+    fuente: assets-src/quaternius-character-animated/character-animated.glb
+    pack: quaternius-character-animated
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://static.poly.pizza/1a8a9d55-9aa9-43c4-a031-d926e251d80a.glb
+    fecha_descarga: 2026-10-29
+    sha256_original: "a24a3bc1160b9ee730f0d01d0a6d2c8c74e35fa9a5671843d9a4a61444a95119"
+    sha256: "2389586aae5a5b788ae0e96fa5f9769cecf43cc564a62a5e088e98ebbf6c8505"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): el cuerpo con piel (Rogue, seis materiales) y el pelo y la cara
+      (NurbsPath.001, malla rígida colgada del hueso Head, enlazada a ese hueso con peso 1) unidos en una primitiva con
+      su esqueleto; sin la bolsita del cinturón (Rogue.001) ni clips; repintado por vértice con las reglas de abajo
+      (camisa y pantalón marcados como prendas); meshopt simplify hasta el 55 % de los triángulos (el pelo trae 4480); meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Las mechas del pelo, los ojos y las costuras de las botas tienen aristas de más de 80°; son el modelado del
+      autor, chicas en pantalla.
+    personaje:
+      tipo: cuerpo
+      nodos: &nodos_quaternius [Rogue, NurbsPath.001]
+      pintura: &pintura_quaternius
+        - { color: "#7b5a32", radio: 0.03, token: piel }
+        - { color: "#273a10", radio: 0.03, token: muro }
+        - { color: "#28281a", radio: 0.03, ropa: pantalon }
+        - { color: "#143232", radio: 0.03, ropa: remera }
+        - { color: "#6a6446", radio: 0.03, token: madera }
+        - { color: "#14110c", radio: 0.03, token: tronco }
+        - { color: "#46310c", radio: 0.03, token: pelo }
+        - { color: "#030303", radio: 0.03, token: tinta }
+        - { color: "#0a0a0a", radio: 0.03, token: tinta }
+        - { color: "#898989", radio: 0.03, token: blanco }
+      simplificar: 0.55
+  - id: quaternius-character-animated/cuerpo-bajo
+    archivo: apps/web/public/models/quaternius-character-animated/cuerpo-bajo.glb
+    triangulos: 1483
+    primitivas: 1
+    fuente: assets-src/quaternius-character-animated/character-animated.glb
+    pack: quaternius-character-animated
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://static.poly.pizza/1a8a9d55-9aa9-43c4-a031-d926e251d80a.glb
+    fecha_descarga: 2026-10-29
+    sha256_original: "a24a3bc1160b9ee730f0d01d0a6d2c8c74e35fa9a5671843d9a4a61444a95119"
+    sha256: "3faae4ad3d909c9d227739aca10128a0a1c7b0e7cd3399753fe6e80d0066d72a"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): el cuerpo con piel (Rogue, seis materiales) y el pelo y la cara
+      (NurbsPath.001, malla rígida colgada del hueso Head, enlazada a ese hueso con peso 1) unidos en una primitiva con
+      su esqueleto; sin la bolsita del cinturón (Rogue.001) ni clips; repintado por vértice con las reglas de abajo
+      (camisa y pantalón marcados como prendas); meshopt simplify hasta el 25 % de los triángulos, el cuerpo del tier low; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Las mechas del pelo, los ojos y las costuras de las botas tienen aristas de más de 80°; son el modelado del
+      autor, chicas en pantalla.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_quaternius
+      pintura: *pintura_quaternius
+      simplificar: 0.25
+  - id: quaternius-character-animated/animaciones
+    archivo: apps/web/public/models/quaternius-character-animated/animaciones.glb
+    triangulos: 0
+    primitivas: 0
+    fuente: assets-src/quaternius-character-animated/character-animated.glb
+    pack: quaternius-character-animated
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://static.poly.pizza/1a8a9d55-9aa9-43c4-a031-d926e251d80a.glb
+    fecha_descarga: 2026-10-29
+    sha256_original: "a24a3bc1160b9ee730f0d01d0a6d2c8c74e35fa9a5671843d9a4a61444a95119"
+    sha256: "19b67b9853ec88d1a51ada6d900d7b932b4deb1727365ba316970c0edbb9ebec"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): solo el esqueleto y los clips Idle, Walk, Run y PickUp (de los 24 del
+      archivo, la mitad duplicados con prefijo CharacterArmature|); sin mallas ni materiales; remuestreado y meshopt.
+    atribucion_requerida: false
+    personaje:
+      tipo: animaciones
+      clips: [Idle, Walk, Run, PickUp]
   # ---------- open-world-3d M3 (T6): suelo .ktx2 (scripts/assets/ktx2.ts, D-832) ----------
   - id: polyhaven/leafy-grass-diff
     archivo: apps/web/public/textures/leafy-grass-diff.ktx2
@@ -674,3 +791,494 @@ assets:
       scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
       -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
     atribucion_requerida: false
+  # ---------- open-world-3d M3 (T7): árboles horneados (scripts/assets/bake-trees.ts, ez-tree vendorizado, D-830) ----------
+  - id: ez-tree/pine-a
+    archivo: apps/web/public/models/generated/trees/pine-a.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "967024c90d6813e89157d294a5faab889d73ec97ee7d26a255975b5e8622c96b"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: pineA
+      semilla: 101
+    atribucion_requerida: false
+    triangulos: 1236
+    primitivas: 1
+  - id: ez-tree/pine-a-liviano
+    archivo: apps/web/public/models/generated/trees/pine-a-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "9083613b6a19b4ed0f1ec5e1c58c36107ef45348a7ce7ee9295e5f59d0eb96a3"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: pineA (liviano)
+      semilla: 101
+    atribucion_requerida: false
+    triangulos: 384
+    primitivas: 1
+  - id: ez-tree/pine-b
+    archivo: apps/web/public/models/generated/trees/pine-b.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "b0d51ef7b52fc890ad0307f887b36798f5372f4db5b21fa7d0a8cfd510e79bee"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: pineB
+      semilla: 202
+    atribucion_requerida: false
+    triangulos: 1188
+    primitivas: 1
+  - id: ez-tree/pine-b-liviano
+    archivo: apps/web/public/models/generated/trees/pine-b-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "49299a5bfe18efac9e930b3d4462b9abe8f579f39ba1160e15f024c9ec76a0e5"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: pineB (liviano)
+      semilla: 202
+    atribucion_requerida: false
+    triangulos: 408
+    primitivas: 1
+  - id: ez-tree/pine-c
+    archivo: apps/web/public/models/generated/trees/pine-c.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "add0c208a4acf9ad53c01c67e21e57cd4a6acbc2ada9328063fe3bca5120e6c9"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: pineC
+      semilla: 303
+    atribucion_requerida: false
+    triangulos: 906
+    primitivas: 1
+  - id: ez-tree/pine-c-liviano
+    archivo: apps/web/public/models/generated/trees/pine-c-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "96b9320dc997eed00019ea5144e8657f63afa49e7ca854401ff1dcc196086382"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: pineC (liviano)
+      semilla: 303
+    atribucion_requerida: false
+    triangulos: 284
+    primitivas: 1
+  - id: ez-tree/oak
+    archivo: apps/web/public/models/generated/trees/oak.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "5cae7b1290426d7fb124f71eebb05d537c1d711afdf06ddc3f5ff3ec6910e58f"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: oak
+      semilla: 404
+    atribucion_requerida: false
+    triangulos: 1704
+    primitivas: 1
+  - id: ez-tree/oak-liviano
+    archivo: apps/web/public/models/generated/trees/oak-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "1fad12d2ee1373d0e97f1af2f04f8e31bd9c0e1a7ee51b872c0698ad4a0b3aef"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: oak (liviano)
+      semilla: 404
+    atribucion_requerida: false
+    triangulos: 528
+    primitivas: 1
+  - id: ez-tree/aspen
+    archivo: apps/web/public/models/generated/trees/aspen.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "e5d49875adf9408beebf5cb22d7629561b68de9072ff64addcfe975c0d4634de"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: aspen
+      semilla: 505
+    atribucion_requerida: false
+    triangulos: 1320
+    primitivas: 1
+  - id: ez-tree/aspen-liviano
+    archivo: apps/web/public/models/generated/trees/aspen-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "a78f4be7b8e4b7ac98cee6ebb293cf8bba381839a9bb6f55f0c4cb6af3a2e518"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: aspen (liviano)
+      semilla: 505
+    atribucion_requerida: false
+    triangulos: 384
+    primitivas: 1
+  - id: ez-tree/bush-a
+    archivo: apps/web/public/models/generated/trees/bush-a.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "fcaa4bfd358646e8891c458a02cf89d7f7898bfb3d8bae5fd347726e50c2c8d1"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: bushA
+      semilla: 606
+    atribucion_requerida: false
+    triangulos: 418
+    primitivas: 1
+  - id: ez-tree/bush-a-liviano
+    archivo: apps/web/public/models/generated/trees/bush-a-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "bf0e11618c346fa4ad64ad02efe48af52dbaf6671e89eb27653ab8e90d0b3c8a"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: bushA (liviano)
+      semilla: 606
+    atribucion_requerida: false
+    triangulos: 140
+    primitivas: 1
+  - id: ez-tree/bush-b
+    archivo: apps/web/public/models/generated/trees/bush-b.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "3bd2f343ea393613f09502201131450598a398f646837e424cb883af3e069d78"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: bushB
+      semilla: 707
+    atribucion_requerida: false
+    triangulos: 478
+    primitivas: 1
+  - id: ez-tree/bush-b-liviano
+    archivo: apps/web/public/models/generated/trees/bush-b-liviano.glb
+    pack: ez-tree
+    autor: learning-game (horneado con ez-tree de Daniel Greenheck)
+    licencia: MIT
+    modificaciones: >-
+      Horneado en Node con tooling/vendor/ez-tree (sin texturas ni materiales) y escrito por scripts/assets/glb-write.ts:
+      una primitiva (corteza y hojas juntas, uv.y < 0,25 corteza), COLOR_0 por vértice; sin meshopt.
+    sha256: "04767dbf7a8be01167fd0e204d106a2dfb83fc4f967d64efed6ddba1840371c6"
+    procedencia: generated
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    generador:
+      archivo: scripts/assets/bake-trees.ts
+      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      preset: bushB (liviano)
+      semilla: 707
+    atribucion_requerida: false
+    triangulos: 164
+    primitivas: 1
+  # ---------- open-world-3d M3 (T7): hoja, corteza y rocas de Poly Haven (scripts/assets/nature.ts, D-829, D-832) ----------
+  - id: polyhaven/hoja-diff
+    archivo: apps/web/public/textures/hoja-diff.ktx2
+    fuente: assets-src/polyhaven/models/jacaranda_tree_leaves_diff_1k.png
+    pack: polyhaven
+    autor: Rico Cilliers, Rob Tuytel (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/jacaranda_tree/jacaranda_tree_leaves_diff_1k.png
+    fecha_descarga: 2026-10-29
+    sha256_original: "5729978e92649ee6cc70bdc457aac1b28b16a10bde0a55004b659a1923c8861b"
+    sha256: "ae3ef3fbbfc8b732b2cbb7b9a522a8d3db7c867d41e9ba2b1f999d8092efaaa3"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: Recorte 680x370 desde x 330 del difuso de hojas, alfa = (max(r,g,b) - 22) * 10 (fondo negro), contain en 512x512; basisu 2.50 fijado (ktx2.ts) ETC1S con mips, 512.
+    atribucion_requerida: false
+  - id: polyhaven/corteza-diff
+    archivo: apps/web/public/textures/corteza-diff.ktx2
+    fuente: assets-src/polyhaven/models/jacaranda_tree_trunk_diff_1k.png
+    pack: polyhaven
+    autor: Rico Cilliers, Rob Tuytel (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/jacaranda_tree/jacaranda_tree_trunk_diff_1k.png
+    fecha_descarga: 2026-10-29
+    sha256_original: "9ba4a3af9d38d54638df35a2bae4f30455f5fb25c080825f6e22af4e5d65c7f2"
+    sha256: "651377506f98cb3cd2945748fdada5ab296ac87099d05752ac9030d60a5f1201"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: El difuso del tronco reducido por área a 512x512; basisu 2.50 fijado (ktx2.ts) ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rocas-diff
+    archivo: apps/web/public/textures/rocas-diff.ktx2
+    fuente: assets-src/polyhaven/models/rock_07_diff_1k.png
+    pack: polyhaven
+    autor: Dario Barresi (Poly Haven); Jenelle van Heerden (Poly Haven); Kless Gyzen (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_07/rock_07_diff_1k.png
+    fecha_descarga: 2026-10-29
+    sha256_original: "86e26fcb23e53288e23b04a1aa92ce90ff717b7da7b7f4713af6827b7cc0f3f2"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_09/rock_09_diff_1k.png
+        sha256: "c8e367a5390fe938bdae8f497d773784f6ad47aa278f5a69fd4e4e7c815ef8b2"
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_moss_set_01/rock_moss_set_01_diff_1k.png
+        sha256: "03c913af0cad5cd894c7e9add79a624a046a2c2269d997181034a0dff4de8387"
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_face_01/rock_face_01_diff_1k.png
+        sha256: "b4ee4b57f977252b37e60c55a1d27138c0829db0c18ec331ba486e12739a85ce"
+    sha256: "d9111dd4b9d910b31efd5491fab21f4eaeb4d6374d7f1e109b84928a74901348"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: Atlas 2x2 a 1024 (cada escaneo reducido por área a 512, en el orden de ROCK_SCANS de @lg/art); basisu 2.50 fijado ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rocas-nor
+    archivo: apps/web/public/textures/rocas-nor.ktx2
+    fuente: assets-src/polyhaven/models/rock_07_nor_gl_1k.png
+    pack: polyhaven
+    autor: Dario Barresi (Poly Haven); Jenelle van Heerden (Poly Haven); Kless Gyzen (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_07/rock_07_nor_gl_1k.png
+    fecha_descarga: 2026-10-29
+    sha256_original: "f2294cbeaf0dc62991aea5cadca98a0fb1a47177f41f89db7671ae5323d2a705"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_09/rock_09_nor_gl_1k.png
+        sha256: "c444821ec158181fdf3392a68919d15e72a67eb028f69c663e3820393d4bc975"
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_moss_set_01/rock_moss_set_01_nor_gl_1k.png
+        sha256: "48df4063311e2fcca02aa4b5ece40c4a486eff1f7df051eff7c8f7d7e7fc506b"
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/png/1k/rock_face_01/rock_face_01_nor_gl_1k.png
+        sha256: "8a72b16484d0650367103d26a8ba4a6be79b9adc61ed80fdb124636c9442b73f"
+    sha256: "dc49914cb4dd510c81f56e639048aa1cb20fa1cc2d883936feb19ad84575275d"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: Atlas 2x2 a 1024 de los normales OpenGL (cada escaneo a 512, orden de ROCK_SCANS); basisu 2.50 fijado ETC1S -normal_map con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rock-07
+    archivo: apps/web/public/models/polyhaven/rock-07.glb
+    fuente: assets-src/polyhaven/models/rock_07_1k.gltf
+    pack: polyhaven
+    autor: Jenelle van Heerden (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_07/rock_07_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "efcc2dcaa133ff8ad5c865dc2135772e8f5dbc83fa38db2ee2cf25382436b6e6"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_07/rock_07.bin
+        sha256: "e4a532a6d6cf4a08c288f501b790f32cba0528136a29959ce774c3cd39369e7e"
+    sha256: "58fd71f3d24ecae83ed99266843fd3a2cb024d924a232b147c121ff88c7037b2"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 900
+    primitivas: 1
+  - id: polyhaven/rock-07-lejos
+    archivo: apps/web/public/models/polyhaven/rock-07-lejos.glb
+    fuente: assets-src/polyhaven/models/rock_07_1k.gltf
+    pack: polyhaven
+    autor: Jenelle van Heerden (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_07/rock_07_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "efcc2dcaa133ff8ad5c865dc2135772e8f5dbc83fa38db2ee2cf25382436b6e6"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_07/rock_07.bin
+        sha256: "e4a532a6d6cf4a08c288f501b790f32cba0528136a29959ce774c3cd39369e7e"
+    sha256: "9a9df499b5324b767519019a43c61c6ef6d8c9643c330f5c3938f67280d116ce"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 200
+    primitivas: 1
+  - id: polyhaven/rock-09
+    archivo: apps/web/public/models/polyhaven/rock-09.glb
+    fuente: assets-src/polyhaven/models/rock_09_1k.gltf
+    pack: polyhaven
+    autor: Jenelle van Heerden (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_09/rock_09_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "636e57eb0090889627da18edaec202ff9f65f83101b94f91b7da4d21dc080ab9"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_09/rock_09.bin
+        sha256: "780c37d6fc11ca3a01c3763535ef883908b6007271a46bd446d2289ded820751"
+    sha256: "1c34e452d9538711d6a5dbdf7c2c285890eb53963634d71f69b8fc7f98b6b21d"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 900
+    primitivas: 1
+  - id: polyhaven/rock-09-lejos
+    archivo: apps/web/public/models/polyhaven/rock-09-lejos.glb
+    fuente: assets-src/polyhaven/models/rock_09_1k.gltf
+    pack: polyhaven
+    autor: Jenelle van Heerden (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_09/rock_09_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "636e57eb0090889627da18edaec202ff9f65f83101b94f91b7da4d21dc080ab9"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_09/rock_09.bin
+        sha256: "780c37d6fc11ca3a01c3763535ef883908b6007271a46bd446d2289ded820751"
+    sha256: "0de6b8d935b26048d20b043572979e28a948c9fbc69d94035e66c70deb81458b"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 198
+    primitivas: 1
+  - id: polyhaven/rock-moss-set-01
+    archivo: apps/web/public/models/polyhaven/rock-moss-set-01.glb
+    fuente: assets-src/polyhaven/models/rock_moss_set_01_1k.gltf
+    pack: polyhaven
+    autor: Kless Gyzen (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_moss_set_01/rock_moss_set_01_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "c36675aca9c6b2be7785c2534cf413b03ec82a5a2a5407a2b1c0cdb0346c9727"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_moss_set_01/rock_moss_set_01.bin
+        sha256: "de8360e6175879aaf02c171911069cf5f1852547f9ca7f10e440085dbcc3315e"
+    sha256: "318f471f9b9655feaa2096b96eb737f63c39e1262625eea102e4035ff7042c83"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 1792
+    primitivas: 6
+  - id: polyhaven/rock-moss-set-01-lejos
+    archivo: apps/web/public/models/polyhaven/rock-moss-set-01-lejos.glb
+    fuente: assets-src/polyhaven/models/rock_moss_set_01_1k.gltf
+    pack: polyhaven
+    autor: Kless Gyzen (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_moss_set_01/rock_moss_set_01_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "c36675aca9c6b2be7785c2534cf413b03ec82a5a2a5407a2b1c0cdb0346c9727"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_moss_set_01/rock_moss_set_01.bin
+        sha256: "de8360e6175879aaf02c171911069cf5f1852547f9ca7f10e440085dbcc3315e"
+    sha256: "c7459e0da9ffe568023771d41b49f875c9e36c59c862325fb1f3a4c7c7a49aac"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 742
+    primitivas: 6
+  - id: polyhaven/rock-face-01
+    archivo: apps/web/public/models/polyhaven/rock-face-01.glb
+    fuente: assets-src/polyhaven/models/rock_face_01_1k.gltf
+    pack: polyhaven
+    autor: Dario Barresi (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_face_01/rock_face_01_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "96c332c01d173a2431115f3bac29be101fba341e5500e2a08e384f4edd17299e"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_face_01/rock_face_01.bin
+        sha256: "873eac0319333e92bc96ddeedf8ebf69dc3c68ff1dfe32d8c14ddc165cdb20ac"
+    sha256: "98aec84af71b2083228c89fc9cf3d4ca551c3fd10b987267ca9f14839e67fb6a"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 2199
+    primitivas: 1
+  - id: polyhaven/rock-face-01-lejos
+    archivo: apps/web/public/models/polyhaven/rock-face-01-lejos.glb
+    fuente: assets-src/polyhaven/models/rock_face_01_1k.gltf
+    pack: polyhaven
+    autor: Dario Barresi (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_face_01/rock_face_01_1k.gltf
+    fecha_descarga: 2026-10-29
+    sha256_original: "96c332c01d173a2431115f3bac29be101fba341e5500e2a08e384f4edd17299e"
+    fuentes_extra:
+      - url: https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_face_01/rock_face_01.bin
+        sha256: "873eac0319333e92bc96ddeedf8ebf69dc3c68ff1dfe32d8c14ddc165cdb20ac"
+    sha256: "e63dad6e7dfb51e9990df42bd4ae045e0d8797eba2c3536980d8bf8d58562205"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/nature.ts: glTF 1k sin imágenes, texturas ni materiales; transformaciones horneadas, weld, meshopt simplify (error 0,08), cada malla centrada con base en y 0 y lado horizontal 1 m, COLOR_0 blanco, UV a su cuarto del atlas rocas-*.ktx2, meshopt.
+    atribucion_requerida: false
+    triangulos: 420
+    primitivas: 1
+  # ---------- fin T7 ----------

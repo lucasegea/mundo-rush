@@ -53,3 +53,104 @@ codigo:
       Transcodificador de Basis Universal sin cambios (open-world-3d T6, PD-4): KTX2Loader de three/examples lo carga
       autoalojado desde /decoders/ para el suelo .ktx2. docs/licencias/basis-universal-LICENSE.txt es el LICENSE (Apache
       2.0) del repo de Binomial en la etiqueta v2_50.
+  # ---------- open-world-3d T7 (PD-3, D-830): ez-tree 1.1.0 vendorizado, código de horneado (nunca en el cliente) ----------
+  - id: ez-tree/license
+    archivo: tooling/vendor/ez-tree/LICENSE
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/LICENSE
+    fecha_descarga: 2026-10-29
+    sha256_original: "20e4afadfb10c67952b3d73cd2982d21d165ab4ae82b0dd9e4d6f2166ee349b6"
+    sha256: "20e4afadfb10c67952b3d73cd2982d21d165ab4ae82b0dd9e4d6f2166ee349b6"
+    procedencia: refetched
+    editado: false
+    notas: >-
+      El LICENSE (MIT) del paquete: la licencia de cada árbol horneado (LICENCIA_EZ_TREE, D-831).
+  - id: ez-tree/src/lib/branch.js
+    archivo: tooling/vendor/ez-tree/branch.js
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/src/lib/branch.js
+    fecha_descarga: 2026-10-29
+    sha256_original: "f71a5e0df6b74ae521942f1722e5a0dd17707add05f12691da96231fdeff8571"
+    sha256: "f71a5e0df6b74ae521942f1722e5a0dd17707add05f12691da96231fdeff8571"
+    procedencia: refetched
+    editado: false
+    notas: >-
+      Sin cambios; la importa tree.js en el horneado (scripts/assets/bake-trees.ts).
+  - id: ez-tree/src/lib/enums.js
+    archivo: tooling/vendor/ez-tree/enums.js
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/src/lib/enums.js
+    fecha_descarga: 2026-10-29
+    sha256_original: "0df64e7a58e1bbb9fa62e8de382f913d1ae9d305939a6c26176e60bc2ccb3a72"
+    sha256: "0df64e7a58e1bbb9fa62e8de382f913d1ae9d305939a6c26176e60bc2ccb3a72"
+    procedencia: refetched
+    editado: false
+    notas: >-
+      Sin cambios; la importa tree.js en el horneado (scripts/assets/bake-trees.ts).
+  - id: ez-tree/src/lib/options.js
+    archivo: tooling/vendor/ez-tree/options.js
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/src/lib/options.js
+    fecha_descarga: 2026-10-29
+    sha256_original: "2b087ffba8916422032623be1af998134ce4c7e6dd6ea71decb621c832fbbffe"
+    sha256: "8c0330e7595efbe1067c627e5d729d4c3917296397f263794d6b0b8093cdc34b"
+    procedencia: edited
+    editado: true
+    parche: tooling/vendor/ez-tree/options.js.patch
+    notas: >-
+      La copia editada del mockup V6: el import de enums con .js (Node ESM).
+  - id: ez-tree/src/lib/rng.js
+    archivo: tooling/vendor/ez-tree/rng.js
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/src/lib/rng.js
+    fecha_descarga: 2026-10-29
+    sha256_original: "e4f2bfff79a0a6af3f909f106876e9208be1bb88cc7f7d1541a6858cbaa0c3c8"
+    sha256: "e4f2bfff79a0a6af3f909f106876e9208be1bb88cc7f7d1541a6858cbaa0c3c8"
+    procedencia: refetched
+    editado: false
+    notas: >-
+      Sin cambios; la importa tree.js en el horneado (scripts/assets/bake-trees.ts).
+  - id: ez-tree/src/lib/tree.js
+    archivo: tooling/vendor/ez-tree/tree.js
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/src/lib/tree.js
+    fecha_descarga: 2026-10-29
+    sha256_original: "721433501003241545cfaab1faf10658fa7ee0cab4622028d2bb49d541ae9b7a"
+    sha256: "8f47751ba1bdf5aa8f9d66f92a64da59fa73f87acef2433c24c3e2842e1256ad"
+    procedencia: edited
+    editado: true
+    parche: tooling/vendor/ez-tree/tree.js.patch
+    notas: >-
+      La copia editada del mockup V6: imports con .js (Node ESM) y sin texturas ni materiales (geometría sola; quedan loadPreset y el sombreador de viento afuera). La corre scripts/assets/bake-trees.ts en Node; ningún archivo de apps/ o packages/ la importa (AC43).
+  - id: ez-tree/src/lib/trellis.js
+    archivo: tooling/vendor/ez-tree/trellis.js
+    paquete: "@dgreenheck/ez-tree@1.1.0"
+    autor: Daniel Greenheck
+    licencia: MIT
+    archivo_licencia: tooling/vendor/ez-tree/LICENSE
+    url_origen: https://unpkg.com/@dgreenheck/ez-tree@1.1.0/src/lib/trellis.js
+    fecha_descarga: 2026-10-29
+    sha256_original: "ca623b4fbbee1a11aa14be213f5132928ecbe37f91db7424081fe9d681fc765b"
+    sha256: "ca623b4fbbee1a11aa14be213f5132928ecbe37f91db7424081fe9d681fc765b"
+    procedencia: refetched
+    editado: false
+    notas: >-
+      Sin cambios; la importa tree.js en el horneado (scripts/assets/bake-trees.ts).

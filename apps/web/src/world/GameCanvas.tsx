@@ -23,6 +23,7 @@ import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectReq
 import { sceneAnimated } from "./actors/animState";
 import { PLAYER_LOOK_ID } from "./actors/looks";
 import { Player } from "./actors/Player";
+import { actorRig } from "./actors/rigs";
 import { CameraRig } from "./camera/CameraRig";
 import { TWO_SHOT, viewScale } from "./camera/rig";
 import { zoomDistanceAt } from "./camera/zoom";
@@ -137,7 +138,8 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           />
         ) : null}
         {/* Player antes que CameraRig: en cada cuadro la cámara sigue la posición ya dibujada. */}
-        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} /> : null}
+        {/* Open-world-3d T7 (AC47): con relieve (el mundo abierto), el jugador es el personaje de Quaternius. */}
+        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} rig={actorRig(Boolean(scene?.picker))} /> : null}
         <CameraRig
           preset={render.preset}
           motion={render.cameraMotion}

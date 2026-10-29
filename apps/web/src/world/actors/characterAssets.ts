@@ -7,8 +7,8 @@ import type { AnimationClip, Object3D } from "three";
 import type { SceneDensity } from "@lg/art";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { loadMeshoptDecoder, MODEL_PREFIX, modelUrl, type MeshoptDecoderModule } from "../props/gltf";
-import { bodyAsset, CLIPS_ASSET } from "./clips";
 import type { BodyId } from "./looks";
+import { KAYKIT_RIG, type RigSpec } from "./rigs";
 
 export interface CharacterAssets {
   body: Object3D;
@@ -37,8 +37,11 @@ function load(asset: string): Promise<{ scene: Object3D; clips: AnimationClip[] 
   return p;
 }
 
-/** El cuerpo base y los clips compartidos (la escena del cuerpo se clona por personaje en skinned.ts). */
-export async function loadCharacterAssets(body: BodyId, lod: SceneDensity = "full"): Promise<CharacterAssets> {
-  const [b, c] = await Promise.all([load(bodyAsset(body, lod)), load(CLIPS_ASSET)]);
+/**
+ * El cuerpo base y los clips compartidos (la escena del cuerpo se clona por personaje en skinned.ts). Open-world-3d T7:
+ * del esqueleto `rig` (KayKit en los dioramas planos, Quaternius en el mundo abierto).
+ */
+export async function loadCharacterAssets(body: BodyId, lod: SceneDensity = "full", rig: RigSpec = KAYKIT_RIG): Promise<CharacterAssets> {
+  const [b, c] = await Promise.all([load(rig.bodyAsset(body, lod)), load(rig.clipsAsset)]);
   return { body: b.scene, clips: c.clips };
 }

@@ -1,0 +1,9 @@
+diff --git a/tooling/vendor/ez-tree/options.js b/tooling/vendor/ez-tree/options.js
+--- a/tooling/vendor/ez-tree/options.js
++++ b/tooling/vendor/ez-tree/options.js
+@@ -1,4 +1,4 @@
+-import { BarkType, Billboard, LeafType, TreeType } from './enums';
++import { BarkType, Billboard, LeafType, TreeType } from './enums.js';
+ 
+ export default class TreeOptions {
+   constructor() {

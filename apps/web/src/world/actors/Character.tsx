@@ -5,9 +5,12 @@
 // gesto pedido, "reducir movimiento") y, si el gobernador lo deja, el avance de la animación. Deja su lugar en
 // `actorSpots` para la sombra blob y el gobernador. Con `onSelect`, el clic sobre el cuerpo llega por el bridge (F2).
 // Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido). Plan estetica-c M6:
-// `lod` elige el cuerpo completo o el simplificado de `low`.
+// `lod` elige el cuerpo completo o el simplificado de `low`. Open-world-3d T7 (AC47): `rig` elige el esqueleto (KayKit o
+// el de Quaternius del mundo abierto) y, con `distanceRules`, un NPC fuera del encuadre o a más de 62 m no se dibuja y a
+// más de 28 m pierde los accesorios (rigs.ts).
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Frustum, Matrix4, Sphere, Vector3, type Camera, type Object3D } from "three";
 import type { SceneDensity } from "@lg/art";
 import { actorSpots, actorY, animatedActors } from "../runtime";
 import { chooseAnimation, type GestureId, type SceneRole } from "./animState";
@@ -15,6 +18,7 @@ import { loadCharacterAssets } from "./characterAssets";
 import { applyChibiPose, buildChibi, chibiPose, disposeChibi } from "./chibiModel";
 import { gestureDone, PROCEDURAL_GESTURES, type ProceduralGesture } from "./gestures";
 import type { CharacterLook } from "./looks";
+import { npcDistanceRule, RIGS, type RigId } from "./rigs";
 import { buildSkinnedCharacter, disposeSkinnedCharacter, driveCharacter, type SkinnedCharacter } from "./skinned";
 
 export interface ActorPose {
@@ -41,6 +45,28 @@ interface Props {
   initialYaw?: number;
   /** Densidad del tier: el cuerpo completo o el simplificado de `low` (plan estetica-c M6). */
   lod?: SceneDensity;
+  /** El esqueleto (open-world-3d T7): KayKit en los dioramas planos, Quaternius en el mundo abierto. */
+  rig?: RigId;
+  /** NPC del mundo abierto: se oculta fuera del encuadre o lejos, y sin accesorios de lejos (AC47). */
+  distanceRules?: boolean;
+}
+
+/** Centro y radio de la esfera del personaje para el encuadre (m, sobre sus pies). */
+const BOUND_Y = 1;
+const BOUND_R = 1.4;
+const frustum = new Frustum();
+const projView = new Matrix4();
+const sphere = new Sphere();
+const center = new Vector3();
+
+/** Aplica la regla de distancia de un NPC del mundo abierto a su raíz y sus accesorios. */
+function applyDistanceRule(root: Object3D, accessories: readonly Object3D[], camera: Camera): void {
+  center.set(root.position.x, root.position.y + BOUND_Y, root.position.z);
+  projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projView);
+  const rule = npcDistanceRule(camera.position.distanceTo(center), frustum.intersectsSphere(sphere.set(center, BOUND_R)));
+  root.visible = rule.visible;
+  for (const a of accessories) if (a.userData["hidden"] !== true) a.visible = rule.accessories;
 }
 
 /** Velocidad de referencia del cuerpo de cápsulas (la del jugador del núcleo). */
@@ -56,7 +82,7 @@ const seedOf = (id: string): number => {
 
 const isProcedural = (g: string): g is ProceduralGesture => (PROCEDURAL_GESTURES as readonly string[]).includes(g);
 
-export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4, lod = "full" }: Props) {
+export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4, lod = "full", rig = "kaykit", distanceRules = false }: Props) {
   const seed = useMemo(() => seedOf(id), [id]);
   const chibi = useMemo(() => buildChibi(look, seed), [look, seed]);
   const [skinned, setSkinned] = useState<SkinnedCharacter | null>(null);
@@ -67,10 +93,10 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
   useEffect(() => {
     let alive = true;
     setSkinned(null);
-    loadCharacterAssets(look.body, lod)
+    loadCharacterAssets(look.body, lod, RIGS[rig])
       .then((a) => {
         if (!alive) return;
-        setSkinned(buildSkinnedCharacter(a.body, a.clips, look, seed));
+        setSkinned(buildSkinnedCharacter(a.body, a.clips, look, seed, RIGS[rig]));
       })
       .catch((err: unknown) => {
         // Se queda con el cuerpo de cápsulas, pero no en silencio: el aviso nombra el cuerpo que no bajó.
@@ -79,7 +105,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     return () => {
       alive = false;
     };
-  }, [look, seed, id, lod]);
+  }, [look, seed, id, lod, rig]);
   // Open-world-3d M3 (fuga al cambiar de tier): se libera el cuerpo cuando deja de ser el dibujado, no en la limpieza de
   // la carga. Liberado ahí, el cuerpo viejo seguía en la escena hasta el próximo commit, three rearmaba su textura de
   // huesos en ese cuadro y quedaba viva (4 texturas de 16 × 16 por cambio de tier, medido con la sonda).
@@ -94,7 +120,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     active.current = gesture ? { id: gesture, t: 0 } : null;
   }, [gesture]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock, camera }, delta) => {
     const p = pose(delta);
     const root = skinned ? skinned.root : chibi.root;
     const y = actorY(p.x, p.z);
@@ -105,6 +131,10 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     }
     root.rotation.y = yaw.current;
     actorSpots.set(id, { x: p.x, y, z: p.z });
+    if (distanceRules) {
+      root.updateMatrix();
+      applyDistanceRule(root, skinned ? skinned.accessories : [], camera);
+    }
 
     const g = active.current;
     if (g) {

@@ -24,6 +24,8 @@ import { parse } from "yaml";
 import { ArchivoRegistroCodigo, type PackAssets, type RegistroAsset, type RegistroCodigo } from "@lg/content-schema";
 import { BASISU, basisuCommand, encodeKtx2, EncoderMismatch, loadEncoder, mapKindOf } from "./ktx2.ts";
 import { derivarFila, leerRegistro } from "./optimize.ts";
+import { bakeAll, sha256 as shaArchivo } from "./bake-trees.ts";
+import { NATURE_CACHE, natureJob } from "./nature.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const REGISTRO_CODIGO = "content/code-registry.yaml";
@@ -80,10 +82,9 @@ const comparar = (root: string, archivo: string, rehecho: Uint8Array, extra = ""
 export const refetchAsset = async (fila: RegistroAsset, pack: PackAssets | undefined, scratch: string, bajar: Bajar, root = ROOT): Promise<Linea> => {
   const archivo = fila.archivo;
   try {
-    if (fila.procedencia === "generated") {
-      // SEAM (T7, bake-trees): una fila generated se rehace corriendo su `generador` con su preset y semilla, no por red.
-      return { estado: "ERROR", archivo, detalle: "procedencia generated: el re-horneado llega con scripts/assets/bake-trees.ts (T7)" };
-    }
+    if (fila.procedencia === "generated") return await rehornear(fila, scratch, root);
+    const job = natureJob(archivo);
+    if (job) return await refetchNature(fila, job, scratch, bajar, root);
     if (!fila.url_origen || !fila.sha256_original) return { estado: "ERROR", archivo, detalle: "la fila no tiene url_origen o sha256_original" };
     const url = await urlDescarga(fila.url_origen, bajar);
     const original = await bajar(url);
@@ -115,9 +116,54 @@ export const refetchAsset = async (fila: RegistroAsset, pack: PackAssets | undef
   }
 };
 
+/**
+ * Open-world-3d T7: una fila generated se rehace corriendo su generador (bake-trees.ts, sin red) si el script es el que
+ * dice la fila (sha256), y se compara byte a byte.
+ */
+let horneados: Promise<{ file: string; glb: Uint8Array }[]> | null = null;
+const rehornear = async (fila: RegistroAsset, scratch: string, root: string): Promise<Linea> => {
+  const archivo = fila.archivo;
+  const g = fila.generador;
+  if (!g) return { estado: "ERROR", archivo, detalle: "fila generated sin generador" };
+  const actual = shaArchivo(new Uint8Array(readFileSync(join(root, g.archivo))));
+  if (actual !== g.sha256) return { estado: "SOURCE-MISMATCH", archivo, detalle: `${g.archivo}: sha256 ${actual} != registro ${g.sha256}` };
+  horneados ??= bakeAll(root);
+  const t = (await horneados).find((h) => h.file === archivo);
+  if (!t) return { estado: "ERROR", archivo, detalle: `${g.archivo} no hornea ${archivo}` };
+  guardar(scratch, archivo, t.glb);
+  return comparar(root, archivo, t.glb, ` (${g.archivo} preset ${g.preset}, semilla ${g.semilla})`);
+};
+
+/**
+ * Open-world-3d T7: un archivo de scripts/assets/nature.ts. Baja cada original de la fila (`url_origen` y
+ * `fuentes_extra`) al caché de la carpeta de scratch, verifica su sha256 y deriva con esos bytes.
+ */
+const refetchNature = async (fila: RegistroAsset, job: NonNullable<ReturnType<typeof natureJob>>, scratch: string, bajar: Bajar, root: string): Promise<Linea> => {
+  const archivo = fila.archivo;
+  const fuentes = [{ url: fila.url_origen ?? "", sha256: fila.sha256_original ?? "" }, ...(fila.fuentes_extra ?? [])];
+  for (const o of job.sources) {
+    const f = fuentes.find((x) => x.url === o.url);
+    if (!f) return { estado: "ERROR", archivo, detalle: `la fila no nombra el original ${o.url}` };
+    const bytes = await bajar(o.url);
+    if (sha(bytes) !== f.sha256) return { estado: "SOURCE-MISMATCH", archivo, detalle: `${o.url}: sha256 ${sha(bytes)} != registro ${f.sha256}` };
+    guardar(scratch, join(NATURE_CACHE, o.file), bytes);
+  }
+  let encoder: Uint8Array;
+  try {
+    encoder = await loadEncoder(root, bajar);
+  } catch (e) {
+    if (e instanceof EncoderMismatch) return { estado: "ENCODER-MISMATCH", archivo, detalle: `${e.message}; se esperaba basisu ${BASISU.version}` };
+    throw e;
+  }
+  const { bytes } = await job.make(scratch, encoder);
+  guardar(scratch, archivo, bytes);
+  return comparar(root, archivo, bytes, ` (scripts/assets/nature.ts, ${job.sources.length} original(es))`);
+};
+
 /** Aplica `parche` (rutas relativas a la raíz del repo, formato `git diff`) sobre la copia de scratch. */
 const aplicarParche = (scratch: string, parcheAbs: string): void => {
-  const r = spawnSync("git", ["apply", "--whitespace=nowarn", parcheAbs], { cwd: scratch, encoding: "utf8" });
+  // Sin core.autocrlf: con `true` (la máquina del operador) git apply escribe CRLF y los bytes no coinciden (T7, medido).
+  const r = spawnSync("git", ["-c", "core.autocrlf=false", "apply", "--whitespace=nowarn", parcheAbs], { cwd: scratch, encoding: "utf8" });
   if (r.status !== 0) throw new Error(`git apply ${parcheAbs}: ${r.stderr.trim()}`);
 };
 

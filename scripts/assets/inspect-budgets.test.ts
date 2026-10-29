@@ -30,7 +30,9 @@ describe("inspect-budgets sobre el árbol real", () => {
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
     // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los archivos de personaje, dentro del tope de muelle.
     // M6: 3 cuerpos, 3 cuerpos reducidos de `low` y el de clips (cota de arriba: un tier baja unos u otros).
-    expect(lineas.join("\n")).toMatch(/info diorama test: 9 modelo\(s\)/);
+    // Cambio registrado (open-world-3d T7, AC47): la cota de arriba suma el personaje de Quaternius del mundo abierto
+    // (cuerpo, -bajo y clips): 2 modelos + 10 archivos de personaje. Antes, 9.
+    expect(lineas.join("\n")).toMatch(/info diorama test: 12 modelo\(s\)/);
     expect(lineas.join("\n")).toMatch(/OK {3}diorama test contra assets_muelle_mb/);
     // Plan estetica-c M5: cada fila del registro con pieza servida trae la medida que usa el estimador, y coincide.
     expect(lineas.filter((l) => /^OK {3}registro /.test(l)).length).toBe(modelos.length);
@@ -129,7 +131,8 @@ describe("open-world-3d T6 (AC42, cambio registrado): la carga del muelle del mu
     const lineas: string[] = [];
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
     const texto = lineas.join("\n");
-    expect(texto).toMatch(/OK {3}assets del primer diorama: [\d.]+ MB \([\d.]+ de modelos y [\d.]+ de 12 archivo\(s\) más/);
+    // T7 (cambio registrado): la carga suma los árboles horneados y las rocas; la cuenta sale de cargaMundoAbierto.
+    expect(texto).toMatch(new RegExp(`OK {3}assets del primer diorama: [\\d.]+ MB \\([\\d.]+ de modelos y [\\d.]+ de ${cargaMundoAbierto().length} archivo\\(s\\) más`));
     for (const a of cargaMundoAbierto()) expect(texto).toContain(`OK   carga del muelle ${a}:`);
     expect(cargaMundoAbierto()).toEqual(expect.arrayContaining([...DECODIFICADOR_BASIS, "apps/web/public/textures/leafy-grass-diff.ktx2"]));
   });

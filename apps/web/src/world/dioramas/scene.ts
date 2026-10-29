@@ -11,6 +11,8 @@
 // sombreador del suelo (clase `terreno`) y el paso del tier, un selector del suelo que hace raycast sobre la malla (el
 // clic camina sobre el relieve), props y árboles apoyados en `heightAt` (bases 0,1 m abajo) y el cielo (cúpula y nubes)
 // dentro del grafo, así el estimador y el auditor lo cuentan. Sin relieve, todo sigue como en estetica-c.
+// Open-world-3d T7: con relieve, los árboles, las rocas y el detalle salen de `diorama.vegetation` (el sembrado del mockup
+// V6 que también bloquea la grilla) por world/nature; los pinos del borde por código quedan para los dioramas sin relieve.
 import {
   Box3, BufferAttribute, BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, Object3D, PlaneGeometry, Quaternion, Sphere, Vector3,
   type Intersection, type Raycaster,
@@ -32,6 +34,7 @@ import { waterMaterial } from "../water/waterMaterial";
 import { rng } from "../materials/rng";
 import { buildSky, type Sky } from "../sky/sky";
 import { groundMaterial, type GroundMaterial } from "../terrain/groundMaterial";
+import { buildNature, type Nature } from "../nature/buildNature";
 
 /** Altura del plano de agua (el terreno se hunde debajo). */
 export const WATER_LEVEL = -0.15;
@@ -60,6 +63,8 @@ export interface DioramaScene {
   sky: Sky | null;
   /** Lo que recibe el clic del suelo: con relieve, un raycast sobre las baldosas del terreno; null sin relieve. */
   picker: Object3D | null;
+  /** Open-world-3d T7: árboles, rocas y detalle del mundo abierto (ya dentro de `root`); null sin relieve. */
+  nature: Nature | null;
   dispose(): void;
 }
 
@@ -328,12 +333,20 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
     }
   }
 
-  // Árboles del layout y pinos del borde (fuera de los límites): una llamada por tipo y tinte.
-  const seed = diorama.ground.terrain.seed ?? ART_SEED;
-  const border = borderPines(diorama.bounds, seed, spec.borderPines).map((p) => ({ ...p, y: terrain.heightAt(p.x, p.z) - PROP_SINK }));
-  const pines = trees.get("codigo/pino|") ?? { asset: "codigo/pino" as const, tint: undefined, items: [] };
-  pines.items.push(...border);
-  trees.set("codigo/pino|", pines);
+  // Árboles del layout y pinos del borde (fuera de los límites): una llamada por tipo y tinte. Con relieve, el borde es
+  // el bosque de world/nature (T7).
+  let nature: Nature | null = null;
+  if (relief && diorama.vegetation) {
+    nature = buildNature({ scatter: diorama.vegetation, bounds: diorama.bounds, tier, heightAt: terrain.heightAt });
+    root.add(nature.group);
+    for (const o of nature.obstacles) obstacles.push({ kind: "circle", x: o.x, z: o.z, r: o.r, height: o.height });
+  } else {
+    const seed = diorama.ground.terrain.seed ?? ART_SEED;
+    const border = borderPines(diorama.bounds, seed, spec.borderPines).map((p) => ({ ...p, y: terrain.heightAt(p.x, p.z) - PROP_SINK }));
+    const pines = trees.get("codigo/pino|") ?? { asset: "codigo/pino" as const, tint: undefined, items: [] };
+    pines.items.push(...border);
+    trees.set("codigo/pino|", pines);
+  }
   for (const t of trees.values()) {
     if (t.items.length === 0) continue;
     const geo = buildProp(t.asset, { w: 0.6, h: TREE_HEIGHT[t.asset], d: 0.6 }, 1, t.tint, spec.lod);
@@ -362,11 +375,13 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
     ground,
     sky,
     picker,
+    nature,
     dispose() {
       root.traverse((o) => { if (o instanceof Mesh) o.geometry.dispose(); });
       for (const g of geometries) g.dispose();
       sky?.dispose();
       ground?.dispose();
+      nature?.dispose();
     },
   };
 }

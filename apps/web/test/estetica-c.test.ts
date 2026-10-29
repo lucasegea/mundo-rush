@@ -417,14 +417,16 @@ describe("A13/A14 paleta: una sola fuente de los hex", () => {
 
   test("ningún archivo nuevo de world/ escribe un hex fuera de palette.ts", () => {
     // Cambio registrado (open-world-3d T6): se suma `sky` (el cielo nuevo tampoco escribe hex; sus colores salen de palette.ts).
-    const zones = "materials|terrain|water|labels|budget|lighting|actors|dioramas|camera|props|sky";
+    // Cambio registrado (open-world-3d T7): se suma `nature` (sus colores son números de @lg/art NATURE_COLORS y la gorra
+    // CAP_COLOR; antes la zona no existía).
+    const zones = "materials|terrain|water|labels|budget|lighting|actors|dioramas|camera|props|sky|nature";
     const src = import.meta.glob("../src/world/*/**/*.{ts,tsx}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
     // Plan estetica-c M7: lo de HD-2D (props/Boxes.tsx) se retiró; ya no hay excepciones.
     const files = Object.entries(src)
       .map(([path, text]) => [path.replace(/^.*\/src\/world\//, ""), text] as const)
       .filter(([rel]) => new RegExp(`^(${zones})/`).test(rel));
     expect(files.length).toBeGreaterThan(25);
-    expect(files.filter(([, text]) => /#[0-9a-fA-F]{6}/.test(text)).map(([rel]) => rel)).toEqual([]);
+    expect(files.filter(([, text]) => /#[0-9a-fA-F]{6}\b/.test(text)).map(([rel]) => rel)).toEqual([]);
   });
 
   test("los pares de las etiquetas son los de la paleta y su mínimo es 7:1", () => {

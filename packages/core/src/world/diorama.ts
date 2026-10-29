@@ -9,6 +9,7 @@ import {
   buildWalkGrid, DEFAULT_INTERACT_RADIUS, type Bounds, type Interactable, type Point, type Rect, type WalkGrid,
 } from "../movement";
 import { sampleCatmullRom } from "./curves";
+import { blockingFootprints, TERRAIN_SEED, vegetationScatter, type VegetationScatter } from "@lg/art";
 
 type Vec3 = readonly [number, number, number];
 type Vec2 = readonly [number, number];
@@ -93,6 +94,11 @@ export interface DioramaRuntime {
   npcs: { id: string; x: number; z: number }[];
   interactables: Interactable[];
   grid: WalkGrid;
+  /**
+   * Open-world-3d T7 (AC46): el sembrado del mundo abierto (árboles, rocas y detalle de @lg/art, el mismo que dibuja
+   * world/), con sus troncos y rocas grandes ya bloqueados en `grid`. null sin relieve (campesino no cambia).
+   */
+  vegetation: VegetationScatter | null;
 }
 
 const DEG = Math.PI / 180;
@@ -163,6 +169,18 @@ export function prepareDiorama(layout: DioramaLayout): DioramaRuntime {
   const npcRects: Rect[] = npcs.map((n) => ({ minX: n.x - 0.25, maxX: n.x + 0.25, minZ: n.z - 0.25, maxZ: n.z + 0.25 }));
   const ground = groundOf(layout);
   const prints = boxes.map(footprint);
+  const spawnPoint: Point = layout.spawn ? { x: layout.spawn[0], z: layout.spawn[2] } : { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 };
+  // Open-world-3d T7 (AC46): con relieve, el bosque del mundo abierto; cada tronco (y cada roca grande) bloquea su celda.
+  const vegetation = ground.terrain.relief
+    ? vegetationScatter({
+      bounds, spawn: spawnPoint, npcs, seed: ground.terrain.seed ?? TERRAIN_SEED,
+      pads: ground.pads.map(([x, z]) => ({ x, z })),
+      paths: ground.paths.filter((p) => p.surface === "camino").map((p) => ({ points: p.points, width: p.width })),
+    })
+    : null;
+  const trunks: Rect[] = vegetation
+    ? blockingFootprints(vegetation, bounds).map((f) => ({ minX: f.x - f.r, maxX: f.x + f.r, minZ: f.z - f.r, maxZ: f.z + f.r }))
+    : [];
   const grid = buildWalkGrid({
     bounds,
     polygons: [
@@ -170,17 +188,18 @@ export function prepareDiorama(layout: DioramaLayout): DioramaRuntime {
       ...ground.ponds,
       ...prints.flatMap((f) => ("polygon" in f ? [f.polygon] : [])),
     ],
-    rects: [...prints.flatMap((f) => ("rect" in f ? [f.rect] : [])), ...npcRects],
+    rects: [...prints.flatMap((f) => ("rect" in f ? [f.rect] : [])), ...npcRects, ...trunks],
     bands: ground.rivers.map((r) => ({ line: r.line, halfWidth: r.width / 2 })),
   });
   return {
     id: layout.id,
     bounds,
-    spawn: layout.spawn ? { x: layout.spawn[0], z: layout.spawn[2] } : { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 },
+    spawn: spawnPoint,
     ground,
     boxes,
     npcs,
     interactables,
     grid,
+    vegetation,
   };
 }

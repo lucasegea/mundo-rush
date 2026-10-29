@@ -629,6 +629,91 @@ async function walkThirdPerson(page: Page): Promise<void> {
     `distancia ${v0.rigDist.toFixed(2)} -> ${full.rigDist.toFixed(1)} -> ${back.rigDist.toFixed(2)} m`);
 }
 
+// ---------- naturaleza y personajes del mundo abierto (open-world-3d T7: AC45, AC47) ----------
+
+/**
+ * Los triángulos de los árboles en la vista de ahora, por renderer.info: se esconde todo lo que no es un nivel de árbol
+ * (`<especie>:completo|liviano|impostor`), se dibuja un cuadro con el renderer del canvas y se vuelve a mostrar.
+ */
+const treeTriangles = (page: Page): Promise<{ triangles: number; calls: number; meshes: number }> => page.evaluate(`import("/src/world/runtime.ts").then(({ cameraLook, worldRenderer }) => {
+  const cam = cameraLook.camera;
+  const gl = worldRenderer.gl;
+  if (!cam || !gl) return { triangles: -1, calls: -1, meshes: 0 };
+  let root = cam;
+  while (root.parent) root = root.parent;
+  const hidden = [];
+  let meshes = 0;
+  root.traverse((o) => {
+    if (!(o.isMesh || o.isSprite || o.isPoints || o.isLine) || !o.visible) return;
+    if (/:(completo|liviano|impostor)$/.test(o.name)) { meshes += 1; return; }
+    o.visible = false;
+    hidden.push(o);
+  });
+  const auto = gl.info.autoReset;
+  gl.info.autoReset = false;
+  gl.info.reset();
+  gl.render(root, cam);
+  const out = { triangles: gl.info.render.triangles, calls: gl.info.render.calls, meshes };
+  gl.info.reset();
+  gl.info.autoReset = auto;
+  for (const o of hidden) o.visible = true;
+  return out;
+})`);
+
+/** Gira la vista `deg` grados (la accion semantica "look" de R10, 0,25 grados por px) y espera que la camara llegue. */
+async function turnBy(page: Page, deg: number): Promise<void> {
+  await page.evaluate(`import("/src/state/actions.ts").then(({ actions }) => actions.dispatch({ type: "look", dx: ${-deg / 0.25}, dy: 0 }))`);
+  await page.waitForTimeout(1500);
+}
+
+/**
+ * AC45 (Walk): en la aparicion, de cara al bosque se dibujan mas triangulos de arbol que de espaldas (renderer.info). El
+ * bosque es el mas denso de cuatro rumbos a 90 grados; de espaldas, el opuesto. AC47 (Walk): el jugador y los NPCs del
+ * mundo abierto son el personaje de Quaternius (huesos `Head`), el jugador con su gorra.
+ */
+const AWAY_MAX_SHARE = 0.6;
+
+async function walkForest(page: Page): Promise<void> {
+  await page.waitForFunction(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
+    let root = cameraLook.camera;
+    while (root && root.parent) root = root.parent;
+    let n = 0;
+    if (root) root.traverse((o) => { if (/:(completo|liviano|impostor)$/.test(o.name) && o.count > 0) n += 1; });
+    return n > 0;
+  })`, undefined, { timeout: 30_000 });
+  const views: { yaw: number; triangles: number; calls: number }[] = [];
+  for (let k = 0; k < 4; k++) {
+    const t = await treeTriangles(page);
+    const c = await camState(page);
+    views.push({ yaw: c.yaw, triangles: t.triangles, calls: t.calls });
+    await turnBy(page, 90);
+  }
+  const forest = views.reduce((a, b) => (b.triangles > a.triangles ? b : a));
+  const away = views[(views.indexOf(forest) + 2) % 4] as (typeof views)[number];
+  // AC45 ("facing away draws fewer tree triangles"), fix 1 de QA: "menos" con dientes. Medido 0,38 (8.070 / 21.056);
+  // sin la prueba del frustum la proporción sube a 0,94, así que el tope 0,6 separa los dos casos.
+  check("AC45-walk", forest.triangles > 0 && away.triangles <= AWAY_MAX_SHARE * forest.triangles,
+    `triangulos de arbol por rumbo: ${views.map((v) => `${v.yaw.toFixed(0)}°: ${v.triangles} (${v.calls} llamadas)`).join(", ")}; bosque ${forest.triangles}, de espaldas ${away.triangles} (proporción ${(away.triangles / Math.max(1, forest.triangles)).toFixed(2)}, tope ${AWAY_MAX_SHARE})`);
+
+  const rigs = await page.evaluate<{ quaternius: number; kaykit: number; caps: number }>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
+    let root = cameraLook.camera;
+    while (root && root.parent) root = root.parent;
+    const out = { quaternius: 0, kaykit: 0, caps: 0 };
+    root.traverse((o) => {
+      if (o.isSkinnedMesh) {
+        const names = o.skeleton.bones.map((b) => b.name);
+        if (names.includes("Head")) out.quaternius += 1;
+        else if (names.includes("head")) out.kaykit += 1;
+      }
+      if (o.isMesh && !o.isSkinnedMesh && o.parent && o.parent.isBone && o.parent.name === "Head" && o.visible && o.geometry.getAttribute("position").count > 100) out.caps += 1;
+    });
+    return out;
+  })`);
+  await shot(page, "ac47-personajes");
+  check("AC47-walk", rigs.quaternius >= 4 && rigs.kaykit === 0 && rigs.caps >= 1,
+    `cuerpos de Quaternius ${rigs.quaternius} (jugador y 3 NPCs), de KayKit ${rigs.kaykit}, accesorios de cabeza visibles ${rigs.caps}`);
+}
+
 // ---------- las dos caminatas ----------
 
 async function walkUniverse(page: Page, url: string): Promise<void> {
@@ -641,6 +726,7 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   const skyImg = await canvasImage(page);
   const sky = skyCheck(skyImg, await horizonRow(page), await worldTop(page), await worldVisible(page, skyImg.width, skyImg.height), await skyMask(page, skyImg));
   check("AC39", sky.ok && isNonUniform(stats), `${sky.detail}; regla de pixeles ${isNonUniform(stats)}`);
+  await walkForest(page);
   await walkGround(page);
   await walkThirdPerson(page);
 

@@ -86,17 +86,24 @@ export class EncoderMismatch extends Error {
 const WASM = (globalThis as unknown as { WebAssembly: { compile(b: Uint8Array): Promise<object>; instantiate(m: object, imports: object): Promise<object> } }).WebAssembly;
 let compiled: object | null = null;
 
+/** Open-world-3d T7: un original PNG (derivado en memoria por scripts/assets/nature.ts) y su lado de destino. */
+export interface EncodeOptions {
+  ext?: "jpg" | "png";
+  targetPx?: number;
+}
+
 /**
  * Codifica un original (JPG o PNG) a .ktx2 con el basisu fijado, en una carpeta temporal que se borra al final. El
  * proceso WASI solo ve esa carpeta.
  */
-export async function encodeKtx2(source: Uint8Array, kind: MapKind, encoder: Uint8Array, sourcePx = 1024): Promise<Uint8Array> {
+export async function encodeKtx2(source: Uint8Array, kind: MapKind, encoder: Uint8Array, sourcePx = 1024, opts: EncodeOptions = {}): Promise<Uint8Array> {
   compiled ??= await WASM.compile(encoder);
   const dir = mkdtempSync(join(tmpdir(), "lg-basisu-"));
   try {
-    writeFileSync(join(dir, "in.jpg"), source);
-    const px = targetPx(kind);
-    const args = ["basisu", ...KTX2_FLAGS[kind], ...(px !== sourcePx ? ["-resample", String(px), String(px)] : []), "-file", "in.jpg", "-output_file", "out.ktx2"];
+    const input = `in.${opts.ext ?? "jpg"}`;
+    writeFileSync(join(dir, input), source);
+    const px = opts.targetPx ?? targetPx(kind);
+    const args = ["basisu", ...KTX2_FLAGS[kind], ...(px !== sourcePx ? ["-resample", String(px), String(px)] : []), "-file", input, "-output_file", "out.ktx2"];
     const wasi = new WASI({ version: "preview1", args, env: {}, preopens: { ".": dir }, returnOnExit: true, stdout: 2, stderr: 2 });
     const code = wasi.start(await WASM.instantiate(compiled, wasi.getImportObject()));
     if (code !== 0 || !existsSync(join(dir, "out.ktx2"))) throw new Error(`basisu salió con ${code} (${kind})`);

@@ -40,6 +40,9 @@ export const RETIRED_NAMES = [
 const retiredNameRe = new RegExp(`\\b(${RETIRED_NAMES.join("|")})\\b`, "g");
 
 const ORTHO = /OrthographicCamera|\borthographic\b/;
+// Cambio registrado (open-world-3d T7, AC44): las dos cámaras ortográficas del horneado de impostores (de costado y desde
+// arriba, a una textura, nunca a la pantalla) viven en world/camera/bakeCamera.ts por R11. Es la única excepción.
+const ORTHO_ALLOWED = new Set(["apps/web/src/world/camera/bakeCamera.ts"]);
 const NEAREST = /\bNearestFilter\b/;
 /**
  * Tests que nombran los presets viejos a propósito: un ajuste guardado con un preset ortográfico cae al default (A11) y
@@ -73,7 +76,7 @@ export function scanTree(files: readonly TreeFile[]): TreeViolation[] {
     if (names.length > 0) out.push({ path, rule: "nombre-retirado", detail: [...new Set(names)].join(", ") });
     if (isProductSource(path) && path !== NEAREST_ALLOWED && NEAREST.test(text)) out.push({ path, rule: "nearest", detail: "NearestFilter" });
     const ortho = text.match(ORTHO);
-    if (ortho) out.push({ path, rule: "ortografica", detail: ortho[0] });
+    if (ortho && !ORTHO_ALLOWED.has(path)) out.push({ path, rule: "ortografica", detail: ortho[0] });
   }
   return out;
 }
@@ -152,5 +155,8 @@ describe("dientes del test de árbol (texto sintético)", () => {
     }
     expect(one("apps/web/src/world/GameCanvas.tsx", "<Canvas orthographic frameloop=\"always\" />")).toEqual(["ortografica"]);
     expect(one("apps/web/src/world/camera/CameraRig.tsx", "<PerspectiveCamera makeDefault />")).toEqual([]);
+    // T7: solo el horneado de impostores, solo en su archivo.
+    expect(one("apps/web/src/world/camera/bakeCamera.ts", 'import { OrthographicCamera } from "three";')).toEqual([]);
+    expect(one("apps/web/src/world/nature/impostor.ts", 'import { OrthographicCamera } from "three";')).toEqual(["ortografica"]);
   });
 });

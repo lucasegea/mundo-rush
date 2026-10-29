@@ -3,21 +3,25 @@
 // `_ROPA` en scripts/assets/characters.ts), le cuelga del hueso `head` la cabeza por código (head.ts, una malla) y la
 // boca, y arma el mezclador con los clips compartidos. `driveCharacter` aplica la elección de animState.ts: cruza los
 // clips de base, suma el gesto procedural (gestures.ts) y, con "reducir movimiento", deja la cadera a su altura.
+// Open-world-3d T7 (AC47): el esqueleto llega como `RigSpec` (rigs.ts). Con el de Quaternius no hay cabeza por código:
+// el modelo trae pelo y cara, y los accesorios (gorra, sombrero, bufanda: accessories.ts) cuelgan de sus huesos.
 import {
-  AnimationMixer, BufferAttribute, Euler, Group, LoopOnce, LoopRepeat, Mesh, PropertyBinding, Quaternion, SkinnedMesh, Vector3,
-  type AnimationAction, type AnimationClip, type Bone, type BufferGeometry, type Object3D,
+  AnimationMixer, BufferAttribute, BufferGeometry, Euler, Group, LoopOnce, LoopRepeat, Mesh, PropertyBinding, Quaternion, SkinnedMesh, Vector3,
+  type AnimationAction, type AnimationClip, type Bone, type Object3D,
 } from "three";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { paintColors, tokenRgb } from "@lg/art";
 import { toonMaterial } from "../materials/registry";
 import type { AnimChoice } from "./animState";
-import { CLIP_MANIFEST, type ClipId } from "./clips";
+import { openWorldAccessories } from "./accessories";
+import type { ClipId } from "./clips";
 import { gesturePose, PROCEDURAL_GESTURES, type ProceduralGesture } from "./gestures";
 import { characterHeadGeometry, mouthGeometry } from "./head";
 import type { CharacterLook } from "./looks";
+import { KAYKIT_RIG, rigBoneName, type RigSpec } from "./rigs";
 
 /** Escala del personaje con esqueleto: el hueso de la cabeza a 1,24 + la cabeza por código da ~2,3 m (como el de M1). */
-export const CHARACTER_SCALE = 1.1;
+export const CHARACTER_SCALE = KAYKIT_RIG.scale;
 /** Centro de la cabeza por código sobre el hueso `head` (unidades del esqueleto). */
 export const HEAD_OFFSET = 0.4;
 /** Valores de `_ROPA` (los de scripts/assets/characters.ts). */
@@ -32,8 +36,13 @@ export const boneKey = (name: string): string => PropertyBinding.sanitizeNodeNam
 export interface SkinnedCharacter {
   root: Group;
   body: SkinnedMesh;
+  /** La cabeza por código (KayKit) o el accesorio de la cabeza (Quaternius; sin sombrero, una malla vacía oculta). */
   head: Mesh;
   mouth: Mesh;
+  rig: RigSpec;
+  headBone: Bone;
+  /** Los accesorios por código (Quaternius): se ocultan de lejos (rigs.ts, NPC_ACCESSORY_M). */
+  accessories: Mesh[];
   bones: ReadonlyMap<string, Bone>;
   mixer: AnimationMixer;
   actions: ReadonlyMap<string, AnimationAction>;
@@ -74,11 +83,15 @@ export function clipsFor(clips: readonly AnimationClip[], bones: ReadonlyMap<str
   });
 }
 
+/** El hueso `name` (nombre de KayKit) del personaje, traducido a su esqueleto. */
+export const characterBone = (c: Pick<SkinnedCharacter, "bones" | "rig">, name: string): Bone | undefined => c.bones.get(boneKey(rigBoneName(c.rig, name)));
+
 /**
  * Arma el personaje de `look` sobre la escena glTF de su cuerpo (no la modifica: clona esqueleto y malla) y los clips
- * del archivo compartido. Una malla de cuerpo, una de cabeza y la boca (oculta hasta que habla).
+ * del archivo compartido. Una malla de cuerpo, una de cabeza (o el accesorio de la cabeza) y la boca (oculta hasta que
+ * habla).
  */
-export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly AnimationClip[], look: CharacterLook, seed = 0): SkinnedCharacter {
+export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly AnimationClip[], look: CharacterLook, seed = 0, rig: RigSpec = KAYKIT_RIG): SkinnedCharacter {
   const model = cloneSkinned(bodyScene);
   let body: SkinnedMesh | null = null;
   const bones = new Map<string, Bone>();
@@ -88,9 +101,9 @@ export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly Anima
   });
   if (!body) throw new Error(`cuerpo ${look.body}: el archivo no tiene malla con esqueleto`);
   const skinned: SkinnedMesh = body;
-  const headBone = bones.get(boneKey("head"));
-  const hips = bones.get(boneKey("hips"));
-  if (!headBone || !hips) throw new Error(`cuerpo ${look.body}: al esqueleto le falta "head" o "hips"`);
+  const headBone = characterBone({ bones, rig }, "head");
+  const hips = characterBone({ bones, rig }, "hips");
+  if (!headBone || !hips) throw new Error(`cuerpo ${look.body} (${rig.id}): al esqueleto le falta "${rigBoneName(rig, "head")}" o "${rigBoneName(rig, "hips")}"`);
 
   skinned.geometry = repaintClothes(skinned.geometry, look, seed);
   skinned.material = toonMaterial();
@@ -100,7 +113,8 @@ export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly Anima
 
   const root = new Group();
   root.add(model);
-  root.scale.setScalar(CHARACTER_SCALE * look.scale);
+  if (!rig.codeHead) return withAccessories(root, model, skinned, headBone, hips, bones, clips, look, seed, rig);
+  root.scale.setScalar(rig.scale * look.scale);
   root.updateMatrixWorld(true);
 
   // La cabeza por código, en el marco del personaje aunque el hueso tenga escala o giro de reposo.
@@ -121,14 +135,62 @@ export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly Anima
   const actions = new Map<string, AnimationAction>();
   for (const clip of clipsFor(clips, bones)) actions.set(clip.name, mixer.clipAction(clip));
   return {
-    root, body: skinned, head, mouth, bones, mixer, actions,
+    root, body: skinned, head, mouth, rig, headBone, accessories: [], bones, mixer, actions,
     state: { base: null, overlay: null, overlayT: 0, hipsY: hips.position.y },
     meshes: [skinned, head, mouth],
   };
 }
 
-const fileClip = (id: ClipId): { clip: string; loop: boolean } | null => {
-  const s = CLIP_MANIFEST[id];
+/** Boca del personaje de Quaternius en unidades del modelo (bajo los ojos, sobre la cara que mira a +z). */
+const MODEL_MOUTH = { y: 2.08, z: 0.43 } as const;
+
+/**
+ * El personaje con la cabeza del modelo (Quaternius): los accesorios se arman en unidades del modelo, se cuelgan con
+ * `attach` (conservan su lugar) antes de escalar, y la cabeza se achica como en la maqueta.
+ */
+function withAccessories(
+  root: Group, model: Object3D, skinned: SkinnedMesh, headBone: Bone, hips: Bone, bones: Map<string, Bone>,
+  clips: readonly AnimationClip[], look: CharacterLook, seed: number, rig: RigSpec,
+): SkinnedCharacter {
+  model.updateMatrixWorld(true);
+  const acc = openWorldAccessories(look, seed);
+  const hang = (geo: BufferGeometry | null, bone: Bone | undefined): Mesh | null => {
+    if (!geo || !bone) return null;
+    const m = new Mesh(geo, toonMaterial());
+    m.receiveShadow = true;
+    model.add(m);
+    bone.attach(m);
+    return m;
+  };
+  const head = hang(acc.head ?? new BufferGeometry(), headBone) as Mesh;
+  if (!acc.head) {
+    head.visible = false;
+    head.userData["hidden"] = true; // sin sombrero: la regla de distancia no la prende
+  }
+  const neck = hang(acc.neck, characterBone({ bones, rig }, "neck"));
+  // La boca: la misma de head.ts (centrada en una cabeza de radio 0,42), corrida a la cara del modelo.
+  const mouth = new Mesh(mouthGeometry(), toonMaterial());
+  mouth.position.set(0, MODEL_MOUTH.y + 0.2, MODEL_MOUTH.z - 0.392);
+  mouth.visible = false;
+  model.add(mouth);
+  headBone.attach(mouth);
+  headBone.scale.setScalar(rig.headScale);
+  root.scale.setScalar(rig.scale * look.scale);
+  root.updateMatrixWorld(true);
+
+  const mixer = new AnimationMixer(model);
+  const actions = new Map<string, AnimationAction>();
+  for (const clip of clipsFor(clips, bones)) actions.set(clip.name, mixer.clipAction(clip));
+  const accessories = [head, ...(neck ? [neck] : [])];
+  return {
+    root, body: skinned, head, mouth, rig, headBone, accessories, bones, mixer, actions,
+    state: { base: null, overlay: null, overlayT: 0, hipsY: hips.position.y },
+    meshes: [skinned, ...accessories, mouth],
+  };
+}
+
+const fileClip = (rig: RigSpec, id: ClipId): { clip: string; loop: boolean } | null => {
+  const s = rig.manifest[id];
   return s.kind === "archivo" ? { clip: s.clip, loop: s.loop } : null;
 };
 const isProcedural = (id: string): id is ProceduralGesture => (PROCEDURAL_GESTURES as readonly string[]).includes(id);
@@ -162,11 +224,11 @@ function applyGesture(c: SkinnedCharacter, id: ProceduralGesture, t: number): vo
   if (p.weight <= 0) return;
   c.root.updateMatrixWorld(true);
   for (const [name, dir] of Object.entries(p.aim)) {
-    const bone = c.bones.get(boneKey(name));
+    const bone = characterBone(c, name);
     if (bone) aimBone(c, bone, dir, p.weight);
   }
   for (const [name, r] of Object.entries(p.turn)) {
-    const bone = c.bones.get(boneKey(name));
+    const bone = characterBone(c, name);
     if (bone) bone.quaternion.multiply(qa.setFromEuler(euler.set(r[0] * p.weight, r[1] * p.weight, r[2] * p.weight)));
   }
 }
@@ -189,15 +251,15 @@ export function driveCharacter(c: SkinnedCharacter, choice: AnimChoice, dt: numb
   const s = c.state;
   const fade = cut ? 0 : CROSSFADE;
   // Un gesto de archivo (dar algo) es de cuerpo entero: mientras dura, reemplaza al clip de base en vez de promediarse.
-  const fileOverlay = choice.overlay ? fileClip(choice.overlay) : null;
+  const fileOverlay = choice.overlay ? fileClip(c.rig, choice.overlay) : null;
   if (choice.overlay !== s.overlay) {
-    const prev = s.overlay ? fileClip(s.overlay as ClipId) : null;
+    const prev = s.overlay ? fileClip(c.rig, s.overlay as ClipId) : null;
     if (prev) c.actions.get(prev.clip)?.fadeOut(fade);
     if (fileOverlay) play(c, fileOverlay.clip, fileOverlay.loop, fade);
     s.overlay = choice.overlay;
     s.overlayT = 0;
   }
-  const wantBase = fileOverlay ? null : (fileClip(choice.base)?.clip ?? null);
+  const wantBase = fileOverlay ? null : (fileClip(c.rig, choice.base)?.clip ?? null);
   if (s.base !== wantBase) {
     if (s.base) c.actions.get(s.base)?.fadeOut(fade);
     if (wantBase) play(c, wantBase, true, fade);
@@ -210,9 +272,10 @@ export function driveCharacter(c: SkinnedCharacter, choice: AnimChoice, dt: numb
   if (choice.mouth) c.mouth.scale.y = 0.35 + 0.65 * Math.abs(Math.sin(t * 11));
   if (!animate) return;
   c.mixer.update(dt);
+  if (c.rig.headScale !== 1) c.headBone.scale.setScalar(c.rig.headScale); // un clip con escala en la cabeza no la agranda
   if (s.overlay && isProcedural(s.overlay)) applyGesture(c, s.overlay, s.overlayT);
   if (choice.bounce === 0) {
-    const hips = c.bones.get(boneKey("hips"));
+    const hips = characterBone(c, "hips");
     if (hips) hips.position.y = s.hipsY;
   }
 }

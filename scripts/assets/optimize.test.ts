@@ -9,6 +9,7 @@ import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import { ArchivoRegistroAssets } from "@lg/content-schema";
 import { tokenRgb, withinPaint, type PaletteToken } from "@lg/art";
+import { natureJob } from "./nature.ts";
 import { crearIO, leerRegistro, optimizarGlb, PiezaRechazada, sha256 } from "./optimize.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -188,8 +189,10 @@ describe("optimize: tabla de pintura del pack", () => {
 
 describe("piezas reales del registro", () => {
   const { packs, assets } = leerRegistro(ROOT);
-  // Los archivos de personaje (bloque `personaje`, M3) tienen su propio test en characters.test.ts.
-  const servidas = assets.filter((a) => a.archivo.endsWith(".glb") && !a.personaje);
+  // Los archivos de personaje (bloque `personaje`, M3) tienen su propio test en characters.test.ts. Open-world-3d T7
+  // (cambio registrado): los árboles horneados (generated, bake-trees.ts) y las rocas de scripts/assets/nature.ts no
+  // salen de optimize y tienen los suyos (bake-trees.test.ts, nature.test.ts).
+  const servidas = assets.filter((a) => a.archivo.endsWith(".glb") && !a.personaje && a.procedencia !== "generated" && !natureJob(a.archivo));
 
   test("hay al menos dos piezas CC0 servidas y cada una salió del pipeline", async () => {
     expect(servidas.length).toBeGreaterThanOrEqual(2);

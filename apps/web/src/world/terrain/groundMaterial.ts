@@ -142,6 +142,12 @@ export function groundMapsFor(tier: WorldTier): { map: GroundMap; kind: "diff" |
 
 let ktx2: KTX2Loader | null = null;
 
+/** El cargador KTX2 del mundo (uno solo: el suelo y, desde T7, la naturaleza), con el transcodificador autoalojado. */
+export function ktx2Loader(renderer: WebGLRenderer): KTX2Loader {
+  ktx2 ??= new KTX2Loader().setTranscoderPath(`${import.meta.env.BASE_URL}decoders/`).detectSupport(renderer);
+  return ktx2;
+}
+
 /** El material del suelo del mundo abierto (uno por escena). */
 export function groundMaterial(tier: WorldTier, edge: GroundEdge | null = null): GroundMaterial {
   const normals = OPEN_WORLD_DENSITY[tier].groundNormals;
@@ -196,8 +202,7 @@ export function groundMaterial(tier: WorldTier, edge: GroundEdge | null = null):
     loadMaps(renderer) {
       alive = true;
       loading ??= (async () => {
-        ktx2 ??= new KTX2Loader().setTranscoderPath(`${import.meta.env.BASE_URL}decoders/`).detectSupport(renderer);
-        const loader = ktx2;
+        const loader = ktx2Loader(renderer);
         const maps = await Promise.all(groundMapsFor(tier).map(async ({ map, kind }) => {
           const tex = await loader.loadAsync(groundMapUrl(map, kind, import.meta.env.BASE_URL));
           tex.wrapS = tex.wrapT = RepeatWrapping;

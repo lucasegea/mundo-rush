@@ -91,3 +91,13 @@ export const silhouetteKey = (l: CharacterLook): string => [l.body, l.hairStyle,
 export const PLAYER_LOOK: CharacterLook = {
   body: "tunica", shirt: "casa-1", pants: "pantalon", skin: "piel", hair: "pelo", hairStyle: "casquete", hat: "gorra", scarf: null, scale: 1,
 };
+
+/**
+ * Open-world-3d T7 (AC47, D3): en el mundo abierto (dioramas con relieve) el jugador y los NPCs usan el personaje de
+ * Quaternius de la maqueta V6 (un solo cuerpo con pelo y cara; la apariencia de cada uno repinta remera y pantalón y
+ * elige sombrero y cuello). Los dioramas planos (campesino) siguen con los tres cuerpos de KayKit.
+ */
+export const OPEN_WORLD_BODY_ASSET = "quaternius-character-animated/cuerpo";
+export const OPEN_WORLD_CLIPS_ASSET = "quaternius-character-animated/animaciones";
+/** La gorra del jugador del mundo abierto, de la maqueta (accesorio por código, no un token: es el rojo de la maqueta). */
+export const CAP_COLOR = 0xd6342c;
