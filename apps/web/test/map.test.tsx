@@ -4,7 +4,7 @@
 // un EventTarget; el clic de R3F entra por state/bridge.ts. Ambos tienen que producir las MISMAS acciones (R10).
 // El lazo de simulación corre con un planificador falso: el tiempo lo avanza el test.
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { circleBlocked, DEFAULT_ZOOM_STEP, facingFrom, planPath, SIM_DT, ZOOM_STEPS, type DioramaLayout } from "@lg/core";
+import { circleBlocked, facingFrom, planPath, SIM_DT, THIRD_PERSON, zoomDistanceAt, type DioramaLayout } from "@lg/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { loadDiorama, pickDiorama } from "../src/services/content";
 import { startInput, WORLD_SURFACE_ATTR } from "../src/services/input";
@@ -238,21 +238,25 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
     surface.append(inner);
     const panel = document.createElement("div");
     document.body.append(surface, panel);
-    const zoomAfter = (fn: () => void) => { act(fn); return gameStore.getState().ui.zoomStep; };
-    const start = gameStore.getState().ui.zoomStep;
+    // Cambio registrado (open-world-3d T5, PD-5 amienda D-208 para la vista por defecto): antes se comparaba
+    // `ui.zoomStep` (índice de la escalera); con el zoom continuo se compara la distancia pedida `ui.camera.zoomDistance`.
+    const dist = () => gameStore.getState().ui.camera.zoomDistance;
+    const zoomAfter = (fn: () => void) => { act(fn); return dist(); };
+    const start = dist();
     const byKey = zoomAfter(() => { key("keydown", "Equal"); });
+    expect(byKey).toBeLessThan(start);
     act(() => actions.zoomOut());
-    expect(gameStore.getState().ui.zoomStep).toBe(start);
+    expect(dist()).toBeCloseTo(start, 9);
     // Teclado español/latinoamericano: el "+" impreso es BracketRight y el "-" es Slash (D-197, nota N1 de QA).
-    expect(zoomAfter(() => { key("keydown", "BracketRight", "+"); })).toBe(byKey);
-    expect(zoomAfter(() => { key("keydown", "Slash", "-"); })).toBe(start);
+    expect(zoomAfter(() => { key("keydown", "BracketRight", "+"); })).toBeCloseTo(byKey, 9);
+    expect(zoomAfter(() => { key("keydown", "Slash", "-"); })).toBeCloseTo(start, 9);
     stop();
     // La rueda sobre el canvas: el servicio escucha en document (como en window en la app) y mira el target real.
     stop = startInput({ target: document, dispatch: actions.dispatch, isActive: () => selectMapActive(gameStore.getState()) });
     act(() => { inner.dispatchEvent(new WheelEvent("wheel", { deltaY: -120, bubbles: true, cancelable: true })); });
-    expect(gameStore.getState().ui.zoomStep).toBe(byKey);
+    expect(dist()).toBeCloseTo(byKey, 9);
     act(() => { panel.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true, cancelable: true })); });
-    expect(gameStore.getState().ui.zoomStep).toBe(byKey);
+    expect(dist()).toBeCloseTo(byKey, 9);
     surface.remove();
     panel.remove();
   });
@@ -328,27 +332,31 @@ describe("A8 aviso de interacción en el HUD (del store, no del canvas)", () => 
   });
 });
 
-describe("A9 zoom: la escalera de D-208 acotada, con teclas, rueda o botones", () => {
-  test("acercar y alejar recorren toda la escalera de a un paso y se acotan; el HUD dice el nivel y los botones hacen lo mismo", async () => {
+// Cambio registrado (open-world-3d T5, PD-5 amienda D-208 para la vista por defecto): este bloque probaba la escalera de
+// 8 pasos (`zoomStep` de 30 a 22 y 160 m, "Zoom 1 de 8"); la cámara del mapa ahora tiene zoom continuo de 2,5 m al mapa
+// entero. Se prueban los mismos topes, teclas y botones sobre la distancia pedida.
+describe("A9 zoom continuo (PD-5): acotado, con teclas, rueda o botones", () => {
+  test("acercar se acota en 2,5 m y alejar en el mapa entero; el HUD dice la distancia y los botones hacen lo mismo", async () => {
     await startMap();
-    const step = () => gameStore.getState().ui.zoomStep;
-    expect(step()).toBe(DEFAULT_ZOOM_STEP);
-    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(30);
-    act(() => { for (let i = 0; i < ZOOM_STEPS + 2; i++) key("keydown", i % 2 ? "NumpadAdd" : "Equal"); });
-    expect(step()).toBe(ZOOM_STEPS - 1);
-    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(22);
+    const cam = () => gameStore.getState().ui.camera;
+    expect(cam().zoomDistance).toBe(THIRD_PERSON.defaultDistance);
+    expect(selectWorldRender(gameStore.getState()).preset).toBe("thirdPerson");
+    act(() => { for (let i = 0; i < 40; i++) key("keydown", i % 2 ? "NumpadAdd" : "Equal"); });
+    expect(cam().zoomDistance).toBeCloseTo(THIRD_PERSON.minDistance, 9);
     const walked: number[] = [];
-    act(() => { for (let i = 0; i < ZOOM_STEPS + 2; i++) { key("keydown", "Minus"); walked.push(step()); } });
-    expect(walked.slice(0, ZOOM_STEPS - 1)).toEqual(Array.from({ length: ZOOM_STEPS - 1 }, (_, i) => ZOOM_STEPS - 2 - i));
-    expect(step()).toBe(0);
-    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(160);
+    act(() => { for (let i = 0; i < 40; i++) { key("keydown", "Minus"); walked.push(cam().zoomDistance); } });
+    // Cada paso aleja la misma razón (log-lineal) hasta el mapa entero, donde se queda.
+    const ratios = walked.slice(1, 10).map((d, i) => d / (walked[i] as number));
+    for (const r of ratios) expect(r).toBeCloseTo(ratios[0] as number, 6);
+    expect(cam().overview).toBe(true);
+    expect(cam().zoomDistance).toBe(cam().fitDistance);
     render(<WorldHud />);
-    expect(screen.getByText(`Zoom 1 de ${ZOOM_STEPS}`)).toBeTruthy();
+    expect(screen.getByText("Mapa completo")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Alejar" }).getAttribute("aria-disabled")).toBe("true");
     act(() => { screen.getByRole("button", { name: "Acercar" }).click(); });
-    expect(selectWorldHudView(gameStore.getState()).zoomStep).toBe(1);
-    expect(selectWorldRender(gameStore.getState()).zoomStep).toBe(1);
-    expect(selectWorldRender(gameStore.getState()).zoomDistance).toBe(120);
+    expect(cam().overview).toBe(false);
+    expect(cam().zoomDistance).toBeCloseTo(zoomDistanceAt(1 - THIRD_PERSON.zoomStep, cam().fitDistance), 9);
+    expect(selectWorldHudView(gameStore.getState()).zoomMeters).toBeCloseTo(cam().zoomDistance, 0);
   });
 
   test("rueda de trackpad: muchos eventos chicos suman una muesca, no recorren la escalera", async () => {
@@ -358,11 +366,14 @@ describe("A9 zoom: la escalera de D-208 acotada, con teclas, rueda o botones", (
     document.body.append(surface);
     stop();
     stop = startInput({ target: document, dispatch: actions.dispatch, isActive: () => selectMapActive(gameStore.getState()) });
-    const start = gameStore.getState().ui.zoomStep;
+    // Cambio registrado (PD-5): una muesca es un paso de zoom continuo; antes se contaban índices de `zoomStep`.
+    const fit = gameStore.getState().ui.camera.fitDistance;
+    const t = () => Math.log(gameStore.getState().ui.camera.zoomDistance / THIRD_PERSON.minDistance) / Math.log(fit / THIRD_PERSON.minDistance);
+    const start = t();
     act(() => { for (let i = 0; i < 12; i++) surface.dispatchEvent(new WheelEvent("wheel", { deltaY: 5, bubbles: true, cancelable: true })); });
-    expect(gameStore.getState().ui.zoomStep).toBe(start - 1);
+    expect(t()).toBeCloseTo(start + THIRD_PERSON.zoomStep, 9);
     act(() => { for (let i = 0; i < 3; i++) surface.dispatchEvent(new WheelEvent("wheel", { deltaY: 100, bubbles: true, cancelable: true })); });
-    expect(gameStore.getState().ui.zoomStep).toBe(start - 4);
+    expect(t()).toBeCloseTo(start + 4 * THIRD_PERSON.zoomStep, 9);
     surface.remove();
   });
 });
@@ -512,12 +523,14 @@ describe("estetica-c M1 en el mapa real", () => {
     expect(selectConversationFrame(gameStore.getState())).toBeNull();
     act(() => actions.closePanel());
     act(() => actions.closePanel());
-    expect(selectWorldRender(gameStore.getState()).preset).toBe("perspective3D");
+    // Cambio registrado (open-world-3d T5, PD-5): la cámara del mapa fuera de la charla pasó de "perspective3D" a
+    // "thirdPerson" (en las dos aserciones de este test).
+    expect(selectWorldRender(gameStore.getState()).preset).toBe("thirdPerson");
     // A8: una escena con un NPC que no está en este diorama no encuadra a nadie.
     act(() => actions.enterScene("NPC-MAYA"));
     expect(gameStore.getState().ui.panels.at(-1)).toEqual({ kind: "scene", npcId: "NPC-MAYA" });
     expect(selectConversationFrame(gameStore.getState())).toBeNull();
-    expect(selectWorldRender(gameStore.getState()).preset).toBe("perspective3D");
+    expect(selectWorldRender(gameStore.getState()).preset).toBe("thirdPerson");
   });
 
   test("A13: el NPC resaltado y el del aviso del HUD siempre coinciden (incluido el medio entre Inés y Harlan)", async () => {

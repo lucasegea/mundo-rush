@@ -11,6 +11,13 @@ export interface PlayerState {
   previous: { x: number; z: number } | null;
   velocity: { x: number; z: number };
   intent: MoveIntent;
+  /**
+   * Open-world-3d T4 (D-820): la dirección de pantalla mantenida (WASD), así la intención en el mundo se recalcula cuando
+   * cambia el yaw de la cámara (moverse es relativo a la cámara). {0, 0} = ninguna.
+   */
+  heldDir: { x: number; y: number };
+  /** Shift mantenida: corre a 5,5 m/s. */
+  running: boolean;
   /** Pasos de simulación aplicados (cambia en cada paso que movió algo). */
   simTick: number;
   facing: Facing;
@@ -30,6 +37,8 @@ export const initialPlayer = (): PlayerState => ({
   previous: null,
   velocity: { x: 0, z: 0 },
   intent: IDLE,
+  heldDir: { x: 0, y: 0 },
+  running: false,
   simTick: 0,
   facing: "s",
   avatar: null,

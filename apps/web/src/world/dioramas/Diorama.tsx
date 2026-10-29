@@ -8,13 +8,14 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useMemo } from "react";
 import type { SceneDensity } from "@lg/art";
 import type { DioramaRuntime } from "@lg/core";
-import { bridge } from "../../state/bridge";
+import { bridge, LOOK_DRAG_PX } from "../../state/bridge";
 import type { MapActor, SceneActivityView } from "../../state/selectors";
 import { AnimationGovernor } from "../actors/AnimationGovernor";
 import { BlobShadows } from "../actors/BlobShadows";
 import { Character, type ActorPose } from "../actors/Character";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
 import { fallbackLook } from "../actors/looks";
+import { Beacons } from "../labels/Beacons";
 import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
 import { RequestBubble } from "../labels/RequestBubble";
@@ -33,6 +34,8 @@ interface Props {
   sceneNpcId: string | null;
   /** Distancia pedida de la cámara (m): de lejos solo queda la etiqueta resaltada (D-208). */
   viewDistance: number;
+  /** Open-world-3d T5: t de zoom (cuantizado); pasado LABEL_HIDE_T solo queda la etiqueta resaltada. */
+  zoomT?: number;
   cut: boolean;
   /** Quién habla y quién escucha en la escena (la máquina de animación lo lee). */
   activity: SceneActivityView;
@@ -48,6 +51,20 @@ interface Props {
   density?: SceneDensity;
 }
 
+/**
+ * Open-world-3d T4 (D-820, AC20): R3F dispara `click` también al soltar un arrastre; `event.delta` (píxeles entre el
+ * apretar y el soltar) mayor que LOOK_DRAG_PX fue una mirada y no camina ni interactúa. El umbral es el único del núcleo.
+ */
+export function isDragClick(delta: number): boolean {
+  return delta > LOOK_DRAG_PX;
+}
+
+/** Clic sobre el suelo → `moveTo` por el puente (o nada, si fue un arrastre de mirada). */
+export function onGroundClick(e: { delta: number; point: { x: number; z: number }; nativeEvent: { button: number } }): void {
+  if (isDragClick(e.delta)) return;
+  bridge.pointer({ kind: "ground", x: e.point.x, z: e.point.z }, e.nativeEvent.button);
+}
+
 /** A menos de esto el NPC gira cabeza y cuerpo hacia el jugador (propuesta C §3). */
 const LOOK_AT_PLAYER_M = 6;
 
@@ -60,6 +77,7 @@ function Npc({ actor, cut, activity, lod }: { actor: MapActor; cut: boolean; act
   }, [actor.x, actor.z]);
   const onSelect = (e: ThreeEvent<MouseEvent>): void => {
     e.stopPropagation(); // el suelo de atrás no recibe el mismo clic
+    if (isDragClick(e.delta)) return;
     bridge.pointer({ kind: "interactable", id: actor.id }, e.nativeEvent.button);
   };
   const mine = activity.npcId === actor.id;
@@ -89,6 +107,7 @@ export function Diorama({
   highlightId,
   sceneNpcId,
   viewDistance,
+  zoomT = 0,
   cut,
   activity,
   maxAnimated,
@@ -98,10 +117,8 @@ export function Diorama({
   density = "full",
 }: Props) {
   const { minX, maxX, minZ, maxZ } = diorama.bounds;
-  const onGround = (e: ThreeEvent<MouseEvent>): void => {
-    bridge.pointer({ kind: "ground", x: e.point.x, z: e.point.z }, e.nativeEvent.button);
-  };
-  const labels = labelEntries(actors, highlightId, sceneNpcId, viewDistance);
+  const onGround = (e: ThreeEvent<MouseEvent>): void => onGroundClick(e);
+  const labels = labelEntries(actors, highlightId, sceneNpcId, viewDistance, zoomT);
   return (
     <group>
       {/* Plano invisible para el raycast del suelo: dentro de los límites el terreno es plano en y = 0. */}
@@ -123,6 +140,7 @@ export function Diorama({
         return a ? <RequestBubble key={`pedido-${id}`} x={a.x} y={LABEL_HEIGHT} z={a.z} still={cut || frozen} /> : null;
       })}
       <BlobShadows anchors={scene.blobAnchors} />
+      <Beacons npcs={actors} heightAt={scene.terrain.heightAt} />
     </group>
   );
 }

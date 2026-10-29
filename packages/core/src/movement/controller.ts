@@ -28,6 +28,8 @@ export interface MovementConfig {
  * pasillo de 2 celdas (03 §6.4.5) alcanza.
  */
 export const DEFAULT_MOVEMENT: MovementConfig = { speed: 3.5, accel: 24, radius: 0.24, arriveRadius: 0.05 };
+/** Open-world-3d T4 (D-820): correr con Shift, 5,5 m/s (mockup V6 `SPEED.run`); lo demás igual que caminar. */
+export const RUN_MOVEMENT: MovementConfig = { ...DEFAULT_MOVEMENT, speed: 5.5 };
 
 export interface Body {
   x: number;
@@ -92,8 +94,10 @@ function desired(body: Body, intent: MoveIntent, cfg: MovementConfig, dt: number
     const dx = w.x - body.x;
     const dz = w.z - body.z;
     const dist = Math.hypot(dx, dz);
-    // El último tramo frena para no pasarse: nunca más rápido que lo que falta en un paso.
-    const speed = waypoints.length === 1 ? Math.min(cfg.speed, dist / dt) : cfg.speed;
+    // Ningún tramo se pasa de su punto: nunca más rápido que lo que falta en un paso. Antes solo frenaba el último y
+    // un punto intermedio que quedaba a 0,05-0,067 m antes del paso (más que arriveRadius, menos que un paso de
+    // 0,117 m) se cruzaba ida y vuelta para siempre (open-world-3d M2, AC29: el clic quedaba a 3 m del destino).
+    const speed = Math.min(cfg.speed, dist / dt);
     return { vx: (dx / dist) * speed, vz: (dz / dist) * speed, intent: waypoints === intent.waypoints ? intent : { kind: "path", waypoints } };
   }
   return { vx: 0, vz: 0, intent: IDLE };

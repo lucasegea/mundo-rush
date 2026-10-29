@@ -39,7 +39,8 @@ describe("diorama", () => {
 
 describe("acciones semánticas (R10)", () => {
   test("la lista del contrato (R10 + zoom de D-197)", () => {
-    expect([...SEMANTIC_ACTIONS]).toEqual(["move", "moveTo", "interact", "talk", "cancel", "openNotebook", "zoomIn", "zoomOut"]);
+    // Cambio registrado (open-world-3d T4, D-820): la lista gana `look`, `run` y `toggleOverview` al final.
+    expect([...SEMANTIC_ACTIONS]).toEqual(["move", "moveTo", "interact", "talk", "cancel", "openNotebook", "zoomIn", "zoomOut", "look", "run", "toggleOverview"]);
   });
   test("puntero: suelo → moveTo, interactuable → interact; otros botones no hacen nada", () => {
     expect(pointerAction({ kind: "ground", x: 1.5, z: -2 })).toEqual({ type: "moveTo", x: 1.5, z: -2 });
@@ -81,8 +82,9 @@ describe("acciones semánticas (R10)", () => {
 });
 
 describe("cámara: presets (R11) y zoom (D-197, D-208)", () => {
-  test("los 3 presets de R11 desde M7 (D-207: sin ortográficos); ángulos de D-207", () => {
-    expect([...CAMERA_PRESET_IDS]).toEqual(["dialogueFrame", "perspective3D", "xrTabletop"]);
+  test("los presets de R11: thirdPerson (open-world-3d T5, PD-5) y los 3 de M7 (D-207: sin ortográficos); ángulos de D-207", () => {
+    // Cambio registrado (PD-5): antes ["dialogueFrame", "perspective3D", "xrTabletop"]; `thirdPerson` entra primero.
+    expect([...CAMERA_PRESET_IDS]).toEqual(["thirdPerson", "dialogueFrame", "perspective3D", "xrTabletop"]);
     expect(presetAngles("perspective3D")).toEqual({ pitchDeg: 50, yawDeg: 45 });
     expect(presetAngles("dialogueFrame")).toEqual({ pitchDeg: 20, yawDeg: 45 });
     // Declarado sin implementar: hasta E-XR da los del lente largo (M7 SEAM en camera.ts).

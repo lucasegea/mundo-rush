@@ -45,7 +45,9 @@ const NEAREST = /\bNearestFilter\b/;
  * Tests que nombran los presets viejos a propósito: un ajuste guardado con un preset ortográfico cae al default (A11) y
  * el registro de R11 ya no los tiene (A4 de F2, reescrito en M7). Solo esos dos nombres, solo en esos tests.
  */
-const OLD_PRESET_ALLOWED = new Set(["packages/core/test/estetica-c.test.ts", "apps/web/test/world-pure.test.ts"]);
+// Cambio registrado (open-world-3d T5, AC27): se suma apps/web/test/third-person.test.tsx, que carga un ajuste guardado
+// `topdownOrtho` para probar que cae a `thirdPerson` (PD-5). Antes eran solo los dos tests de arriba.
+const OLD_PRESET_ALLOWED = new Set(["packages/core/test/estetica-c.test.ts", "apps/web/test/world-pure.test.ts", "apps/web/test/third-person.test.tsx"]);
 const OLD_PRESETS = new Set(["topdownOrtho", "isoOrtho"]);
 
 export interface TreeFile {

@@ -1,6 +1,6 @@
 // Selectores del slice `world`: view-model del modo solo-diálogo (lugares de la región y quién está en cada uno)
 // y, desde F2, lo que world/ dibuja, el aviso de interacción del HUD y los parámetros de render del mapa.
-import { presetAngles, zoomDistance, ZOOM_STEPS, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier, type ZoomStep } from "@lg/core";
+import { THIRD_PERSON, zoomTAt, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier } from "@lg/core";
 import type { CharacterLook } from "@lg/art";
 import type { GameState } from "../store";
 import { selectEffectiveTier } from "./settings";
@@ -124,15 +124,25 @@ export const selectHighlightedNpc = createViewSelector(
 export interface WorldHudView {
   mapStatus: GameState["world"]["dioramaStatus"];
   prompt: InteractionPrompt | null;
-  zoomStep: ZoomStep;
-  zoomSteps: number;
+  /** Zoom continuo (PD-5): la distancia pedida redondeada (m), o null con el mapa entero. */
+  zoomMeters: number | null;
+  /** En el tope cercano (2,5 m) o lejano (el mapa entero): los botones de zoom quedan aria-disabled. */
+  zoomAtMin: boolean;
+  zoomAtMax: boolean;
   /** Tier efectivo: el chip de calidad de abajo a la derecha (solo en desarrollo, plan estetica-c M4). */
   tier: SelectableTier;
 }
 
 export const selectWorldHudView = createViewSelector(
-  (s: GameState) => [s.world.dioramaStatus, selectInteractionPrompt(s), s.ui.zoomStep, selectEffectiveTier(s)] as const,
-  (mapStatus, prompt, zoomStep, tier): WorldHudView => ({ mapStatus, prompt, zoomStep, zoomSteps: ZOOM_STEPS, tier }),
+  (s: GameState) => [s.world.dioramaStatus, selectInteractionPrompt(s), s.ui.camera.zoomDistance, s.ui.camera.fitDistance, s.ui.camera.overview, selectEffectiveTier(s)] as const,
+  (mapStatus, prompt, zoomDistance, fit, overview, tier): WorldHudView => {
+    const t = overview ? 1 : zoomTAt(zoomDistance, fit);
+    return {
+      mapStatus, prompt, tier,
+      zoomMeters: t >= 1 ? null : Math.round(Math.min(zoomDistance, fit) * 10) / 10,
+      zoomAtMin: t <= 0, zoomAtMax: t >= 1,
+    };
+  },
 );
 
 /**
@@ -162,14 +172,17 @@ export const CONVERSATION_MAX_FPS = 30;
 
 export interface WorldRenderView {
   tier: SelectableTier;
-  /** `dialogueFrame` mientras dura una charla con un NPC del diorama; si no, la cámara de los ajustes. */
+  /**
+   * `dialogueFrame` mientras dura una charla con un NPC del diorama; si no, `thirdPerson` (open-world-3d T5, PD-5: un
+   * ajuste `perspective3D` abre la misma cámara con el mapa entero). Yaw, inclinación y zoom NO van acá: cambian con
+   * cada arrastre y CameraRig los lee con `readGame(selectCameraView)` dentro de useFrame (D-820), sin re-render.
+   */
   preset: CameraPresetId;
-  /** Ángulos de la cámara del mapa (la de los ajustes); el plano de a dos calcula los suyos en world/camera/. */
-  pitchDeg: number;
-  yawDeg: number;
-  zoomStep: ZoomStep;
-  /** Distancia (m) de la cámara del mapa en ese paso (D-208); world/ no lee valores del núcleo, la recibe acá. */
-  zoomDistance: number;
+  /**
+   * t de zoom pedido, cuantizado a 0,05 (lo que depende de él en React: qué etiquetas se dibujan). La cámara usa el
+   * exacto de `selectCameraView`.
+   */
+  zoomBand: number;
   /** "Reducir movimiento" (D-053, F2 A7): la cámara corta en vez de seguir con suavizado. */
   cameraMotion: "follow" | "cut";
   /** Postprocesado permitido (el nivel por tier lo fija TIER_PARAMS); apagado con "reducir movimiento" (§2.9). */
@@ -187,17 +200,56 @@ export interface WorldRenderView {
   conversationFps: number | null;
 }
 
+const ZOOM_BAND = 0.05;
+
 export const selectWorldRender = createViewSelector(
-  (s: GameState) => [selectEffectiveTier(s), s.settings.camera, s.settings.accessibility.reduceMotion, s.ui.zoomStep, s.ui.panels, selectConversationFrame(s) !== null] as const,
-  (tier, camera, reduceMotion, zoomStep, panels, talking): WorldRenderView => {
-    const { pitchDeg, yawDeg } = presetAngles(camera);
+  (s: GameState) => [selectEffectiveTier(s), s.settings.accessibility.reduceMotion, selectZoomBand(s), s.ui.panels, selectConversationFrame(s) !== null] as const,
+  (tier, reduceMotion, zoomBand, panels, talking): WorldRenderView => {
     const top = topPanel(panels);
     return {
-      tier, preset: talking ? "dialogueFrame" : camera, pitchDeg, yawDeg, zoomStep, zoomDistance: zoomDistance(zoomStep),
+      tier, preset: talking ? "dialogueFrame" : "thirdPerson", zoomBand,
       cameraMotion: reduceMotion ? "cut" : "follow",
       post: !reduceMotion && tier !== "low" && tier !== "dialog-only",
       paused: top !== undefined && top.kind !== "scene",
       conversationFps: top?.kind === "scene" ? CONVERSATION_MAX_FPS : null,
     };
   },
+);
+
+// ---------- cámara en tercera persona (open-world-3d T4/T5, D-820, PD-5) ----------
+
+const zoomTOf = (c: GameState["ui"]["camera"]): number => (c.overview ? 1 : zoomTAt(c.zoomDistance, c.fitDistance));
+
+/** t de zoom pedido cuantizado (ver `WorldRenderView.zoomBand`). */
+export const selectZoomBand = (s: GameState): number => Math.round(zoomTOf(s.ui.camera) / ZOOM_BAND) * ZOOM_BAND;
+
+export interface CameraView {
+  yawDeg: number;
+  pitchDeg: number;
+  /** Distancia pedida (m); world/camera la acota a su `fitDistance` vivo. */
+  zoomDistance: number;
+  /** Mapa entero: la distancia es la de `fitDistance`, sea cual sea. */
+  overview: boolean;
+  /** Distancia del mapa entero que tiene el store (world/camera la corrige con `bridge.cameraFit`). */
+  fitDistance: number;
+  /** t de zoom pedido (0 = 2,5 m, 1 = el mapa entero) con la distancia del mapa entero del store. */
+  t: number;
+  /** "Reducir movimiento": zoom, inclinación y pivote cortan, sin suavizado. */
+  reduceMotion: boolean;
+  /** Distancias del zoom (m): las del núcleo, que world/ no importa en tiempo de ejecución. */
+  minDistance: number;
+  userPitchMin: number;
+  userPitchMax: number;
+}
+
+/**
+ * Lo que CameraRig lee en cada cuadro con `readGame` (03 §2.3, D-820): sin suscripción ni re-render por arrastre. El
+ * objeto se reusa mientras nada cambió.
+ */
+export const selectCameraView = createViewSelector(
+  (s: GameState) => [s.ui.camera.yawDeg, s.ui.camera.pitchDeg, s.ui.camera.zoomDistance, s.ui.camera.overview, s.ui.camera.fitDistance, s.settings.accessibility.reduceMotion] as const,
+  (yawDeg, pitchDeg, zoomDistance, overview, fitDistance, reduceMotion): CameraView => ({
+    yawDeg, pitchDeg, zoomDistance, overview, fitDistance, reduceMotion, t: overview ? 1 : zoomTAt(zoomDistance, fitDistance),
+    minDistance: THIRD_PERSON.minDistance, userPitchMin: THIRD_PERSON.minPitchDeg, userPitchMax: THIRD_PERSON.maxPitchDeg,
+  }),
 );

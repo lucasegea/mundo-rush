@@ -59,10 +59,14 @@ export function WorldHud() {
               {t("world.quality", { tier: t(`settings.tier.${view.tier}`) })}
             </p>
           ) : null}
+          {/* Open-world-3d T5 (PD-5): zoom continuo; la lectura dice la distancia o "Mapa completo", y V tiene su botón. */}
           <div className={`pointer-events-auto flex items-center gap-2 p-1 ${CARD}`}>
-            <Button id="world-zoom-out" aria-disabled={view.zoomStep === 0} onClick={() => actions.zoomOut()}>{t("world.zoomOut")}</Button>
-            <span className="px-1 text-sm">{t("world.zoomLevel", { value: view.zoomStep + 1, total: view.zoomSteps })}</span>
-            <Button id="world-zoom-in" aria-disabled={view.zoomStep === view.zoomSteps - 1} onClick={() => actions.zoomIn()}>{t("world.zoomIn")}</Button>
+            <Button id="world-zoom-out" aria-disabled={view.zoomAtMax} onClick={() => actions.zoomOut()}>{t("world.zoomOut")}</Button>
+            <span data-testid="world-zoom-readout" className="px-1 text-sm">
+              {view.zoomMeters === null ? t("world.zoomFull") : t("world.zoomMeters", { value: view.zoomMeters.toLocaleString("es-AR") })}
+            </span>
+            <Button id="world-zoom-in" aria-disabled={view.zoomAtMin} onClick={() => actions.zoomIn()}>{t("world.zoomIn")}</Button>
+            <Button id="world-overview" aria-pressed={view.zoomMeters === null} onClick={() => actions.toggleOverview()}>{t("world.overview")}</Button>
           </div>
         </div>
       </div>

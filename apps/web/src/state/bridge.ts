@@ -2,10 +2,16 @@
 // mundo 3D puede despachar. world/ lee solo de state/selectors/ y nunca escribe `nearbyInteractables` (lo deriva
 // el núcleo en cada paso de simulación). Un clic de R3F sobre una malla entra como acción semántica (R10, P0
 // ADR-025): el mismo traductor del núcleo que usa services/input.
-import { pointerAction, type PointerHit } from "@lg/core";
+import { LOOK_DRAG_PX as CORE_LOOK_DRAG_PX, pointerAction, type PointerHit } from "@lg/core";
 import { actions } from "./actions";
 
 export type { PointerHit };
+
+/**
+ * Open-world-3d T4 (D-820): el umbral clic/arrastre del núcleo, como número para world/ (que usa el núcleo solo como
+ * tipos). Un clic de R3F con `event.delta` mayor fue un arrastre de mirada y no camina.
+ */
+export const LOOK_DRAG_PX: number = CORE_LOOK_DRAG_PX;
 
 export const bridge = {
   /** Caminar hasta un punto del suelo (metros, plano XZ). */
@@ -19,6 +25,8 @@ export const bridge = {
   },
   /** PerformanceMonitor de drei: el FPS cayó por debajo del piso (§2.7.2.2). */
   performanceDeclined: (): void => actions.performanceDeclined(),
+  /** world/camera: la distancia del mapa entero cambió (aspecto o yaw); el zoom continuo la usa de tope (PD-5). */
+  cameraFit: (fitDistance: number): void => actions.cameraFitted(fitDistance),
   /** `webglcontextlost` (§2.7.2.4). */
   contextLost: (): void => actions.contextLost(),
 } as const;

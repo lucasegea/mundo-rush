@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { glArgs } from "./gl-mode.ts";
-import { CONFIGS, frameStats, markdownSection, MEM_HOOK, parseProbeArgs, poseAvailable, timingOk, upsertSection, WARMUP_MS, WINDOW_MS, type Row } from "./perf-probe.ts";
+import { CONFIGS, frameStats, markdownSection, MEM_HOOK, parseProbeArgs, poseAvailable, POSE_ZOOM_T, timingOk, upsertSection, WARMUP_MS, WINDOW_MS, type Row } from "./perf-probe.ts";
 
 const row = (over: Partial<Row> = {}): Row => ({
   config: "main", tier: "medium", pose: "spawn", stats: { frames: 100, mean: 5, p50: 4.9, p95: 7 }, calls: 120, triangles: 50_000, programs: 14,
@@ -51,9 +51,12 @@ describe("perf-probe: medida", () => {
   test("sin tope: las banderas de Chromium quitan vsync y el tope de cuadros", () => {
     expect(glArgs("gpu", { uncapped: true })).toEqual(expect.arrayContaining(["--disable-gpu-vsync", "--disable-frame-rate-limit", "--force_high_performance_gpu"]));
   });
-  test("al cierre de M1 solo spawn está disponible (close/mid/full con T5, hilltop con T6)", () => {
-    expect(poseAvailable("spawn")).toBe(true);
-    for (const p of ["close", "mid", "full", "hilltop"] as const) expect(poseAvailable(p)).toBe(false);
+  // Cambio registrado (open-world-3d T5, PD-5): antes «al cierre de M1 solo spawn está disponible» y close/mid/full
+  // daban false; con el zoom continuo de thirdPerson las tres poses existen (t = 0, 0,5 y 1). hilltop sigue para T6.
+  test("con T5 spawn, close, mid y full están disponibles (hilltop con T6)", () => {
+    for (const p of ["spawn", "close", "mid", "full"] as const) expect(poseAvailable(p)).toBe(true);
+    expect(poseAvailable("hilltop")).toBe(false);
+    expect(POSE_ZOOM_T).toEqual({ spawn: "default", close: 0, mid: 0.5, full: 1 });
   });
   test("el gancho de memoria cuenta las subidas comprimidas", () => {
     expect(MEM_HOOK).toContain("compressedTexImage2D");

@@ -27,11 +27,17 @@ export function labelVisibleAt(highlighted: boolean, viewDistance: number): bool
   return highlighted || viewDistance <= LABEL_HIDE_DISTANCE;
 }
 
-export function labelEntries(actors: readonly LabelActor[], highlightId: string | null, sceneNpcId: string | null, viewDistance = 0): LabelEntry[] {
+/**
+ * Open-world-3d T5 (PD-5): con el zoom continuo las etiquetas se apagan al alejar (mockup V6: de t 0,3 a 0,55); pasado
+ * este t solo queda la resaltada, y aparecen las balizas (Beacons.tsx).
+ */
+export const LABEL_HIDE_T = 0.45;
+
+export function labelEntries(actors: readonly LabelActor[], highlightId: string | null, sceneNpcId: string | null, viewDistance = 0, zoomT = 0): LabelEntry[] {
   return actors
     .filter((a) => a.id !== sceneNpcId)
     .map((a) => ({ id: a.id, name: a.name, highlighted: a.id === highlightId }))
-    .filter((e) => labelVisibleAt(e.highlighted, viewDistance));
+    .filter((e) => labelVisibleAt(e.highlighted, viewDistance) && (e.highlighted || zoomT < LABEL_HIDE_T));
 }
 
 /** Medidas del chip dibujado a 2x (px del canvas). */

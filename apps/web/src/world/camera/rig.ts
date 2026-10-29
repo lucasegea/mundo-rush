@@ -220,3 +220,78 @@ export function shortestYawDelta(from: number, to: number): number {
   const d = (((to - from) % 360) + 540) % 360 - 180;
   return d === -180 ? 180 : d;
 }
+
+// ---------- thirdPerson: detrás del personaje (open-world-3d T5, D-820, PD-5) ----------
+
+export interface ThirdPersonInput {
+  /** El pivote: el jugador (o el centro del mapa) a la altura del pecho. */
+  target: Vec3;
+  yawDeg: number;
+  /** Inclinación efectiva (la del zoom, `zoomPose`). */
+  pitchDeg: number;
+  /** Cuánto baja la mirada (grados); por defecto, la inclinación (mira al pivote). */
+  lookPitchDeg?: number;
+  distance: number;
+  /** Lo que puede tapar al personaje: la cámara se acerca hasta que el segmento cámara-pivote queda libre. */
+  obstacles?: readonly Obstacle[];
+  heightAt?: ((x: number, z: number) => number) | null;
+}
+
+export interface ThirdPersonShot {
+  position: Vec3;
+  lookAt: Vec3;
+  /** Distancia final al pivote, después del acercamiento por obstáculos o terreno (nunca menos de 1,5 m). */
+  distanceUsed: number;
+}
+
+export const THIRD_PERSON_RIG = {
+  /** Distancia mínima tras acercarse por un obstáculo. */
+  minPullIn: 1.5,
+  /** Paso de muestreo del segmento cámara-pivote (m) y margen alrededor de cada obstáculo. */
+  sampleStep: 0.1,
+  obstacleMargin: 0.2,
+  /** Lo que queda entre la cámara y el primer obstáculo. */
+  pullInGap: 0.3,
+  /** La cámara nunca baja de esto sobre el terreno, ni el segmento de esto en su mitad. */
+  terrainClearance: 0.6,
+  segmentClearance: 0.35,
+  /** Hasta dónde mira hacia adelante cuando no mira al pivote. */
+  lookAhead: 30,
+} as const;
+
+/**
+ * La cámara en tercera persona (D-820, AC22-24): detrás del yaw (yaw 0 = cámara del lado +z), elevada por la
+ * inclinación, a `distance` del pivote; se acerca si el segmento cámara-pivote cruza un obstáculo (nunca a menos de 1,5 m)
+ * o el terreno, y nunca queda a menos de 0,6 m sobre el suelo. Mira hacia adelante bajando `lookPitchDeg`.
+ */
+export function solveThirdPerson(input: ThirdPersonInput): ThirdPersonShot {
+  const { target, yawDeg, pitchDeg, distance } = input;
+  const obstacles = input.obstacles ?? [];
+  const heightAt = input.heightAt ?? null;
+  const dir = cameraOffset(pitchDeg, yawDeg, 1);
+  const at = (d: number): Vec3 => [target[0] + dir[0] * d, target[1] + dir[1] * d, target[2] + dir[2] * d];
+  const blocked = (p: Vec3, s: number): boolean => {
+    for (const o of obstacles) if (p[1] < o.height && inside(o, p[0], p[2], THIRD_PERSON_RIG.obstacleMargin)) return true;
+    // El terreno tapa si la mitad lejana del segmento pasa por debajo del suelo más el margen.
+    return heightAt !== null && s > 0.3 && p[1] < heightAt(p[0], p[2]) + THIRD_PERSON_RIG.segmentClearance;
+  };
+  let used = distance;
+  if (obstacles.length > 0 || heightAt) {
+    const n = Math.max(1, Math.ceil(distance / THIRD_PERSON_RIG.sampleStep));
+    for (let k = 1; k <= n; k++) {
+      const d = (k / n) * distance;
+      if (blocked(at(d), k / n)) {
+        used = Math.max(THIRD_PERSON_RIG.minPullIn, d - THIRD_PERSON_RIG.pullInGap);
+        break;
+      }
+    }
+  }
+  const position = at(used);
+  if (heightAt) position[1] = Math.max(position[1], heightAt(position[0], position[2]) + THIRD_PERSON_RIG.terrainClearance);
+  const lp = (input.lookPitchDeg ?? pitchDeg) * RAD;
+  const fx = -Math.sin(yawDeg * RAD);
+  const fz = -Math.cos(yawDeg * RAD);
+  const ahead = input.lookPitchDeg === undefined ? used : THIRD_PERSON_RIG.lookAhead;
+  const lookAt: Vec3 = [position[0] + fx * Math.cos(lp) * ahead, position[1] - Math.sin(lp) * ahead, position[2] + fz * Math.cos(lp) * ahead];
+  return { position, lookAt, distanceUsed: used };
+}

@@ -7,10 +7,11 @@ import { CAMERA_RIG_PRESETS } from "../src/world/camera/presets";
 import { cameraOffset, cutFollow, followAlpha } from "../src/world/camera/rig";
 
 describe("A4 CameraRig: exactamente los presets de R11", () => {
-  test("las claves del registro son CAMERA_PRESET_IDS; perspective3D y dialogueFrame implementados, xrTabletop declarado", () => {
-    expect([...CAMERA_PRESET_IDS]).toEqual(["dialogueFrame", "perspective3D", "xrTabletop"]);
+  test("las claves del registro son CAMERA_PRESET_IDS; thirdPerson, perspective3D y dialogueFrame implementados, xrTabletop declarado", () => {
+    // Cambio registrado (open-world-3d T5, PD-5): el registro gana `thirdPerson` (antes 3 claves).
+    expect([...CAMERA_PRESET_IDS]).toEqual(["thirdPerson", "dialogueFrame", "perspective3D", "xrTabletop"]);
     expect(Object.keys(CAMERA_RIG_PRESETS).sort()).toEqual([...CAMERA_PRESET_IDS].sort());
-    expect(CAMERA_RIG_PRESETS).toEqual({ dialogueFrame: "implemented", perspective3D: "implemented", xrTabletop: "declared" });
+    expect(CAMERA_RIG_PRESETS).toEqual({ thirdPerson: "implemented", dialogueFrame: "implemented", perspective3D: "implemented", xrTabletop: "declared" });
   });
 
   test("plan estetica-c M7: los ortográficos de HD-2D salieron de R11 (revisión de arquitectura 2026-10-12)", () => {

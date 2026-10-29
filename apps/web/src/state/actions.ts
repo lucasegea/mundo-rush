@@ -1,15 +1,15 @@
 // state/actions.ts — barril de acciones públicas: lo único que ui/ (y dev/director) despachan (R14, P0 T2).
 // Acciones delgadas: las reglas (tiers, saneo de ajustes, fase, pila de paneles) viven en @lg/core.
 import {
-  applySettingsPatch, applyWorldEffects, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom, IDLE,
-  isWalkable, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, presetAngles, pushPanel, sameIds,
-  screenDirToWorld, standoffPoint, stepBody, stepZoom, suggestTier,
-  type Capabilities, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
+  applyLook, applySettingsPatch, applyWorldEffects, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom,
+  headingYaw, IDLE, isWalkable, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, pushPanel, recenterYaw,
+  RUN_MOVEMENT, sameIds, screenDirToWorld, SIM_DT, standoffPoint, stepBody, stepZoomDistance, suggestTier, THIRD_PERSON, zoomDistanceAt, zoomTAt,
+  type Capabilities, type Settings, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
   type SemanticAction, type SettingsPatch, type TextScale, type TierChoice, type WorldEffect,
 } from "@lg/core";
 import type { ServerMessage } from "@lg/protocol";
 import { gameStore, type GameState, type GameStore } from "./store";
-import { freshScene, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo, type VoiceUi } from "./slices";
+import { freshScene, initialCamera, type CameraState, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo, type VoiceUi } from "./slices";
 import { selectMapActive } from "./selectors/world";
 
 export interface DialogOnlyCatalog {
@@ -210,9 +210,46 @@ export function createActions(store: GameStore) {
     };
   };
 
+  // ---------- cámara en tercera persona (open-world-3d T4/T5, D-820, PD-5) ----------
+
+  const withCamera = (s: GameState, patch: Partial<CameraState>): Partial<GameState> => ({ ui: { ...s.ui, camera: { ...s.ui.camera, ...patch } } });
+
+  /** La distancia vigente: con el mapa entero, la de `fitDistance`. */
+  const currentDistance = (c: CameraState): number => (c.overview ? c.fitDistance : Math.min(c.zoomDistance, c.fitDistance));
+
+  /** Un paso de zoom continuo (+1 acerca, -1 aleja); desde el mapa entero, el primer paso sale de él. */
   const zoom = (direction: 1 | -1) => (s: GameState): Partial<GameState> => {
-    const zoomStep = stepZoom(s.ui.zoomStep, direction);
-    return zoomStep === s.ui.zoomStep ? {} : { ui: { ...s.ui, zoomStep } };
+    const c = s.ui.camera;
+    const zoomDistance = stepZoomDistance(currentDistance(c), c.fitDistance, direction);
+    const overview = zoomTAt(zoomDistance, c.fitDistance) >= 1;
+    if (zoomDistance === c.zoomDistance && overview === c.overview) return {};
+    return withCamera(s, { zoomDistance, overview, prevZoomDistance: overview ? c.prevZoomDistance : zoomDistance });
+  };
+
+  /** V (PD-5): al mapa entero recordando la distancia, o de vuelta a ella. */
+  const toggleOverview = (s: GameState): Partial<GameState> => {
+    const c = s.ui.camera;
+    if (!c.overview && zoomTAt(c.zoomDistance, c.fitDistance) < THIRD_PERSON.overviewToggleT) {
+      return withCamera(s, { overview: true, prevZoomDistance: c.zoomDistance, zoomDistance: c.fitDistance });
+    }
+    return withCamera(s, { overview: false, zoomDistance: c.prevZoomDistance });
+  };
+
+  /** La intención de teclado en el mundo según el yaw vigente: moverse es relativo a la cámara (AC18). */
+  const dirIntent = (dir: { x: number; y: number }, yawDeg: number): MoveIntent => {
+    const w = screenDirToWorld(dir, yawDeg);
+    return { kind: "dir", x: w.x, z: w.z };
+  };
+
+  /** Mirar: yaw e inclinación nuevos; si se camina con el teclado, la dirección gira con la cámara. */
+  const look = (s: GameState, dx: number, dy: number): Partial<GameState> => {
+    const c = s.ui.camera;
+    const next = applyLook(c.yawDeg, c.pitchDeg, dx, dy);
+    if (next.yawDeg === c.yawDeg && next.pitchDeg === c.pitchDeg && c.sinceLookS === 0) return {};
+    const out = withCamera(s, { ...next, sinceLookS: 0 });
+    const held = s.player.heldDir;
+    if (s.player.intent.kind === "dir" && (held.x !== 0 || held.y !== 0)) out.player = { ...s.player, intent: dirIntent(held, next.yawDeg), path: [] };
+    return out;
   };
 
   /** Una acción semántica (R10) aplicada al estado; fuera del mapa no hace nada. */
@@ -220,9 +257,10 @@ export function createActions(store: GameStore) {
     if (!selectMapActive(s)) return {};
     switch (a.type) {
       case "move": {
-        if (a.dir.x === 0 && a.dir.y === 0) return s.player.intent.kind === "dir" ? withIntent(s, IDLE) : {};
-        const w = screenDirToWorld(a.dir, presetAngles(s.settings.camera).yawDeg);
-        return withIntent(s, { kind: "dir", x: w.x, z: w.z });
+        const player = { ...s.player, heldDir: { x: a.dir.x, y: a.dir.y } };
+        if (a.dir.x === 0 && a.dir.y === 0) return { player, ...(s.player.intent.kind === "dir" ? withIntent({ ...s, player }, IDLE) : {}) };
+        // El yaw es el vivo de la cámara (D-820): antes era el fijo del preset (presetAngles), constante.
+        return { player, ...withIntent({ ...s, player }, dirIntent(a.dir, s.ui.camera.yawDeg)) };
       }
       case "moveTo": return walkTo(s, a.x, a.z);
       case "interact": return interactWith(s, a.target, false);
@@ -231,6 +269,9 @@ export function createActions(store: GameStore) {
       case "openNotebook": return { ui: { ...s.ui, announcement: announcement(s, "announce.notebookSoon") } };
       case "zoomIn": return zoom(1)(s);
       case "zoomOut": return zoom(-1)(s);
+      case "look": return look(s, a.dx, a.dy);
+      case "run": return a.on === s.player.running ? {} : { player: { ...s.player, running: a.on } };
+      case "toggleOverview": return toggleOverview(s);
     }
   };
 
@@ -242,7 +283,7 @@ export function createActions(store: GameStore) {
     const v = s.player.velocity;
     // Quieto y sin intención: nada cambia y nadie se entera (el store no notifica 30 veces por segundo).
     if (s.player.intent.kind === "idle" && v.x === 0 && v.z === 0 && s.player.previous === pos) return {};
-    const { body, intent } = stepBody(diorama.grid, { x: pos.x, z: pos.z, vx: v.x, vz: v.z }, s.player.intent);
+    const { body, intent } = stepBody(diorama.grid, { x: pos.x, z: pos.z, vx: v.x, vz: v.z }, s.player.intent, s.player.running ? RUN_MOVEMENT : DEFAULT_MOVEMENT);
     // Si no se movió, se conserva el mismo objeto: así el próximo paso ve previous === position y no notifica.
     const position = body.x === pos.x && body.z === pos.z ? pos : { x: body.x, z: body.z };
     const nearby = nearbyInteractables(position, diorama.interactables);
@@ -259,7 +300,35 @@ export function createActions(store: GameStore) {
         simTick: s.player.simTick + 1,
       },
       world: sameIds(nearby, s.world.nearbyInteractables) ? s.world : { ...s.world, nearbyInteractables: nearby, focusedInteractable: nearby[0] ?? null },
+      ...recenter(s, body.vx, body.vz),
     };
+  };
+
+  /**
+   * Recentrado (D-820, AC25): caminando hacia adelante (W sin lateral) o hacia un clic, desde 1,5 s después de la
+   * última mirada, la cámara gira hacia la marcha a lo sumo 90°/s; nunca con "reducir movimiento". El tiempo sin mirar
+   * se cuenta en pasos de simulación con movimiento (quieto, el lazo no notifica al store).
+   */
+  const recenter = (s: GameState, vx: number, vz: number): Partial<GameState> => {
+    const c = s.ui.camera;
+    const sinceLookS = c.sinceLookS + SIM_DT;
+    const held = s.player.heldDir;
+    const forward = s.player.intent.kind === "path" || (s.player.intent.kind === "dir" && held.x === 0 && held.y > 0);
+    const moving = Math.hypot(vx, vz) > 0.2;
+    const yawDeg = moving
+      ? recenterYaw({
+        yawDeg: c.yawDeg, headingDeg: headingYaw(vx, vz), sinceLookS, dt: SIM_DT, forward,
+        reduceMotion: s.settings.accessibility.reduceMotion, t: zoomTAt(currentDistance(c), c.fitDistance),
+      })
+      : c.yawDeg;
+    return withCamera(s, { sinceLookS, yawDeg });
+  };
+
+  /** Cámara al entrar a un mapa: la de tercera persona por defecto, o el mapa entero si el ajuste es `perspective3D`. */
+  const cameraFor = (settings: Settings, fitDistance: number): CameraState => {
+    const overview = settings.camera === "perspective3D";
+    const c = initialCamera(overview);
+    return { ...c, fitDistance, zoomDistance: overview ? fitDistance : c.zoomDistance };
   };
 
   return {
@@ -269,7 +338,10 @@ export function createActions(store: GameStore) {
 
     /** Restaura ajustes guardados en el dispositivo (o preferencias del sistema). Sin anuncio. */
     restoreSettings(patch: SettingsPatch | null): void {
-      set((s) => ({ settings: applySettingsPatch(s.settings, patch) }));
+      set((s) => {
+        const settings = applySettingsPatch(s.settings, patch);
+        return { settings, ui: { ...s.ui, camera: cameraFor(settings, s.ui.camera.fitDistance) } };
+      });
     },
 
     /** Fin del arranque: tier sugerido por capacidades, fase inicial y menú principal abierto. */
@@ -528,6 +600,7 @@ export function createActions(store: GameStore) {
             ...s.player, position, previous: position, cell: cellAt(diorama.grid, position.x, position.z) as [number, number],
             velocity: { x: 0, z: 0 }, intent: IDLE, path: [],
           },
+          ui: { ...s.ui, camera: cameraFor(s.settings, s.ui.camera.fitDistance) },
         };
       });
     },
@@ -587,6 +660,34 @@ export function createActions(store: GameStore) {
     interact: (target: string | null = null) => set((s) => semantic(s, { type: "interact", target })),
     zoomIn: () => set((s) => semantic(s, { type: "zoomIn" })),
     zoomOut: () => set((s) => semantic(s, { type: "zoomOut" })),
+    toggleOverview: () => set((s) => semantic(s, { type: "toggleOverview" })),
+
+    /**
+     * Zoom a un t dado (0 = 2,5 m, 1 = el mapa entero). Lo usan la sonda de rendimiento (poses close, mid y full) y los
+     * tests; el jugador usa los pasos.
+     */
+    zoomTo(t: number): void {
+      set((s) => {
+        const c = s.ui.camera;
+        const overview = t >= 1;
+        const zoomDistance = overview ? c.fitDistance : zoomDistanceAt(t, c.fitDistance);
+        return withCamera(s, { overview, zoomDistance, prevZoomDistance: overview ? c.prevZoomDistance : zoomDistance });
+      });
+    },
+
+    /**
+     * world/camera avisa la distancia del mapa entero (cambia con el aspecto y el yaw). Con el mapa entero la distancia
+     * la sigue; si no, la pedida nunca pasa de ella (alejar de más no acumula pasos invisibles).
+     */
+    cameraFitted(fitDistance: number): void {
+      if (!Number.isFinite(fitDistance) || fitDistance <= THIRD_PERSON.minDistance) return;
+      set((s) => {
+        const c = s.ui.camera;
+        if (fitDistance === c.fitDistance) return {};
+        const zoomDistance = c.overview ? fitDistance : Math.min(c.zoomDistance, fitDistance);
+        return withCamera(s, { fitDistance, zoomDistance });
+      });
+    },
 
     /** Un paso fijo de simulación; lo llama el lazo de services/simulation. */
     simulationStep(): void {

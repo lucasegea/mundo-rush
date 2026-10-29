@@ -53,7 +53,8 @@ describe("applySettingsPatch", () => {
     expect(s.graphics).toEqual(DEFAULT_SETTINGS.graphics);
     expect(s.npcSpeed).toBe(DEFAULT_SETTINGS.npcSpeed);
     expect(s.helpLevel).toBe("auto");
-    expect(s.camera).toBe("perspective3D");
+    // Cambio registrado (open-world-3d T5, PD-5): el default de la cámara pasó de "perspective3D" a "thirdPerson".
+    expect(s.camera).toBe("thirdPerson");
     expect(s.input.endOfTurnMs).toBe(300);
   });
 

@@ -2,7 +2,9 @@
 // se traducen a estas acciones en apps/web/src/services/input/ o, para un clic sobre una malla, en el handler
 // de R3F vía state/bridge.ts. El núcleo, el store y world/ solo ven acciones.
 
-export const SEMANTIC_ACTIONS = ["move", "moveTo", "interact", "talk", "cancel", "openNotebook", "zoomIn", "zoomOut"] as const;
+export const SEMANTIC_ACTIONS = [
+  "move", "moveTo", "interact", "talk", "cancel", "openNotebook", "zoomIn", "zoomOut", "look", "run", "toggleOverview",
+] as const;
 export type SemanticActionType = (typeof SEMANTIC_ACTIONS)[number];
 
 export type SemanticAction =
@@ -16,7 +18,23 @@ export type SemanticAction =
   | { type: "cancel" }
   | { type: "openNotebook" }
   | { type: "zoomIn" }
-  | { type: "zoomOut" };
+  | { type: "zoomOut" }
+  /**
+   * Open-world-3d T4 (D-820): mirar. `dx`/`dy` en píxeles de pantalla (un arrastre pasado LOOK_DRAG_PX, o Q y R
+   * mantenidas, que services/input traduce a píxeles por paso); el reductor los lleva a yaw e inclinación.
+   */
+  | { type: "look"; dx: number; dy: number }
+  /** Correr mientras se mantiene (Shift): 5,5 m/s en vez de 3,5. */
+  | { type: "run"; on: boolean }
+  /** V: el mapa entero (t = 1) o de vuelta a la distancia anterior (PD-5). */
+  | { type: "toggleOverview" };
+
+/**
+ * Open-world-3d T4 (D-820): umbral único entre clic y arrastre, en píxeles. services/input lo importa del núcleo; world/
+ * (que no importa el núcleo en tiempo de ejecución) lo recibe por state/bridge.ts. Un arrastre más largo mira y nunca
+ * camina; uno más corto es un clic.
+ */
+export const LOOK_DRAG_PX = 6;
 
 /** Lo que el puntero tocó en el mundo (lo resuelve el raycast de R3F en world/). */
 export type PointerHit = { kind: "ground"; x: number; z: number } | { kind: "interactable"; id: string };

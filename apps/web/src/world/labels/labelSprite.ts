@@ -4,7 +4,7 @@
 // queda en blanco y el resto igual.
 import { CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, Sprite, type Texture } from "three";
 import { labelMaterial } from "../materials/registry";
-import { PERSPECTIVE } from "../camera/rig";
+import { THIRD_PERSON_VIEW } from "../camera/zoom";
 import { LABEL_FONT, LABEL_FONT_PX, labelLayout, labelScale, type LabelLayout } from "./labels";
 
 type Ctx = CanvasRenderingContext2D;
@@ -77,7 +77,8 @@ export function createNameLabel(name: string, highlighted: boolean): Sprite {
   const { texture, layout } = labelTexture(name, highlighted);
   const sprite = new Sprite(labelMaterial(texture));
   sprite.center.set(0.5, 0);
-  const [sx, sy] = labelScale(layout, PERSPECTIVE.fovDeg);
+  // Open-world-3d T5: el chip mide lo mismo en pantalla con el lente de la tercera persona (antes, el de perspective3D).
+  const [sx, sy] = labelScale(layout, THIRD_PERSON_VIEW.fovDeg);
   sprite.scale.set(sx, sy, 1);
   sprite.renderOrder = 10;
   sprite.userData["label"] = { name, highlighted };

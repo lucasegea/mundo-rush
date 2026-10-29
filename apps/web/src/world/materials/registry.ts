@@ -48,6 +48,14 @@ export function labelMaterial(map: Texture): SpriteMaterial {
   return tagMaterial(new SpriteMaterial({ map, sizeAttenuation: false, depthTest: false, depthWrite: false, transparent: true, fog: false }), "etiqueta");
 }
 
+/**
+ * Open-world-3d T5 (PD-5): la baliza del mapa entero (jugador y NPCs). Es de la clase `etiqueta` (un marcador de pantalla
+ * como el chip): sin test de profundidad, sin niebla, con la opacidad que fija el zoom cada cuadro.
+ */
+export function beaconMaterial(map: Texture): SpriteMaterial {
+  return tagMaterial(new SpriteMaterial({ map, depthTest: false, depthWrite: false, transparent: true, fog: false, opacity: 0 }), "etiqueta");
+}
+
 export interface MaterialAudit {
   /** Instancias distintas por clase. */
   byKind: Record<WorldMaterialKind, number>;

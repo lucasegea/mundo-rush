@@ -4,7 +4,10 @@
 // R11 (revisión de arquitectura 2026-10-12); `xrTabletop` queda declarado (futuro de E-XR, no código muerto).
 import type { CameraPresetId } from "@lg/core";
 
+// Open-world-3d T5 (PD-5): `thirdPerson` es la cámara del mapa; `perspective3D` sigue registrado y lo dibuja la misma
+// tercera persona con el mapa entero (t = 1).
 export const CAMERA_RIG_PRESETS: Readonly<Record<CameraPresetId, "implemented" | "declared">> = {
+  thirdPerson: "implemented",
   dialogueFrame: "implemented",
   perspective3D: "implemented",
   xrTabletop: "declared",

@@ -29,14 +29,16 @@ describe("A1 (núcleo): perspective3D es el lente largo de 50° / 45°", () => {
   });
 });
 
-describe("A11 ajustes: solo perspective3D; un valor viejo cae al default", () => {
-  test("CAMERA_PRESETS es exactamente ['perspective3D'] y es el default", () => {
-    expect([...CAMERA_PRESETS]).toEqual(["perspective3D"]);
-    expect(DEFAULT_SETTINGS.camera).toBe("perspective3D");
+// Cambio registrado (open-world-3d T5, PD-5 amienda D-208 para la vista por defecto, AC27): antes CAMERA_PRESETS era
+// exactamente ["perspective3D"] y ese era el default; ahora `thirdPerson` es el default y `perspective3D` sigue elegible.
+describe("A11 ajustes: thirdPerson por defecto, perspective3D elegible; un valor viejo cae al default", () => {
+  test("CAMERA_PRESETS es exactamente ['thirdPerson', 'perspective3D'] y thirdPerson es el default", () => {
+    expect([...CAMERA_PRESETS]).toEqual(["thirdPerson", "perspective3D"]);
+    expect(DEFAULT_SETTINGS.camera).toBe("thirdPerson");
   });
-  test.each(["topdownOrtho", "isoOrtho"])("un ajuste guardado con camera: %s carga como perspective3D", (old) => {
+  test.each(["topdownOrtho", "isoOrtho"])("un ajuste guardado con camera: %s carga como thirdPerson", (old) => {
     const s = applySettingsPatch(DEFAULT_SETTINGS, { camera: old } as unknown as SettingsPatch);
-    expect(s.camera).toBe("perspective3D");
+    expect(s.camera).toBe("thirdPerson");
   });
 });
 

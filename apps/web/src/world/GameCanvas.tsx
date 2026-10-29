@@ -22,6 +22,7 @@ import { PLAYER_LOOK_ID } from "./actors/looks";
 import { Player } from "./actors/Player";
 import { CameraRig } from "./camera/CameraRig";
 import { TWO_SHOT, viewScale } from "./camera/rig";
+import { zoomDistanceAt } from "./camera/zoom";
 import { Diorama } from "./dioramas/Diorama";
 import { buildDioramaScene } from "./dioramas/scene";
 import { FrameRegulator } from "./FrameRegulator";
@@ -54,8 +55,10 @@ export interface WorldTierParams {
   density: SceneDensity;
 }
 
-/** Atributo del contenedor: services/input solo hace zoom con la rueda sobre el mapa. */
+/** Atributo del contenedor: services/input solo hace zoom con la rueda (y mira con el arrastre) sobre el mapa. */
 const WORLD_SURFACE = { "data-lg-world": "" };
+/** Distancia del mapa entero de referencia para lo que depende del zoom en React (post); la cámara usa la viva. */
+const VIEW_FIT_REFERENCE = 150;
 
 export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record<SelectableTier, WorldTierParams>> }) {
   const map = useGameView(selectMapView);
@@ -72,13 +75,15 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const inScene = render.conversationFps !== null;
   const animatedOnly = useMemo(() => sceneAnimated(inScene, [PLAYER_LOOK_ID, conversation?.npcId ?? null]), [inScene, conversation?.npcId]);
   const fog = fogFor(1, DENSITY[density].fogScale);
-  // Distancia pedida de la cámara: la del plano de a dos durante la charla, la del paso de zoom en el mapa.
-  const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : render.zoomDistance;
+  // Distancia pedida de la cámara (open-world-3d T5): la del plano de a dos durante la charla; en el mapa, una referencia
+  // del t de zoom cuantizado (post y etiquetas). La exacta la lleva CameraRig por cuadro.
+  const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : zoomDistanceAt(render.zoomBand, VIEW_FIT_REFERENCE);
   const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density) : null), [map.diorama, density]);
   useEffect(() => () => scene?.dispose(), [scene]);
 
   return (
-    <div {...WORLD_SURFACE} className="fixed inset-0 z-0" aria-hidden="true">
+    // touch-action: none (D-820): un arrastre táctil mira en vez de desplazar la página (Pointer Events, sin pointer lock).
+    <div {...WORLD_SURFACE} className="fixed inset-0 z-0" style={{ touchAction: "none" }} aria-hidden="true">
       <Canvas
         frameloop={loop.frameloop}
         dpr={[1, params.maxDpr ?? 1]}
@@ -109,6 +114,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             highlightId={highlightId}
             sceneNpcId={conversation?.npcId ?? null}
             viewDistance={viewDistance}
+            zoomT={render.zoomBand}
             cut={cut}
             activity={activity}
             maxAnimated={params.maxAnimatedCharacters}
@@ -122,13 +128,12 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} /> : null}
         <CameraRig
           preset={render.preset}
-          pitchDeg={render.pitchDeg}
-          yawDeg={render.yawDeg}
-          distance={render.zoomDistance}
           motion={render.cameraMotion}
           conversation={conversation}
           obstacles={scene?.obstacles ?? []}
           heightAt={scene ? scene.terrain.heightAt : null}
+          bounds={map.diorama?.bounds ?? null}
+          fogScale={DENSITY[density].fogScale}
         />
         {post !== "none" ? (
           <Suspense fallback={null}>

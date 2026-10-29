@@ -33,15 +33,27 @@ export const TIERS = ["low", "medium", "high"] as const;
 export type Tier = (typeof TIERS)[number];
 
 /**
- * Poses de cámara. Al cierre de M1 solo existe `spawn` (la cámara por defecto al entrar). SEAM (T5): `close` (t = 0,
- * 2,5 m), `mid` (t = 0,5) y `full` (t = 1) llegan con el zoom continuo de `thirdPerson`; SEAM (T6): `hilltop` con la
- * pose con nombre del mapa grande y los tres NPCs a la vista. Una pose sin `apply` se informa como "no disponible".
+ * Poses de cámara. `spawn` es la cámara por defecto al entrar (6 m detrás); desde open-world-3d T5 el zoom continuo de
+ * `thirdPerson` da `close` (t = 0, 2,5 m), `mid` (t = 0,5) y `full` (t = 1, el mapa entero), puestas con la acción
+ * `zoomTo` del store (el calentamiento de 12 s cubre el suavizado). SEAM (T6): `hilltop` con la pose con nombre del mapa
+ * grande y los tres NPCs a la vista. Una pose sin `apply` se informa como "no disponible".
  */
 export const POSES = ["spawn", "close", "mid", "full", "hilltop"] as const;
 export type Pose = (typeof POSES)[number];
-const POSE_APPLY: Partial<Record<Pose, (page: Page) => Promise<void>>> = {
-  spawn: async () => undefined,
+/** t de zoom de cada pose del zoom continuo; `spawn` vuelve a la distancia de entrada. */
+export const POSE_ZOOM_T: Readonly<Partial<Record<Pose, number | "default">>> = { spawn: "default", close: 0, mid: 0.5, full: 1 };
+const zoomPose = (t: number | "default") => async (page: Page): Promise<void> => {
+  await page.evaluate(`(async () => {
+    const { gameStore } = await import("/src/state/store.ts");
+    const { actions } = await import("/src/state/actions.ts");
+    const c = gameStore.getState().ui.camera;
+    const t = ${JSON.stringify(t)} === "default" ? Math.log(6 / 2.5) / Math.log(c.fitDistance / 2.5) : ${JSON.stringify(t)};
+    actions.zoomTo(t);
+  })()`);
 };
+const POSE_APPLY: Partial<Record<Pose, (page: Page) => Promise<void>>> = Object.fromEntries(
+  Object.entries(POSE_ZOOM_T).map(([pose, t]) => [pose, zoomPose(t as number | "default")]),
+);
 export const poseAvailable = (p: Pose): boolean => POSE_APPLY[p] !== undefined;
 
 /** Columnas: la del gate y las dos informativas (O-5). */
