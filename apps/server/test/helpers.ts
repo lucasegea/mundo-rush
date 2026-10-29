@@ -11,6 +11,7 @@ import { loadModelsConfig, type ModelsConfig } from "../src/config/models.ts";
 import { createSceneSession, type Scheduler, type SceneSession } from "../src/scene-runtime/runtime.ts";
 import { createMemoryEvidenceStore, type EvidenceStore } from "../src/store/evidence.ts";
 import type { ModerationProvider } from "../src/providers/moderation.ts";
+import type { TextModelProvider } from "../src/providers/text.ts";
 import { createMemorySafetyStore, type SafetyEventStore } from "../src/store/safety.ts";
 import { fakeNpcModel, fakeObserverModel, observerJson, type CriteriaRule, type FakeModel } from "./fakes/text-model.ts";
 import type { VoiceProviderFactory } from "../src/providers/types.ts";
@@ -98,6 +99,8 @@ export interface HarnessOptions {
   rules?: readonly CriteriaRule[];
   observe?: Parameters<typeof fakeObserverModel>[0];
   replies?: readonly string[];
+  /** open-world-3d T1: un modelo de NPC propio (p. ej. uno que rechaza) en lugar del falso de guion. */
+  npcModel?: TextModelProvider;
   evidence?: EvidenceStore;
   content?: () => ServerContent;
   /** F4.2: clasificador de moderación falso y registro de safety_events. */
@@ -129,7 +132,7 @@ export function harness(opts: HarnessOptions = {}): Harness {
   const costErrors: string[] = [];
   let n = 0;
   const open = (): SceneSession => createSceneSession({
-    content: opts.content ?? realContent, npcModel: npc, observerModel: observer, models, evidence,
+    content: opts.content ?? realContent, npcModel: opts.npcModel ?? npc, observerModel: observer, models, evidence,
     accountId: "op-local", clock, scheduler, newId: () => `id-${++n}`, safety,
     ...(opts.moderation ? { moderation: opts.moderation } : {}),
     ...(opts.voice !== undefined ? { voice: opts.voice } : {}), ...(opts.ledger ? { ledger: opts.ledger } : {}),

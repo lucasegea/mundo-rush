@@ -127,6 +127,17 @@ export const SAFETY_LAYERS = ["input", "output", "observer"] as const;
 export type SafetyLayer = (typeof SAFETY_LAYERS)[number];
 
 export const NOTICE_CODES = ["observer_invalid", "model_unavailable", "containment"] as const;
+/**
+ * Causa estructurada de un `model_unavailable` del NPC en texto (open-world-3d T1). La arma el servidor SOLO desde
+ * `ProviderError.code` y `status`, nunca desde el texto del error (que puede traer una clave o un cuerpo crudo).
+ */
+export const NOTICE_CAUSE_KINDS = ["http", "timeout", "empty", "truncated", "unavailable", "unknown"] as const;
+export type NoticeCauseKind = (typeof NOTICE_CAUSE_KINDS)[number];
+export const NoticeCauseSchema = z.strictObject({
+  kind: z.enum(NOTICE_CAUSE_KINDS),
+  status: z.number().int().min(100).max(599).nullable(),
+});
+export type NoticeCause = z.infer<typeof NoticeCauseSchema>;
 /** `not_voice`: un mensaje o frame de voz en una escena que no está en modo voz. */
 export const ERROR_CODES = ["bad_message", "not_implemented", "scene_busy", "no_scene", "unknown_npc", "not_your_turn", "not_voice"] as const;
 
@@ -210,7 +221,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     final: z.boolean(),
   }),
   /** Evento de error que no corta la escena (p. ej. el observador no validó dos veces). */
-  z.strictObject({ type: z.literal("scene.notice"), code: z.enum(NOTICE_CODES), message: z.string() }),
+  z.strictObject({ type: z.literal("scene.notice"), code: z.enum(NOTICE_CODES), message: z.string(), cause: NoticeCauseSchema.optional() }),
   z.strictObject({ type: z.literal("error"), code: z.enum(ERROR_CODES), message: z.string() }),
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

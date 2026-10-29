@@ -44,4 +44,14 @@ persona_prompt: >
   short.
 
   === END PERSONA ===
+apariencia:
+  cuerpo: tunica
+  remera: casa-1
+  pantalon: pantalon-2
+  piel: piel-2
+  pelo: pelo
+  peinado: corto
+  sombrero: null
+  cuello: null
+  escala: 1
 estado: draft

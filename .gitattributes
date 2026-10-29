@@ -4,3 +4,10 @@
 *.glb binary
 *.ogg binary
 *.wav binary
+# open-world-3d T2(d), D-830: el código de terceros y los binarios nuevos se versionan byte a byte (el sha256 del
+# registro cubre los bytes exactos en todo sistema operativo, con o sin core.autocrlf).
+tooling/vendor/** -text
+apps/web/public/decoders/** -text
+*.ktx2 binary
+*.wasm binary
+*.bin binary

@@ -11,25 +11,35 @@
 //   - Solo se matan los PIDs que este script arranco (nunca por nombre de proceso).
 //   - "Caminar" usa las mismas acciones del store que el clic y el teclado (moveTo / interact) con el juego real corriendo;
 //     el store se alcanza importando los modulos del propio Vite (misma instancia que la app).
+//   - open-world-3d T2(f) (D-833, AC12): el GL sale de `LG_GL=gpu|igpu|swiftshader` (default `gpu`, la NVIDIA) por el
+//     lanzador compartido scripts/dev/gl-mode.ts, que verifica el renderer desenmascarado y falla si no es el del modo; un
+//     modo desconocido sale con 2 antes de abrir nada. El viewport es 1280x720 (el de la sonda y el mockup).
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createServer, connect } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import type { Page } from "playwright-core";
+import { closeAllGlBrowsers, parseGlMode, withGlBrowser, type GlMode } from "./gl-mode.ts";
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 export const SHOTS_DIR = join(REPO_ROOT, "(documento interno)");
 export const UNIVERSE = "U-GALEANO";
 
-/** Umbrales del analisis de pixeles (AC12/AC17): colores cuantizados distintos y tope de un solo color. */
-export const MIN_DISTINCT_COLORS = 12;
-export const MAX_DOMINANT_SHARE = 0.6;
+/**
+ * Umbrales del analisis de pixeles (AC12/AC17): colores cuantizados distintos y tope de un solo color. Reajustados UNA
+ * vez sobre el render de la GPU (open-world-3d T3, S-OW-18; antes 12 y 0,6, del render de tiles en SwiftShader): el
+ * muelle en formato maqueta medido en LG_GL=gpu dio 126 colores y 60,9 % de pasto dominante, y la campesino 141 y 35 %.
+ * Prueba roja (misma cuantización): un recorte de solo pasto de esa captura da 6 colores y 96,5 %, y un color liso 1 y
+ * 100 %; los dos fallan.
+ */
+export const MIN_DISTINCT_COLORS = 40;
+export const MAX_DOMINANT_SHARE = 0.75;
 
 export interface PixelStats { distinct: number; dominantShare: number }
 
-/** AC12/AC17: un mapa de tiles no es uniforme. Pura, para probarla sin navegador. */
+/** AC12/AC17 (AC16 de open-world-3d): el mapa renderizado no es uniforme. Pura, para probarla sin navegador. */
 export const isNonUniform = (s: PixelStats): boolean => s.distinct >= MIN_DISTINCT_COLORS && s.dominantShare <= MAX_DOMINANT_SHARE;
 
 /** Carpeta de Chromium: LG_CHROMIUM manda; si no, el `chromium-*` mas nuevo de la cache de Playwright. Nunca instala. */
@@ -77,21 +87,25 @@ async function waitFor(what: string, test: () => Promise<boolean>, ms = 60_000):
 }
 
 /** Mata SOLO el arbol de este PID (en Windows el hijo de node puede tener nietos). */
-function killTree(child: ChildProcess): void {
+export function killTree(child: ChildProcess): void {
   if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return;
   if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
   else child.kill();
 }
 
-interface Stack { url: string; stop: () => void }
+export interface Stack { url: string; stop: () => void }
 
-/** Servidor de escenas + Vite, con modo operador y modelos guionados, en puertos libres. */
-async function startStack(universe: string | null): Promise<Stack> {
+/**
+ * Servidor de escenas + Vite, con modo operador y modelos guionados, en puertos libres. `extraEnv` llega al servidor y a
+ * Vite (la sonda de rendimiento pone ahi VITE_LG_PERF_PROBE=1). Con `previewDir` sirve ese build con `vite preview` (que
+ * hereda el proxy de /scene) en lugar del servidor de desarrollo (la carga de `perf:probe --build`).
+ */
+export async function startStack(universe: string | null, extraEnv: NodeJS.ProcessEnv = {}, opts: { previewDir?: string } = {}): Promise<Stack> {
   const build = spawnSync(process.execPath, [join(REPO_ROOT, "scripts/content/build.ts"), ...(universe ? [`--universe=${universe}`] : [])], { cwd: REPO_ROOT, stdio: "inherit" });
   if (build.status !== 0) throw new Error(`el contenido ${universe ?? "campesino"} no compilo`);
   const [serverPort, webPort] = [await freePort(), await freePort()];
   const env: NodeJS.ProcessEnv = {
-    ...process.env, LG_OPERATOR_MODE: "1", LG_FAKE_MODELS: "1", LG_PORT: String(serverPort),
+    ...process.env, ...extraEnv, LG_OPERATOR_MODE: "1", LG_FAKE_MODELS: "1", LG_PORT: String(serverPort),
     ...(universe ? { LG_UNIVERSE: universe } : {}),
   };
   if (!universe) delete env["LG_UNIVERSE"];
@@ -99,7 +113,7 @@ async function startStack(universe: string | null): Promise<Stack> {
   const viteBin = join(dirname(createRequire(join(webDir, "package.json")).resolve("vite/package.json")), "bin/vite.js");
   const children: ChildProcess[] = [
     spawn(process.execPath, [join(REPO_ROOT, "apps/server/src/main.ts")], { cwd: REPO_ROOT, env, stdio: "inherit" }),
-    spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(webPort), "--strictPort"], { cwd: webDir, env, stdio: "inherit" }),
+    spawn(process.execPath, [viteBin, ...(opts.previewDir ? ["preview", "--outDir", opts.previewDir] : []), "--host", "127.0.0.1", "--port", String(webPort), "--strictPort"], { cwd: webDir, env, stdio: "inherit" }),
   ];
   const stop = (): void => { for (const c of children) killTree(c); };
   try {
@@ -113,17 +127,6 @@ async function startStack(universe: string | null): Promise<Stack> {
 }
 
 // ---------- navegador ----------
-
-/** Cierre garantizado: cada paso se intenta aunque el anterior falle, con tope de tiempo para no colgarse. */
-async function closeBrowser(context: BrowserContext | null, browser: Browser | null): Promise<void> {
-  const bounded = (p: Promise<unknown> | undefined): Promise<unknown> =>
-    Promise.race([p ?? Promise.resolve(), new Promise((r) => setTimeout(r, 10_000))]).catch(() => undefined);
-  await bounded(context?.close());
-  await bounded(browser?.close());
-}
-
-/** Navegador vivo de la caminata en curso: las senales (Ctrl+C) lo cierran tambien. */
-let live: { browser: Browser | null; context: BrowserContext | null } = { browser: null, context: null };
 
 const checks: { ac: string; ok: boolean; detail: string }[] = [];
 const check = (ac: string, ok: boolean, detail: string): void => {
@@ -163,7 +166,7 @@ async function canvasStats(page: Page): Promise<PixelStats> {
 const WORLD_READY = "document.querySelector('canvas') !== null";
 
 /** Menu: espera `#menu-world` habilitado y entra al mapa. */
-async function enterWorld(page: Page): Promise<void> {
+export async function enterWorld(page: Page): Promise<void> {
   await page.waitForSelector("#menu-world:not([aria-disabled='true'])", { timeout: 30_000 });
   await page.click("#menu-world");
   await page.waitForFunction(WORLD_READY, undefined, { timeout: 30_000 });
@@ -283,20 +286,13 @@ async function walkCampesino(page: Page, url: string): Promise<void> {
   check("AC17", isNonUniform(stats), `colores ${stats.distinct}, dominante ${(stats.dominantShare * 100).toFixed(1)}%, aviso con "${name}"`);
 }
 
-/** Abre el navegador para una caminata; el finally lo cierra pase lo que pase. */
-async function withBrowser(exe: string, run: (page: Page) => Promise<void>, failOnPurpose: boolean): Promise<void> {
-  let browser: Browser | null = null;
-  let context: BrowserContext | null = null;
-  try {
-    browser = await chromium.launch({
-      executablePath: exe,
-      headless: process.env["LG_WALK_HEADED"] !== "1",
-      args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--enable-webgl"],
-    });
-    live = { browser, context: null };
-    context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-    live = { browser, context };
-    const page = await context.newPage();
+/**
+ * Abre el navegador del modo de GL para una caminata (scripts/dev/gl-mode.ts: el finally de `withGlBrowser` lo cierra
+ * pase lo que pase, tambien con `--fail-on-purpose`). Un renderer que no es el del modo es una falla de la corrida.
+ */
+async function withBrowser(exe: string, mode: GlMode, run: (page: Page) => Promise<void>, failOnPurpose: boolean): Promise<void> {
+  await withGlBrowser(exe, { mode, headless: process.env["LG_WALK_HEADED"] !== "1", failOnPurpose }, async (page, info) => {
+    check("GL", true, `modo ${info.mode}${info.adapterLuidFallback ? " (respaldo --use-adapter-luid)" : ""}, renderer ${info.renderer}`);
     const errors: string[] = [];
     // El 404 de /favicon.ico lo pide el propio navegador (la app no declara icono): ruido de Chromium, no un error del juego.
     page.on("console", (m) => { if (m.type() === "error" && !m.location().url.endsWith("/favicon.ico")) errors.push(`${m.text()} (${m.location().url})`); });
@@ -309,7 +305,6 @@ async function withBrowser(exe: string, run: (page: Page) => Promise<void>, fail
       });
     }
     page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
-    if (failOnPurpose) throw new Error("--fail-on-purpose: falla deliberada con el navegador abierto");
     try {
       await run(page);
     } catch (e) {
@@ -317,15 +312,19 @@ async function withBrowser(exe: string, run: (page: Page) => Promise<void>, fail
       throw e;
     }
     check("console", errors.length === 0, errors.length === 0 ? "cero console.error" : errors.slice(0, 3).join(" | "));
-  } finally {
-    await closeBrowser(context, browser);
-    live = { browser: null, context: null };
-    console.log("[walk] navegador cerrado");
-  }
+  });
 }
 
 async function main(): Promise<void> {
   const failOnPurpose = process.argv.includes("--fail-on-purpose") || process.env["LG_WALK_FAIL"] === "1";
+  let mode: GlMode;
+  try {
+    mode = parseGlMode(process.env["LG_GL"]);
+  } catch (e) {
+    console.error(`[walk] ${e instanceof Error ? e.message : String(e)}`);
+    process.exitCode = 2;
+    return;
+  }
   const exe = findChromium();
   if (!exe) {
     console.error("[walk] no hay Chromium en la cache de Playwright (ms-playwright). Este script no instala nada: instala uno o pasa LG_CHROMIUM=<ruta>.");
@@ -337,16 +336,16 @@ async function main(): Promise<void> {
   rmSync(join(SHOTS_DIR, "fallo.png"), { force: true }); // la captura de una falla vieja no debe confundir a esta corrida
   let stack: Stack | null = null;
   const onSignal = (): void => {
-    void closeBrowser(live.context, live.browser).finally(() => { stack?.stop(); process.exit(130); });
+    void closeAllGlBrowsers().finally(() => { stack?.stop(); process.exit(130); });
   };
   process.once("SIGINT", onSignal);
   process.once("SIGTERM", onSignal);
   try {
     stack = await startStack(UNIVERSE);
-    await withBrowser(exe, (page) => walkUniverse(page, stack?.url ?? ""), failOnPurpose);
+    await withBrowser(exe, mode, (page) => walkUniverse(page, stack?.url ?? ""), failOnPurpose);
     stack.stop();
     stack = await startStack(null);
-    await withBrowser(exe, (page) => walkCampesino(page, stack?.url ?? ""), failOnPurpose);
+    await withBrowser(exe, mode, (page) => walkCampesino(page, stack?.url ?? ""), failOnPurpose);
   } catch (e) {
     console.error(`[walk] ERROR ${e instanceof Error ? e.message : String(e)}`);
     check("run", false, "la caminata termino con error");

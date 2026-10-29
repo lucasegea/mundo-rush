@@ -31,6 +31,8 @@ export default defineConfig({
       pkg("core"),
       pkg("protocol"),
       pkg("content-schema"),
+      // Plan estetica-c M2: paleta, pintura y regla del bisel puras (@lg/art).
+      pkg("art"),
       { test: { name: "@lg/server", root: "./apps/server", include: ["test/**/*.test.ts"], testTimeout: 30000 } },
       "./apps/web/vitest.config.ts",
       { test: { name: "lint-boundaries", root: "./scripts/lint", include: ["**/*.test.ts"], testTimeout: 30000 } },
@@ -38,6 +40,8 @@ export default defineConfig({
       { test: { name: "adr", root: "./scripts/adr", include: ["**/*.test.ts"] } },
       // F1.2: el contenido real compila; lints, red, retirados, filtros, salida e incremental (A2-A9, A11).
       { test: { name: "content", root: "./scripts/content", include: ["**/*.test.ts"], testTimeout: 30000 } },
+      // Plan estetica-c M2: pipeline de assets 3D (optimize, registro de licencias, presupuestos de descarga).
+      { test: { name: "assets", root: "./scripts/assets", include: ["**/*.test.ts"], testTimeout: 60000 } },
       // F1.3 A4: contraste de los tokens del HUD.
       { test: { name: "a11y", root: "./scripts/a11y", include: ["**/*.test.ts"] } },
       // M6.4: lo puro de la caminata de navegador a pedido (D-815).

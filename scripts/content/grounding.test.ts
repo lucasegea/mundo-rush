@@ -77,6 +77,10 @@ describe("M4 grounding gate — teeth end-to-end por el build (AC9)", () => {
     temporales.push(root);
     cpSync(join(REPO, "content", "universes", "U-GALEANO"),
       join(root, "content", "universes", "U-GALEANO"), { recursive: true });
+    // open-world-3d T3: el universo compila junto con el registro global (sus NPCs usan los cuerpos registrados), y el
+    // registro exige que cada archivo nombrado exista: van también los modelos servidos.
+    for (const f of ["assets-registry.yaml", "creditos.yaml"]) cpSync(join(REPO, "content", f), join(root, "content", f));
+    cpSync(join(REPO, "apps", "web", "public", "models"), join(root, "apps", "web", "public", "models"), { recursive: true });
     return { root, conv: join(root, "content", "universes", "U-GALEANO", "conversaciones", "CONV-POTOSI.yaml") };
   };
   const log = (): void => {};

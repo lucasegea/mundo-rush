@@ -24,7 +24,12 @@ export type FontChoice = (typeof FONTS)[number];
 export const COLOR_VISION_MODES = ["none", "protanopia", "deuteranopia", "tritanopia"] as const;
 export type ColorVisionMode = (typeof COLOR_VISION_MODES)[number];
 
-export const CAMERA_PRESETS = ["topdownOrtho", "isoOrtho"] as const;
+/**
+ * Cámara que el jugador puede elegir (D-207): solo el lente largo `perspective3D`. Un ajuste guardado viejo (uno de
+ * los presets ortográficos de HD-2D, retirados de R11 en el plan estetica-c M7) no está en la lista y `oneOf` lo lleva
+ * al default al cargar.
+ */
+export const CAMERA_PRESETS = ["perspective3D"] as const;
 export type CameraPreset = (typeof CAMERA_PRESETS)[number];
 
 export const VOLUME_CHANNELS = ["npc", "lumi", "music", "ambient", "sfx"] as const;
@@ -85,7 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
   npcSpeed: "slowest", // GDD §2.6: A0 = Muy lenta
   helpLevel: "auto",
   graphics: { tier: "auto", suggestedTier: "dialog-only" },
-  camera: "topdownOrtho",
+  camera: "perspective3D",
 };
 
 /** Un cambio parcial de ajustes: lo que la UI o el guardado local mandan. Se sanea campo por campo. */

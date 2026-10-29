@@ -7,7 +7,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compilarContenido, compilarIncremental, compilarManifiesto, formatearHallazgo } from "@lg/content-schema";
+import { compilarContenido, compilarIncremental, compilarManifiesto, formatearHallazgo, necesitaRegistro } from "@lg/content-schema";
 import type { ArchivoFuente, Hallazgo, Modo, Resultado } from "@lg/content-schema";
 import { chequearGrounding } from "./grounding.ts";
 
@@ -43,7 +43,51 @@ export const leerContenido = (root: string, universe?: string): ArchivoFuente[] 
     }
   };
   recorrer(base);
-  return out;
+  // open-world-3d T3: un universo se lee junto con el registro global de assets y créditos (sus dioramas usan los
+  // mismos modelos que la campesino); antes solo `construir` los sumaba y quien leía el universo directo no los tenía.
+  return universe ? conRegistroGlobal(root, out) : out;
+};
+
+/**
+ * Archivos servidos en apps/web/public que exigen registro de licencia (models, textures, audio, sprites; 03 §6.4.2),
+ * con su ruta desde root. El contenido generado (public/content/) no entra.
+ */
+export const leerPublicos = (root: string): string[] => {
+  const out: string[] = [];
+  const recorrer = (dir: string): void => {
+    let entradas;
+    try {
+      entradas = readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw e;
+    }
+    for (const e of entradas) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) recorrer(p);
+      else out.push(aPosix(relative(root, p)));
+    }
+  };
+  recorrer(join(root, "apps/web/public"));
+  return out.filter(necesitaRegistro).sort();
+};
+
+/**
+ * El registro de licencias y los créditos son GLOBALES: los archivos servidos en apps/web/public son de todos los
+ * universos. Un universo namespaceado sin registro propio compila contra los de `content/` (open-world-3d T2), así
+ * sus `modelo/*` y los archivos servidos se cruzan con el mismo registro que la campesino.
+ */
+const RUTAS_GLOBALES = ["content/assets-registry.yaml", "content/creditos.yaml"] as const;
+const conRegistroGlobal = (root: string, archivos: readonly ArchivoFuente[]): ArchivoFuente[] => {
+  const extra = RUTAS_GLOBALES.filter((ruta) => !archivos.some((a) => a.ruta === ruta)).flatMap((ruta) => {
+    try {
+      return [{ ruta, texto: readFileSync(join(root, ruta), "utf8") }];
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw e;
+    }
+  });
+  return [...archivos, ...extra];
 };
 
 /**
@@ -104,7 +148,7 @@ export const construir = ({ root, modo, universe, log }: Opciones): number => {
   const archivos = leerContenido(root, universe);
   // D-804/D-805: un universo con solo cabeza compila como scaffold (M1); con dataset, el compilador completo (M3).
   if (universe && archivos.every((a) => a.ruta === CABEZA_UNIVERSO)) return construirScaffold(universe, archivos, log);
-  const r = compilarContenido(archivos, modo);
+  const r = compilarContenido(archivos, modo, leerPublicos(root));
   imprimir(r.hallazgos, log);
   const avisos = r.hallazgos.length - r.errores.length;
   if (!r.salida) {
@@ -144,7 +188,7 @@ export const crearCompiladorIncremental = (root: string, modo: Modo = "dev") => 
           throw e;
         }
       });
-      const r = compilarIncremental(base, cambios, modo);
+      const r = compilarIncremental(base, cambios, modo, leerPublicos(root));
       if (!r.salida) return { tocados: r.tocados, errores: r.errores, escrito: false };
       escribirSalida(root, r, modo);
       base = r.archivos;

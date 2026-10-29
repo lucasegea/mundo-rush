@@ -1,6 +1,9 @@
 /* Tokens del HUD (03 §2.6, GDD §5.4): variables CSS --lg-color-* y --lg-font-scale. Tailwind las expone como
    utilidades (bg-paper, text-ink, …). Todo texto en rem: el tamaño de texto (100-200 %) escala el HUD entero
-   cambiando un solo valor raíz. scripts/a11y/contrast.ts lee ESTE archivo y exige ≥ 4,5:1 en los pares de texto. */
+   cambiando un solo valor raíz. scripts/a11y/contrast.ts lee ESTE archivo y exige ≥ 4,5:1 en los pares de texto.
+   Plan estetica-c M4 ("papel y tinta", propuesta C §6 y §8): los tokens que vienen de la paleta de arte (papel, tinta,
+   tinta-suave, ámbar, ámbar-osc, texto del chip, borde de tarjeta) tienen el MISMO hex que @lg/art; check:contrast
+   falla si difieren (PALETTE_TOKENS en scripts/a11y/contrast.ts). */
 @import "tailwindcss";
 
 :root {
@@ -8,13 +11,22 @@
   --lg-color-paper: #fbf6ec;
   --lg-color-surface: #ffffff;
   --lg-color-ink: #2a2a33;
-  --lg-color-ink-muted: #55545f;
+  --lg-color-ink-muted: #5b5664;
   --lg-color-border: #8a857a;
   --lg-color-accent: #2e5e86;
   --lg-color-on-accent: #ffffff;
   --lg-color-accent-soft: #dce8f2;
   --lg-color-focus: #b3471d;
   --lg-color-danger: #a12a1c;
+
+  /* "Papel y tinta" de la propuesta C §6 (plan estetica-c M4): ámbar del medidor y del chip del nombre, su borde
+     oscuro (el ámbar lleno no contrasta con el papel: el estado va además por borde, negrita y rayado), el texto del
+     chip, el borde cálido de las tarjetas y el punto verde de "tu turno". */
+  --lg-color-amber: #f2a93b;
+  --lg-color-amber-strong: #b86e12;
+  --lg-color-on-amber: #2a1a05;
+  --lg-color-card-line: #e6dcc8;
+  --lg-color-turn: #3f7a45;
 
   /* Paleta del valle (GDD §5.4) para los retratos SVG por código (D-030). */
   --lg-color-agua: #5fb3c8;
@@ -33,7 +45,12 @@
   --lg-color-luz-bicho: #ffd27a;
 
   --lg-font-scale: 1.25;
-  --lg-font-sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  /* Sans redondeada de la propuesta C §8, solo con fuentes del sistema (plan estetica-c §9 pregunta 5: sin descargas). */
+  --lg-font-sans: ui-rounded, "Segoe UI Rounded", Nunito, "Segoe UI", sans-serif;
+
+  /* Tarjetas: radio de 14 px y sombra cálida (propuesta C §8). */
+  --lg-radius-card: 14px;
+  --lg-shadow-card: 0 0.375rem 1.25rem -0.25rem rgb(122 86 38 / 0.28);
 }
 
 /* Alto contraste: blanco y negro puros (objetivo AAA). */
@@ -61,7 +78,14 @@
   --color-accent-soft: var(--lg-color-accent-soft);
   --color-focus: var(--lg-color-focus);
   --color-danger: var(--lg-color-danger);
+  --color-amber: var(--lg-color-amber);
+  --color-amber-strong: var(--lg-color-amber-strong);
+  --color-on-amber: var(--lg-color-on-amber);
+  --color-card-line: var(--lg-color-card-line);
+  --color-turn: var(--lg-color-turn);
   --font-sans: var(--lg-font-sans);
+  --radius-card: var(--lg-radius-card);
+  --shadow-card: var(--lg-shadow-card);
 }
 
 html {
@@ -80,6 +104,24 @@ body {
 :focus-visible {
   outline: 3px solid var(--lg-color-focus);
   outline-offset: 2px;
+}
+
+/* Segmento actual del medidor: rayado ámbar (forma, no solo color; propuesta C §6). */
+.lg-stripes {
+  background-image: repeating-linear-gradient(135deg, var(--lg-color-amber) 0 0.25rem, transparent 0.25rem 0.5rem);
+}
+
+/* Punto de "tu turno" que late. Con "reducir movimiento" el componente ni le pone la clase (data-pulse="false"), y la
+   regla de abajo lo frena igual si llegara a tenerla. */
+@keyframes lg-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+.lg-pulse {
+  animation: lg-pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg-pulse { animation: none; }
 }
 
 /* Reducir movimiento: el ajuste del jugador (el default sale de prefers-reduced-motion al arrancar). */

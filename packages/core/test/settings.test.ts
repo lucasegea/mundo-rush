@@ -42,7 +42,7 @@ describe("applySettingsPatch", () => {
     const junk = {
       accessibility: { textScale: 999, highContrast: "sí", volumes: { npc: -50, lumi: Number.NaN } },
       graphics: { tier: "xr", suggestedTier: "xr" },
-      npcSpeed: "rapidísimo", helpLevel: 9, camera: "perspective3D",
+      npcSpeed: "rapidísimo", helpLevel: 9, camera: "ojoDePez",
       input: { endOfTurnMs: 5 },
     } as unknown as SettingsPatch;
     const s = applySettingsPatch(DEFAULT_SETTINGS, junk);
@@ -53,7 +53,7 @@ describe("applySettingsPatch", () => {
     expect(s.graphics).toEqual(DEFAULT_SETTINGS.graphics);
     expect(s.npcSpeed).toBe(DEFAULT_SETTINGS.npcSpeed);
     expect(s.helpLevel).toBe("auto");
-    expect(s.camera).toBe("topdownOrtho");
+    expect(s.camera).toBe("perspective3D");
     expect(s.input.endOfTurnMs).toBe(300);
   });
 

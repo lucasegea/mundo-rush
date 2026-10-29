@@ -1,6 +1,7 @@
 // Selectores del slice `world`: view-model del modo solo-diálogo (lugares de la región y quién está en cada uno)
 // y, desde F2, lo que world/ dibuja, el aviso de interacción del HUD y los parámetros de render del mapa.
-import { presetAngles, ZOOM_STEPS, type CameraPreset, type DioramaRuntime, type SelectableTier, type ZoomStep } from "@lg/core";
+import { presetAngles, zoomDistance, ZOOM_STEPS, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier, type ZoomStep } from "@lg/core";
+import type { CharacterLook } from "@lg/art";
 import type { GameState } from "../store";
 import { selectEffectiveTier } from "./settings";
 import { createViewSelector } from "./view";
@@ -54,6 +55,8 @@ export interface MapActor {
   name: string;
   x: number;
   z: number;
+  /** Apariencia de su ficha (plan estetica-c M5); null si el catálogo no cargó o la ficha no la trae. */
+  look: CharacterLook | null;
 }
 
 export interface MapView {
@@ -65,14 +68,29 @@ export interface MapView {
 
 const npcName = (npcs: GameState["world"]["npcs"], id: string): string => npcs.find((n) => n.id === id)?.name ?? id;
 
-/** Lo que world/ dibuja: el diorama (estático) y los NPCs. Cambia solo al cargar un diorama. */
+/** Lo que world/ dibuja: el diorama (estático) y los NPCs. Cambia al cargar un diorama o el catálogo. */
 export const selectMapView = createViewSelector(
   (s: GameState) => [s.world.dioramaStatus, s.world.diorama, s.world.npcs] as const,
   (status, diorama, npcs): MapView => ({
     status,
     diorama,
-    actors: (diorama?.npcs ?? []).map((n) => ({ id: n.id, name: npcName(npcs, n.id), x: n.x, z: n.z })),
+    actors: (diorama?.npcs ?? []).map((n) => {
+      const info = npcs.find((x) => x.id === n.id);
+      return { id: n.id, name: info?.name ?? n.id, x: n.x, z: n.z, look: info?.look ?? null };
+    }),
   }),
+);
+
+/**
+ * Burbuja ámbar de pedido (propuesta C §3, plan estetica-c M5): los NPCs del diorama con un pedido abierto, según
+ * `npcStates[id].requestIcon` del slice `world`, la señal más angosta que ya existe para "este NPC tiene un pedido". El
+ * NPC de la charla en curso no la muestra (el panel ya lo nombra). M5 SEAM: hoy nadie escribe `requestIcon`, así que la
+ * lista sale vacía en el juego; la llena el sistema de misiones o del tablero cuando abra pedidos por NPC.
+ */
+export const selectRequestBubbles = createViewSelector(
+  (s: GameState) => [s.world.diorama, s.world.npcStates, selectConversationFrame(s)?.npcId ?? null] as const,
+  (diorama, states, talking): string[] =>
+    (diorama?.npcs ?? []).filter((n) => states[n.id]?.requestIcon === true && n.id !== talking).map((n) => n.id),
 );
 
 export interface InteractionPrompt {
@@ -94,41 +112,92 @@ export const selectInteractionPrompt = createViewSelector(
   },
 );
 
+/**
+ * El NPC resaltado en el mundo (plan estetica-c M1 ítem 15): el mismo que nombra el aviso del HUD, porque los dos salen
+ * de `selectInteractionPrompt` (A13). Sin nadie en rango, o si lo más cercano no es un NPC, no hay resaltado.
+ */
+export const selectHighlightedNpc = createViewSelector(
+  (s: GameState) => [selectInteractionPrompt(s)] as const,
+  (prompt): string | null => (prompt?.kind === "npc" ? prompt.id : null),
+);
+
 export interface WorldHudView {
   mapStatus: GameState["world"]["dioramaStatus"];
   prompt: InteractionPrompt | null;
   zoomStep: ZoomStep;
   zoomSteps: number;
+  /** Tier efectivo: el chip de calidad de abajo a la derecha (solo en desarrollo, plan estetica-c M4). */
+  tier: SelectableTier;
 }
 
 export const selectWorldHudView = createViewSelector(
-  (s: GameState) => [s.world.dioramaStatus, selectInteractionPrompt(s), s.ui.zoomStep] as const,
-  (mapStatus, prompt, zoomStep): WorldHudView => ({ mapStatus, prompt, zoomStep, zoomSteps: ZOOM_STEPS }),
+  (s: GameState) => [s.world.dioramaStatus, selectInteractionPrompt(s), s.ui.zoomStep, selectEffectiveTier(s)] as const,
+  (mapStatus, prompt, zoomStep, tier): WorldHudView => ({ mapStatus, prompt, zoomStep, zoomSteps: ZOOM_STEPS, tier }),
 );
+
+/**
+ * Plano de a dos (plan estetica-c M1 ítem 3): mientras el panel de arriba es la escena con un NPC que está en el
+ * diorama, world/ encuadra a los dos. Las posiciones son las lógicas (el jugador ya acomodado por `standoffPoint`).
+ */
+export interface ConversationFrame {
+  npcId: string;
+  npc: { x: number; z: number };
+  player: { x: number; z: number };
+}
+
+const topPanel = (panels: readonly Panel[]): Panel | undefined => panels[panels.length - 1];
+
+export const selectConversationFrame = createViewSelector(
+  (s: GameState) => [s.session.phase, s.ui.panels, s.world.diorama, s.player.position] as const,
+  (phase, panels, diorama, player): ConversationFrame | null => {
+    const top = topPanel(panels);
+    if (phase !== "world" || top?.kind !== "scene" || top.npcId === null || !player) return null;
+    const npc = diorama?.npcs.find((n) => n.id === top.npcId);
+    return npc ? { npcId: npc.id, npc: { x: npc.x, z: npc.z }, player: { x: player.x, z: player.z } } : null;
+  },
+);
+
+/** Tope de cuadros con una escena de conversación arriba (03 §2.7.4): libera CPU para el audio y el WebSocket. */
+export const CONVERSATION_MAX_FPS = 30;
 
 export interface WorldRenderView {
   tier: SelectableTier;
-  preset: CameraPreset;
+  /** `dialogueFrame` mientras dura una charla con un NPC del diorama; si no, la cámara de los ajustes. */
+  preset: CameraPresetId;
+  /** Ángulos de la cámara del mapa (la de los ajustes); el plano de a dos calcula los suyos en world/camera/. */
   pitchDeg: number;
   yawDeg: number;
   zoomStep: ZoomStep;
+  /** Distancia (m) de la cámara del mapa en ese paso (D-208); world/ no lee valores del núcleo, la recibe acá. */
+  zoomDistance: number;
   /** "Reducir movimiento" (D-053, F2 A7): la cámara corta en vez de seguir con suavizado. */
   cameraMotion: "follow" | "cut";
   /** Postprocesado permitido (el nivel por tier lo fija TIER_PARAMS); apagado con "reducir movimiento" (§2.9). */
   post: boolean;
-  /** Un panel tapa el mapa: el canvas pasa a frameloop "demand" (§2.7.4). */
+  /**
+   * Un panel tapa el mapa: el canvas pasa a frameloop "demand" (§2.7.4). Con la escena arriba sigue vivo (la
+   * transición de cámara y el idle de los personajes, plan estetica-c M1 ítem 5), con el tope de `conversationFps`.
+   */
   paused: boolean;
+  /**
+   * Plan estetica-c M6 (03 §2.7.4): con una escena de conversación arriba, el tope de cuadros (30); si no, null y manda
+   * el `targetFps` del tier. world/ además congela lo no esencial (agua, NPCs de fondo) y no mide rendimiento mientras
+   * dura (PerformanceMonitor nunca baja ni sube el tier por el tope propio de la charla).
+   */
+  conversationFps: number | null;
 }
 
 export const selectWorldRender = createViewSelector(
-  (s: GameState) => [selectEffectiveTier(s), s.settings.camera, s.settings.accessibility.reduceMotion, s.ui.zoomStep, s.ui.panels.length] as const,
-  (tier, preset, reduceMotion, zoomStep, panels): WorldRenderView => {
-    const { pitchDeg, yawDeg } = presetAngles(preset);
+  (s: GameState) => [selectEffectiveTier(s), s.settings.camera, s.settings.accessibility.reduceMotion, s.ui.zoomStep, s.ui.panels, selectConversationFrame(s) !== null] as const,
+  (tier, camera, reduceMotion, zoomStep, panels, talking): WorldRenderView => {
+    const { pitchDeg, yawDeg } = presetAngles(camera);
+    const top = topPanel(panels);
     return {
-      tier, preset, pitchDeg, yawDeg, zoomStep,
+      tier, preset: talking ? "dialogueFrame" : camera, pitchDeg, yawDeg, zoomStep, zoomDistance: zoomDistance(zoomStep),
       cameraMotion: reduceMotion ? "cut" : "follow",
       post: !reduceMotion && tier !== "low" && tier !== "dialog-only",
-      paused: panels > 0,
+      paused: top !== undefined && top.kind !== "scene",
+      conversationFps: top?.kind === "scene" ? CONVERSATION_MAX_FPS : null,
     };
   },
 );

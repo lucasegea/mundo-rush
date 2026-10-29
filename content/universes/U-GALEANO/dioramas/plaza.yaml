@@ -8,4 +8,27 @@ spawn:
   - 12
   - 0
   - 12
+terreno:
+  extension: 160
+  lomas: 4
+  semilla: 1572
+caminos:
+  - puntos:
+      - - 0
+        - 12
+      - - 12
+        - 12
+      - - 24
+        - 12
+    ancho: 3
+    superficie: empedrado
+  - puntos:
+      - - 12
+        - 0
+      - - 12
+        - 12
+      - - 12
+        - 24
+    ancho: 3
+    superficie: empedrado
 sitios: []

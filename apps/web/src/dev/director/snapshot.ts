@@ -1,7 +1,7 @@
 // selectDirectorSnapshot (03 §6.5.2, FD0 A3): arma el DirectorSnapshot leyendo SOLO state/selectors/.
 // Lo que el store no guarda (el recorrido, con quién se habló, las líneas de escenas anteriores) lo acumula
 // un historial puro que avanza con cada estado; el snapshot es estado + historial, sin inventar nada.
-import { DIALOGUE_CAP, PATH_CAP, type DirectorSnapshot } from "@lg/protocol/director";
+import { DIALOGUE_CAP, PATH_CAP, type DirectorSnapshot, type RenderStats } from "@lg/protocol/director";
 import {
   selectCurrentDiorama, selectFinalLines, selectFoundations, selectLastPick, selectNearbyIds, selectNetworkIntros,
   selectOpenScene, selectPlayerFacing, selectPlayerPosition, selectPlayerTile, selectRegionName, selectWorldFlags,
@@ -64,6 +64,11 @@ export function advanceHistory(h: DirectorHistory, s: GameState, at: string): Di
 export interface SnapshotMeta {
   sessionId: string;
   at: string;
+  /**
+   * Plan estetica-c M6: los contadores de renderer.info (world/budget/renderStats, inyectados por boot/dev.ts). Sin la
+   * clave, el snapshot no la lleva; con null, el canvas todavía no dibujó.
+   */
+  render?: RenderStats | null;
 }
 
 /** El snapshot v1. `build` y `contentErrors` los completa el plugin de desarrollo (los sabe Node, no el cliente). */
@@ -87,5 +92,6 @@ export function selectDirectorSnapshot(s: GameState, h: DirectorHistory, meta: S
     network: [...selectNetworkIntros(s)],
     lastPick: selectLastPick(s),
     contentErrors: [],
+    ...(meta.render !== undefined ? { render: meta.render } : {}),
   };
 }

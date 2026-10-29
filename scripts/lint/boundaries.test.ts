@@ -2,6 +2,7 @@
 // Corre la config REAL (eslint.config.js) por la API de ESLint con texto en memoria y un
 // filePath virtual dentro de la carpeta destino. Cada caso prohibido tiene que fallar con el
 // ruleId esperado (no con cualquier error) y cada import por ruta apunta a un archivo que existe.
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -541,5 +542,197 @@ describe("F4.1 A6: escrituras a disco del servidor", () => {
   test("leer de node:fs sigue permitido fuera de store/", async () => {
     const msgs = await lint(F.server, "import { readFileSync } from \"node:fs\";\nexport const p = () => readFileSync(\"x\", \"utf8\");\n");
     expect(msgs.filter((m) => m.message.includes(DISK)), describeMsgs(msgs)).toEqual([]);
+  });
+});
+
+// ---------- estetica-c M1 A16 (D-207): las zonas nuevas de world/ y la regla `import * as THREE` ----------
+// revisión de arquitectura 2026-10-12: la regla nueva va en la MISMA lista de no-restricted-syntax que R10, R11 y R13 (un bloque posterior
+// la reemplazaría y borraría esas costuras en silencio): por eso cada zona prueba además que R10 y R13 siguen vivas.
+const M1_ZONES = ["materials", "terrain", "labels", "budget"] as const;
+const m1Probe = (zone: string): string => `${WEB}/world/${zone}/__probe__.ts`;
+const M1_FORBIDDEN: Case[] = [
+  ...M1_ZONES.flatMap((z): Case[] => [
+    { name: `D-207: import * as THREE en world/${z}/`, file: m1Probe(z), code: imp("three"), rule: SYNTAX, msg: "D-207" },
+    { name: `D-207: import * de three/addons en world/${z}/`, file: m1Probe(z), code: imp("three/addons/geometries/RoundedBoxGeometry.js"), rule: SYNTAX, msg: "D-207" },
+    { name: `R10: keydown en world/${z}/ (sigue vivo junto a D-207)`, file: m1Probe(z), code: expr('window.addEventListener("keydown", () => {})'), rule: SYNTAX, msg: "R10" },
+    { name: `R13: new AudioContext en world/${z}/`, file: m1Probe(z), code: expr("new AudioContext()"), rule: SYNTAX, msg: "R13" },
+    { name: `R11: PerspectiveCamera fuera de world/camera/ (world/${z}/)`, file: m1Probe(z), code: named("PerspectiveCamera", "three"), rule: IMP, msg: "R11" },
+    { name: `R11: new PerspectiveCamera() en world/${z}/`, file: m1Probe(z), code: expr("new PerspectiveCamera()"), rule: SYNTAX, msg: "R11" },
+    { name: `R3: world/${z}/ -> ui (alias @ui)`, file: m1Probe(z), code: imp("@ui/index"), rule: ZONE, msg: "R3" },
+    { name: `R3: ui -> world/${z}/ (alias @world)`, file: F.ui, code: imp(`@world/${z}/index`), rule: ZONE, msg: "R3" },
+  ]),
+  { name: "R11: drei PerspectiveCamera en world/dioramas/", file: `${WEB}/world/dioramas/__probe__.tsx`, code: named("PerspectiveCamera", "@react-three/drei"), rule: IMP, msg: "R11" },
+];
+const M1_ALLOWED: Omit<Case, "rule">[] = [
+  ...M1_ZONES.map((z) => ({ name: `world/${z}/ -> three por nombre`, file: m1Probe(z), code: named("Mesh", "three") })),
+  { name: "world/camera/ puede importar three como espacio de nombres", file: `${WEB}/world/camera/__probe__.ts`, code: imp("three") },
+  { name: "world/camera/ -> PerspectiveCamera", file: `${WEB}/world/camera/__probe__.ts`, code: named("PerspectiveCamera", "three") },
+];
+const REAL_M1 = [
+  `${WEB}/world/materials/registry.ts`, `${WEB}/world/materials/paintGeometry.ts`, `${WEB}/world/terrain/buildTerrain.ts`,
+  `${WEB}/world/labels/labelSprite.ts`, `${WEB}/world/labels/NameLabel.tsx`, `${WEB}/world/budget/estimate.ts`,
+  // Chibi.tsx pasó a Character.tsx en M3 (mismo lugar, misma zona).
+  `${WEB}/world/actors/Character.tsx`, `${WEB}/world/dioramas/scene.ts`, `${WEB}/world/water/waterMaterial.ts`,
+  `${WEB}/world/props/builders.ts`, `${WEB}/world/lighting/Lighting.tsx`,
+];
+
+describe("estetica-c M1 A16: zonas nuevas de world/", () => {
+  test("cada zona tiene su marcador y los archivos reales existen (antes de mirar el ruleId)", () => {
+    for (const z of [...M1_ZONES, "water"]) expect(isFile(resolve(ROOT, WEB, "world", z, "index.ts")), `marcador de world/${z}`).toBe(true);
+    for (const f of REAL_M1) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of M1_FORBIDDEN) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(M1_FORBIDDEN.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test.each(M1_ALLOWED.map((c) => [c.name, c] as const))("%s pasa", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_M1)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test("eslint --stdin con un import ui -> world conocido sigue saliendo 1", () => {
+    const bin = resolve(ROOT, "node_modules/eslint/bin/eslint.js");
+    expect(isFile(bin)).toBe(true);
+    const run = (code: string) => spawnSync(process.execPath, [bin, "--stdin", "--stdin-filename", resolve(ROOT, F.ui)], { cwd: ROOT, input: code, encoding: "utf8" });
+    // La paleta se mudó a @lg/art en M2: el import conocido apunta al marcador de world/materials/, que existe.
+    expect(isFile(resolve(ROOT, WEB, "world/materials/index.ts"))).toBe(true);
+    const bad = run('import "@world/materials/index";\n');
+    expect(bad.status, bad.stdout + bad.stderr).toBe(1);
+    expect(bad.stdout).toContain("R3");
+    const ok = run("export const x = 1;\n");
+    expect(ok.status, ok.stdout + ok.stderr).toBe(0);
+  }, 60_000);
+});
+
+// ---------- estetica-c M3: world/portraits/ (estudio de retratos) y dev/portraits/ (su panel) ----------
+// Zonas nuevas con su marcador y su fixture: el marcador se comprueba antes de mirar el ruleId.
+const PORTRAITS = `${WEB}/world/portraits/__probe__.ts`;
+const DEV_PORTRAITS = `${WEB}/dev/portraits/__probe__.ts`;
+const M3_FORBIDDEN: Case[] = [
+  { name: "D-207: import * as THREE en world/portraits/", file: PORTRAITS, code: imp("three"), rule: SYNTAX, msg: "D-207" },
+  { name: "R11: new PerspectiveCamera() en world/portraits/ (la cámara vive en world/camera/)", file: PORTRAITS, code: expr("new PerspectiveCamera()"), rule: SYNTAX, msg: "R11" },
+  { name: "R11: PerspectiveCamera importada en world/portraits/", file: PORTRAITS, code: named("PerspectiveCamera", "three"), rule: IMP, msg: "R11" },
+  { name: "R3: world/portraits/ -> ui", file: PORTRAITS, code: imp("@ui/index"), rule: ZONE, msg: "R3" },
+  { name: "§4.3: world/portraits/ -> services", file: PORTRAITS, code: imp("../../services/index"), rule: ZONE },
+  { name: "ADR-026: dev/portraits/ -> world/portraits/", file: DEV_PORTRAITS, code: imp("../../world/portraits/index"), rule: ZONE, msg: "ADR-026" },
+  { name: "ADR-026: dev/portraits/ -> three", file: DEV_PORTRAITS, code: imp("three"), rule: TS_IMP },
+  { name: "ADR-026: ui -> dev/portraits/", file: F.ui, code: imp("../dev/portraits/index"), rule: ZONE, msg: "ADR-026" },
+  { name: "ADR-026: world -> dev/portraits/", file: F.world, code: imp("../dev/portraits/index"), rule: ZONE, msg: "ADR-026" },
+];
+const M3_ALLOWED: Omit<Case, "rule">[] = [
+  { name: "world/portraits/ -> world/camera/portrait (la fábrica de la cámara)", file: PORTRAITS, code: named("createPortraitCamera", "../camera/portrait") },
+  { name: "raíz de composición -> dev/portraits/", file: F.boot, code: imp("../dev/portraits/index") },
+];
+const REAL_M3 = [
+  `${WEB}/world/actors/Character.tsx`, `${WEB}/world/actors/skinned.ts`, `${WEB}/world/actors/AnimationGovernor.tsx`,
+  `${WEB}/world/actors/animState.ts`, `${WEB}/world/actors/clips.ts`, `${WEB}/world/actors/gestures.ts`,
+  `${WEB}/world/actors/characterAssets.ts`, `${WEB}/world/actors/head.ts`, `${WEB}/world/camera/portrait.ts`,
+  `${WEB}/world/portraits/studio.ts`, `${WEB}/dev/portraits/index.ts`, `${WEB}/boot/dev.ts`, "scripts/assets/characters.ts", "scripts/assets/png.ts",
+];
+
+describe("estetica-c M3: world/portraits/ y dev/portraits/", () => {
+  test("cada zona tiene su marcador y los archivos reales existen (antes de mirar el ruleId)", () => {
+    expect(isFile(resolve(ROOT, WEB, "world/portraits/index.ts")), "marcador de world/portraits/").toBe(true);
+    expect(isFile(resolve(ROOT, WEB, "dev/portraits/index.ts")), "marcador de dev/portraits/").toBe(true);
+    for (const f of REAL_M3) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of [...M3_FORBIDDEN, ...M3_ALLOWED]) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(M3_FORBIDDEN.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test.each(M3_ALLOWED.map((c) => [c.name, c] as const))("%s pasa", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_M3)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+});
+
+// ---------- estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art puro y la zona scripts/assets/ ----------
+// Cada zona nueva nace con su marcador y su fixture: el marcador se comprueba antes de mirar el ruleId.
+const ART = "packages/art/src/__probe__.ts";
+const ASSETS = "scripts/assets/__probe__.ts";
+const M2_FORBIDDEN: Case[] = [
+  { name: "@lg/art -> three", file: ART, code: imp("three"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> three/addons", file: ART, code: imp("three/addons/utils/BufferGeometryUtils.js"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> react", file: ART, code: imp("react"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> node:fs", file: ART, code: imp("node:fs"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> @gltf-transform/core", file: ART, code: imp("@gltf-transform/core"), rule: IMP, msg: "M2" },
+  { name: "@lg/art -> @lg/core (paquete)", file: ART, code: imp("@lg/core"), rule: [IMP, ZONE], msg: "M2" },
+  { name: "@lg/art -> core (relativo)", file: ART, code: imp("../../core/src/index"), rule: ZONE, msg: "M2: @lg/art no depende de otros paquetes" },
+  { name: "@lg/art -> apps/web (relativo)", file: ART, code: imp("../../../apps/web/src/world/materials/registry"), rule: ZONE, msg: "los paquetes no importan apps/" },
+  { name: "@lg/art: window", file: ART, code: expr("window"), rule: GLOBALS },
+  { name: "@lg/art: document", file: ART, code: expr("document.body"), rule: GLOBALS },
+  { name: "@lg/art: OffscreenCanvas", file: ART, code: expr("new OffscreenCanvas(1, 1)"), rule: GLOBALS },
+  { name: "@lg/art: process", file: ART, code: expr("process.env.X"), rule: GLOBALS },
+  { name: "@lg/art: Math.random()", file: ART, code: expr("Math.random()"), rule: PROPS, msg: "determinístico" },
+  { name: "@lg/art: Date.now()", file: ART, code: expr("Date.now()"), rule: PROPS, msg: "determinístico" },
+  { name: "scripts/assets -> world/materials (relativo)", file: ASSETS, code: imp("../../apps/web/src/world/materials/paintGeometry"), rule: ZONE, msg: "M2" },
+  { name: "scripts/assets -> world/props (relativo)", file: ASSETS, code: imp("../../apps/web/src/world/props/gltf"), rule: ZONE, msg: "M2" },
+];
+const M2_ALLOWED: Omit<Case, "rule">[] = [
+  { name: "@lg/art -> su propio módulo (relativo, con extensión)", file: ART, code: named("PALETTE", "./palette.ts") },
+  { name: "world/materials -> @lg/art (import por nombre)", file: m1Probe("materials"), code: named("PALETTE", "@lg/art") },
+  { name: "world/props -> @lg/art", file: `${WEB}/world/props/__probe__.ts`, code: named("paintColors", "@lg/art") },
+  { name: "scripts/assets -> @lg/art", file: ASSETS, code: named("paintColors", "@lg/art") },
+  { name: "scripts/assets -> @gltf-transform/core", file: ASSETS, code: named("NodeIO", "@gltf-transform/core") },
+  { name: "scripts/a11y -> @lg/art", file: "scripts/a11y/__probe__.ts", code: named("PALETTE", "@lg/art") },
+];
+const REAL_M2 = [
+  "packages/art/src/index.ts", "packages/art/src/palette.ts", "packages/art/src/paint.ts", "packages/art/src/bevel.ts",
+  "packages/art/src/tolerance.ts", "scripts/assets/index.ts", "scripts/assets/optimize.ts", "scripts/assets/inspect-budgets.ts",
+  `${WEB}/world/props/gltf.ts`, `${WEB}/world/props/ModelProps.tsx`, `${WEB}/world/dioramas/scene.ts`, "scripts/a11y/contrast.ts",
+];
+
+describe("estetica-c M2: @lg/art puro y scripts/assets/", () => {
+  test("cada zona tiene su marcador y los archivos reales existen (antes de mirar el ruleId)", () => {
+    expect(isFile(resolve(ROOT, "packages/art/src/index.ts")), "marcador de @lg/art").toBe(true);
+    expect(isFile(resolve(ROOT, "scripts/assets/index.ts")), "marcador de scripts/assets/").toBe(true);
+    for (const f of REAL_M2) expect(isFile(resolve(ROOT, f)), f).toBe(true);
+    for (const c of [...M2_FORBIDDEN, ...M2_ALLOWED]) for (const target of pathTargets(c)) expect(existsWithExt(target), `no existe ${target}`).toBe(true);
+  });
+
+  test.each(M2_FORBIDDEN.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const rules = Array.isArray(c.rule) ? c.rule : [c.rule];
+    const hits = msgs.filter((m) => m.ruleId !== null && rules.includes(m.ruleId));
+    expect(hits.length, describeMsgs(msgs)).toBeGreaterThan(0);
+    if (c.msg) expect(hits.some((m) => m.message.includes(c.msg ?? "")), describeMsgs(hits)).toBe(true);
+  });
+
+  test.each(M2_ALLOWED.map((c) => [c.name, c] as const))("%s pasa", async (_name, c) => {
+    const msgs = await lint(c.file, c.code);
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
+  });
+
+  test.each(REAL_M2)("%s lintea limpio tal como está", async (file) => {
+    const msgs = await lint(file, realCode(file));
+    const hits = msgs.filter((m) => m.ruleId !== null && BOUNDARY_RULES.includes(m.ruleId));
+    expect(hits, describeMsgs(hits)).toEqual([]);
   });
 });

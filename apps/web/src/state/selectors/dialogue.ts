@@ -2,6 +2,7 @@
 // glosario crudo: recibe líneas ya partidas en palabras tocables y el glosario ya filtrado por `glossaryDisplay`
 // (03 §8.3, D-131). Una palabra sin entrada visible no tiene traducción (D-068): la UI ofrece marcarla.
 import { glossaryKey, glossaryVisibility, HINT_CHIP_DELAY_MS, isGlossaryDisplay, plainTemplateText, tokenizeLine, type LineToken } from "@lg/core";
+import type { NoticeCause } from "@lg/protocol";
 import type { GameState } from "../store";
 import type { ConversationUi, DialogueLine, Lexicon, MicProblem } from "../slices";
 import { createViewSelector } from "./view";
@@ -77,6 +78,8 @@ export interface DialogueHudView {
   blocked: "notIntroduced" | "noScene" | null;
   containment: { line: string; resource: { label: string; detail: string } | null; provisional: boolean } | null;
   notice: string | null;
+  /** Causa del aviso `model_unavailable` (open-world-3d T1); null sin causa. */
+  noticeCause: NoticeCause | null;
   /** Clave de palabra → entrada visible en este build. */
   glossary: Readonly<Record<string, GlossaryView>>;
   glossaryReady: boolean;
@@ -90,6 +93,8 @@ export interface DialogueHudView {
   conversation: ConversationUi | null;
   /** Silencio en `waiting` para subir la escalera de ayuda del lado del cliente: [pista, frases] en ms. */
   conversationHelpIdleMs: readonly [number, number];
+  /** "Reducir movimiento": el punto de "tu turno" no late (plan estetica-c M4). */
+  reduceMotion: boolean;
 }
 
 /** A2: el cliente sube la ayuda sola si el jugador no dice nada (el servidor la sube por turnos sin progreso). */
@@ -170,8 +175,8 @@ const phaseOf = (d: GameState["dialogue"]): HudPhase => {
 };
 
 export const selectDialogueHudView = createViewSelector(
-  (s: GameState) => [s.dialogue, s.world.npcs, s.settings.input.hintChip, s.ui.panels] as const,
-  (d, npcs, hintChip, panels): DialogueHudView => {
+  (s: GameState) => [s.dialogue, s.world.npcs, s.settings.input.hintChip, s.ui.panels, s.settings.accessibility.reduceMotion] as const,
+  (d, npcs, hintChip, panels, reduceMotion): DialogueHudView => {
     const top = panels[panels.length - 1];
     const npcId = d.npcId ?? (top?.kind === "scene" ? top.npcId : null);
     const name = (id: string): string | null => npcs.find((n) => n.id === id)?.name ?? null;
@@ -191,6 +196,7 @@ export const selectDialogueHudView = createViewSelector(
       blocked: d.blocked,
       containment: d.containment,
       notice: d.notice,
+      noticeCause: d.noticeCause,
       glossary: visibleGlossary(d.lexicon),
       glossaryReady: d.lexicon.status === "ready",
       voice: voiceView(d),
@@ -198,6 +204,7 @@ export const selectDialogueHudView = createViewSelector(
       micLost: d.modality === "voice" && d.sceneId !== null && d.voice.audio === "noPermission",
       conversation: d.conversation,
       conversationHelpIdleMs: CONVERSATION_HELP_IDLE_MS,
+      reduceMotion,
     };
   },
 );
@@ -206,3 +213,42 @@ export const selectDialogueHudView = createViewSelector(
 export const selectSceneRequest = (s: GameState) => s.dialogue.request;
 export const selectSceneOutbox = (s: GameState) => s.dialogue.outbox;
 export const selectLexiconStatus = (s: GameState) => s.dialogue.lexicon.status;
+
+/** El papel de un personaje en la escena en curso (lo lee la máquina de animación de world/actors, plan estetica-c M3). */
+export type SceneRoleView = "habla" | "escucha" | null;
+
+export interface SceneActivityView {
+  /** El NPC de la escena (null sin escena). */
+  npcId: string | null;
+  npc: SceneRoleView;
+  player: SceneRoleView;
+  /** La escena está arrancando: el NPC saluda. */
+  greet: boolean;
+}
+
+const NO_ACTIVITY: SceneActivityView = { npcId: null, npc: null, player: null, greet: false };
+
+/**
+ * Quién habla y quién escucha: el NPC habla mientras dice su línea y escucha en el turno del jugador; el jugador habla
+ * con el micrófono abierto. M3 SEAM: los gestos que pida el diálogo (asentir, negar, pensar, sorprenderse, dar algo)
+ * entran acá cuando el protocolo los mande; hoy el único pedido es el saludo al empezar.
+ */
+let lastActivity: SceneActivityView = NO_ACTIVITY;
+const sameActivity = (a: SceneActivityView, b: SceneActivityView): boolean =>
+  a.npcId === b.npcId && a.npc === b.npc && a.player === b.player && a.greet === b.greet;
+
+export const selectSceneActivity = createViewSelector(
+  (s: GameState) => [s.dialogue] as const,
+  (d): SceneActivityView => {
+    let next = NO_ACTIVITY;
+    if (d.sceneId !== null && d.npcId !== null) {
+      const phase = phaseOf(d);
+      const npc: SceneRoleView = phase === "npcSpeaking" ? "habla" : phase === "yourTurn" || phase === "passMenu" ? "escucha" : null;
+      const player: SceneRoleView = voicePhaseOf(d) === "listening" && voiceView(d) !== null ? "habla" : phase === "npcSpeaking" ? "escucha" : null;
+      next = { npcId: d.npcId, npc, player, greet: phase === "starting" };
+    }
+    // El nivel del micrófono cambia muchas veces por segundo: la misma actividad devuelve el mismo objeto (sin re-render).
+    if (!sameActivity(next, lastActivity)) lastActivity = next;
+    return lastActivity;
+  },
+);

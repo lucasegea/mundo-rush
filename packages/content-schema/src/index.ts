@@ -15,9 +15,13 @@ export * from "./schemas/control.ts";
 export * from "./schemas/pedido.ts";
 export * from "./schemas/conversacion.ts";
 export * from "./schemas/universo.ts";
+export * from "./schemas/assets.ts";
 
 export { compilarContenido, compilarIncremental, compilarManifiesto } from "./compile/compilar.ts";
 export type { Resultado, ResultadoIncremental } from "./compile/compilar.ts";
+export { necesitaRegistro } from "./compile/assets.ts";
+export { desplegarProps, estimarPresupuestoDiorama, PARTE_SOMBRA } from "./compile/dioramas.ts";
+export type { ContextoPresupuesto, EstimadoDiorama, InstanciaDesplegada } from "./compile/dioramas.ts";
 export { filtrarGlosario, filtrarSaberes } from "./compile/vistas.ts";
 export type { Salida } from "./compile/vistas.ts";
 export { buscarRetirados, RUTA_RETIRADOS } from "./compile/retirados.ts";

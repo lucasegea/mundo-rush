@@ -8,6 +8,10 @@
 // del micrófono. Sin micrófono o sin permiso la escena va por texto y se dice por qué.
 // A2 (ADR-027): en una conversación libre por medidores, el panel de medidores, "Lo que sabés de…" y la escalera de
 // ayuda (ConversationPanel), en voz y en texto.
+// Plan estetica-c M4 (propuesta C §8, "papel y tinta"): sobre el mapa, tarjeta de papel abajo al centro (hasta 47,5rem)
+// con el chip ámbar del nombre, la línea del NPC más grande, la palabra nueva subrayada con puntos, el indicador de
+// turno (punto gris "habla", punto verde que late "tu turno", quieto con "reducir movimiento") y la barra de andamiaje
+// con Terminé, el botón oscuro, a la derecha. Misma estructura, mismos ids: cambian tokens y disposición. Todo en rem.
 // Lee view-models de state/selectors y despacha state/actions: no conoce la red ni el protocolo.
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { t, type MessageKey } from "../../i18n";
@@ -20,13 +24,50 @@ import { ConversationPanel } from "./ConversationPanel";
 
 export type HudSurface = "dialogOnly" | "canvas";
 
-const PASS_OPTIONS: readonly PassChoice[] = ["hint", "repeat", "simpler", "continue"];
+/**
+ * Orden de la barra de andamiaje de la propuesta C §8: Repetir · Más despacio · Pista · Escribir · Terminé. Las
+ * opciones de "Pasar el turno" van en ese orden (`simpler` es la más cercana a "Más despacio"; `continue` no está en
+ * la propuesta y va al final del grupo) y Terminé cierra la barra, a la derecha.
+ * M4 SEAM: "Escribir" (pasar de voz a texto dentro de la misma escena) pide cambiar la lógica de turnos y de
+ * modalidad, fuera de M4; cuando exista entra entre `hint` y Terminé.
+ */
+export const PASS_OPTIONS: readonly PassChoice[] = ["repeat", "simpler", "hint", "continue"];
 
 const FRAME: Record<HudSurface, string> = {
   dialogOnly: "mx-auto flex max-w-3xl flex-col gap-4 p-4 md:p-6",
-  // Sobre el mapa: panel abajo, opaco, que recibe el puntero (el resto del shell lo deja pasar al canvas).
-  canvas: "pointer-events-auto fixed inset-x-0 bottom-0 flex max-h-[75dvh] flex-col gap-3 overflow-y-auto border-t-2 border-line bg-surface p-4 shadow-lg",
+  // Sobre el mapa: tarjeta de papel abajo al centro, opaca, que recibe el puntero (el resto del shell lo deja pasar al
+  // canvas). Alto máximo ~45 % para no tapar el plano de a dos (plan estetica-c M1 ítem 16); lo que no entra scrollea
+  // adentro. Ancho hasta 47,5rem (propuesta C §8).
+  canvas: "pointer-events-auto fixed inset-x-3 bottom-3 mx-auto flex max-h-[45dvh] max-w-[47.5rem] flex-col gap-3 overflow-y-auto rounded-card border-2 border-card-line bg-paper p-4 shadow-card",
 };
+
+type DotKind = "speaking" | "turn" | "listening";
+const DOT_CLASS: Readonly<Record<DotKind, string>> = {
+  speaking: "bg-line",
+  turn: "bg-turn",
+  listening: "bg-danger",
+};
+
+/** Punto del indicador de turno. Solo late en tu turno y nunca con "reducir movimiento" (`data-pulse`). */
+function TurnDot({ kind, reduceMotion }: { kind: DotKind; reduceMotion: boolean }) {
+  const pulse = kind === "turn" && !reduceMotion;
+  return (
+    <span
+      aria-hidden="true" data-testid="turn-dot" data-dot={kind} data-pulse={String(pulse)}
+      className={`inline-block h-3 w-3 shrink-0 rounded-full ${DOT_CLASS[kind]} ${pulse ? "lg-pulse" : ""}`}
+    />
+  );
+}
+
+/** Terminé: el botón oscuro a la derecha de la barra. Espacio y Enter lo activan (botón nativo); la tecla se muestra. */
+function DoneButton({ disabled, onClick }: { disabled: boolean; onClick(): void }) {
+  return (
+    <Button id="scene-done" variant="primary" className="ml-auto" aria-disabled={disabled} aria-keyshortcuts="Space Enter" onClick={onClick}>
+      {t("scene.done")}
+      <kbd aria-hidden="true" className="rounded-md border border-paper px-1.5 text-xs font-semibold">{t("scene.done.key")}</kbd>
+    </Button>
+  );
+}
 
 interface WordChoice {
   word: string;
@@ -44,6 +85,15 @@ function useHintChip(active: boolean, delayMs: number, resetKey: string): boolea
     return () => clearTimeout(timer);
   }, [active, delayMs, resetKey]);
   return active && shown === resetKey;
+}
+
+/**
+ * La frase de la causa de un `model_unavailable` (open-world-3d T1). Solo `http` con estado lleva número; sin estado
+ * (red caída) va la frase sin código, nunca "null".
+ */
+export function noticeCauseText(cause: NonNullable<DialogueHudView["noticeCause"]>): string {
+  if (cause.kind === "http") return cause.status === null ? t("scene.notice.cause.http_sin_codigo") : t("scene.notice.cause.http", { status: cause.status });
+  return t(`scene.notice.cause.${cause.kind}`);
 }
 
 function phaseText(view: DialogueHudView): string {
@@ -73,7 +123,12 @@ function voiceStatus(v: VoiceHudView, npcName: string | null): string {
 }
 
 /** Controles de voz: Hablar (mantener o tocar), Terminé, Pasar el turno, indicador, lo oído y el medidor. */
-function VoiceControls({ v, npcName, canPass }: { v: VoiceHudView; npcName: string | null; canPass: boolean }) {
+function voiceDot(v: VoiceHudView): DotKind {
+  if (v.phase === "listening") return "listening";
+  return v.phase === "yourTurn" ? "turn" : "speaking";
+}
+
+function VoiceControls({ v, npcName, canPass, reduceMotion }: { v: VoiceHudView; npcName: string | null; canPass: boolean; reduceMotion: boolean }) {
   const talk = useRef<HTMLButtonElement>(null);
   const pressedAt = useRef<number | null>(null);
 
@@ -98,7 +153,7 @@ function VoiceControls({ v, npcName, canPass }: { v: VoiceHudView; npcName: stri
   return (
     <div className="flex flex-col gap-2" data-testid="voice-controls">
       <p role="status" className="flex items-center gap-2 font-semibold" data-voice-phase={v.phase}>
-        <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${v.phase === "listening" ? "bg-danger" : v.phase === "yourTurn" ? "bg-accent" : "bg-line"}`} />
+        <TurnDot kind={voiceDot(v)} reduceMotion={reduceMotion} />
         {voiceStatus(v, npcName)}
       </p>
       {v.heard ? <p className="text-ink-muted" lang="en">{t("scene.voice.heard", { text: v.heard })}</p> : null}
@@ -108,7 +163,7 @@ function VoiceControls({ v, npcName, canPass }: { v: VoiceHudView; npcName: stri
         <meter min={0} max={1} low={0.15} high={0.9} optimum={0.5} value={v.level} className="h-3 w-40" data-testid="mic-level" />
       </label>
       <p id="scene-talk-hint" className="text-sm text-ink-muted">{t("scene.voice.talkHint")}</p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("scene.scaffold")} data-testid="scaffold-bar">
         <Button
           id="scene-talk" ref={talk} variant="primary" aria-pressed={v.phase === "listening"} aria-disabled={!v.canTalk && !v.canFinish}
           aria-describedby="scene-talk-hint"
@@ -125,8 +180,8 @@ function VoiceControls({ v, npcName, canPass }: { v: VoiceHudView; npcName: stri
         >
           {t("scene.voice.talk")}
         </Button>
-        <Button id="scene-done" aria-disabled={!v.canFinish} onClick={() => actions.voiceTalkEnd()}>{t("scene.done")}</Button>
         <Button id="scene-pass" aria-disabled={!canPass || v.phase === "listening"} onClick={() => actions.passTurn()}>{t("scene.pass")}</Button>
+        <DoneButton disabled={!v.canFinish} onClick={() => actions.voiceTalkEnd()} />
       </div>
     </div>
   );
@@ -135,6 +190,8 @@ function VoiceControls({ v, npcName, canPass }: { v: VoiceHudView; npcName: stri
 function LineView({ line, onWord }: { line: HudLine; onWord(choice: WordChoice): void }) {
   const speaker = line.who === "player" ? t("scene.you") : line.who === "lumi" ? t("scene.lumi") : line.name;
   if (line.who === "system") return <li className="text-sm italic text-ink-muted">{t("scene.cut")}</li>;
+  // La línea del NPC va más grande (propuesta C §8: 22 sobre 16, o sea 1,375rem; escala con el tamaño de texto).
+  const big = line.who === "npc";
   // Palabras con tabindex itinerante: Tab entra a la línea por la primera palabra; las flechas recorren el resto.
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
@@ -146,7 +203,7 @@ function LineView({ line, onWord }: { line: HudLine; onWord(choice: WordChoice):
   };
   let firstWord = true;
   return (
-    <li className={`rounded-lg border-2 p-3 ${line.who === "player" ? "border-line bg-paper" : "border-accent-soft bg-surface"}`}>
+    <li data-line={line.who} className={`rounded-card border-2 p-3 ${line.who === "player" ? "border-card-line bg-surface" : "border-transparent bg-paper"} ${big ? "text-[1.375rem] leading-snug" : ""}`}>
       {speaker ? <span className="mr-2 font-bold">{speaker}:</span> : null}
       {line.tokens ? (
         <span lang={line.lang} onKeyDown={onKeyDown}>
@@ -174,7 +231,7 @@ function WordCard({ choice, view, onClose }: { choice: WordChoice; view: Dialogu
   const heading = useFocusOnMount<HTMLHeadingElement>();
   const entry = view.glossary[choice.key];
   return (
-    <aside aria-labelledby="word-title" className="flex flex-col gap-2 rounded-lg border-2 border-accent bg-paper p-3">
+    <aside aria-labelledby="word-title" className="flex flex-col gap-2 rounded-card border-2 border-amber-strong bg-surface p-3 shadow-card">
       <h2 id="word-title" ref={heading} tabIndex={-1} className="text-lg font-bold" lang="en">{t("scene.word.title", { word: choice.word })}</h2>
       {entry ? (
         <>
@@ -234,21 +291,29 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {view.npcId && surface === "dialogOnly" ? <Portrait id={view.npcId} name={view.npcName ?? view.npcId} size={64} /> : null}
-          <h1 id="scene-title" ref={heading} tabIndex={-1} className="text-2xl font-bold">{title}</h1>
+          {/* El chip ámbar del nombre (propuesta C §8): texto del chip sobre ámbar ≥ 7:1, con el borde oscuro. */}
+          <h1 id="scene-title" ref={heading} tabIndex={-1} data-testid="name-chip" className="rounded-full border-2 border-amber-strong bg-amber px-3 py-0.5 text-lg font-bold text-on-amber">{title}</h1>
         </div>
         <Button id="scene-leave" onClick={() => actions.leaveScene()}>{t("scene.leave")}</Button>
       </header>
 
       {view.voice && (view.phase === "yourTurn" || view.phase === "npcSpeaking") ? null : (
-        <p className="font-semibold" data-phase={view.phase}>{phaseText(view)}</p>
+        <p className="flex items-center gap-2 font-semibold" data-phase={view.phase}>
+          {view.phase === "yourTurn" || view.phase === "npcSpeaking" ? (
+            <TurnDot kind={view.phase === "yourTurn" ? "turn" : "speaking"} reduceMotion={view.reduceMotion} />
+          ) : null}
+          {phaseText(view)}
+        </p>
       )}
       {view.notice && view.notice !== "containment" ? <p className="text-sm text-ink-muted">{t(`scene.notice.${view.notice}` as MessageKey)}</p> : null}
-      {view.micProblem ? <p role="alert" className="rounded-lg border-2 border-line bg-paper p-2" data-testid="mic-problem">{t(`scene.mic.${view.micProblem}`)}</p> : null}
-      {view.micLost ? <p role="alert" className="rounded-lg border-2 border-line bg-paper p-2" data-testid="mic-problem">{t("scene.mic.lost")}</p> : null}
+      {view.notice === "model_unavailable" && view.noticeCause ? <p className="text-sm text-ink-muted" data-testid="notice-cause">{noticeCauseText(view.noticeCause)}</p> : null}
+      {view.micProblem ? <p role="alert" className="rounded-card border-2 border-line bg-surface p-2" data-testid="mic-problem">{t(`scene.mic.${view.micProblem}`)}</p> : null}
+      {view.micLost ? <p role="alert" className="rounded-card border-2 border-line bg-surface p-2" data-testid="mic-problem">{t("scene.mic.lost")}</p> : null}
 
       {view.conversation && !view.containment ? (
         <ConversationPanel
           conv={view.conversation} waiting={view.waiting} idleMs={view.conversationHelpIdleMs} resetKey={`${view.lines.length}`}
+          floating={surface === "canvas"}
           onPhrase={view.voice ? null : (phrase) => {
             setDraft(phrase);
             input.current?.focus();
@@ -268,7 +333,7 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
       {word ? <WordCard choice={word} view={view} onClose={closeWord} /> : null}
 
       {view.containment ? (
-        <section aria-labelledby="containment-title" className="flex flex-col gap-2 rounded-lg border-2 border-danger bg-paper p-3">
+        <section aria-labelledby="containment-title" className="flex flex-col gap-2 rounded-card border-2 border-danger bg-surface p-3">
           <h2 id="containment-title" className="text-lg font-bold">{t("scene.containment.title")}</h2>
           <p>{view.containment.line}</p>
           {view.containment.resource ? (
@@ -283,7 +348,7 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
       ) : (
         <>
           {view.phase === "passMenu" ? (
-            <fieldset className="flex flex-wrap gap-2 rounded-lg border-2 border-line p-3">
+            <fieldset className="flex flex-wrap gap-2 rounded-card border-2 border-card-line p-3" data-testid="pass-menu">
               <legend className="px-1 font-semibold">{t("scene.pass.title")}</legend>
               {PASS_OPTIONS.map((o, i) => (
                 <Button key={o} id={`pass-${o}`} autoFocus={i === 0} onClick={() => actions.choosePass(o)}>{t(`scene.pass.${o}`)}</Button>
@@ -295,12 +360,12 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
             <div><Button id="scene-hint-chip" variant="ghost" className="border-line" onClick={() => actions.passTurn()}>{t("scene.hintChip")}</Button></div>
           ) : null}
 
-          {view.voice ? <VoiceControls v={view.voice} npcName={view.npcName} canPass={view.canPass} /> : view.micLost ? null : (
+          {view.voice ? <VoiceControls v={view.voice} npcName={view.npcName} canPass={view.canPass} reduceMotion={view.reduceMotion} /> : view.micLost ? null : (
           <div className="flex flex-col gap-2">
             <label htmlFor="scene-input" className="font-semibold">{t("scene.input.label")}</label>
             <textarea
               id="scene-input" ref={input} lang="en" rows={2} maxLength={500}
-              className="w-full rounded-lg border-2 border-line bg-paper p-2 text-base"
+              className="w-full rounded-card border-2 border-line bg-surface p-2 text-base"
               aria-describedby="scene-input-hint" aria-disabled={!view.canWrite}
               value={draft}
               onChange={(e) => setDraft(e.currentTarget.value)}
@@ -312,9 +377,9 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
               }}
             />
             <p id="scene-input-hint" className="text-sm text-ink-muted">{t("scene.input.hint")}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button id="scene-done" variant="primary" aria-disabled={!view.canWrite} onClick={submit}>{t("scene.done")}</Button>
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("scene.scaffold")} data-testid="scaffold-bar">
               <Button id="scene-pass" aria-disabled={!view.canPass} onClick={() => actions.passTurn()}>{t("scene.pass")}</Button>
+              <DoneButton disabled={!view.canWrite} onClick={submit} />
             </div>
           </div>
           )}

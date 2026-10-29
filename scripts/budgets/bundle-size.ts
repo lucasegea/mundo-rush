@@ -7,9 +7,18 @@
 // archivo de chunk → módulos que contiene) y falla si algún chunk del grafo estático de index.html trae módulos de
 // three o @react-three/*. La firma de texto de F1.3 queda como segunda red.
 //
+// Plan estetica-c M2: el decodificador meshopt autoalojado (public/decoders/, 03 §4.2) se baja junto con el mundo 3D, así
+// que su gzip se suma al chunk 3D (los archivos de dist/decoders/ entran como extras de cada entrada del mundo).
+//
+// Plan estetica-c M6 (03 §2.9, D-160): el postprocesado es un chunk aparte que `low` y `dialog-only` nunca descargan. Si
+// el manifiesto tiene el canvas del mundo, falla cuando Post no es una entrada dinámica propia o cuando el grafo estático
+// del canvas (o del shell) trae la entrada de Post o módulos de postprocessing / @react-three/postprocessing.
+// M6 SEAM: M7 exige que el chunk 3D no crezca respecto de M6; el número de referencia es el que imprime este chequeo al
+// cerrar M6 (está en el registro de construcción de M6).
+//
 // Uso: node scripts/budgets/bundle-size.ts [--dist <dir>]   (por defecto apps/web/dist)
 // Sale con 1 si un presupuesto se pasa o si falta el manifiesto; con 0 si todo entra.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -82,10 +91,17 @@ export const BUDGETS_PATH = join(SCRIPT_DIR, "budgets.json");
 export const DEFAULT_DIST = join(ROOT, "apps/web/dist");
 export const MANIFEST_RELATIVE = ".vite/manifest.json";
 export const CHUNK_MODULES_RELATIVE = ".vite/chunk-modules.json";
+/** Carpeta del dist con los decodificadores autoalojados (copia de apps/web/public/decoders/). */
+export const DECODERS_RELATIVE = "decoders";
 
 const SHELL_ENTRY = "index.html";
 const DOCENTE_ENTRY = "docente.html";
 const WORLD_PREFIX = "src/world/";
+/** El canvas del mundo y el postprocesado (plan estetica-c M6): Post se baja solo si el tier lo usa. */
+export const WORLD_CANVAS_ENTRY = "src/world/GameCanvas.tsx";
+export const POST_ENTRY = "src/world/post/Post.tsx";
+/** Un módulo del postprocesado (la librería y su envoltorio de R3F). */
+export const POST_MODULE = /(^|\/)node_modules\/(postprocessing|@react-three\/postprocessing)\//;
 
 /** Lee y valida budgets.json: exactamente las claves de 03 §2.7.3, todas números positivos. */
 export function loadBudgets(path = BUDGETS_PATH): Budgets {
@@ -152,6 +168,8 @@ export function checkBundle(
   gzipSize: (file: string) => number,
   fileText?: (file: string) => string,
   chunkModules?: ChunkModules,
+  /** Archivos del dist que se bajan con el mundo 3D sin ser chunks de Vite (el decodificador meshopt). */
+  worldExtras: readonly string[] = [],
 ): CheckReport {
   if (!manifest[SHELL_ENTRY]) {
     throw new Error(`manifiesto: falta la entrada "${SHELL_ENTRY}" (¿build.manifest: true en apps/web/vite.config.ts?)`);
@@ -193,9 +211,12 @@ export function checkBundle(
   if (worldEntries.length === 0) skipped.push("chunk_3d_gzip_kb: sin chunk 3D todavía (llega con F2)");
   for (const entry of worldEntries) {
     const own = staticClosure(manifest, entry).filter((key) => !shellSet.has(key));
+    const extras = worldExtras.map((file): ChunkSize => ({ key: "public/decoders", file, gzipBytes: gzipSize(file) }));
     results.push(result(`chunk 3D (${entry})`, "chunk_3d_gzip_kb", budgets.chunk_3d_gzip_kb,
-      measure(manifest, own, gzipSize)));
+      [...measure(manifest, own, gzipSize), ...extras].sort((a, b) => b.gzipBytes - a.gzipBytes)));
   }
+
+  violations.push(...checkPostChunk(manifest, shellKeys, chunkModules));
 
   if (manifest[DOCENTE_ENTRY]) {
     results.push(result(`panel docente (${DOCENTE_ENTRY})`, "docente_gzip_kb", budgets.docente_gzip_kb,
@@ -203,10 +224,38 @@ export function checkBundle(
   } else {
     skipped.push("docente_gzip_kb: sin docente.html (F11.2, postergada)");
   }
-  skipped.push("assets_muelle_mb, assets_muelle_plaza_mb: sin assets todavía (F3)");
+  skipped.push("assets_muelle_mb, assets_muelle_plaza_mb: los mide scripts/assets/inspect-budgets.ts (plan estetica-c M2)");
   skipped.push("audio_lineas_por_mision_mb: sin audio guionado todavía (F8)");
 
   return { ok: results.every((r) => r.ok) && violations.length === 0, results, skipped, violations };
+}
+
+/**
+ * Plan estetica-c M6: el postprocesado en su propio chunk. Con el canvas del mundo en el manifiesto, Post tiene que ser
+ * una entrada dinámica y ni el grafo estático del canvas ni el del shell pueden traerla (ni a sus módulos): así `low` y
+ * `dialog-only`, que montan el canvas sin Post, nunca la descargan. Sin nada de `src/world/` en el manifiesto (antes de
+ * F2) no hay nada que chequear; con módulos del mundo y sin la clave del canvas, falla (nota 4 de QA en M6): un canvas
+ * renombrado no puede dejar pasar el chequeo en vacío.
+ */
+export function checkPostChunk(manifest: Manifest, shellKeys: readonly string[], chunkModules?: ChunkModules): string[] {
+  if (!manifest[WORLD_CANVAS_ENTRY]) {
+    const world = Object.keys(manifest).filter((key) => (manifest[key]?.src ?? key).startsWith(WORLD_PREFIX));
+    return world.length === 0 ? [] : [`falta la entrada del canvas ${WORLD_CANVAS_ENTRY} en el manifiesto, con módulos del mundo (${world.join(", ")}): no se puede chequear el chunk del postprocesado`];
+  }
+  const violations: string[] = [];
+  const post = manifest[POST_ENTRY];
+  if (!post || post.isDynamicEntry !== true) violations.push(`postprocesado sin chunk propio: falta la entrada dinámica ${POST_ENTRY}`);
+  const loadedWithoutPost = new Set([...shellKeys, ...staticClosure(manifest, WORLD_CANVAS_ENTRY)]);
+  if (loadedWithoutPost.has(POST_ENTRY)) violations.push(`postprocesado en el grafo estático del canvas: ${POST_ENTRY}`);
+  if (chunkModules) {
+    for (const key of loadedWithoutPost) {
+      const file = (manifest[key] as ManifestChunk).file;
+      if (!file.endsWith(".js")) continue;
+      const hit = (chunkModules[file] ?? []).find((m) => POST_MODULE.test(m));
+      if (hit) violations.push(`postprocesado en el grafo estático del canvas: ${file} (${key}) trae ${hit}`);
+    }
+  }
+  return violations;
 }
 
 /** Texto del reporte. Si un presupuesto se pasa, nombra cada chunk de ese grafo con su tamaño. */
@@ -241,7 +290,11 @@ export function run(distDir = DEFAULT_DIST, budgetsPath = BUDGETS_PATH, log: (li
   const chunkModules = JSON.parse(readFileSync(modulesPath, "utf8")) as ChunkModules;
   const gzipSize = (file: string): number => gzipSync(readFileSync(join(distDir, file))).length;
   const fileText = (file: string): string => readFileSync(join(distDir, file), "utf8");
-  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText, chunkModules);
+  const decodersDir = join(distDir, DECODERS_RELATIVE);
+  const worldExtras = existsSync(decodersDir)
+    ? readdirSync(decodersDir).filter((f) => f.endsWith(".js")).sort().map((f) => `${DECODERS_RELATIVE}/${f}`)
+    : [];
+  const report = checkBundle(manifest, loadBudgets(budgetsPath), gzipSize, fileText, chunkModules, worldExtras);
   log(formatReport(report));
   return report.ok ? 0 : 1;
 }

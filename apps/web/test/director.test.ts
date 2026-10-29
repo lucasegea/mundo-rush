@@ -296,3 +296,46 @@ describe("doble llave de boot/dev.ts (03 §6.5.1 punto 1)", () => {
     stop?.();
   });
 });
+
+describe("plan estetica-c M6: contadores del renderer en la instantánea", () => {
+  const SAMPLE = { drawCalls: 29, triangles: 22302, textures: 9, geometries: 41, fps: 30 };
+
+  test("con el lector, el snapshot lleva `render` y valida; sin él, no lleva la clave (el v1 de siempre)", () => {
+    const { store } = mapStore();
+    const s = store.getState();
+    const h = advanceHistory(emptyHistory(), s, AT);
+    const withRender = selectDirectorSnapshot(s, h, { ...META, render: SAMPLE });
+    expect(withRender.render).toEqual(SAMPLE);
+    expect(DirectorSnapshotSchema.safeParse(withRender).success).toBe(true);
+    expect(DirectorSnapshotSchema.safeParse(selectDirectorSnapshot(s, h, { ...META, render: null })).success).toBe(true);
+    expect("render" in selectDirectorSnapshot(s, h, META)).toBe(false);
+  });
+
+  test("teeth: un contador negativo o un campo de más no valida (objeto estricto)", () => {
+    const s = createGameStore().getState();
+    const snap = selectDirectorSnapshot(s, advanceHistory(emptyHistory(), s, AT), META);
+    expect(DirectorSnapshotSchema.safeParse({ ...snap, render: { ...SAMPLE, drawCalls: -1 } }).success).toBe(false);
+    expect(DirectorSnapshotSchema.safeParse({ ...snap, render: { ...SAMPLE, audio: 1 } }).success).toBe(false);
+  });
+
+  test("startDirector re-arma el snapshot cada segundo con la muestra nueva aunque el store no cambie, y para al detenerse", () => {
+    const { store } = mapStore();
+    const { clock, advance } = fakeClock();
+    const sent: DirectorSnapshot[] = [];
+    let sample = { ...SAMPLE };
+    const stop = startDirector({
+      hot: { send: (event, data) => { if (event === SNAPSHOT_EVENT) sent.push(data as DirectorSnapshot); } },
+      store, clock, sessionId: META.sessionId, render: () => sample,
+    });
+    advance(10);
+    expect(sent.at(-1)?.render).toEqual(SAMPLE);
+    sample = { ...SAMPLE, drawCalls: 33, fps: 58.5 };
+    advance(1000);
+    expect(sent.at(-1)?.render).toEqual(sample);
+    const count = sent.length;
+    stop();
+    sample = { ...SAMPLE, drawCalls: 99 };
+    advance(5000);
+    expect(sent.length).toBe(count);
+  });
+});

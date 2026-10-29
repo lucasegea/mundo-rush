@@ -7,14 +7,19 @@ import { afterAll, describe, expect, test } from "vitest";
 import {
   BUDGET_KEYS,
   checkBundle,
+  checkPostChunk,
   formatReport,
   loadBudgets,
   run,
   staticClosure,
   THREE_MODULE,
+  POST_ENTRY,
+  POST_MODULE,
+  WORLD_CANVAS_ENTRY,
   type Budgets,
   type ChunkModules,
   type Manifest,
+  type ManifestChunk,
 } from "./bundle-size";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -99,8 +104,16 @@ const manifest = (vendorFile: string): Manifest => ({
     src: "src/world/GameCanvas.tsx",
     isDynamicEntry: true,
     imports: ["_vendor-b2.js", "_three-e5.js"],
+    dynamicImports: ["src/world/post/Post.tsx"],
   },
   "_three-e5.js": { file: "assets/three-e5.js" },
+  // Plan estetica-c M6: el postprocesado en su propio chunk (lo baja solo el tier que lo usa).
+  "src/world/post/Post.tsx": {
+    file: "assets/Post-g7.js",
+    src: "src/world/post/Post.tsx",
+    isDynamicEntry: true,
+    imports: ["_vendor-b2.js"],
+  },
 });
 
 const sizes = (overrides: Record<string, number>) => (file: string): number => {
@@ -111,6 +124,7 @@ const sizes = (overrides: Record<string, number>) => (file: string): number => {
     "assets/vendor-big.js": 400 * KB,
     "assets/GameCanvas-d4.js": 30 * KB,
     "assets/three-e5.js": 200 * KB,
+    "assets/Post-g7.js": 20 * KB,
   };
   const size = overrides[file] ?? base[file];
   if (size === undefined) throw new Error(`fixture sin tamaño: ${file}`);
@@ -141,6 +155,18 @@ describe("A2 check:budgets sobre el manifiesto de Vite", () => {
     const text = formatReport(report);
     expect(text).toContain("FAIL shell (index.html, carga inicial): 450 KB gzip (tope 300 KB, shell_js_css_gzip_kb)");
     expect(text).toContain("chunk más pesado: assets/vendor-big.js (_vendor-b2.js)");
+  });
+
+  test("estetica-c M2: el decodificador meshopt autoalojado suma al chunk 3D, no al shell", () => {
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({ "decoders/meshopt_decoder.module.js": 15 * KB }), undefined, undefined,
+      ["decoders/meshopt_decoder.module.js"]);
+    const [shell, world] = report.results;
+    expect(shell?.totalKb).toBe(110);
+    expect(world?.totalKb).toBe(245);
+    expect(world?.chunks.some((c) => c.file === "decoders/meshopt_decoder.module.js" && c.key === "public/decoders")).toBe(true);
+    const over = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({ "decoders/meshopt_decoder.module.js": 230 * KB }), undefined, undefined,
+      ["decoders/meshopt_decoder.module.js"]);
+    expect(over.results[1]?.ok).toBe(false);
   });
 
   test("el chunk 3D tiene su propio tope", () => {
@@ -192,6 +218,7 @@ describe("F2 A6 check:budgets con el mapa chunk → módulos", () => {
     "assets/vendor-b2.js": ["node_modules/react/index.js", "node_modules/zustand/esm/vanilla.mjs"],
     "assets/GameCanvas-d4.js": ["apps/web/src/world/GameCanvas.tsx", "node_modules/@react-three/fiber/dist/x.js"],
     "assets/three-e5.js": ["node_modules/three/build/three.module.js"],
+    "assets/Post-g7.js": ["apps/web/src/world/post/Post.tsx", "node_modules/postprocessing/build/index.js"],
   };
 
   test("el patrón reconoce three y @react-three/*, no parecidos", () => {
@@ -239,6 +266,69 @@ describe("F2 A6 check:budgets con el mapa chunk → módulos", () => {
 });
 
 // ---------- A2 de punta a punta: archivos reales, gzip real ----------
+// ---------- plan estetica-c M6: el postprocesado en su propio chunk (03 §2.9, D-160) ----------
+describe("estetica-c M6: low y dialog-only no descargan el postprocesado", () => {
+  const modules: ChunkModules = {
+    "assets/index-a1.js": ["apps/web/src/main.tsx"],
+    "assets/vendor-b2.js": ["node_modules/react/index.js"],
+    "assets/GameCanvas-d4.js": ["apps/web/src/world/GameCanvas.tsx", "node_modules/@react-three/fiber/dist/x.js"],
+    "assets/three-e5.js": ["node_modules/three/build/three.module.js"],
+    "assets/Post-g7.js": ["apps/web/src/world/post/Post.tsx", "node_modules/@react-three/postprocessing/dist/index.js", "node_modules/postprocessing/build/index.js"],
+  };
+
+  test("el patrón reconoce postprocessing y su envoltorio de R3F, no parecidos", () => {
+    expect(POST_MODULE.test("node_modules/postprocessing/build/index.js")).toBe(true);
+    expect(POST_MODULE.test("node_modules/@react-three/postprocessing/dist/index.js")).toBe(true);
+    expect(POST_MODULE.test("node_modules/@react-three/fiber/dist/x.js")).toBe(false);
+    expect(POST_MODULE.test("apps/web/src/world/post/Post.tsx")).toBe(false);
+  });
+
+  test("Post como entrada dinámica aparte pasa, y se mide como chunk del mundo", () => {
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), undefined, modules);
+    expect(report.violations).toEqual([]);
+    expect(report.ok).toBe(true);
+    expect(report.results.some((r) => r.name.includes(POST_ENTRY))).toBe(true);
+  });
+
+  test("dientes: Post importado estático desde el canvas falla", () => {
+    const m = manifest("assets/vendor-b2.js");
+    m["src/world/GameCanvas.tsx"] = {
+      file: "assets/GameCanvas-d4.js", src: "src/world/GameCanvas.tsx", isDynamicEntry: true, imports: ["_vendor-b2.js", "_three-e5.js", POST_ENTRY],
+    };
+    m[POST_ENTRY] = { file: "assets/Post-g7.js", src: POST_ENTRY, imports: ["_vendor-b2.js"] };
+    const report = checkBundle(m, BUDGETS, sizes({}), undefined, modules);
+    expect(report.ok).toBe(false);
+    expect(report.violations.join("\n")).toContain("postprocesado sin chunk propio");
+    expect(report.violations.join("\n")).toContain(`postprocesado en el grafo estático del canvas: ${POST_ENTRY}`);
+  });
+
+  test("dientes: módulos de postprocessing en un chunk estático del canvas fallan aunque Post siga aparte", () => {
+    const leaky = { ...modules, "assets/three-e5.js": ["node_modules/three/build/three.module.js", "node_modules/postprocessing/build/index.js"] };
+    const report = checkBundle(manifest("assets/vendor-b2.js"), BUDGETS, sizes({}), undefined, leaky);
+    expect(report.ok).toBe(false);
+    expect(report.violations.join("\n")).toContain("assets/three-e5.js (_three-e5.js) trae node_modules/postprocessing/build/index.js");
+  });
+
+  test("dientes (M7, nota 4 de QA): con módulos del mundo y sin la clave del canvas, falla; sin mundo, no hay nada que chequear", () => {
+    const full = manifest("assets/vendor-b2.js");
+    const canvas = full[WORLD_CANVAS_ENTRY] as ManifestChunk;
+    const m: Manifest = Object.fromEntries(Object.entries(full).filter(([k]) => k !== WORLD_CANVAS_ENTRY));
+    m["src/world/Canvas3D.tsx"] = { ...canvas, src: "src/world/Canvas3D.tsx" };
+    (m["index.html"] as ManifestChunk).dynamicImports = ["src/world/Canvas3D.tsx"];
+    const v = checkPostChunk(m, staticClosure(m, "index.html"), modules);
+    expect(v).toHaveLength(1);
+    expect(v[0]).toContain(`falta la entrada del canvas ${WORLD_CANVAS_ENTRY}`);
+    expect(checkBundle(m, BUDGETS, sizes({}), undefined, modules).ok).toBe(false);
+    expect(checkPostChunk({ "index.html": { file: "assets/index-a1.js", src: "index.html", isEntry: true } }, ["index.html"])).toEqual([]);
+  });
+
+  test("el canvas real carga Post con import() y React.lazy (nunca estático)", () => {
+    const src = readFileSync(join(ROOT, "apps/web/src/world/GameCanvas.tsx"), "utf8");
+    expect(src).toContain('lazy(() => import("./post/Post"))');
+    expect(src).not.toMatch(/^import [^;]*from "\.\/post\/Post";/m);
+  });
+});
+
 describe("A2 run() sobre un dist de fixture en disco", () => {
   const dir = mkdtempSync(join(tmpdir(), "lg-dist-"));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));

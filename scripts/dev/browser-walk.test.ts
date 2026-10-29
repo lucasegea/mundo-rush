@@ -50,16 +50,28 @@ describe("findChromium", () => {
   });
 });
 
+// Cambio registrado (open-world-3d T2(f), D-833): el lanzamiento de Chromium se mudo de browser-walk.ts al lanzador
+// compartido gl-mode.ts (lo usan la caminata y la sonda). La asercion vieja leia `chromium.launch(` en browser-walk.ts;
+// ahora se lee en gl-mode.ts, y browser-walk.ts tiene que abrir el navegador solo por `withGlBrowser`.
 describe("condicion del operador (D-815): el navegador siempre se cierra", () => {
   const src = readFileSync(new URL("./browser-walk.ts", import.meta.url), "utf8");
-  test("el lanzamiento esta en un try cuyo finally cierra context y browser", () => {
-    const launch = src.indexOf("chromium.launch(");
-    const fin = src.indexOf("} finally {", launch);
-    expect(launch).toBeGreaterThan(0);
+  const launcher = readFileSync(new URL("./gl-mode.ts", import.meta.url), "utf8");
+  test("el lanzamiento esta en un try cuyo finally cierra context y browser (gl-mode.ts)", () => {
+    const run = launcher.indexOf("export async function withGlBrowser");
+    const launch = launcher.indexOf("launchOnce(exe, o)", run);
+    const fin = launcher.indexOf("} finally {", launch);
+    expect(run).toBeGreaterThan(0);
+    expect(launch).toBeGreaterThan(run);
     expect(fin).toBeGreaterThan(launch);
-    expect(src.slice(fin, fin + 200)).toContain("closeBrowser(context, browser)");
+    expect(launcher.slice(fin, fin + 200)).toContain("closeBrowser(context, browser)");
+    expect(launcher.match(/chromium\.launch\(/g)).toHaveLength(1);
+  });
+  test("la caminata abre el navegador solo por withGlBrowser", () => {
+    expect(src).not.toContain("chromium.launch(");
+    expect(src).toContain("withGlBrowser(");
   });
   test("existe la falla deliberada para que QA compruebe que no queda chromium vivo", () => {
     expect(src).toContain("--fail-on-purpose");
+    expect(launcher).toContain("failOnPurpose");
   });
 });

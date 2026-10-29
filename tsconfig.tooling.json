@@ -9,5 +9,5 @@
   },
   "include": ["vitest.config.ts", "scripts/**/*.ts"],
   "exclude": ["scripts/eval/**", "scripts/integration/**"],
-  "references": [{ "path": "./packages/content-schema" }]
+  "references": [{ "path": "./packages/content-schema" }, { "path": "./packages/art" }]
 }

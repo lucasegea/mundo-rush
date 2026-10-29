@@ -53,7 +53,8 @@ export function buildWithFlag(outDir: string): number {
   const vite = join(ROOT, "node_modules/vite/bin/vite.js");
   const r = spawnSync(process.execPath, [vite, "build", "--outDir", outDir, "--emptyOutDir", "--logLevel", "error"], {
     cwd: WEB,
-    env: { ...process.env, VITE_LG_DIRECTOR: "1" },
+    // open-world-3d T2(g): la sonda de rendimiento tiene su propia llave; el build con las dos puestas tampoco la emite.
+    env: { ...process.env, VITE_LG_DIRECTOR: "1", VITE_LG_PERF_PROBE: "1" },
     stdio: ["ignore", "inherit", "inherit"],
   });
   return r.status ?? 1;

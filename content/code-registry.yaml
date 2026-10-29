@@ -1,0 +1,23 @@
+# content/code-registry.yaml: registro de CÓDIGO de terceros (open-world-3d T2(c), D-831). Todo archivo bajo
+# tooling/vendor/ y apps/web/public/decoders/ tiene una fila acá con su paquete@version, licencia (lista cerrada D1 de
+# packages/content-schema/src/schemas/assets.ts), el texto de la licencia versionado (`archivo_licencia`), el origen y el
+# sha256 upstream (`sha256_original`), y el sha256 de los bytes versionados (`sha256`). Un archivo editado lleva su
+# `<archivo>.patch` contra los bytes upstream; scripts/assets/refetch.ts lo baja, aplica el parche y compara byte a byte.
+# scripts/content/provenance.test.ts recalcula cada sha256 y falla con un archivo sin fila o con un hash distinto.
+codigo:
+  - id: three/examples/jsm/libs/meshopt_decoder.module.js
+    archivo: apps/web/public/decoders/meshopt_decoder.module.js
+    paquete: three@0.186.1
+    autor: Arseny Kapoulkine (meshoptimizer 1.1), copia de three
+    licencia: MIT
+    archivo_licencia: docs/licencias/meshoptimizer-LICENSE.md
+    url_origen: https://unpkg.com/three@0.186.1/examples/jsm/libs/meshopt_decoder.module.js
+    fecha_descarga: 2026-10-13
+    sha256_original: "d428e73a000057c6c94bfcedc3412d0c2dc14ca8800e88553aab05113ad2bf19"
+    sha256: "d428e73a000057c6c94bfcedc3412d0c2dc14ca8800e88553aab05113ad2bf19"
+    procedencia: refetched
+    editado: false
+    notas: >-
+      Copia sin cambios de three/examples/jsm/libs/meshopt_decoder.module.js (estetica-c M2) que world/props/gltf.ts carga
+      autoalojada. Es el decodificador de meshoptimizer 1.1 (MIT, Arseny Kapoulkine); docs/licencias/meshoptimizer-LICENSE.md
+      es el LICENSE.md de meshoptimizer, el mismo texto MIT con su aviso de copyright.

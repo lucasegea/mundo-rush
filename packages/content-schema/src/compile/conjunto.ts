@@ -17,6 +17,7 @@ import type { Pista, Presentacion, Sobre } from "../schemas/red.ts";
 import { Saber } from "../schemas/saber.ts";
 import { FichaConversacion } from "../schemas/conversacion.ts";
 import { Universo } from "../schemas/universo.ts";
+import { ArchivoCreditos, ArchivoOverridesNpm, ArchivoRegistroAssets, ArchivoRegistroCodigo } from "../schemas/assets.ts";
 import type { ArchivoFuente, Entrada, Hallazgo } from "./tipos.ts";
 import { clave } from "./tipos.ts";
 
@@ -50,6 +51,14 @@ export interface Conjunto {
   contencion: Infer<typeof ArchivoContencion> | null;
   retirados: Entrada<Infer<typeof ArchivoRetirados>> | null;
   allowlist: Entrada<Infer<typeof ArchivoAllowlist>> | null;
+  /** Registro de licencias de assets (03 §6.4.2, plan estetica-c M2). */
+  registroAssets: Entrada<Infer<typeof ArchivoRegistroAssets>> | null;
+  /** Créditos que genera la pantalla de créditos (03 §6.4.2). */
+  creditos: Entrada<Infer<typeof ArchivoCreditos>> | null;
+  /** Registro de código de terceros (tooling/vendor/, public/decoders/; open-world-3d T2(c), D-831). */
+  registroCodigo: Entrada<Infer<typeof ArchivoRegistroCodigo>> | null;
+  /** Overrides de licencia de npm para paquetes sin `license` en el lockfile (AC9). */
+  overridesNpm: Entrada<Infer<typeof ArchivoOverridesNpm>> | null;
   /** Textos planos que van solo al servidor (content/prompts/*.txt), por nombre de archivo sin extensión. */
   prompts: Record<string, string>;
   /** Ids definidos por cada archivo (para la compilación incremental). */
@@ -59,13 +68,15 @@ export interface Conjunto {
 export const conjuntoVacio = (): Conjunto => ({
   misiones: [], npcs: [], pedidos: [], fundaciones: [], saberes: [], presentaciones: [], sobres: [], pistas: [],
   plantillas: [], glosario: [], habilidades: [], ramas: [], regiones: [], lugares: [], niveles: [], dioramas: [], conversaciones: [],
-  universo: null, bloqueos: [], temas: null, contencion: null, retirados: null, allowlist: null, prompts: {}, idsPorArchivo: new Map(),
+  universo: null, bloqueos: [], temas: null, contencion: null, retirados: null, allowlist: null, registroAssets: null, creditos: null,
+  registroCodigo: null, overridesNpm: null, prompts: {}, idsPorArchivo: new Map(),
 });
 
 type Tipo =
   | "mision" | "npc" | "pedido" | "fundacion" | "saber" | "presentaciones" | "sobres" | "pistas" | "lumi"
   | "glosario" | "habilidades" | "lugares" | "nivel" | "diorama" | "bloqueo" | "temas" | "contencion" | "retirados"
-  | "allowlist" | "prompt" | "conversacion" | "manifiesto" | "ignorado";
+  | "allowlist" | "prompt" | "conversacion" | "manifiesto" | "registro-assets" | "creditos" | "registro-codigo" | "overrides-npm"
+  | "ignorado";
 
 /** Ruta canónica → tipo (03 §4.2.1). Lo que no matchea es un error: nada se ignora en silencio. */
 const RUTAS: [RegExp, Tipo][] = [
@@ -93,6 +104,10 @@ const RUTAS: [RegExp, Tipo][] = [
   [/^content\/lint-allowlist\.yaml$/, "allowlist"],
   [/^content\/prompts\/[^/]+\.txt$/, "prompt"],
   [/^content\/conversaciones\/[^/]+\.yaml$/, "conversacion"],
+  [/^content\/assets-registry\.yaml$/, "registro-assets"],
+  [/^content\/creditos\.yaml$/, "creditos"],
+  [/^content\/code-registry\.yaml$/, "registro-codigo"],
+  [/^content\/npm-licence-overrides\.yaml$/, "overrides-npm"],
   // Fuera del compilador: prompt offline de Lumi (02 §2.6) y archivos versionados a mano (D-159).
   [/^content\/authoring\//, "ignorado"],
   [/^content\/audio-lines\.manifest\.json$/, "ignorado"],
@@ -240,6 +255,32 @@ export const agregarArchivo = (c: Conjunto, f: ArchivoFuente, h: Hallazgo[]): vo
     case "retirados": {
       const d = validar(ArchivoRetirados, f.ruta, raw, h);
       if (d) c.retirados = { archivo: f.ruta, base: "", data: d };
+      break;
+    }
+    case "registro-assets": {
+      const d = validar(ArchivoRegistroAssets, f.ruta, raw, h);
+      if (d) {
+        c.registroAssets = { archivo: f.ruta, base: "", data: d };
+        ids.push(...d.packs.map((x) => `pack:${x.id}`), ...d.assets.map((x) => `asset:${x.id}`));
+      }
+      break;
+    }
+    case "creditos": {
+      const d = validar(ArchivoCreditos, f.ruta, raw, h);
+      if (d) c.creditos = { archivo: f.ruta, base: "", data: d };
+      break;
+    }
+    case "registro-codigo": {
+      const d = validar(ArchivoRegistroCodigo, f.ruta, raw, h);
+      if (d) {
+        c.registroCodigo = { archivo: f.ruta, base: "", data: d };
+        ids.push(...d.codigo.map((x) => `codigo:${x.id}`));
+      }
+      break;
+    }
+    case "overrides-npm": {
+      const d = validar(ArchivoOverridesNpm, f.ruta, raw, h);
+      if (d) c.overridesNpm = { archivo: f.ruta, base: "", data: d };
       break;
     }
     case "allowlist": {

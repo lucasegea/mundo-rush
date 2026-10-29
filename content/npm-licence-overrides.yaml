@@ -1,0 +1,8 @@
+# content/npm-licence-overrides.yaml: licencias de npm leídas a mano (open-world-3d T2(c), AC9, D-831). Un paquete del
+# cierre de producción de apps/web sin `license` en package-lock.json lleva acá la licencia de su LICENSE, el sha256 de
+# ese archivo en node_modules (si el paquete cambia, el hash deja de coincidir y el test falla) y la fecha de la lectura.
+overrides:
+  webgl-constants@1.1.1:
+    license: MIT
+    license_file_sha256: "0969fa65680b694452c2c65981df14af5c192da24f2b1f87bdd51d8ed24efcfa"
+    verified: 2026-10-28

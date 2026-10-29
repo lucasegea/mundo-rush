@@ -1,12 +1,14 @@
 // F1.2 A1: cada esquema tiene un fixture válido y uno inválido (incluidos fundación, saber, presentación,
 // sobre, efectos y sitios). Fixtures en YAML como el contenido real; el paquete no lee disco.
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import type { z } from "zod";
 import {
   ArbolHabilidades, ArchivoAllowlist, ArchivoGlosario, ArchivoLugares, ArchivoLumi, ArchivoPistas,
   ArchivoPresentaciones, ArchivoRetirados, ArchivoSobres, Diorama, Efecto, Escena, Fundacion, ListaBloqueo,
-  Mision, MomentoPronunciacion, Npc, PedidoTablero, Saber, TarjetaNivel, TemasGlobales,
+  Mision, MomentoPronunciacion, Npc, PedidoTablero, Saber, TarjetaNivel, TemasGlobales, ArchivoRegistroAssets, PackAssets,
+  PiezaPersonaje, FORMATO_MAQUETA,
 } from "../src/index.ts";
 
 const y = (s: string): unknown => parse(s);
@@ -221,12 +223,24 @@ describe("A1: esquemas con fixture válido e inválido", () => {
   test("diorama con anclas sitios:", () => {
     const d = y(`id: plaza
 bounds: { minX: 0, maxX: 10, minZ: 0, maxZ: 10 }
-tiles: []
 sitios:
   - { id: SITIO-X, pos: [1, 0, 2], ocupa: [[1, 2]], caminable_en: [fundado] }`);
     ok(Diorama, d);
     falla(Diorama, con(d, { sitios: [{ id: "SITIO-X", pos: [1, 2] }] }), "sitios.0.pos");
     falla(Diorama, con(d, { id: "faro" }), "id");
+  });
+  test("plan estetica-c M7: `tiles` y `atlas_tiles` se rechazan con un mensaje que apunta al formato de la maqueta", () => {
+    const d = y(`id: plaza
+bounds: { minX: 0, maxX: 10, minZ: 0, maxZ: 10 }`);
+    ok(Diorama, d);
+    for (const [clave, valor] of [["tiles", []], ["tiles", [{ capa: "suelo", origen: [0, 0], filas: ["1 1"] }]], ["atlas_tiles", "atlas/test"]] as const) {
+      const r = Diorama.safeParse(con(d, { [clave]: valor }));
+      expect(r.success, clave).toBe(false);
+      const issue = r.error?.issues.find((i) => i.path.join(".") === clave);
+      expect(issue?.message, clave).toContain(`\`${clave}\` se retiró con HD-2D`);
+      expect(issue?.message, clave).toContain(FORMATO_MAQUETA);
+      expect(issue?.message, clave).toMatch(/plan estetica-c M5/);
+    }
   });
   test("lugares y regiones", () => {
     const l = y(`regiones:
@@ -291,5 +305,38 @@ ejemplo_tarjeta: null`);
       objetivo: "x", criterio: "x", slots_repaso: 2, red: null, fundacion: null, saberes: [], escenas: [ESCENA], estado: "draft" };
     ok(PedidoTablero, p);
     falla(PedidoTablero, { ...p, plantilla: "compra" }, "plantilla");
+  });
+});
+
+describe("plan estetica-c M6: los tokens de `pintura` del registro son tokens de la paleta (el M2 SEAM cerrado)", () => {
+  const registro = y(readFileSync(new URL("../../../content/assets-registry.yaml", import.meta.url), "utf8")) as {
+    packs: Record<string, unknown>[];
+    assets: { personaje?: { tipo: string; pintura?: Record<string, unknown>[] } }[];
+  };
+
+  test("el registro real valida", () => {
+    ok(ArchivoRegistroAssets, registro);
+  });
+
+  test("teeth: un token de pintura de pack que no es de la paleta falla en validate:content, nombrando el material", () => {
+    const pack = registro.packs.find((p) => p.pintura !== undefined) as Record<string, unknown>;
+    expect(pack).toBeDefined();
+    ok(PackAssets, pack);
+    falla(PackAssets, { ...pack, pintura: { White: "rojo-que-no-existe" } }, "pintura.White");
+  });
+
+  test("teeth: una regla de pintura de cuerpo con un token fuera de la paleta falla", () => {
+    const cuerpo = registro.assets.find((a) => a.personaje?.tipo === "cuerpo")?.personaje as { pintura: Record<string, unknown>[] };
+    expect(cuerpo).toBeDefined();
+    ok(PiezaPersonaje, cuerpo);
+    const malo = { ...cuerpo, pintura: [{ ...cuerpo.pintura[0], token: "verde-fluo", ropa: undefined }] };
+    falla(PiezaPersonaje, malo, "pintura.0.token");
+  });
+
+  test("simplificar (cuerpo reducido de low) es una razón entre 0 y 1", () => {
+    const cuerpo = registro.assets.find((a) => a.personaje?.tipo === "cuerpo")?.personaje as object;
+    ok(PiezaPersonaje, { ...cuerpo, simplificar: 0.4 });
+    falla(PiezaPersonaje, { ...cuerpo, simplificar: 1 }, "simplificar");
+    falla(PiezaPersonaje, { ...cuerpo, simplificar: 0 }, "simplificar");
   });
 });

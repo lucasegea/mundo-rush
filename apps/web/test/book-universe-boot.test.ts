@@ -56,7 +56,9 @@ async function lexiconUrlsOnSceneOpen(universeId: string | undefined, content: R
   });
   await vi.waitFor(() => expect(gameStore.getState().world.catalog).toBe("ready"));
   actions.enterScene("NPC-CERRO", null);
-  await vi.waitFor(() => expect(gameStore.getState().dialogue.lexicon.status).toBe("ready"));
+  // Cambio registrado (open-world-3d T3, lesson F4.2): el tope de espera pasa del default de 1 s de vi.waitFor a 10 s;
+  // la afirmación no cambia. Con la suite entera en paralelo el import en frío del léxico pasó el segundo una vez.
+  await vi.waitFor(() => expect(gameStore.getState().dialogue.lexicon.status).toBe("ready"), { timeout: 10_000 });
   return urls;
 }
 

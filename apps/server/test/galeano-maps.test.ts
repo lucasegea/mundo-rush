@@ -1,7 +1,12 @@
-// book-mode slice-1 M6.1 (AC1, AC2): los dioramas compilados de U-GALEANO son mapas reales (tiles, props, NPCs) y
-// son recorribles. Se compila en memoria desde content/universes/U-GALEANO/ (la salida en disco está fuera de git).
+// book-mode slice-1 M6.1 (AC1, AC2): los dioramas compilados de U-GALEANO son mapas reales (props, NPCs) y son
+// recorribles. Se compila en memoria desde content/universes/U-GALEANO/ (la salida en disco está fuera de git).
+//
+// Cambio registrado (open-world-3d T3, AC13; D-818 y el plan estetica-c M7, D-207, que retira `tiles` y `atlas_tiles`):
+// el test "muelle es un mapa de tiles con al menos 4 ids distintos" afirmaba `atlas_tiles` y una capa `suelo` del tamaño
+// de los límites; ahora afirma el formato de la maqueta (`terreno`, al menos un camino, sin `tiles` ni `atlas_tiles`).
+// El A* hasta cada NPC ahora además comprueba que la celda de llegada queda a 3 m o menos del NPC.
 import { compilarContenido } from "@lg/content-schema";
-import { cellAt, findPath, isWalkable, nearestWalkable, prepareDiorama, type DioramaLayout } from "@lg/core";
+import { cellAt, cellCenter, findPath, isWalkable, nearestWalkable, prepareDiorama, type DioramaLayout } from "@lg/core";
 import { describe, expect, test } from "vitest";
 import { leerContenido } from "../../../scripts/content/build.ts";
 import { must, REPO_ROOT } from "./helpers.ts";
@@ -11,18 +16,20 @@ if (!resultado.salida) throw new Error(`U-GALEANO no compila: ${JSON.stringify(r
 const dioramas = resultado.salida.cliente["dioramas.json"] as DioramaLayout[];
 const layout = (id: string): DioramaLayout => must(dioramas.find((d) => d.id === id), id);
 
-describe("AC1: muelle y plaza compilan con atlas y capas del tamaño de sus límites", () => {
-  test("muelle es un mapa de tiles con al menos 4 ids distintos", () => {
-    const l = layout("muelle");
-    expect(l.atlas_tiles).toBeTruthy();
-    const ancho = l.bounds.maxX - l.bounds.minX;
-    const alto = l.bounds.maxZ - l.bounds.minZ;
-    const suelo = must(l.tiles?.find((t) => t.capa === "suelo"), "capa suelo");
-    expect(suelo.filas).toHaveLength(alto);
-    for (const fila of suelo.filas) expect(fila.trim().split(/\s+/)).toHaveLength(ancho);
-    const ids = new Set((l.tiles ?? []).flatMap((t) => t.filas.flatMap((f) => f.trim().split(/\s+/))).filter((c) => c !== "0"));
-    expect(ids.size).toBeGreaterThanOrEqual(4);
-    for (const id of ids) expect(Number(id)).toBeLessThanOrEqual(8);
+describe("AC13: muelle y plaza en el formato de la maqueta", () => {
+  test("muelle tiene terreno y al menos un camino, sin tiles ni atlas_tiles; 28x20 como antes", () => {
+    const l = layout("muelle") as DioramaLayout & Record<string, unknown>;
+    expect(l["terreno"]).toBeTruthy();
+    expect((l["caminos"] as unknown[] | undefined)?.length ?? 0).toBeGreaterThanOrEqual(1);
+    expect("tiles" in l).toBe(false);
+    expect("atlas_tiles" in l).toBe(false);
+    expect([l.bounds.maxX - l.bounds.minX, l.bounds.maxZ - l.bounds.minZ]).toEqual([28, 20]);
+  });
+
+  test("plaza compila, también sin tiles", () => {
+    const l = layout("plaza") as DioramaLayout & Record<string, unknown>;
+    expect("tiles" in l).toBe(false);
+    expect("atlas_tiles" in l).toBe(false);
   });
 });
 
@@ -38,6 +45,9 @@ describe("AC2: NPCs en el mapa y alcanzables desde el spawn", () => {
     for (const npc of run.npcs) {
       const goal = nearestWalkable(run.grid, cellAt(run.grid, npc.x, npc.z), 3);
       expect(goal, `${npc.id} sin celda libre cerca`).not.toBeNull();
+      const [col, row] = must(goal, npc.id);
+      const llegada = cellCenter(run.grid, col, row);
+      expect(Math.hypot(llegada.x - npc.x, llegada.z - npc.z), `${npc.id}: llegada a más de 3 m`).toBeLessThanOrEqual(3);
       expect(findPath(run.grid, start, must(goal, npc.id)), `${npc.id} inalcanzable`).not.toBeNull();
     }
   });

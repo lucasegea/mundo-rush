@@ -1,8 +1,9 @@
 // Slice `world` (03 §3.3). F1.3 llena solo lo que necesita el modo solo-diálogo: los lugares de la región
 // y dónde está cada NPC (contenido compilado de F1.2, cargado por services/content). El resto (dioramas,
 // flags, fundaciones, red, NPCs en el mapa, interactuables) arranca vacío y lo llenan F2-F3.3.
-// F2: el diorama cargado, listo para jugar (capas de tiles, cajas, NPCs, interactuables y grilla de caminabilidad).
+// F2: el diorama cargado, listo para jugar (suelo de la maqueta, cajas, NPCs, interactuables y grilla de caminabilidad).
 import type { DioramaRuntime } from "@lg/core";
+import type { CharacterLook } from "@lg/art";
 
 export type FoundationState = "idea" | "en_marcha" | "fundado" | "crece";
 
@@ -19,6 +20,8 @@ export interface NpcInfo {
   id: string;
   name: string;
   placeId: string;
+  /** Plan estetica-c M5: la apariencia de su ficha (`apariencia`); null o ausente si la ficha no la trae. */
+  look?: CharacterLook | null;
 }
 
 export interface WorldState {
@@ -42,6 +45,11 @@ export interface WorldState {
   network: { intros: string[]; links: [string, string][] };
   /** Último punto elegido en modo inspección (solo modo director, §6.5.3). */
   lastPick: { x: number; z: number } | null;
+  /**
+   * Estado por NPC. `requestIcon`: el NPC tiene un pedido abierto (burbuja ámbar sobre la cabeza, propuesta C §3; plan
+   * estetica-c M5 la dibuja desde `selectRequestBubbles`). M5 SEAM: hoy nadie lo escribe; lo escribe el sistema de
+   * misiones o del tablero de pedidos cuando abra pedidos por NPC (no se inventa acá).
+   */
   npcStates: Record<string, { cell: [number, number] | null; available: boolean; requestIcon: boolean }>;
   /** Relación por NPC, 0-5, nunca baja. */
   relationships: Record<string, number>;

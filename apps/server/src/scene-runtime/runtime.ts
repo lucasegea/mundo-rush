@@ -22,13 +22,13 @@ import {
 import type { Clock } from "@lg/core";
 import {
   ClientMessageSchema, ServerMessageSchema,
-  type ClientMessage, type EvidenceEvent, type ServerMessage,
+  type ClientMessage, type EvidenceEvent, type NoticeCause, type ServerMessage,
 } from "@lg/protocol";
 import type { Escena, FichaConversacion, LineaGuionada, Mision, Npc } from "@lg/content-schema";
 import type { ServerContent } from "../content/loader.ts";
 import type { ModelsConfig } from "../config/models.ts";
 import { runObserver } from "../observer/observer.ts";
-import type { TextModelProvider, TextTurn } from "../providers/text.ts";
+import { noticeCause, type TextModelProvider, type TextTurn } from "../providers/text.ts";
 import type { EvidenceStore } from "../store/evidence.ts";
 import { createModerator, type ModerationResult, type Moderator } from "../moderation/moderation.ts";
 import type { ModerationProvider } from "../providers/moderation.ts";
@@ -346,11 +346,11 @@ export function createSceneSession(
       turnId: `${r.sceneRunId}:${turn}`, playerText, lastNpcLine: r.lastNpcLine,
       criteria: r.scene.criterios_exito, structures, cefrBand: r.scene.banda,
     }, role.observer);
-    const replying: Promise<{ text: string } | { error: string } | null> = r.npc && r.system
+    const replying: Promise<{ text: string } | { error: string; cause: NoticeCause } | null> = r.npc && r.system
       ? deps.npcModel.generate({
         system: r.system, turns: modelTurns(r, note ? DIRECTOR_NOTES[note] : null),
         json: false, maxOutputTokens: role.textNpc.maxOutputTokens, timeoutMs: role.textNpc.timeoutMs,
-      }).then((res) => ({ text: res.text }), (err: unknown) => ({ error: err instanceof Error ? err.message : "error" }))
+      }).then((res) => ({ text: res.text }), (err: unknown) => ({ error: err instanceof Error ? err.message : "error", cause: noticeCause(err) }))
       : Promise.resolve(null);
 
     const obs = await observing;
@@ -369,7 +369,7 @@ export function createSceneSession(
       // Salida en texto: moderación síncrona y completa antes de mostrar (03 §7.7 punto 4).
       if (!(await speakModerated(r, reply.text, () => stillOn(r, gen, turn)))) return;
     } else if (reply) {
-      send({ type: "scene.notice", code: "model_unavailable", message: "El NPC no pudo responder (modelo no disponible)." });
+      send({ type: "scene.notice", code: "model_unavailable", message: "El NPC no pudo responder (modelo no disponible).", cause: reply.cause });
     }
     dispatch(r.completePending ? { type: "criteriaMet" } : { type: "npcDone" });
   }

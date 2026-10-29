@@ -58,13 +58,13 @@ export function createGeminiTextProvider(apiKey: string, model: string, fetchImp
         const timeout = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
         throw new ProviderError(timeout ? "el proveedor no respondió a tiempo" : "error de red con el proveedor", timeout ? "timeout" : "http");
       }
-      if (!res.ok) throw new ProviderError(`el proveedor respondió ${res.status}`, "http");
+      if (!res.ok) throw new ProviderError(`el proveedor respondió ${res.status}`, "http", res.status);
       const data = (await res.json()) as GeminiResponse;
       const candidate = data.candidates?.[0];
       // finishReason antes de usar el texto: una salida cortada no se interpreta como respuesta.
       if (candidate?.finishReason === "MAX_TOKENS") throw new ProviderError("respuesta truncada (MAX_TOKENS)", "truncated");
       const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
-      if (text === "") throw new ProviderError("respuesta vacía del proveedor", "http");
+      if (text === "") throw new ProviderError("respuesta vacía del proveedor", "empty");
       return { text };
     },
   };

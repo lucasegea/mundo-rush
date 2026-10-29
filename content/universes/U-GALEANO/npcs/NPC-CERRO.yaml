@@ -45,4 +45,14 @@ persona_prompt: >
   sentences.
 
   === END PERSONA ===
+apariencia:
+  cuerpo: ancho
+  remera: casa-6
+  pantalon: pantalon-2
+  piel: piel-2
+  pelo: piedra
+  peinado: casquete
+  sombrero: null
+  cuello: bufanda
+  escala: 1
 estado: draft

@@ -46,4 +46,14 @@ persona_prompt: >
   short and precise.
 
   === END PERSONA ===
+apariencia:
+  cuerpo: saco
+  remera: casa-4
+  pantalon: pantalon
+  piel: piel
+  pelo: pelo-2
+  peinado: casquete
+  sombrero: boina
+  cuello: null
+  escala: 1
 estado: draft

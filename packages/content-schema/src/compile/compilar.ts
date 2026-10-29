@@ -1,4 +1,6 @@
 // Compilador de contenido: puro (texto → datos + hallazgos). scripts/content/build.ts hace el IO.
+import { chequearAssets } from "./assets.ts";
+import { chequearDioramas } from "./dioramas.ts";
 import { buscarRetirados } from "./retirados.ts";
 import { agregarArchivo, chequearDuplicados, conjuntoVacio } from "./conjunto.ts";
 import type { Conjunto } from "./conjunto.ts";
@@ -29,7 +31,11 @@ const OBLIGATORIOS = [
   "content/red/presentaciones.yaml",
 ];
 
-export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo = "dev"): Resultado => {
+/**
+ * `publicos`: archivos servidos en apps/web/public (rutas desde la raíz del repo), para cruzarlos con el registro de
+ * licencias (plan estetica-c M2). Sin la lista se saltean solo los cruces contra disco.
+ */
+export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo = "dev", publicos?: readonly string[]): Resultado => {
   const h: Hallazgo[] = [];
   const c = conjuntoVacio();
   const ordenados = [...archivos].sort((a, b) => a.ruta.localeCompare(b.ruta));
@@ -45,6 +51,8 @@ export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo
   chequearRed(c, h);
   chequearCatalogoLumi(c, h);
   chequearNiveles(c, h);
+  chequearAssets(c, h, publicos);
+  chequearDioramas(c, h);
 
   const lineas = extraerLineas(c);
   lintBloqueos(c, lineas, h);
@@ -89,6 +97,7 @@ export const compilarIncremental = (
   base: readonly ArchivoFuente[],
   cambios: readonly { ruta: string; texto: string | null }[],
   modo: Modo = "dev",
+  publicos?: readonly string[],
 ): ResultadoIncremental => {
   const mapa = new Map(base.map((a) => [a.ruta, a.texto]));
   const antes = compilarSoloIds(base.filter((a) => cambios.some((ch) => ch.ruta === a.ruta)));
@@ -97,7 +106,7 @@ export const compilarIncremental = (
     else mapa.set(ch.ruta, ch.texto);
   }
   const archivos = [...mapa].map(([ruta, texto]) => ({ ruta, texto }));
-  const r = compilarContenido(archivos, modo);
+  const r = compilarContenido(archivos, modo, publicos);
   const despues = idsDe(r.conjunto, cambios.map((ch) => ch.ruta));
   return { ...r, tocados: [...new Set([...antes, ...despues])].sort(), archivos };
 };

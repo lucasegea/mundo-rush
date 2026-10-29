@@ -2,7 +2,7 @@
 // `import()` bajo `import.meta.env.DEV && VITE_LG_DIRECTOR === "1"`: en `vite build` no existe.
 // Lee el juego solo por state/selectors/ (el store le llega inyectado como lector) y manda por el canal de HMR
 // el snapshot (≤ 4 por segundo y solo si cambió) y los eventos del diario.
-import { JOURNAL_EVENT, SNAPSHOT_EVENT, type JournalBatch, type JournalEventInput } from "@lg/protocol/director";
+import { JOURNAL_EVENT, SNAPSHOT_EVENT, type JournalBatch, type JournalEventInput, type RenderStats } from "@lg/protocol/director";
 import { selectEffectiveTier, type GameState } from "../../state/selectors";
 import { browserClock, createJournalEmitter, createSnapshotEmitter, type DirectorClock } from "./emitter";
 import { journalEvents } from "./journal";
@@ -30,7 +30,16 @@ export interface DirectorDeps {
   sessionId?: string;
   /** Recibe `pagehide` para cerrar la sesión del diario (la app pasa window). */
   pageEvents?: EventTarget;
+  /**
+   * Plan estetica-c M6: lector de los contadores del renderer (boot/dev.ts inyecta world/budget/renderStats; dev/ no
+   * conoce world/ ni three). Con él, el snapshot lleva `render` y se vuelve a armar cada RENDER_SAMPLE_MS aunque el store
+   * no cambie (el emisor solo manda si cambió).
+   */
+  render?: () => RenderStats | null;
 }
+
+/** Cada cuánto se re-arma el snapshot para refrescar los contadores del renderer. */
+export const RENDER_SAMPLE_MS = 1000;
 
 /** Id de sesión ordenable por fecha y seguro como nombre de archivo: `20261007-183012-k3f9`. */
 export const newSessionId = (now: number, random: () => number = Math.random): string => {
@@ -54,7 +63,7 @@ export function startDirector(deps: DirectorDeps): () => void {
   const onState = (state: GameState, prev: GameState | null): void => {
     const at = iso();
     history = advanceHistory(history, state, at);
-    snapshots.push(selectDirectorSnapshot(state, history, { sessionId, at }));
+    snapshots.push(selectDirectorSnapshot(state, history, { sessionId, at, ...(deps.render ? { render: deps.render() } : {}) }));
     journal.add(journalEvents(prev, state, at));
   };
 
@@ -65,9 +74,17 @@ export function startDirector(deps: DirectorDeps): () => void {
   const unsubscribe = deps.store.subscribe(onState);
 
   let stopped = false;
+  let sampler: unknown = null;
+  const sample = (): void => {
+    sampler = clock.setTimeout(sample, RENDER_SAMPLE_MS);
+    const at = iso();
+    snapshots.push(selectDirectorSnapshot(deps.store.getState(), history, { sessionId, at, render: deps.render ? deps.render() : null }));
+  };
+  if (deps.render) sampler = clock.setTimeout(sample, RENDER_SAMPLE_MS);
   const stop = (): void => {
     if (stopped) return;
     stopped = true;
+    if (sampler !== null) clock.clearTimeout(sampler);
     unsubscribe();
     snapshots.stop();
     journal.add([{ type: "session.end", at: iso() }]);

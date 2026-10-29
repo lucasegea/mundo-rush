@@ -2,7 +2,7 @@
 // (F4.2) necesita para mostrarla. Lo llena el servicio de escena (services/scene) con los mensajes del protocolo; la UI
 // pide cosas con acciones, que dejan comandos en `outbox` para que el servicio los mande (R5: la red vive en services/).
 import type { NpcSpeed } from "@lg/core";
-import type { ClientMessage, ConversationStateMessage } from "@lg/protocol";
+import type { ClientMessage, ConversationStateMessage, NoticeCause } from "@lg/protocol";
 
 /** Una línea del historial. `template`: id de plantilla de Lumi (su texto sale del contenido, nunca del modelo). */
 export interface DialogueLine {
@@ -94,6 +94,8 @@ export interface DialogueState {
   containment: { line: string; resource: { label: string; detail: string } | null; provisional: boolean } | null;
   /** Último aviso del servidor que no corta la escena (código del protocolo). */
   notice: string | null;
+  /** Causa estructurada del último `model_unavailable` del NPC (open-world-3d T1); null si el aviso no trajo causa. */
+  noticeCause: NoticeCause | null;
   lexicon: Lexicon;
   /** F5.2: voz del jugador (micrófono, turno hablado, medidor). */
   voice: VoiceUi;
@@ -135,6 +137,7 @@ export const initialDialogue = (): DialogueState => ({
   outcome: null,
   containment: null,
   notice: null,
+  noticeCause: null,
   lexicon: initialLexicon(),
   voice: initialVoiceUi(),
   conversation: null,

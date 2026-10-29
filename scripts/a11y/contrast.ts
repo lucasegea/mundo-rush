@@ -1,17 +1,26 @@
 // check:contrast (F1.3 A4; GDD §5.4, §2.19): contraste WCAG de los tokens de color del HUD en
 // apps/web/src/styles/tokens.css, en el tema normal y en alto contraste. Pares de texto ≥ 4,5:1 (AA);
-// componentes no textuales (foco, bordes de controles) ≥ 3:1 (WCAG 1.4.11).
+// componentes no textuales (foco, bordes de controles) ≥ 3:1 (WCAG 1.4.11). Además, los pares de las etiquetas de
+// nombre del mundo (plan estetica-c M1 A14, D-207) ≥ 7:1 (AAA), leídos de la paleta del mundo (una sola fuente de hex,
+// sin copiarlos a tokens.css; desde M2 vienen de @lg/art).
+// Plan estetica-c M4 (HUD "papel y tinta"): los pares del diálogo que piden AAA (≥ 7:1: tinta sobre papel, texto del
+// chip sobre ámbar, botón primario papel sobre tinta), los no textuales nuevos (borde ámbar oscuro de los segmentos,
+// punto de "tu turno") y la sincronía de hex: los tokens de tokens.css que vienen de la paleta de arte tienen que ser
+// iguales a los de @lg/art (una sola fuente de los hex, revisión de arquitectura M1 A14). Un token desalineado hace salir 1.
 //
 // Uso: node scripts/a11y/contrast.ts [--tokens <archivo.css>]   Sale con 1 si un par no llega.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { LABEL_CONTRAST_MIN, LABEL_CONTRAST_PAIRS, PALETTE, type PaletteToken } from "@lg/art";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const TOKENS_PATH = resolve(ROOT, "apps/web/src/styles/tokens.css");
 
 export const TEXT_MIN = 4.5;
 export const NON_TEXT_MIN = 3;
+/** AAA (GDD: objetivo del diálogo). */
+export const AAA_MIN = 7;
 
 /** [primer plano, fondo] por nombre de token (sin el prefijo --lg-color-). Son los pares que usa ui/. */
 export const TEXT_PAIRS: readonly (readonly [string, string])[] = [
@@ -20,7 +29,24 @@ export const TEXT_PAIRS: readonly (readonly [string, string])[] = [
 ];
 export const NON_TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["focus", "paper"], ["focus", "surface"], ["focus", "accent-soft"], ["border", "paper"], ["border", "surface"], ["accent", "surface"],
+  // M4: borde oscuro de los segmentos del medidor y punto verde de "tu turno", sobre la tarjeta de papel.
+  ["amber-strong", "paper"], ["amber-strong", "surface"], ["turn", "paper"], ["turn", "surface"],
 ];
+/** M4 (propuesta C §6): pares del HUD de diálogo que piden ≥ 7:1. */
+export const AAA_PAIRS: readonly (readonly [string, string])[] = [
+  ["ink", "paper"], ["on-amber", "amber"], ["paper", "ink"],
+];
+
+/** Token de tokens.css (sin --lg-color-) → token de la paleta de arte con el mismo hex (tema normal). */
+export const PALETTE_TOKENS: Readonly<Record<string, PaletteToken>> = {
+  paper: "papel",
+  ink: "tinta",
+  "ink-muted": "tinta-suave",
+  amber: "ámbar",
+  "amber-strong": "ámbar-osc",
+  "on-amber": "chip-texto",
+  "card-line": "papel-borde",
+};
 
 export type Theme = Record<string, string>;
 
@@ -70,7 +96,7 @@ export function checkContrast(css: string): PairResult[] {
   const themes = parseThemes(css);
   const out: PairResult[] = [];
   for (const [theme, tokens] of Object.entries(themes)) {
-    for (const [pairs, min] of [[TEXT_PAIRS, TEXT_MIN], [NON_TEXT_PAIRS, NON_TEXT_MIN]] as const) {
+    for (const [pairs, min] of [[TEXT_PAIRS, TEXT_MIN], [NON_TEXT_PAIRS, NON_TEXT_MIN], [AAA_PAIRS, AAA_MIN]] as const) {
       for (const [fg, bg] of pairs) {
         const a = tokens[fg];
         const b = tokens[bg];
@@ -82,11 +108,48 @@ export function checkContrast(css: string): PairResult[] {
   return out;
 }
 
-export function run(path = TOKENS_PATH, log: (s: string) => void = console.log): number {
-  const results = checkContrast(readFileSync(path, "utf8"));
+/** Un par de la paleta del mundo: hex directos, no tokens de tokens.css. */
+export interface WorldPair {
+  name: string;
+  fg: string;
+  bg: string;
+}
+
+/** Los pares de las etiquetas de nombre (A14) contra su mínimo (7:1). */
+export function checkWorldLabels(pairs: readonly WorldPair[] = LABEL_CONTRAST_PAIRS, min: number = LABEL_CONTRAST_MIN): PairResult[] {
+  return pairs.map((p) => {
+    const valid = /^#[0-9a-fA-F]{6}$/.test(p.fg) && /^#[0-9a-fA-F]{6}$/.test(p.bg);
+    const ratio = valid ? Math.round(contrastRatio(p.fg, p.bg) * 100) / 100 : 0;
+    return { theme: "mundo", fg: p.name, bg: `${p.fg} / ${p.bg}`, ratio, min, ok: ratio >= min };
+  });
+}
+
+export interface SyncResult {
+  token: string;
+  palette: PaletteToken;
+  css: string | null;
+  art: string;
+  ok: boolean;
+}
+
+/** Los tokens de tokens.css que vienen de la paleta de arte, contra @lg/art (tema normal; mayúsculas no importan). */
+export function checkPaletteSync(css: string, palette: Readonly<Record<string, string>> = PALETTE): SyncResult[] {
+  const { normal } = parseThemes(css);
+  return Object.entries(PALETTE_TOKENS).map(([token, name]) => {
+    const art = (palette[name] ?? "").toLowerCase();
+    const value = normal[token] ?? null;
+    return { token, palette: name, css: value, art, ok: value !== null && value === art };
+  });
+}
+
+export function run(path = TOKENS_PATH, log: (s: string) => void = console.log, worldPairs: readonly WorldPair[] = LABEL_CONTRAST_PAIRS): number {
+  const css = readFileSync(path, "utf8");
+  const results = [...checkContrast(css), ...checkWorldLabels(worldPairs)];
   for (const r of results) log(`${r.ok ? "OK  " : "FAIL"} [${r.theme}] ${r.fg} sobre ${r.bg}: ${r.ratio}:1 (mínimo ${r.min}:1)`);
-  const failed = results.filter((r) => !r.ok).length;
-  log(failed === 0 ? `check:contrast OK: ${results.length} pares` : `check:contrast: ${failed} par(es) por debajo del mínimo`);
+  const sync = checkPaletteSync(css);
+  for (const s of sync) log(`${s.ok ? "OK  " : "FAIL"} [paleta] --lg-color-${s.token} = ${s.css ?? "(falta)"}; @lg/art ${s.palette} = ${s.art}`);
+  const failed = results.filter((r) => !r.ok).length + sync.filter((s) => !s.ok).length;
+  log(failed === 0 ? `check:contrast OK: ${results.length} pares, ${sync.length} tokens de paleta` : `check:contrast: ${failed} par(es) o token(s) fuera de regla`);
   return failed === 0 ? 0 : 1;
 }
 

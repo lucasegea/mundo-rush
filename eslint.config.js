@@ -26,6 +26,13 @@ const r13 = [
   { selector: "NewExpression[callee.property.name=/^(AudioContext|webkitAudioContext|OfflineAudioContext|Audio)$/]",
     message: "R13: un solo AudioContext, en services/audio/." },
 ];
+// D-207 / plan estetica-c M1 A16: world/ importa three por nombre (`import { MeshToonMaterial } from "three"`), nunca el
+// espacio de nombres entero (fuera de world/camera/). Más estricta que R11; va en la MISMA lista que R10, R11 y R13 de
+// world/ porque en flat config un bloque posterior con no-restricted-syntax reemplaza las opciones del anterior.
+const threeNamespace = [
+  { selector: "ImportDeclaration[source.value=/^three($|[^a-z0-9-])/] > ImportNamespaceSpecifier",
+    message: "D-207: world/ importa three por nombre (import { X } from \"three\"), no import * as THREE." },
+];
 const r15Props = [
   { object: "navigator", property: "xr", message: "R15: navigator.xr solo en services/platform/." },
   { object: "navigator", property: "getGamepads", message: "R10: gamepad solo en services/input/." },
@@ -46,7 +53,10 @@ const DISK_WRITE_IMPORTS = [...DISK_WRITE_FNS, "write", "writeSync"];
 const DISK_WRITE_MSG = "D-108: apps/server escribe a disco solo en src/store/ y src/cost/.";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/node_modules/**", "experiments/**", "tooling/eslint-fixtures/**",
+  // Cambio registrado (open-world-3d T2(d), D-830): `tooling/vendor/**` es código de terceros copiado byte a byte
+  // (content/code-registry.yaml, con su .patch si está editado), no código del repo; el resto de tooling se sigue
+  // linteando (scripts/lint/vendor-ignore.test.ts lo prueba con una sonda --stdin).
+  { ignores: ["**/dist/**", "**/node_modules/**", "experiments/**", "tooling/eslint-fixtures/**", "tooling/vendor/**",
               "apps/web/public/**", "apps/server/generated/**", ".director/**"] },
   ...tseslint.configs.strict,
 
@@ -89,6 +99,11 @@ export default tseslint.config(
         { target: "./packages",    from: "./apps", message: "§4.3: los paquetes no importan apps/." },
         { target: "./packages/protocol", from: ["./packages/core", "./packages/content-schema"], message: "§4.3: protocol solo depende de zod." },
         { target: "./packages/core", from: "./packages/content-schema", message: "§4.3: core no depende de content-schema." },
+        // plan estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art es dato de arte puro y no depende de otro paquete; el
+        // script de assets pinta con @lg/art, nunca con el árbol del cliente (una sola implementación, sin copia).
+        { target: "./packages/art", from: ["./packages/core", "./packages/content-schema", "./packages/protocol"],
+          message: "M2: @lg/art no depende de otros paquetes." },
+        { target: "./scripts/assets", from: "./apps", message: "M2: scripts/assets/ usa @lg/art, no importa apps/." },
       ]}],
     },
   },
@@ -108,6 +123,22 @@ export default tseslint.config(
         { object: "Math", property: "random", message: "R4: inyectá el Rng." }],
       "no-restricted-syntax": ["error",
         { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: "R4: inyectá el Clock." }],
+    },
+  },
+  // @lg/art (plan estetica-c M2, revisión de arquitectura 2026-10-12 §10.3): paleta, pintura y regla del bisel en TS puro, como R4: sin
+  // three, react, Node ni globals del DOM, y determinístico (el arte por código sale de una semilla).
+  {
+    files: ["packages/art/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [
+        { group: ["react", "react-*", "three", "three/*", "@react-three/*", "zustand", "zustand/*", "node:*", "@lg/*", "@gltf-transform/*"],
+          message: "M2: @lg/art es TS puro (sin three, react, Node ni otros paquetes)." } ] }],
+      "no-restricted-globals": ["error", "window", "document", "navigator", "localStorage", "sessionStorage",
+        "indexedDB", "fetch", "WebSocket", "AudioContext", "Image", "ImageData", "OffscreenCanvas", "HTMLCanvasElement",
+        "performance", "crypto", "process", "Buffer", "require", "__dirname"],
+      "no-restricted-properties": ["error",
+        { object: "Date", property: "now", message: "M2: @lg/art es determinístico." },
+        { object: "Math", property: "random", message: "M2: @lg/art es determinístico (usá una semilla)." }],
     },
   },
   // protocol: solo zod
@@ -149,6 +180,9 @@ export default tseslint.config(
       "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }],
     },
   },
+  // world/ (salvo world/camera/): las costuras de siempre más three por nombre (D-207). Misma lista, nada se pierde.
+  { files: [`${WEB}/world/**/*.{ts,tsx}`], ignores: [`${WEB}/world/camera/**`],
+    rules: { "no-restricted-syntax": ["error", ...r10, ...r11, ...r13, ...threeNamespace] } },
   // Dentro de cada carpeta-costura se relaja SOLO su propia regla (las demás siguen):
   { files: [`${WEB}/services/input/**`],    rules: { "no-restricted-syntax": ["error", ...r11, ...r13],
       "no-restricted-properties": ["error", r15Props[0]], "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }] } },

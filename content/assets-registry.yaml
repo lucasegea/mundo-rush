@@ -1,0 +1,509 @@
+# content/assets-registry.yaml: registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2, D-207).
+# Todo archivo servido en apps/web/public/{models,textures,audio,sprites} tiene una fila en `assets`; validate:content
+# falla si falta, si la licencia no está en la lista permitida (CC0-1.0, o CC-BY-4.0 con atribución; todo lo demás,
+# "uso personal" o "no comercial" en cualquier grafía incluido, se rechaza), o si una fila con atribucion_requerida no
+# está en content/creditos.yaml. `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
+# diferido al operador o pendiente para un hito posterior). Fuente de todas las verificaciones: investigación de assets
+# del 2026-10-13 (documento interno), con fuente y fecha de acceso por pack.
+# `pintura` es la tabla del pack de material de origen a token de la paleta (@lg/art) que usa scripts/assets/optimize.ts.
+# El decodificador meshopt de apps/web/public/decoders/ es código (MIT): su fila está en content/code-registry.yaml (D-831).
+packs:
+  # ---------- usados en M2 ----------
+  - id: quaternius-farm-buildings
+    nombre: Quaternius Farm Buildings Pack (2018), GLB sueltos en poly.pizza
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/farmbuildings.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: usado
+    razon: >-
+      Cubre granero, gallinero, silo, molino y cercos sin texturas (color por material), CC0 en la página del pack y en
+      cada modelo de poly.pizza (Licence "CC0 1.0", autor Quaternius). En poly.pizza están 10 de las 13 piezas (subidas
+      el 2021-08-15: Barn, BigBarn, SmallBarn, OpenBarn, Silo, Silo_House, TowerWindmill, ChickenCoop, Fence x2); Well,
+      WaterTower y Windmill solo están en FBX/OBJ en el Drive del pack, así que el pozo y el tanque de M2 quedan para
+      cuando el pipeline lea FBX o el operador los exporte. Low-poly de aristas duras: cada pieza va con bisel registrado.
+    fuente_investigacion: investigación 2026-10-13, V3 (Quaternius Farm Buildings Pack) y tabla de descargas
+    pintura:
+      White: muro
+      LightRed: techo
+      DarkRed: cumbrera
+      Brown: madera
+      RoofBlack: tinta-suave
+      Grey: piedra
+  # ---------- usados en M3 (personajes) ----------
+  - id: kaykit-adventurers-1
+    nombre: KayKit Character Pack Adventurers 1.0 (GitHub)
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+    fecha_acceso: 2026-10-13
+    verificacion: [V1, V4]
+    estado: usado
+    razon: >-
+      Cuerpos base chibi con esqueleto (Rig_Medium de la 1.0: root, hips, spine, chest, head, brazos y piernas con
+      controles IK, sin cuello ni dedos) y 76 clips embebidos. Es el esqueleto de destino de M3 (investigación, V1 y V4). La 1.0
+      está en GitHub y se baja por script sin login; LICENSE.txt del repo: CC0, crédito no obligatorio. Se usan tres
+      cuerpos (Mage, Rogue y Barbarian, sin cabeza ni armas) repintados a la paleta y los clips de un solo archivo
+      (Knight), que comparte el esqueleto. La 2.0 de itch.io queda diferida (fila kaykit-adventurers).
+    fuente_investigacion: investigación 2026-10-13, V1 (KayKit, descarga por script de GitHub) y V4 (esqueleto de destino)
+  # ---------- descartados ----------
+  - id: quaternius-medieval-village-megakit
+    nombre: Quaternius Medieval Village MegaKit (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/medievalvillagemegakit.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: descartado
+    razon: >-
+      Texturas PBR de trim sheet (BaseColor, Normal, ORM) que el pipeline sin texturas pierde, y estética medieval
+      europea que no es el rural moderno de la biblia. Sin granero ni pozo.
+    fuente_investigacion: investigación 2026-10-13, V3 (Medieval Village MegaKit)
+  - id: quaternius-stylized-nature-megakit
+    nombre: Quaternius Stylized Nature MegaKit (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/stylizednaturemegakit.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: descartado
+    razon: >-
+      Todo texturizado y los árboles y arbustos usan hojas como tarjetas con máscara alfa (alphaMode MASK): al quitar la
+      textura quedan cuadrados verdes. Árboles y pinos ya son por código (M1); piedras y troncos se reconsideran solo si
+      el operador quiere esas formas.
+    fuente_investigacion: investigación 2026-10-13, V3 (Stylized Nature MegaKit)
+  - id: mixamo
+    nombre: Mixamo (Adobe)
+    autor: Adobe
+    licencia: Términos de Adobe Mixamo (no CC0)
+    url: https://www.mixamo.com/
+    fecha_acceso: 2026-10-13
+    verificacion: [V4]
+    estado: descartado
+    razon: >-
+      Adobe prohíbe redistribuir los archivos crudos de personaje y animación, y en un juego web el GLB queda
+      descargable desde el navegador; además pide cuenta Adobe (no se baja por script). Quaternius UAL 1 y 2 (CC0)
+      cubren lo mismo.
+    fuente_investigacion: investigación 2026-10-13, V4 (Mixamo, FAQ citado desde Adobe Community)
+  # ---------- diferidos al operador (login, compra o descarga por navegador) ----------
+  - id: kaykit-adventurers
+    nombre: KayKit Character Pack Adventurers 2.0 (Free)
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url: https://kaylousberg.itch.io/kaykit-adventurers
+    fecha_acceso: 2026-10-13
+    verificacion: [V1]
+    estado: diferido
+    razon: >-
+      Cuerpos base chibi para M3 (esqueleto de destino recomendado Rig_Medium). La 2.0 solo está en itch.io (botón de
+      "name your own price", no scriptable): la baja el operador. La 1.0 de GitHub se puede bajar por script pero no
+      está verificado que sus huesos coincidan con Rig_Medium 2.0. Ropa de fantasía: se repinta y se viste con accesorios.
+    fuente_investigacion: investigación 2026-10-13, V1
+  - id: kaykit-character-animations
+    nombre: KayKit Character Animations (Free)
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url: https://kaylousberg.itch.io/kaykit-character-animations
+    fecha_acceso: 2026-10-13
+    verificacion: [V1]
+    estado: diferido
+    razon: >-
+      Más de 150 clips CC0 para Rig_Medium (sentarse, interactuar, levantar, herramientas). Solo en itch.io: la baja el
+      operador para M3. Faltan hablar, asentir, negar, cargar caminando y dar (se resuelven por código o desde UAL).
+    fuente_investigacion: investigación 2026-10-13, V1
+  - id: kaykit-series-6
+    nombre: KayKit Mystery Monthly Series 6 (The Farmers)
+    autor: Kay Lousberg
+    licencia: CC0-1.0 (acceso pago, mínimo 19,99 USD)
+    url: https://kaylousberg.itch.io/kaykit-series-6
+    fecha_acceso: 2026-10-13
+    verificacion: [V1]
+    estado: diferido
+    razon: >-
+      Los únicos granjeros de KayKit (dos personajes, mismo rig). Pregunta para el operador: si paga 19,99 USD; la
+      licencia de uso sigue siendo CC0.
+    fuente_investigacion: investigación 2026-10-13, V1 y preguntas para el operador
+  - id: quaternius-ual-1
+    nombre: Quaternius Universal Animation Library 1 (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/universalanimationlibrary.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V4]
+    estado: diferido
+    razon: >-
+      Clips para retargetear en M3 (Idle_Talking_Loop, Sitting_Talking_Loop). El espejo de OpenGameArt trae huesos
+      Rigify viejos; la versión actual con huesos renombrados está solo en itch.io: la baja el operador.
+    fuente_investigacion: investigación 2026-10-13, V4
+  - id: synty-polygon
+    nombre: Synty POLYGON Farm, POLYGON Nature y Sidekick
+    autor: Synty Studios
+    licencia: EULA de compra única de Synty (pago)
+    url: https://syntystore.com/pages/end-user-licence-agreement
+    fecha_acceso: 2026-10-13
+    verificacion: [V5]
+    estado: diferido
+    razon: >-
+      No hace falta ahora: los packs CC0 alcanzan para M2 y M3. Queda como pregunta para el operador (Farm 49,99 USD,
+      6 granjeros con rig y sin animaciones; zona gris del GLB descargable frente a la cláusula de source files; estilo
+      facetado con texturas de atlas). Nada se compra sin su decisión.
+    fuente_investigacion: investigación 2026-10-13, V5
+  # ---------- pendientes (se bajan por script cuando un hito los use) ----------
+  - id: quaternius-ultimate-animated-animals
+    nombre: Quaternius Ultimate Animated Animal Pack
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/ultimateanimatedanimals.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V2]
+    estado: pendiente
+    razon: >-
+      Caballo, vaca, burro y alpaca con esqueleto y 13 clips, sin texturas (color por material). No hay gallina ni
+      cabra: la gallina se decide entre una de poly.pizza y una por código, y la cabra de Clover (D-174) es una
+      pregunta para el operador (por código o cambio de especie). Va con M3 y M5.
+    fuente_investigacion: investigación 2026-10-13, V2
+  - id: quaternius-farm-animal-pack
+    nombre: Quaternius Farm Animal Pack (2018)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/farmanimal.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V2]
+    estado: pendiente
+    razon: Única fuente de oveja y cerdo de Quaternius; solo FBX, OBJ y Blend (sin glTF). Clips no verificados.
+    fuente_investigacion: investigación 2026-10-13, V2
+  - id: quaternius-ual-2
+    nombre: Quaternius Universal Animation Library 2 (Standard)
+    autor: Quaternius
+    licencia: CC0-1.0
+    url: https://quaternius.com/packs/universalanimationlibrary2.html
+    fecha_acceso: 2026-10-13
+    verificacion: [V4]
+    estado: pendiente
+    razon: >-
+      Hablar, sí, no, cargar caminando, cosechar, sembrar y regar para retargetear a Rig_Medium en M3. Esqueleto
+      estilo UE Mannequin, proporciones realistas. El espejo de OpenGameArt se baja por script.
+    fuente_investigacion: investigación 2026-10-13, V4
+  - id: kenney-nature-kit
+    nombre: Kenney Nature Kit
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/nature-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: >-
+      Cultivos con surcos, rocas, cercos y troncos sin texturas; el más fácil de repintar. Low-poly facetado: cada
+      pieza pasa por la regla del bisel. Para M5.
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-fantasy-town-kit
+    nombre: Kenney Fantasy Town Kit 2.0
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/fantasy-town-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: >-
+      Carro (cart, cart-high). Usa una textura colormap de paleta: el pipeline tiene que muestrear el color por UV antes
+      de descartarla (hoy asigna por nombre de material, y Kenney trae un solo material). M2 SEAM para M5.
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-survival-kit
+    nombre: Kenney Survival Kit 2.0
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/survival-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: Barriles, baldes, cajas y herramientas con colormap de paleta. Sin granero, pozo, buzón, carro ni tanque.
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-car-kit
+    nombre: Kenney Car Kit
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/car-kit
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: Tractor y camioneta, con colormap de paleta (mismo seam de muestreo por UV que Fantasy Town).
+    fuente_investigacion: investigación 2026-10-13, V3
+  - id: kenney-city-kits
+    nombre: Kenney City Kit (Suburban, Industrial y Roads)
+    autor: Kenney
+    licencia: CC0-1.0
+    url: https://kenney.nl/assets/category:3D
+    fecha_acceso: 2026-10-13
+    verificacion: [V3]
+    estado: pendiente
+    razon: >-
+      Casas suburbanas, tanque de agua (water-tower, detail-tank) y postes y carteles para armar la parada de colectivo.
+      Buzón y parada no están en ningún pack: se hacen por código.
+    fuente_investigacion: investigación 2026-10-13, V3
+assets:
+  - id: quaternius-farm-buildings/gallinero
+    archivo: apps/web/public/models/quaternius-farm-buildings/gallinero.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 948
+    primitivas: 1
+    fuente: assets-src/quaternius-farm-buildings/ChickenCoop/ChickenCoop.glb
+    pack: quaternius-farm-buildings
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://poly.pizza/m/DM0F8siLam
+    fecha_descarga: 2026-10-13
+    sha256_original: "138f37ba14648259e8fa841d3501ebc05ad7b997babadc6cd5572785de9e158a"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "25ca613e5aca92b33af7e58cef676ac90b7eaeb5494a0285631bf872eadcac1a"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts: sin materiales ni texturas, repintado por vértice a la paleta (White muro, LightRed
+      techo, Brown madera, DarkRed cumbrera, RoofBlack tinta-suave), primitivas unidas en una, meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Low-poly de 2018 con aristas de 90° a 125°. Se acepta para validar el pipeline de punta a punta en el diorama de
+      prueba; si el operador ve que desentona con los props por código de M1, se rehace por código o se reemplaza.
+    notas: Original ChickenCoop.glb de static.poly.pizza (948 triángulos, 5 materiales de color plano, sin texturas).
+  - id: quaternius-farm-buildings/cerco
+    archivo: apps/web/public/models/quaternius-farm-buildings/cerco.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 188
+    primitivas: 1
+    fuente: assets-src/quaternius-farm-buildings/Fence/Fence.glb
+    pack: quaternius-farm-buildings
+    autor: Quaternius
+    licencia: CC0-1.0
+    url_origen: https://poly.pizza/m/e02PFKKhbr
+    fecha_descarga: 2026-10-13
+    sha256_original: "0c35f9fb6b9ff69501463834e3f6cf7d565979aa4caae19445344d87400c70c8"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "c540a9de6d5e1a53f2236e81c83abfdb481bc73c9632352f58097554670b00c8"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts: sin material ni texturas, repintado por vértice a la paleta (Brown madera), meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Postes y tablas de caja con aristas de 90° a 104°. Se acepta para validar el pipeline en el diorama de prueba
+      junto al gallinero; el cerco por código de M1 (codigo/cerco) sigue siendo el de referencia.
+    notas: >-
+      Original Fence.glb de static.poly.pizza (188 triángulos, 1 material, 5,9 m de largo). Reemplaza al silo
+      (Silo, 5GhLrv5Ce3, 1592 triángulos) que se probó primero: con el silo el diorama de prueba estimaba 50.676
+      triángulos en medium, por encima del tope de 50k (03 §2.7.1).
+  # ---------- personajes (plan estetica-c M3) ----------
+  - id: kaykit-adventurers-1/cuerpo-saco
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 3002
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cf898585da33fab50c724d31605fb931eb2912e6d2280092141e98ca81ad507d"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "de41474938de782219db0a4cb3811964106ed579e323c3bc9dea4d340cd2f277"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): sin cabeza, sombrero, capa, libro ni bastón; las cinco mallas del
+      cuerpo unidas en una con su esqueleto; sin clips; repintado por vértice con las reglas de abajo (la textura de
+      paleta se muestrea por UV y se descarta); saco marcado como remera y pantalón como prenda; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Las costuras del saco, el cinturón y los puños tienen aristas de más de 80°; son detalles chicos de un cuerpo
+      redondeado que se lee bien a la distancia de juego. Se revisa en el gate del operador de M3.
+    personaje:
+      tipo: cuerpo
+      nodos: &nodos_saco [Mage_Body, Mage_ArmLeft, Mage_ArmRight, Mage_LegLeft, Mage_LegRight]
+      pintura: &pintura_saco
+        - { huesos: [hand.l, hand.r], token: piel }
+        - { color: "#838d92", radio: 0.16, token: muro }
+        - { color: "#aab8be", radio: 0.2, token: piedra }
+        - { color: "#a95026", radio: 0.16, token: madera }
+        - { color: "#316069", radio: 0.14, token: madera }
+        - { color: "#298588", radio: 0.14, token: madera }
+        - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
+        - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
+        - { ropa: remera }
+  - id: kaykit-adventurers-1/cuerpo-tunica
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 3148
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "8ce7024e7a01352b5e0c6a151583df26e77838c24811cec7cf2d5facf265ac61"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): sin cabeza, capa, cuchillos ni ballestas; las cinco mallas del cuerpo
+      unidas en una con su esqueleto; sin clips; repintado por vértice con las reglas de abajo; túnica marcada como remera
+      y pantalón como prenda; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      Cinturón, hebilla y bolsitas con aristas de más de 80°; detalles chicos de un cuerpo redondeado. Se revisa en el
+      gate del operador de M3.
+    personaje:
+      tipo: cuerpo
+      nodos: &nodos_tunica [Rogue_Body, Rogue_ArmLeft, Rogue_ArmRight, Rogue_LegLeft, Rogue_LegRight]
+      pintura: &pintura_tunica
+        - { huesos: [hand.l, hand.r], token: piel }
+        - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
+        - { color: "#8d989e", radio: 0.2, token: piedra }
+        - { color: "#aab8be", radio: 0.2, token: piedra }
+        - { color: "#965541", radio: 0.14, token: madera }
+        - { color: "#7d3d2c", radio: 0.14, token: madera }
+        - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
+        - { ropa: remera }
+  - id: kaykit-adventurers-1/cuerpo-ancho
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 3012
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "f4262dd8122d5d8f50dd3e98459efe27c24c84bce5a770a707354b573b614679"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): sin cabeza, casco, capa, hachas, escudo ni jarro; las cinco mallas del
+      cuerpo unidas en una con su esqueleto; sin clips; repintado por vértice con las reglas de abajo; chaleco marcado
+      como remera y pantalón como prenda; meshopt.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El borde de piel dentado del cinturón y de los puños tiene aristas de más de 80°; se lee como ribete. Se revisa en
+      el gate del operador de M3.
+    personaje:
+      tipo: cuerpo
+      nodos: &nodos_ancho [Barbarian_Body, Barbarian_ArmLeft, Barbarian_ArmRight, Barbarian_LegLeft, Barbarian_LegRight]
+      pintura: &pintura_ancho
+        - { huesos: [hand.l, hand.r], token: piel }
+        - { color: "#e3e8ea", radio: 0.3, token: muro }
+        - { color: "#844432", radio: 0.12, token: madera }
+        - { huesos: [foot.l, foot.r, toes.l, toes.r, lowerleg.l, lowerleg.r], token: tronco }
+        - { huesos: [upperleg.l, upperleg.r], ropa: pantalon }
+        - { ropa: remera }
+  - id: kaykit-adventurers-1/cuerpo-saco-bajo
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco-bajo.glb
+    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    triangulos: 1200
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cf898585da33fab50c724d31605fb931eb2912e6d2280092141e98ca81ad507d"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "72f5189b3a5a770ed5576794770e2f2c331b1fd41a76e7bc9b388a0ddebde005"
+    procedencia: derived
+    modificaciones: >-
+      Lo mismo que cuerpo-saco (las mismas mallas, reglas de pintura y esqueleto) y además meshopt simplify hasta el 40 %
+      de los triángulos (scripts/assets/characters.ts, plan estetica-c M6): el cuerpo del tier low.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El mismo cuerpo que cuerpo-saco, simplificado; las aristas duras son las de sus costuras y ribetes, más chicas
+      todavía a la distancia de juego de low.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_saco
+      pintura: *pintura_saco
+      simplificar: 0.4
+  - id: kaykit-adventurers-1/cuerpo-tunica-bajo
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica-bajo.glb
+    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    triangulos: 1258
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "ce7535606c438acc0839765a3fe3289ad28eb0ae2eea61e69ca44e60fa32a787"
+    procedencia: derived
+    modificaciones: >-
+      Lo mismo que cuerpo-tunica (las mismas mallas, reglas de pintura y esqueleto) y además meshopt simplify hasta el 40 %
+      de los triángulos (scripts/assets/characters.ts, plan estetica-c M6): el cuerpo del tier low.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El mismo cuerpo que cuerpo-tunica, simplificado; las aristas duras son las de sus costuras y ribetes, más chicas
+      todavía a la distancia de juego de low.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_tunica
+      pintura: *pintura_tunica
+      simplificar: 0.4
+  - id: kaykit-adventurers-1/cuerpo-ancho-bajo
+    archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho-bajo.glb
+    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    triangulos: 1204
+    primitivas: 1
+    fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "c8d5fe89d7ac8b8732de88715c549a94c8be9d1ab6ecd0442781d50d789aa4a8"
+    procedencia: derived
+    modificaciones: >-
+      Lo mismo que cuerpo-ancho (las mismas mallas, reglas de pintura y esqueleto) y además meshopt simplify hasta el 40 %
+      de los triángulos (scripts/assets/characters.ts, plan estetica-c M6): el cuerpo del tier low.
+    atribucion_requerida: false
+    bisel: aceptado
+    bisel_razon: >-
+      El mismo cuerpo que cuerpo-ancho, simplificado; las aristas duras son las de sus costuras y ribetes, más chicas
+      todavía a la distancia de juego de low.
+    personaje:
+      tipo: cuerpo
+      nodos: *nodos_ancho
+      pintura: *pintura_ancho
+      simplificar: 0.4
+  - id: kaykit-adventurers-1/animaciones
+    archivo: apps/web/public/models/kaykit-adventurers-1/animaciones.glb
+    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    triangulos: 0
+    primitivas: 0
+    fuente: assets-src/kaykit-adventurers-1/Knight/Knight.glb
+    pack: kaykit-adventurers-1
+    autor: Kay Lousberg
+    licencia: CC0-1.0
+    url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Knight.glb
+    fecha_descarga: 2026-10-13
+    sha256_original: "60428e3abc09ba83e595d256e3af8c5c976b46cdae599f0802fc82b4a3445168"
+    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    sha256: "848864b0b199256cd797b409a78805a0842c16de20ae38d9ff9d71491f42be0a"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/optimize.ts (characters.ts): solo el esqueleto y los clips nativos que usa el set mínimo de la
+      propuesta C §3 (el resto de los 76 se descarta); sin mallas ni texturas; remuestreado y meshopt. Los cuatro
+      personajes del pack comparten este esqueleto, así que un solo archivo de clips sirve para los tres cuerpos.
+    atribucion_requerida: false
+    personaje:
+      tipo: animaciones
+      clips: [Idle, Walking_A, Running_A, Sit_Chair_Idle, Interact, PickUp]
