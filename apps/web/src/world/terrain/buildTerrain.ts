@@ -8,11 +8,18 @@
 // afuera sube en lomas de hasta `lomas` m, lo bastante lejos como para que ninguna cámara de juego vea el borde (A2).
 // Las líneas de la grilla salen de @lg/art (la misma cuenta que usa el estimador de validate:content). Determinístico
 // con la misma semilla.
+// Open-world-3d T6 (D-819): un diorama con `terreno.relieve` tiene relieve interior (`reliefAt` de @lg/art, con llanos
+// en la aparición y en cada NPC), los caminos aplanan su sección (el centro sigue al relieve, el ancho toma su altura),
+// el paso de la malla es el del tier (OPEN_WORLD_DENSITY) y cada vértice lleva su peso de tierra (`dirt`: caminos y
+// llanos, con la regla suave de D-819) para el sombreador del suelo. `heightAt` interpola sobre los triángulos de la
+// malla (no bilineal, que queda para los dioramas sin relieve): lo que se dibuja es lo que se mide (actores, props,
+// cámara, pasto y el raycast del suelo).
 import type { Bounds, DioramaGround, WalkGrid } from "@lg/core";
 import {
-  FINE_STEP as ART_FINE_STEP, HILL_MAX as ART_HILL_MAX, insidePolygon, noise2, pavingStoneCount, polygonEdgeDistance,
-  polylineDistance, TERRAIN_SEED as ART_TERRAIN_SEED, TERRAIN_SKIRT as ART_TERRAIN_SKIRT, terrainExtent, terrainLines,
-  tokenRgb, type PaletteToken, type Rgb, type SceneDensity, type TerrainPaletteRole,
+  DENSITY, FINE_STEP as ART_FINE_STEP, HILL_MAX as ART_HILL_MAX, insidePolygon, noise2, OPEN_WORLD_DENSITY, pavingStoneCount,
+  polygonEdgeDistance, polylineDistance, polylineNearest, reliefAt, TERRAIN_SEED as ART_TERRAIN_SEED,
+  TERRAIN_SKIRT as ART_TERRAIN_SKIRT, terrainExtent, terrainLines, tokenRgb, type PaletteToken, type ReliefPad, type Rgb,
+  type SceneDensity, type TerrainLod, type TerrainPaletteRole, type WorldTier,
 } from "@lg/art";
 import { mixRgb, scaleRgb } from "./color";
 import { rng } from "../materials/rng";
@@ -37,6 +44,8 @@ export interface TerrainSpec {
   seed?: number;
   /** Plan estetica-c M6: resolución de la malla por tier (la reducida de `low`: paso fino de 1 m y falda más gruesa). */
   density?: SceneDensity;
+  /** Open-world-3d T6: el tier del mundo abierto (paso del terreno de OPEN_WORLD_DENSITY si el suelo tiene relieve). */
+  tier?: WorldTier;
 }
 
 export interface Terrain {
@@ -50,8 +59,16 @@ export interface Terrain {
   uvs: Float32Array;
   indices: Uint32Array;
   extent: Bounds;
-  /** Altura del terreno (bilineal sobre la malla). */
+  /** Open-world-3d T6: peso de tierra por vértice (0 pasto, 1 camino o llano; la regla suave de D-819). */
+  dirt: Float32Array;
+  /** ¿Relieve interior? (el sombreador del suelo del mundo abierto lo usa; sin relieve, el suelo de campesino). */
+  relief: boolean;
+  /** El paso fino de la malla (m). */
+  step: number;
+  /** Altura del terreno: con relieve, sobre los triángulos de la malla (open-world-3d T6); sin relieve, bilineal. */
   heightAt(x: number, z: number): number;
+  /** Peso de tierra interpolado igual que la altura (el canal G de la textura del pasto, PD-2). */
+  dirtAt(x: number, z: number): number;
   /** Índice del vértice que está exactamente en (x, z), o -1. */
   vertexAt(x: number, z: number): number;
 }
@@ -132,10 +149,35 @@ export function curveGround(g: DioramaGround): GroundSource {
   };
 }
 
-interface TerrainShape {
+export interface TerrainShape {
   bounds: Bounds;
   hillMax: number;
   seed: number;
+  /** Open-world-3d T6: relieve interior con estos llanos; null = suelo plano adentro (campesino). */
+  pads: readonly ReliefPad[] | null;
+  /** Caminos (curvas muestreadas) que aplanan su sección. */
+  roads: readonly { width: number; line: readonly { x: number; z: number }[] }[];
+}
+
+/** Sobre el ancho del camino más este margen la sección es plana; hasta `+ ROAD_BANK` se mezcla con el relieve. */
+const ROAD_FLAT = 0.8;
+const ROAD_BANK = 6;
+
+/**
+ * Relieve con los caminos aplanados (open-world-3d T6, D-819): cerca de un camino el suelo toma la altura del relieve en
+ * el punto más cercano de su centro (la sección queda plana) y se mezcla con el relieve en el talud.
+ */
+function reliefHeight(shape: TerrainShape, x: number, z: number): number {
+  const pads = shape.pads ?? [];
+  const base = reliefAt(x, z, shape.seed, pads);
+  let best: { x: number; z: number; d: number; hw: number } | null = null;
+  for (const r of shape.roads) {
+    const q = polylineNearest(x, z, r.line);
+    if (q && q.d - r.width / 2 < (best ? best.d - best.hw : Infinity)) best = { ...q, hw: r.width / 2 };
+  }
+  if (!best || best.d >= best.hw + ROAD_BANK) return base;
+  const t = smooth(best.hw + ROAD_FLAT, best.hw + ROAD_BANK, best.d);
+  return reliefAt(best.x, best.z, shape.seed, pads) + (base - reliefAt(best.x, best.z, shape.seed, pads)) * t;
 }
 
 /** Agua: se hunde solo un vértice estrictamente adentro (los cuatro cuadrantes son agua). */
@@ -149,6 +191,14 @@ function waterSink(src: GroundSource, x: number, z: number): number | null {
 function groundHeight(shape: TerrainShape, src: GroundSource, x: number, z: number): number {
   const out = outsideDistance(shape.bounds, x, z);
   const sink = waterSink(src, x, z);
+  if (shape.pads) {
+    // Relieve (open-world-3d T6): el agua se hunde desde el relieve; afuera, las lomas suben sobre él.
+    const r = reliefHeight(shape, x, z);
+    const hill = out > 0
+      ? smooth(0, HILL_RAMP, out) * Math.max(0, shape.hillMax - 0.25) * (0.55 + 0.45 * noise2(x * 0.05 + 9, z * 0.05, shape.seed)) * (1 - src.flatten(x, z))
+      : 0;
+    return r + hill + (sink ?? 0);
+  }
   if (out > 0) {
     // Lomas: suben suave desde el borde de los límites, con variación de altura por ruido; un camino o un río las
     // aplana (el camino sale del valle entre las lomas).
@@ -192,20 +242,109 @@ function groundColor(p: Palette, shape: TerrainShape, src: GroundSource, x: numb
   return c;
 }
 
+/** Los colores del suelo del mundo abierto (mockup V6 `buildTerrain`, con el alto y el alterno más verdes). */
+function openPalette(): Record<"bajo" | "alto" | "alterno" | "bosque" | "roca" | "rocaCalida", Rgb> {
+  return {
+    bajo: tokenRgb("suelo-bajo"), alto: tokenRgb("suelo-alto"), alterno: tokenRgb("suelo-alterno"),
+    bosque: tokenRgb("suelo-bosque"), roca: tokenRgb("roca"), rocaCalida: tokenRgb("roca-calida"),
+  };
+}
+
+/** Normales por vértice ponderadas por área (las mismas que `computeVertexNormals` de three sobre esta malla). */
+export function vertexNormals(positions: Float32Array, indices: Uint32Array): Float32Array {
+  const n = new Float32Array(positions.length);
+  const p = (k: number): number => positions[k] as number;
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = (indices[t] as number) * 3;
+    const b = (indices[t + 1] as number) * 3;
+    const c = (indices[t + 2] as number) * 3;
+    const e1x = p(b) - p(a);
+    const e1y = p(b + 1) - p(a + 1);
+    const e1z = p(b + 2) - p(a + 2);
+    const e2x = p(c) - p(a);
+    const e2y = p(c + 1) - p(a + 1);
+    const e2z = p(c + 2) - p(a + 2);
+    // (b - a) × (c - a) de cada triángulo tal como está en el índice: con el orden (a, c, b) de la malla apunta a +y.
+    const cx = e1y * e2z - e1z * e2y;
+    const cy = e1z * e2x - e1x * e2z;
+    const cz = e1x * e2y - e1y * e2x;
+    for (const v of [a, b, c]) {
+      n[v] = (n[v] as number) + cx;
+      n[v + 1] = (n[v + 1] as number) + cy;
+      n[v + 2] = (n[v + 2] as number) + cz;
+    }
+  }
+  for (let v = 0; v < n.length; v += 3) {
+    const l = Math.hypot(n[v] as number, n[v + 1] as number, n[v + 2] as number) || 1;
+    n[v] = (n[v] as number) / l;
+    n[v + 1] = (n[v + 1] as number) / l;
+    n[v + 2] = (n[v + 2] as number) / l;
+  }
+  return n;
+}
+
+/**
+ * Peso de tierra de un vértice (D-819, mockup V6): 1 sobre el camino (medio ancho con borde ruidoso de +-0,45 m) y en
+ * el llano de cada NPC (3,4 m), bajando a 0 en 0,75 pasos de malla, así a cualquier paso el camino no tiene huecos
+ * (AC32). La roca de las pendientes se come hasta el 80 % (eso lo aplica buildTerrain).
+ */
+export function roadWeight(shape: TerrainShape, x: number, z: number, step: number): number {
+  let w = 0;
+  const fall = step * 0.75;
+  for (const r of shape.roads) {
+    const q = polylineNearest(x, z, r.line);
+    if (!q) continue;
+    const hw = r.width / 2 + (noise2(x / 3, z / 3, shape.seed + 21) - 0.5) * 0.9;
+    w = Math.max(w, Math.min(1, Math.max(0, 1 - (q.d - hw) / fall)));
+  }
+  // El primer pad es la aparición (un llano sin tierra); los demás, los NPCs.
+  for (const p of (shape.pads ?? []).slice(1)) w = Math.max(w, Math.min(1, Math.max(0, 1 - (Math.hypot(x - p.x, z - p.z) - 3.4) / fall)));
+  return w;
+}
+
+function openColor(p: ReturnType<typeof openPalette>, shape: TerrainShape, x: number, z: number, h: number, rockT: number): Rgb {
+  const seed = shape.seed;
+  const n1 = noise2(x / 9, z / 9, seed + 9);
+  const n2 = noise2(x / 3.2, z / 3.2, seed + 4);
+  const n3 = noise2(x / 22, z / 22, seed + 12);
+  let c = mixRgb(p.bajo, p.alto, Math.min(1, Math.max(0, smooth(3.2, 9.5, h) * 0.9 + (n3 - 0.5) * 0.4)));
+  c = mixRgb(c, p.alterno, Math.min(0.55, Math.max(0, (n1 - 0.45) * 1.1)));
+  c = scaleRgb(c, 0.9 + n2 * 0.22);
+  const b = shape.bounds;
+  const e = Math.max(b.minX + 8 - x, x - (b.maxX - 8), b.minZ + 6 - z, z - (b.maxZ - 6), 0);
+  c = mixRgb(c, p.bosque, smooth(0, 26, e) * 0.5);
+  if (rockT > 0) c = mixRgb(c, mixRgb(p.roca, p.rocaCalida, n2), rockT * 0.9);
+  return c;
+}
+
+/** Altura sobre los triángulos de la celda: (a, c, b) si u + v <= 1, si no (b, c, e); a = (i, j), e = (i + 1, j + 1). */
+function triangleHeight(ha: number, hb: number, hc: number, he: number, u: number, v: number): number {
+  return u + v <= 1 ? ha + (hb - ha) * u + (hc - ha) * v : he + (hc - he) * (1 - u) + (hb - he) * (1 - v);
+}
+
 export function buildTerrain(spec: TerrainSpec): Terrain {
   const { bounds } = spec;
   const t = spec.ground.terrain;
-  const shape: TerrainShape = { bounds, hillMax: t?.hills ?? HILL_MAX, seed: spec.seed ?? t?.seed ?? TERRAIN_SEED };
+  const relief = t?.relief === true;
+  const shape: TerrainShape = {
+    bounds,
+    hillMax: t?.hills ?? HILL_MAX,
+    seed: spec.seed ?? t?.seed ?? TERRAIN_SEED,
+    pads: relief ? spec.ground.pads.map(([x, z]) => ({ x, z })) : null,
+    roads: relief ? spec.ground.paths.filter((p) => p.surface === "camino") : [],
+  };
   const skirt = t?.extension ?? TERRAIN_SKIRT;
   const src = curveGround(spec.ground);
   const extent: Bounds = terrainExtent(bounds, skirt);
-  const { xs, zs } = terrainLines(bounds, skirt, spec.density ?? "full");
+  const lod: SceneDensity | TerrainLod = relief ? OPEN_WORLD_DENSITY[spec.tier ?? "medium"].terrain : (spec.density ?? "full");
+  const { xs, zs } = terrainLines(bounds, skirt, lod);
+  const step = (typeof lod === "string" ? DENSITY[lod].terrain : lod).fineStep;
   const nx = xs.length;
   const nz = zs.length;
-  const p = palette(spec.ground.palette);
   const positions = new Float32Array(nx * nz * 3);
   const colors = new Float32Array(nx * nz * 3);
   const uvs = new Float32Array(nx * nz * 2);
+  const dirt = new Float32Array(nx * nz);
   const heights = new Float64Array(nx * nz);
   const u0 = bounds.minX - BRUSH_UV_SKIRT;
   const v0 = bounds.minZ - BRUSH_UV_SKIRT;
@@ -219,7 +358,6 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
       const h = groundHeight(shape, src, x, z);
       heights[k] = h;
       positions.set([x, h, z], k * 3);
-      colors.set(groundColor(p, shape, src, x, z, h), k * 3);
       uvs.set([(x - u0) / w, (z - v0) / d], k * 2);
     }
   }
@@ -236,18 +374,38 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
       o += 6;
     }
   }
-  const heightAt = (x: number, z: number): number => {
+  if (relief) {
+    // Mundo abierto: el color y la tierra dependen de la pendiente (roca), así se pintan después de las normales.
+    const normals = vertexNormals(positions, indices);
+    const op = openPalette();
+    for (let k = 0; k < nx * nz; k++) {
+      const x = positions[k * 3] as number;
+      const z = positions[k * 3 + 2] as number;
+      const rockT = smooth(0.9, 0.74, normals[k * 3 + 1] as number);
+      colors.set(openColor(op, shape, x, z, heights[k] as number, rockT), k * 3);
+      dirt[k] = roadWeight(shape, x, z, step) * (1 - rockT * 0.8);
+    }
+  } else {
+    const p = palette(spec.ground.palette);
+    for (let k = 0; k < nx * nz; k++) {
+      colors.set(groundColor(p, shape, src, positions[k * 3] as number, positions[k * 3 + 2] as number, heights[k] as number), k * 3);
+    }
+  }
+  // Un valor por vértice interpolado sobre los triángulos de la malla (lo dibujado es lo medido) en el mundo abierto.
+  const onMesh = (values: ArrayLike<number>) => (x: number, z: number): number => {
     const i = lineCell(xs, x);
     const j = lineCell(zs, z);
     const x0 = xs[i] as number;
-    const x1 = xs[i + 1] as number;
     const z0 = zs[j] as number;
-    const z1 = zs[j + 1] as number;
-    const u = Math.min(1, Math.max(0, (x - x0) / (x1 - x0)));
-    const v = Math.min(1, Math.max(0, (z - z0) / (z1 - z0)));
-    const h = (ii: number, jj: number) => heights[jj * nx + ii] as number;
-    return (h(i, j) * (1 - u) + h(i + 1, j) * u) * (1 - v) + (h(i, j + 1) * (1 - u) + h(i + 1, j + 1) * u) * v;
+    const u = Math.min(1, Math.max(0, (x - x0) / ((xs[i + 1] as number) - x0)));
+    const v = Math.min(1, Math.max(0, (z - z0) / ((zs[j + 1] as number) - z0)));
+    const h = (ii: number, jj: number) => values[jj * nx + ii] as number;
+    // Sin relieve (campesino) sigue la bilineal de estetica-c: adentro el suelo es plano y el agua la miden sus tests.
+    if (!relief) return (h(i, j) * (1 - u) + h(i + 1, j) * u) * (1 - v) + (h(i, j + 1) * (1 - u) + h(i + 1, j + 1) * u) * v;
+    return triangleHeight(h(i, j), h(i + 1, j), h(i, j + 1), h(i + 1, j + 1), u, v);
   };
+  const heightAt = onMesh(heights);
+  const dirtAt = onMesh(dirt);
   const vertexAt = (x: number, z: number): number => {
     const i = lineCell(xs, x);
     const j = lineCell(zs, z);
@@ -256,7 +414,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
     }
     return -1;
   };
-  return { xs, zs, positions, colors, uvs, indices, extent, heightAt, vertexAt };
+  return { xs, zs, positions, colors, uvs, indices, extent, dirt, relief, step, heightAt, dirtAt, vertexAt };
 }
 
 export interface Scatter {

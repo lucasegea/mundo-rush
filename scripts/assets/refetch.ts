@@ -22,6 +22,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse } from "yaml";
 import { ArchivoRegistroCodigo, type PackAssets, type RegistroAsset, type RegistroCodigo } from "@lg/content-schema";
+import { BASISU, basisuCommand, encodeKtx2, EncoderMismatch, loadEncoder, mapKindOf } from "./ktx2.ts";
 import { derivarFila, leerRegistro } from "./optimize.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -83,17 +84,28 @@ export const refetchAsset = async (fila: RegistroAsset, pack: PackAssets | undef
       // SEAM (T7, bake-trees): una fila generated se rehace corriendo su `generador` con su preset y semilla, no por red.
       return { estado: "ERROR", archivo, detalle: "procedencia generated: el re-horneado llega con scripts/assets/bake-trees.ts (T7)" };
     }
-    if (archivo.endsWith(".ktx2")) {
-      // SEAM (T6, PD-4): re-codificar con el basisu fijado en la config versionada; si la versión local difiere, la
-      // línea es ENCODER-MISMATCH con las dos versiones (y el sha256 del original igual se verifica).
-      return { estado: "ERROR", archivo, detalle: "KTX2: la re-codificación con basisu fijado llega con T6" };
-    }
     if (!fila.url_origen || !fila.sha256_original) return { estado: "ERROR", archivo, detalle: "la fila no tiene url_origen o sha256_original" };
     const url = await urlDescarga(fila.url_origen, bajar);
     const original = await bajar(url);
     guardar(scratch, `originales/${fila.id}`, original);
     if (sha(original) !== fila.sha256_original) {
       return { estado: "SOURCE-MISMATCH", archivo, detalle: `${url}: sha256 ${sha(original)} != registro ${fila.sha256_original}` };
+    }
+    if (archivo.endsWith(".ktx2")) {
+      // Open-world-3d T6 (PD-4, D-832): se re-codifica con el basisu fijado (scripts/assets/ktx2.ts) y se compara byte a
+      // byte. Si el codificador local no es el fijado, la línea es ENCODER-MISMATCH (nunca MATCH, nunca una falla falsa).
+      const kind = mapKindOf(archivo);
+      if (!kind) return { estado: "ERROR", archivo, detalle: "un .ktx2 que no es -diff ni -nor: ktx2.ts no sabe codificarlo" };
+      let encoder: Uint8Array;
+      try {
+        encoder = await loadEncoder(root, bajar);
+      } catch (e) {
+        if (e instanceof EncoderMismatch) return { estado: "ENCODER-MISMATCH", archivo, detalle: `${e.message}; se esperaba basisu ${BASISU.version}` };
+        throw e;
+      }
+      const rehecho = await encodeKtx2(original, kind, encoder);
+      guardar(scratch, archivo, rehecho);
+      return comparar(root, archivo, rehecho, ` (${url}, ${basisuCommand(kind)})`);
     }
     const rehecho = fila.procedencia === "refetched" ? original : (await derivarFila(fila, pack, original)).glb;
     guardar(scratch, archivo, rehecho);

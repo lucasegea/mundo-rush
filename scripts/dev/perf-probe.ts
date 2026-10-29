@@ -35,8 +35,9 @@ export type Tier = (typeof TIERS)[number];
 /**
  * Poses de cámara. `spawn` es la cámara por defecto al entrar (6 m detrás); desde open-world-3d T5 el zoom continuo de
  * `thirdPerson` da `close` (t = 0, 2,5 m), `mid` (t = 0,5) y `full` (t = 1, el mapa entero), puestas con la acción
- * `zoomTo` del store (el calentamiento de 12 s cubre el suavizado). SEAM (T6): `hilltop` con la pose con nombre del mapa
- * grande y los tres NPCs a la vista. Una pose sin `apply` se informa como "no disponible".
+ * `zoomTo` del store (el calentamiento de 12 s cubre el suavizado). Desde T6, `hilltop`: el jugador en la loma HILLTOP
+ * del muelle (percentil 95 de altura de lo caminable) mirando al sudeste con los tres NPCs a la vista, a la distancia de
+ * entrada. Una pose sin `apply` se informa como "no disponible".
  */
 export const POSES = ["spawn", "close", "mid", "full", "hilltop"] as const;
 export type Pose = (typeof POSES)[number];
@@ -51,9 +52,54 @@ const zoomPose = (t: number | "default") => async (page: Page): Promise<void> =>
     actions.zoomTo(t);
   })()`);
 };
-const POSE_APPLY: Partial<Record<Pose, (page: Page) => Promise<void>>> = Object.fromEntries(
-  Object.entries(POSE_ZOOM_T).map(([pose, t]) => [pose, zoomPose(t as number | "default")]),
-);
+/**
+ * La pose con nombre `hilltop` del muelle (open-world-3d T6): en (-20, 20), 6,6 m (percentil 95 de lo caminable), con
+ * yaw -31° (la cámara al noroeste, mirando al sudeste): Mitayo, Cerro y Factor quedan a 28-32° del centro de la vista,
+ * dentro de los ±39,6° del FOV horizontal de 50° en 16:9 (lo prueba perf-probe.test.ts).
+ */
+export const HILLTOP = { x: -20, z: 20, yawDeg: -31 } as const;
+const hilltopPose = async (page: Page): Promise<void> => {
+  await page.evaluate(`(async () => {
+    const { gameStore } = await import("/src/state/store.ts");
+    const { actions } = await import("/src/state/actions.ts");
+    const s = gameStore.getState();
+    const g = s.world.diorama.grid;
+    const p = { x: ${HILLTOP.x}, z: ${HILLTOP.z} };
+    const cell = [Math.floor((p.x - g.originX) / g.cellSize), Math.floor((p.z - g.originZ) / g.cellSize)];
+    gameStore.setState({
+      player: { ...s.player, position: p, previous: p, cell, path: [] },
+      ui: { ...s.ui, camera: { ...s.ui.camera, yawDeg: ${HILLTOP.yawDeg} } },
+    });
+    const c = gameStore.getState().ui.camera;
+    actions.zoomTo(Math.log(6 / 2.5) / Math.log(c.fitDistance / 2.5));
+  })()`);
+};
+/**
+ * Open-world-3d M3 (hallazgo de QA): con `--tier=all` la pose `spawn` del tier siguiente heredaba el jugador y el yaw
+ * de `hilltop`. Al entrar al mundo se guarda la aparición (posición, celda, yaw) y `spawn` la repone antes del zoom.
+ */
+const SAVE_SPAWN = `import("/src/state/store.ts").then(({ gameStore }) => {
+  const s = gameStore.getState();
+  globalThis.__lgProbeSpawn = { position: s.player.position, cell: s.player.cell, yawDeg: s.ui.camera.yawDeg };
+})`;
+const spawnPose = async (page: Page): Promise<void> => {
+  await page.evaluate(`(async () => {
+    const { gameStore } = await import("/src/state/store.ts");
+    const sp = globalThis.__lgProbeSpawn;
+    if (!sp) throw new Error("perf-probe: sin aparición guardada");
+    const s = gameStore.getState();
+    gameStore.setState({
+      player: { ...s.player, position: sp.position, previous: sp.position, cell: sp.cell, path: [] },
+      ui: { ...s.ui, camera: { ...s.ui.camera, yawDeg: sp.yawDeg } },
+    });
+  })()`);
+  await zoomPose("default")(page);
+};
+const POSE_APPLY: Partial<Record<Pose, (page: Page) => Promise<void>>> = {
+  ...Object.fromEntries(Object.entries(POSE_ZOOM_T).map(([pose, t]) => [pose, zoomPose(t as number | "default")])),
+  spawn: spawnPose,
+  hilltop: hilltopPose,
+};
 export const poseAvailable = (p: Pose): boolean => POSE_APPLY[p] !== undefined;
 
 /** Columnas: la del gate y las dos informativas (O-5). */
@@ -201,8 +247,10 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 /** Fija el tier a mano (PerformanceMonitor no lo baja con un tier fijado) y espera el mapa listo. */
 async function setTier(page: Page, tier: Tier): Promise<void> {
+  await page.evaluate(`import("/src/state/store.ts").then((m) => { globalThis.__lgProbeStore = m.gameStore; })`);
   await page.evaluate(`import("/src/state/actions.ts").then((m) => m.actions.setTierChoice(${JSON.stringify(tier)}))`);
-  await page.waitForFunction(`import("/src/state/store.ts").then((m) => m.gameStore.getState().world.dioramaStatus === "ready")`, undefined, { timeout: 60_000 });
+  // Predicado síncrono: una promesa de import() es truthy y la espera pasaba sin esperar (el mismo arreglo que waitGame).
+  await page.waitForFunction(`(() => { const s = globalThis.__lgProbeStore.getState(); return s.settings.graphics.tier === ${JSON.stringify(tier)} && s.world.dioramaStatus === "ready"; })()`, undefined, { timeout: 60_000 });
 }
 
 interface Hook { frameloop: string; regulators: number }
@@ -244,6 +292,7 @@ async function runConfig(exe: string, a: ProbeArgs, stack: Stack, cfg: (typeof C
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto(`${stack.url}/?universe=${UNIVERSE}&voz=0`);
       await enterWorld(page);
+      await page.evaluate(SAVE_SPAWN);
       await page.waitForFunction("globalThis.__lgPerfProbe !== undefined", undefined, { timeout: 30_000 });
       const hook = await readHook(page);
       if (!hook || hook.frameloop !== "always" || hook.regulators !== 0) {
@@ -308,7 +357,7 @@ export function markdownSection(a: Pick<ProbeArgs, "gl" | "label">, commit: stri
   ];
   // Una corrida `--build` no mide cuadros: solo la línea de carga.
   if (main.length === 0) lines.splice(1);
-  if (main.length > 0 && skipped.length > 0) lines.push("", `Poses todavía no disponibles: ${skipped.join(", ")} (close, mid y full con el zoom de T5; hilltop con el mapa de T6).`);
+  if (main.length > 0 && skipped.length > 0) lines.push("", `Poses todavía no disponibles: ${skipped.join(", ")}.`);
   if (load.length > 0) {
     lines.push("", `Carga sobre el build (vite build + vite preview, perfil nuevo por muestra): ${load.map((l) => `${l.ms} ms (${l.source})`).join(", ")}; mediana ${median(load.map((l) => l.ms))} ms.` +
       (load.some((l) => l.source === "dom") ? " Medida provisoria por DOM (clic a canvas + dos cuadros): las marcas lg:world-enter y lg:world-first-frame llegan con T10(d)." : ""));

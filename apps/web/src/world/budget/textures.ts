@@ -4,6 +4,11 @@
 // en `high` además el mapa de sombra de 1024 (profundidad de 32 bits). Puro: las medidas salen de los mismos módulos
 // que crean las texturas (toon.ts, blob.ts, labels.ts, bubbleSprite.ts, lighting/params.ts). No cuenta los buffers de
 // pantalla del postprocesado (dependen de la resolución; los mide renderer.info en la instantánea del modo director).
+// Open-world-3d T6 (D-832, AC42): con `openWorld` suma además cada textura que crea el mundo abierto en ese tier (el
+// inventario OPEN_WORLD_TEXTURES de @lg/art: suelo, rocas, hoja, corteza, impostores, pasto, flores, nubes, la textura
+// de altura del pasto). Un .ktx2 cuya cabecera se pasa en `headers` cuenta con su ancho, alto, formato y niveles reales
+// (bytes de bloque del destino BC); el resto con su medida declarada.
+import { gpuBytes, ktx2GpuBytes, OPEN_WORLD_TEXTURES, type Ktx2Header, type WorldTier } from "@lg/art";
 import { BLOB_SIZE } from "../materials/blob";
 import { BRUSH_SIZE, TOON_BANDS } from "../materials/toon";
 import { BUBBLE_LAYOUT } from "../labels/bubbleSprite";
@@ -21,6 +26,20 @@ export interface TextureBudgetInput {
   bubbles: number;
   /** ¿Hay mapa de sombra direccional (solo `high`)? */
   shadowMap: boolean;
+  /** El mundo abierto de un tier; `headers` son las cabeceras KTX2 leídas de los archivos servidos (por ruta). */
+  openWorld?: { tier: WorldTier; headers?: Readonly<Record<string, Ktx2Header>> };
+}
+
+/** Bytes en GPU de las texturas del mundo abierto en un tier, por id del inventario. */
+export function openWorldTextureParts(tier: WorldTier, headers: Readonly<Record<string, Ktx2Header>> = {}): Record<string, number> {
+  const parts: Record<string, number> = {};
+  for (const t of OPEN_WORLD_TEXTURES) {
+    const n = t.count[tier];
+    if (n === 0) continue;
+    const header = t.file ? headers[t.file] : undefined;
+    parts[t.id] = n * (header ? ktx2GpuBytes(header) : gpuBytes(t, t.format));
+  }
+  return parts;
 }
 
 export interface TextureEstimate {
@@ -38,6 +57,7 @@ export function estimateTextureMemory(input: TextureBudgetInput): TextureEstimat
     etiquetas: input.labels.reduce((n, l) => n + l.width * l.height * RGBA * MIPS, 0),
     burbujas: input.bubbles * BUBBLE_LAYOUT.width * BUBBLE_LAYOUT.height * RGBA * MIPS,
     "mapa de sombra": input.shadowMap ? SUN_SHADOW.mapSize * SUN_SHADOW.mapSize * 4 : 0,
+    ...(input.openWorld ? openWorldTextureParts(input.openWorld.tier, input.openWorld.headers) : {}),
   };
   const bytes = Math.round(Object.values(parts).reduce((a, b) => a + b, 0));
   return { bytes, mb: bytes / MB, parts };

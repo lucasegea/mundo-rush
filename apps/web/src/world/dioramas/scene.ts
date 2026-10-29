@@ -7,11 +7,18 @@
 // Plan estetica-c M6: se arma con la densidad del tier (DENSITY de @lg/art): en `low`, terreno más grueso, props y
 // árboles de geometría reducida, menos pinos en la falda y una de cada tres instancias de detalle; el estimador de
 // validate:content cuenta con la misma tabla.
+// Open-world-3d T6 (D-819, D-823): un diorama con `terreno.relieve` es el mundo abierto: terreno en baldosas con el
+// sombreador del suelo (clase `terreno`) y el paso del tier, un selector del suelo que hace raycast sobre la malla (el
+// clic camina sobre el relieve), props y árboles apoyados en `heightAt` (bases 0,1 m abajo) y el cielo (cúpula y nubes)
+// dentro del grafo, así el estimador y el auditor lo cuentan. Sin relieve, todo sigue como en estetica-c.
 import {
-  BufferAttribute, BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, Quaternion, Vector3,
+  Box3, BufferAttribute, BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, Object3D, PlaneGeometry, Quaternion, Sphere, Vector3,
+  type Intersection, type Raycaster,
 } from "three";
 import type { DioramaRuntime, PropBox } from "@lg/core";
-import { DENSITY, keepDetail, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity } from "@lg/art";
+import {
+  DENSITY, keepDetail, OPEN_WORLD_DENSITY, TERRAIN_APRON, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity, type WorldTier,
+} from "@lg/art";
 import type { Obstacle } from "../camera/rig";
 import { toonMaterial } from "../materials/registry";
 import { blob, mergeParts, painted, sphere } from "../props/geometry";
@@ -23,9 +30,14 @@ import {
 } from "../terrain/buildTerrain";
 import { waterMaterial } from "../water/waterMaterial";
 import { rng } from "../materials/rng";
+import { buildSky, type Sky } from "../sky/sky";
+import { groundMaterial, type GroundMaterial } from "../terrain/groundMaterial";
 
 /** Altura del plano de agua (el terreno se hunde debajo). */
 export const WATER_LEVEL = -0.15;
+/** Open-world-3d T6 (D-819): los actores van 0,02 m sobre `heightAt`; las bases de props y árboles, 0,1 m abajo. */
+export const ACTOR_LIFT = 0.02;
+export const PROP_SINK = 0.1;
 
 export interface BlobAnchor {
   x: number;
@@ -42,6 +54,12 @@ export interface DioramaScene {
   blobAnchors: BlobAnchor[];
   /** Props `modelo/*` (glTF del pipeline de M2): se cargan aparte y entran en su caja `tam`. */
   models: ModelSlot[];
+  /** Open-world-3d T6: el material del suelo (sus mapas .ktx2 los baja Diorama con el renderer); null sin relieve. */
+  ground: GroundMaterial | null;
+  /** El cielo del mundo abierto (cúpula y nubes, ya dentro de `root`); null sin relieve. */
+  sky: Sky | null;
+  /** Lo que recibe el clic del suelo: con relieve, un raycast sobre las baldosas del terreno; null sin relieve. */
+  picker: Object3D | null;
   dispose(): void;
 }
 
@@ -75,6 +93,108 @@ function terrainMesh(t: Terrain): Mesh {
   m.name = "terreno";
   m.receiveShadow = true;
   return m;
+}
+
+/**
+ * El terreno del mundo abierto en baldosas (D-819): los mismos buffers de vértices y un índice por baldosa, con su caja
+ * (y de -40 a 80 m), así three descarta las que no se ven. `tiles` es columnas por filas, como OPEN_WORLD_DENSITY.
+ */
+export function terrainTiles(t: Terrain, tiles: readonly [number, number], material: GroundMaterial): Group {
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(t.positions, 3));
+  g.setAttribute("color", new BufferAttribute(t.colors, 3));
+  g.setAttribute("uv", new BufferAttribute(t.uvs, 2));
+  g.setAttribute("aDirt", new BufferAttribute(t.dirt, 1));
+  g.setIndex(new BufferAttribute(t.indices, 1));
+  g.computeVertexNormals();
+  const nx = t.xs.length;
+  const cellsX = nx - 1;
+  const cellsZ = t.zs.length - 1;
+  const group = new Group();
+  group.name = "terreno";
+  const [tx, tz] = tiles;
+  for (let a = 0; a < tz; a++) {
+    for (let b = 0; b < tx; b++) {
+      const i0 = Math.round((b * cellsX) / tx);
+      const i1 = Math.round(((b + 1) * cellsX) / tx);
+      const j0 = Math.round((a * cellsZ) / tz);
+      const j1 = Math.round(((a + 1) * cellsZ) / tz);
+      const idx = new Uint32Array((i1 - i0) * (j1 - j0) * 6);
+      let q = 0;
+      for (let j = j0; j < j1; j++) {
+        for (let i = i0; i < i1; i++) {
+          const v = j * nx + i;
+          idx.set([v, v + nx, v + 1, v + 1, v + nx, v + nx + 1], q);
+          q += 6;
+        }
+      }
+      const tg = new BufferGeometry();
+      for (const k of ["position", "normal", "uv", "color", "aDirt"]) tg.setAttribute(k, g.getAttribute(k));
+      tg.setIndex(new BufferAttribute(idx, 1));
+      const box = new Box3(new Vector3(t.xs[i0], -40, t.zs[j0]), new Vector3(t.xs[i1], 80, t.zs[j1]));
+      tg.boundingBox = box;
+      tg.boundingSphere = box.getBoundingSphere(new Sphere());
+      const m = new Mesh(tg, material.material);
+      m.name = `terreno:${b},${a}`;
+      m.receiveShadow = true;
+      group.add(m);
+    }
+  }
+  return group;
+}
+
+/**
+ * El delantal del mundo abierto (open-world-3d M3, AC35, TERRAIN_APRON): un anillo plano de 8 triángulos desde
+ * `overlap` m adentro de la extensión hasta `width` m afuera, `sink` m bajo el vértice más bajo de la malla (así queda
+ * debajo de la falda donde se pisan). Usa el material del suelo, cuyo fundido de borde lo pinta entero del color de la
+ * niebla: con el mapa entero en un aspecto ancho o alto, lo que se ve más allá de la falda es suelo color de niebla.
+ */
+export function terrainApron(t: Terrain, material: GroundMaterial): Mesh {
+  const e = t.extent;
+  let lowest = Infinity;
+  for (let i = 1; i < t.positions.length; i += 3) lowest = Math.min(lowest, t.positions[i] as number);
+  const y = lowest - TERRAIN_APRON.sink;
+  const o = TERRAIN_APRON.overlap;
+  const w = TERRAIN_APRON.width;
+  const ring = (d: number): [number, number][] => [[e.minX - d, e.minZ - d], [e.maxX + d, e.minZ - d], [e.maxX + d, e.maxZ + d], [e.minX - d, e.maxZ + d]];
+  const pts = [...ring(-o), ...ring(w)];
+  const idx: number[] = [];
+  // Cada triángulo con la normal hacia +y: (b - a) × (c - a) con componente y positiva.
+  const tri = (a: number, b: number, c: number): void => {
+    const [ax, az] = pts[a] as [number, number];
+    const [bx, bz] = pts[b] as [number, number];
+    const [cx, cz] = pts[c] as [number, number];
+    idx.push(...((bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0 ? [a, b, c] : [a, c, b]));
+  };
+  for (let k = 0; k < 4; k++) {
+    const k1 = (k + 1) % 4;
+    tri(k, k1, 4 + k1);
+    tri(k, 4 + k1, 4 + k);
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(Float32Array.from(pts.flatMap(([x, z]) => [x, y, z])), 3));
+  g.setAttribute("normal", new BufferAttribute(Float32Array.from(pts.flatMap(() => [0, 1, 0])), 3));
+  g.setAttribute("color", new BufferAttribute(new Float32Array(pts.length * 3).fill(1), 3));
+  g.setAttribute("uv", new BufferAttribute(new Float32Array(pts.length * 2), 2));
+  g.setAttribute("aDirt", new BufferAttribute(new Float32Array(pts.length), 1));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  const m = new Mesh(g, material.material);
+  m.name = "terreno:delantal";
+  return m;
+}
+
+/**
+ * El selector del suelo (open-world-3d T6): un objeto sin malla cuyo raycast es el de las baldosas del terreno, así el
+ * clic del suelo cae en el punto del relieve que se ve (y no en un plano en y = 0). Diorama le pone el `onClick`.
+ */
+export function groundPicker(tiles: Object3D): Object3D {
+  const picker = new Object3D();
+  picker.name = "suelo:clic";
+  picker.raycast = (raycaster: Raycaster, intersects: Intersection[]): void => {
+    for (const hit of raycaster.intersectObject(tiles, true)) intersects.push({ ...hit, object: picker });
+  };
+  return picker;
 }
 
 interface Box2 { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -133,12 +253,30 @@ export function dioramaDetail(diorama: DioramaRuntime): DetailScatter {
   return curveDetailScatter(diorama.ground, diorama.grid, diorama.ground.terrain.seed ?? ART_SEED);
 }
 
-export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity = "full"): DioramaScene {
+export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity = "full", tier: WorldTier = "medium"): DioramaScene {
   const root = new Group();
   root.name = `diorama:${diorama.id}`;
   const spec = DENSITY[density];
-  const terrain = buildTerrain({ bounds: diorama.bounds, ground: diorama.ground, density });
-  root.add(terrainMesh(terrain));
+  const relief = diorama.ground.terrain.relief;
+  const terrain = buildTerrain({ bounds: diorama.bounds, ground: diorama.ground, density, tier });
+  let ground: GroundMaterial | null = null;
+  let sky: Sky | null = null;
+  let picker: Object3D | null = null;
+  if (relief) {
+    // AC35: la falda se funde a la niebla en sus últimos metros y el delantal sigue de ese color (TERRAIN_APRON).
+    const skirt = terrain.extent.maxX - diorama.bounds.maxX;
+    ground = groundMaterial(tier, { bounds: diorama.bounds, fade: [skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]] });
+    const tiles = terrainTiles(terrain, OPEN_WORLD_DENSITY[tier].terrainTiles, ground);
+    tiles.add(terrainApron(terrain, ground));
+    root.add(tiles);
+    picker = groundPicker(tiles);
+    sky = buildSky(tier);
+    root.add(sky.group);
+  } else {
+    root.add(terrainMesh(terrain));
+  }
+  // Con relieve, la base de lo apoyado sigue al terreno (0,1 m abajo); sin relieve, la `y` del layout tal cual.
+  const baseY = (x: number, z: number, y: number): number => (relief ? terrain.heightAt(x, z) - PROP_SINK + y : y);
   const water = waterMesh(diorama);
   if (water) root.add(water);
 
@@ -158,14 +296,14 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
       const t = trees.get(k) ?? { asset: b.asset, tint: tintOf(b), items: [] };
       const scale = b.h / TREE_HEIGHT[b.asset];
       const rot = r() * Math.PI * 2; // el sorteo corre siempre: un giro dado no cambia el de los árboles siguientes
-      t.items.push({ x: b.x, z: b.z, y: b.y - 0.05, rot: b.rotY ?? rot, scale });
+      t.items.push({ x: b.x, z: b.z, y: relief ? baseY(b.x, b.z, b.y) : b.y - 0.05, rot: b.rotY ?? rot, scale });
       trees.set(k, t);
       obstacles.push({ kind: "circle", x: b.x, z: b.z, r: TREE_CANOPY_RADIUS[b.asset] * scale, height: b.h });
       blobAnchors.push({ x: b.x, z: b.z, size: 1.6 * scale });
       continue;
     }
     if (isModelAsset(b.asset)) {
-      models.push({ asset: b.asset, x: b.x, y: b.y, z: b.z, w: b.w, h: b.h, d: b.d, rotY: b.rotY ?? 0 });
+      models.push({ asset: b.asset, x: b.x, y: baseY(b.x, b.z, b.y), z: b.z, w: b.w, h: b.h, d: b.d, rotY: b.rotY ?? 0 });
       obstacles.push({ kind: "rect", ...fp, height: b.h });
       continue;
     }
@@ -179,20 +317,20 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
     geometries.push(geo);
     if (list.length === 1) {
       const m = new Mesh(geo, toonMaterial());
-      m.position.set(first.x, first.y, first.z);
+      m.position.set(first.x, baseY(first.x, first.z, first.y), first.z);
       m.rotation.y = first.rotY ?? 0;
       m.receiveShadow = true;
       m.name = first.asset;
       root.add(m);
     } else {
       // Sin giro en el layout, el mismo leve vaivén de M1 entre vecinos (que no se vean clonados).
-      root.add(instanced(first.asset, geo, list.map((b, i) => ({ x: b.x, y: b.y, z: b.z, rot: b.rotY ?? (i % 2) * 0.08, scale: 1 }))));
+      root.add(instanced(first.asset, geo, list.map((b, i) => ({ x: b.x, y: baseY(b.x, b.z, b.y), z: b.z, rot: b.rotY ?? (i % 2) * 0.08, scale: 1 }))));
     }
   }
 
   // Árboles del layout y pinos del borde (fuera de los límites): una llamada por tipo y tinte.
   const seed = diorama.ground.terrain.seed ?? ART_SEED;
-  const border = borderPines(diorama.bounds, seed, spec.borderPines).map((p) => ({ ...p, y: terrain.heightAt(p.x, p.z) - 0.1 }));
+  const border = borderPines(diorama.bounds, seed, spec.borderPines).map((p) => ({ ...p, y: terrain.heightAt(p.x, p.z) - PROP_SINK }));
   const pines = trees.get("codigo/pino|") ?? { asset: "codigo/pino" as const, tint: undefined, items: [] };
   pines.items.push(...border);
   trees.set("codigo/pino|", pines);
@@ -221,9 +359,14 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
     obstacles,
     blobAnchors,
     models,
+    ground,
+    sky,
+    picker,
     dispose() {
       root.traverse((o) => { if (o instanceof Mesh) o.geometry.dispose(); });
       for (const g of geometries) g.dispose();
+      sky?.dispose();
+      ground?.dispose();
     },
   };
 }

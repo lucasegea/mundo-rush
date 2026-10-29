@@ -1,133 +1,124 @@
 id: muelle
 bounds:
-  minX: 0
-  maxX: 28
-  minZ: 0
-  maxZ: 20
+  minX: -70
+  maxX: 70
+  minZ: -50
+  maxZ: 50
 spawn:
-  - 3
+  - -48
   - 0
-  - 10
+  - 30
 terreno:
   extension: 160
   lomas: 6
   semilla: 1545
+  relieve: true
 caminos:
   - puntos:
-      - - -4
-        - 10
-      - - 3
-        - 10
-      - - 10
-        - 10
-      - - 18
-        - 10
-      - - 26
-        - 10
-      - - 32
-        - 10
-    ancho: 2
-  - puntos:
+      - - -58
+        - 33
+      - - -48
+        - 30
+      - - -30
+        - 26
+      - - -18
+        - 17
+      - - -5
+        - 12
       - - 14
-        - 10
+        - 6
+      - - 30
+        - -4
+      - - 42
+        - -18
+      - - 38
+        - -32
       - - 16
-        - 7.5
-      - - 19
-        - 5.5
-      - - 21
-        - 5
-    ancho: 1.6
+        - -42
+      - - -6
+        - -44
+      - - -20
+        - -38
+    ancho: 3.2
 detalle:
   - tipo: piedritas
     centro:
-      - 13
-      - 3
-    radio: 2.5
+      - 50
+      - -16
+    radio: 4
+    cantidad: 8
+  - tipo: piedritas
+    centro:
+      - -8
+      - 20
+    radio: 3
     cantidad: 5
-  - tipo: piedritas
-    centro:
-      - 25.5
-      - 6
-    radio: 2
-    cantidad: 4
-  - tipo: piedritas
-    centro:
-      - 8
-      - 4
-    radio: 2
-    cantidad: 3
   - tipo: matas
     centro:
-      - 3
-      - 3.5
-    radio: 2
-    cantidad: 4
+      - -40
+      - 40
+    radio: 4
+    cantidad: 6
   - tipo: matas
     centro:
-      - 3.5
-      - 16.5
-    radio: 2.5
-    cantidad: 4
-  - tipo: matas
-    centro:
-      - 26
-      - 17.5
-    radio: 1.5
-    cantidad: 3
+      - -32
+      - -28
+    radio: 4
+    cantidad: 6
   - tipo: flores
     centro:
-      - 14.5
-      - 17
-    radio: 2
-    cantidad: 4
+      - -38
+      - 20
+    radio: 3
+    cantidad: 6
   - tipo: flores
     centro:
-      - 6
-      - 13
-    radio: 1.5
-    cantidad: 3
+      - 22
+      - 20
+    radio: 3
+    cantidad: 5
 props:
   - asset: codigo/galpon
     pos:
-      - 21
+      - 51
       - 0
-      - 3
+      - -24
     tam:
       - 5
       - 2.5
       - 3
   - asset: codigo/caja
     pos:
-      - 11.5
+      - -2
       - 0
-      - 6.5
+      - 17
     tam:
       - 1
       - 1
       - 1
   - asset: codigo/caja
     pos:
-      - 12.5
+      - -1
       - 0
-      - 7.5
+      - 18
     tam:
       - 1
       - 1
       - 1
   - asset: codigo/cerco
     pos:
-      - 8
+      - -14
       - 0
-      - 15
+      - -30
     tam:
       - 8
       - 1
       - 0.2
   - asset: codigo/casa
     pos:
-      - 20
+      - -30
       - 0
-      - 16
+      - -32
     tam:
       - 4
       - 3
@@ -135,27 +126,73 @@ props:
 npcs:
   - id: NPC-MITAYO
     spawn:
-      - 10
+      - -5
       - 0
-      - 8.5
+      - 12
   - id: NPC-CERRO
     spawn:
-      - 17
+      - 42
       - 0
-      - 6.5
+      - -18
   - id: NPC-FACTOR
     spawn:
-      - 24.5
+      - -20
       - 0
-      - 12.5
+      - -38
 no_caminable:
   - poligono:
-      - - 15
+      - - -70
+        - -0.1
+      - - -70
+        - -50
+      - - 70
+        - -50
+      - - 70
+        - 50
+      - - -70
+        - 50
+      - - -70
+        - 0.1
+      - - -64.8
+        - 0.1
+      - - -66
+        - 21.4
+      - - -57.6
+        - 41.8
+      - - -34.6
+        - 47.7
+      - - -15
+        - 46.2
+      - - 0
+        - 45.6
+      - - 15.2
+        - 46.6
+      - - 33.6
+        - 46.3
+      - - 55.1
+        - 40
+      - - 67.2
+        - 21.8
+      - - 69.2
         - 0
-      - - 19
-        - 0
-      - - 19
-        - 2.5
-      - - 15
-        - 2.5
+      - - 66.5
+        - -21.6
+      - - 53.1
+        - -38.6
+      - - 32.5
+        - -44.8
+      - - 15.5
+        - -47.7
+      - - 0
+        - -48.4
+      - - -15.4
+        - -47.3
+      - - -33.6
+        - -46.2
+      - - -55.6
+        - -40.4
+      - - -65.3
+        - -21.2
+      - - -64.8
+        - -0.1
 sitios: []

@@ -9,11 +9,14 @@
 // tope de cuadros (30 con una escena de conversación arriba, el `targetFps` del tier fuera de ella); durante la charla se
 // congela lo no esencial (agua, NPCs de fondo) y PerformanceMonitor no mide. En desarrollo con el modo director, una
 // sonda deja los contadores de renderer.info para la instantánea (en build no existe).
+// Open-world-3d T6 (D-819, D-823): un diorama con relieve se arma con el tier del mundo abierto (OPEN_WORLD_DENSITY:
+// paso del terreno, baldosas, nubes, niebla); su fondo y su niebla son el horizonte de la cúpula (world/sky) y la niebla
+// sale de `fogFor(scale, t)`. El tilt-shift queda fuera de `thirdPerson` (Post).
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { lazy, Suspense, useEffect, useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { ACESFilmicToneMapping } from "three";
-import { DENSITY, type SceneDensity } from "@lg/art";
+import { DENSITY, OPEN_WORLD_DENSITY, WORLD_TIERS, type SceneDensity, type WorldTier } from "@lg/art";
 import type { SelectableTier } from "@lg/core";
 import { bridge } from "../state/bridge";
 import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectRequestBubbles, selectSceneActivity, selectWorldRender, useGameView } from "../state/selectors";
@@ -28,8 +31,10 @@ import { buildDioramaScene } from "./dioramas/scene";
 import { FrameRegulator } from "./FrameRegulator";
 import { canvasLoop } from "./frameRate";
 import { Lighting, type ShadowMode } from "./lighting/Lighting";
-import { BACKGROUND, FOG, fogFor, TONE } from "./lighting/params";
+import { BACKGROUND, FOG, TONE } from "./lighting/params";
 import { postLevel, type PostLevel } from "./post/level";
+import { tiltShiftOn } from "./post/tiltShift";
+import { fogFor, OPEN_FOG_COLOR } from "./sky/palette";
 
 // El postprocesado va en su propio chunk: `low` y `dialog-only` nunca lo descargan (03 §2.9, D-160).
 const Post = lazy(() => import("./post/Post"));
@@ -60,6 +65,9 @@ const WORLD_SURFACE = { "data-lg-world": "" };
 /** Distancia del mapa entero de referencia para lo que depende del zoom en React (post); la cámara usa la viva. */
 const VIEW_FIT_REFERENCE = 150;
 
+/** El tier del mundo abierto de un tier seleccionable (`dialog-only` no dibuja el mapa: cae en `low`). */
+export const worldTierOf = (tier: string): WorldTier => ((WORLD_TIERS as readonly string[]).includes(tier) ? (tier as WorldTier) : "low");
+
 export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record<SelectableTier, WorldTierParams>> }) {
   const map = useGameView(selectMapView);
   const render = useGameView(selectWorldRender);
@@ -74,12 +82,16 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const loop = canvasLoop(render, params.targetFps, PERF_PROBE);
   const inScene = render.conversationFps !== null;
   const animatedOnly = useMemo(() => sceneAnimated(inScene, [PLAYER_LOOK_ID, conversation?.npcId ?? null]), [inScene, conversation?.npcId]);
-  const fog = fogFor(1, DENSITY[density].fogScale);
+  const worldTier = worldTierOf(render.tier);
+  const openWorld = map.diorama?.ground.terrain.relief === true;
+  const fogScale = openWorld ? OPEN_WORLD_DENSITY[worldTier].fogScale : DENSITY[density].fogScale;
+  const fog = fogFor(fogScale, render.zoomBand);
+  const fogColor = openWorld ? OPEN_FOG_COLOR : FOG.color;
   // Distancia pedida de la cámara (open-world-3d T5): la del plano de a dos durante la charla; en el mapa, una referencia
   // del t de zoom cuantizado (post y etiquetas). La exacta la lleva CameraRig por cuadro.
   const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : zoomDistanceAt(render.zoomBand, VIEW_FIT_REFERENCE);
-  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density) : null), [map.diorama, density]);
-  useEffect(() => () => scene?.dispose(), [scene]);
+  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density, worldTier) : null), [map.diorama, density, worldTier]);
+  // La escena se libera en Diorama (dentro del Canvas), no acá: ver el comentario de su efecto.
 
   return (
     // touch-action: none (D-820): un arrastre táctil mira en vez de desplazar la página (Pointer Events, sin pointer lock).
@@ -99,13 +111,13 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           });
         }}
       >
-        <color attach="background" args={[BACKGROUND]} />
-        <fog attach="fog" args={[FOG.color, fog.near, fog.far]} />
+        <color attach="background" args={[openWorld ? OPEN_FOG_COLOR : BACKGROUND]} />
+        <fog attach="fog" args={[fogColor, fog.near, fog.far]} />
         {loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}
         {/* Fuera de la charla mide y puede bajar el tier; durante la charla se desmonta (al volver arranca de cero). Los
             bounds salen del tope de cuadros, así el tope propio no se lee como caída (canvasLoop en frameRate.ts). */}
         {loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} onDecline={() => bridge.performanceDeclined()} /> : null}
-        <Lighting shadows={params.shadows} fogScale={DENSITY[density].fogScale} />
+        <Lighting shadows={params.shadows} fogScale={fogScale} />
         {map.diorama && scene ? (
           <Diorama
             diorama={map.diorama}
@@ -133,11 +145,11 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           obstacles={scene?.obstacles ?? []}
           heightAt={scene ? scene.terrain.heightAt : null}
           bounds={map.diorama?.bounds ?? null}
-          fogScale={DENSITY[density].fogScale}
+          fogScale={fogScale}
         />
         {post !== "none" ? (
           <Suspense fallback={null}>
-            <Post level={post} viewScale={viewScale(viewDistance)} />
+            <Post level={post} viewScale={viewScale(viewDistance)} tiltShift={tiltShiftOn(render.preset)} />
           </Suspense>
         ) : null}
         {RenderStatsProbe ? (

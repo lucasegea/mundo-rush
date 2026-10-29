@@ -24,3 +24,6 @@ export function tiltShiftFor(scale: number): TiltShiftParams {
     end: [1, 0.5],
   };
 }
+
+/** Open-world-3d T6 (D-823): el tilt-shift va en la vista de conjunto y el plano de a dos, nunca en `thirdPerson`. */
+export const tiltShiftOn = (preset: string): boolean => preset !== "thirdPerson";

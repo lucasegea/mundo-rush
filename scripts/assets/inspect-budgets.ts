@@ -9,11 +9,17 @@
 // estimador de presupuesto de validate:content usa los `triangulos` y `primitivas` de cada fila del registro (el
 // compilador no lee .glb): acá se comparan con la pieza medida y una fila sin medida o con otra medida falla. Desde M6
 // los cuerpos reducidos de `low` (`-bajo`) también son filas `personaje`: entran en la cota de arriba de cada diorama.
+// Cambio registrado (open-world-3d T6, D-832, AC42): `assets_muelle_mb` (6 MB, sin cambio) cuenta TODO lo que baja el
+// muelle del mundo abierto en `high`, no solo los `modelo/*` y los personajes: el muelle es el de U-GALEANO (un diorama
+// con `terreno.relieve`), y su carga suma los .ktx2 del inventario de @lg/art que `high` crea y el transcodificador Basis
+// (js y wasm). T7 SEAM: los árboles horneados (.glb de models/generated/trees) entran acá. Cada archivo de esa carga
+// tiene que tener fila en content/assets-registry.yaml o content/code-registry.yaml; uno sin fila falla nombrándolo.
 //
 // Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { OPEN_WORLD_TEXTURES } from "@lg/art";
 import { archivoDeModelo, compilarContenido, PREFIJO_MODELO } from "@lg/content-schema";
 import { loadBudgets, type Budgets } from "../budgets/bundle-size.ts";
 import { leerContenido } from "../content/build.ts";
@@ -34,10 +40,29 @@ export interface PiezaMedida {
   conColor: boolean;
 }
 
+/** Un archivo que no es .glb en la carga de un diorama (texturas .ktx2, el transcodificador). */
+export interface ArchivoCarga {
+  archivo: string;
+  bytes: number;
+}
+
+/** El transcodificador Basis que baja todo mundo abierto (KTX2Loader lo carga desde /decoders/). */
+export const DECODIFICADOR_BASIS = ["apps/web/public/decoders/basis_transcoder.js", "apps/web/public/decoders/basis_transcoder.wasm"] as const;
+/** El universo cuyo muelle es el mundo abierto (open-world-3d): su carga entra en `assets_muelle_mb`. */
+export const UNIVERSO_MUELLE = "U-GALEANO";
+
+/** Los archivos (no .glb) que baja un diorama con relieve en `high`: los .ktx2 del inventario y el transcodificador. */
+export function cargaMundoAbierto(): string[] {
+  const ktx2 = OPEN_WORLD_TEXTURES.flatMap((t) => (t.file && t.count.high > 0 ? [t.file] : []));
+  return [...new Set([...ktx2, ...DECODIFICADOR_BASIS])].sort();
+}
+
 export interface DioramaMedido {
   id: string;
   /** Archivos .glb distintos que usa (se bajan una vez), personajes incluidos. */
   modelos: string[];
+  /** Open-world-3d T6: lo demás que baja (texturas .ktx2, transcodificador); vacío en un diorama sin relieve. */
+  extras: ArchivoCarga[];
   bytes: number;
   /** Triángulos de los modelos por cada vez que aparecen. */
   triangulos: number;
@@ -65,17 +90,21 @@ export async function medirPieza(archivo: string, bytes: Uint8Array): Promise<Pi
  * bajan con cualquier diorama; sus triángulos se miden en el test del diorama, no acá).
  */
 export function medirDioramas(
-  dioramas: readonly { id: string; props?: readonly { asset: string }[] | undefined }[],
+  dioramas: readonly { id: string; props?: readonly { asset: string }[] | undefined; terreno?: { relieve?: boolean | undefined } | undefined }[],
   piezas: ReadonlyMap<string, PiezaMedida>,
   personajes: readonly string[] = [],
+  /** Open-world-3d T6: la carga extra de un diorama con relieve (cargaMundoAbierto con sus bytes). */
+  cargaAbierta: readonly ArchivoCarga[] = [],
 ): DioramaMedido[] {
   return dioramas.map((d) => {
     const usos = (d.props ?? []).filter((p) => p.asset.startsWith(PREFIJO_MODELO)).map((p) => archivoDeModelo(p.asset));
     const modelos = [...new Set([...usos, ...personajes])].sort();
+    const extras = d.terreno?.relieve === true ? [...cargaAbierta] : [];
     return {
       id: d.id,
       modelos,
-      bytes: modelos.reduce((n, m) => n + (piezas.get(m)?.bytes ?? 0), 0),
+      extras,
+      bytes: modelos.reduce((n, m) => n + (piezas.get(m)?.bytes ?? 0), 0) + extras.reduce((n, e) => n + e.bytes, 0),
       triangulos: usos.reduce((n, m) => n + (piezas.get(m)?.triangulos ?? 0), 0),
     };
   });
@@ -105,10 +134,14 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
       return;
     }
     const archivos = new Set(presentes.flatMap((id) => porId.get(id)?.modelos ?? []));
-    const bytes = [...archivos].reduce((n, a) => n + (piezas.find((p) => p.archivo === a)?.bytes ?? 0), 0);
+    const modelos = [...archivos].reduce((n, a) => n + (piezas.find((p) => p.archivo === a)?.bytes ?? 0), 0);
+    const extras = new Map(presentes.flatMap((id) => porId.get(id)?.extras ?? []).map((e) => [e.archivo, e.bytes]));
+    const otros = [...extras.values()].reduce((n, b) => n + b, 0);
+    const bytes = modelos + otros;
     const pasa = bytes / MB <= capMb;
     if (!pasa) ok = false;
-    lineas.push(`${pasa ? "OK  " : "FAIL"} ${nombre}: ${mb(bytes)} MB de modelos (tope ${capMb} MB, ${clave})`);
+    const detalle = extras.size > 0 ? ` (${mb(modelos)} de modelos y ${mb(otros)} de ${extras.size} archivo(s) más: texturas y transcodificador)` : "";
+    lineas.push(`${pasa ? "OK  " : "FAIL"} ${nombre}: ${mb(bytes)} MB${extras.size > 0 ? "" : " de modelos"}${detalle} (tope ${capMb} MB, ${clave})`);
   };
   tope("assets del primer diorama", ["muelle"], b.assets_muelle_mb, "assets_muelle_mb");
   tope("descarga inicial del vertical slice", ["muelle", "plaza"], b.assets_muelle_plaza_mb, "assets_muelle_plaza_mb");
@@ -121,6 +154,21 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
       if (!pasa) ok = false;
       lineas.push(`${pasa ? "OK  " : "FAIL"} diorama test contra assets_muelle_mb: ${mb(d.bytes)} de ${b.assets_muelle_mb} MB`);
     }
+  }
+  return { ok, lineas };
+}
+
+/**
+ * Open-world-3d T6 (AC42): cada archivo de la carga del mundo abierto tiene fila en el registro de assets o en el de
+ * código; uno sin fila (o que no existe en disco) falla nombrándolo.
+ */
+export function chequearCargaRegistrada(carga: readonly { archivo: string; bytes: number | null }[], registrados: ReadonlySet<string>): ChequeoDescarga {
+  const lineas: string[] = [];
+  let ok = true;
+  for (const c of carga) {
+    const falta = c.bytes === null ? "no existe en disco" : registrados.has(c.archivo) ? "" : "sin fila en content/assets-registry.yaml ni content/code-registry.yaml";
+    if (falta) ok = false;
+    lineas.push(`${falta ? "FAIL" : "OK  "} carga del muelle ${c.archivo}${c.bytes === null ? "" : `: ${c.bytes} bytes`}${falta ? `; ${falta}` : ""}`);
   }
   return { ok, lineas };
 }
@@ -187,12 +235,36 @@ export async function run(root = ROOT, log: (s: string) => void = console.log, b
     log(`inspect-budgets: el contenido no compila (${contenido.errores.length} error(es)); corré validate:content`);
     return 1;
   }
+  const universo = compilarContenido(leerContenido(root, UNIVERSO_MUELLE));
+  if (universo.errores.length > 0) {
+    log(`inspect-budgets: ${UNIVERSO_MUELLE} no compila (${universo.errores.length} error(es)); corré validate:content --universe=${UNIVERSO_MUELLE}`);
+    return 1;
+  }
   const personajes = (contenido.conjunto.registroAssets?.data.assets ?? []).filter((a) => a.personaje).map((a) => a.archivo).sort();
-  const dioramas = medirDioramas(contenido.conjunto.dioramas.map((d) => d.data), new Map(piezas.map((p) => [p.archivo, p])), personajes);
+  const tamano = (a: string): number | null => {
+    try {
+      return statSync(join(root, a)).size;
+    } catch {
+      return null;
+    }
+  };
+  const carga = cargaMundoAbierto().map((archivo) => ({ archivo, bytes: tamano(archivo) }));
+  const registrados = new Set([
+    ...(contenido.conjunto.registroAssets?.data.assets ?? []).map((a) => a.archivo),
+    ...(contenido.conjunto.registroCodigo?.data.codigo ?? []).map((c) => c.archivo),
+  ]);
+  const abiertos = universo.conjunto.dioramas.map((d) => d.data).filter((d) => d.terreno?.relieve === true);
+  const dioramas = medirDioramas(
+    [...contenido.conjunto.dioramas.map((d) => d.data), ...abiertos],
+    new Map(piezas.map((p) => [p.archivo, p])),
+    personajes,
+    carga.map((c) => ({ archivo: c.archivo, bytes: c.bytes ?? 0 })),
+  );
   const r = chequearDescarga(piezas, dioramas, budgets);
   const m = chequearMedidasRegistro(piezas, contenido.conjunto.registroAssets?.data.assets ?? []);
-  for (const l of [...r.lineas, ...m.lineas]) log(l);
-  return r.ok && m.ok ? 0 : 1;
+  const k = chequearCargaRegistrada(carga, registrados);
+  for (const l of [...r.lineas, ...m.lineas, ...k.lineas]) log(l);
+  return r.ok && m.ok && k.ok ? 0 : 1;
 }
 
 const invocado = process.argv[1];

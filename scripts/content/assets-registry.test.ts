@@ -129,6 +129,8 @@ describe("teeth del registro (validate:content falla)", () => {
     temporales.push(dir);
     cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
     cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
+    // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+    cpSync(join(ROOT, "apps/web/public/textures"), join(dir, "apps/web/public/textures"), { recursive: true });
     const log: string[] = [];
     expect(construir({ root: dir, modo: "dev", log: (x) => log.push(x) })).toBe(0);
     mkdirSync(join(dir, "apps/web/public/models/suelto"), { recursive: true });

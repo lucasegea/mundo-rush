@@ -9,7 +9,7 @@
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SceneDensity } from "@lg/art";
-import { actorSpots, animatedActors } from "../runtime";
+import { actorSpots, actorY, animatedActors } from "../runtime";
 import { chooseAnimation, type GestureId, type SceneRole } from "./animState";
 import { loadCharacterAssets } from "./characterAssets";
 import { applyChibiPose, buildChibi, chibiPose, disposeChibi } from "./chibiModel";
@@ -66,13 +66,11 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
   }, [chibi, id]);
   useEffect(() => {
     let alive = true;
-    let built: SkinnedCharacter | null = null;
     setSkinned(null);
     loadCharacterAssets(look.body, lod)
       .then((a) => {
         if (!alive) return;
-        built = buildSkinnedCharacter(a.body, a.clips, look, seed);
-        setSkinned(built);
+        setSkinned(buildSkinnedCharacter(a.body, a.clips, look, seed));
       })
       .catch((err: unknown) => {
         // Se queda con el cuerpo de cápsulas, pero no en silencio: el aviso nombra el cuerpo que no bajó.
@@ -80,9 +78,14 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
       });
     return () => {
       alive = false;
-      if (built) disposeSkinnedCharacter(built);
     };
   }, [look, seed, id, lod]);
+  // Open-world-3d M3 (fuga al cambiar de tier): se libera el cuerpo cuando deja de ser el dibujado, no en la limpieza de
+  // la carga. Liberado ahí, el cuerpo viejo seguía en la escena hasta el próximo commit, three rearmaba su textura de
+  // huesos en ese cuadro y quedaba viva (4 texturas de 16 × 16 por cambio de tier, medido con la sonda).
+  useEffect(() => () => {
+    if (skinned) disposeSkinnedCharacter(skinned);
+  }, [skinned]);
 
   const phase = useRef(0);
   const yaw = useRef(initialYaw);
@@ -94,13 +97,14 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
   useFrame(({ clock }, delta) => {
     const p = pose(delta);
     const root = skinned ? skinned.root : chibi.root;
-    root.position.set(p.x, 0, p.z);
+    const y = actorY(p.x, p.z);
+    root.position.set(p.x, y, p.z);
     if (p.yaw !== null) {
       const d = Math.atan2(Math.sin(p.yaw - yaw.current), Math.cos(p.yaw - yaw.current));
       yaw.current += cut ? d : d * (1 - Math.exp(-10 * delta));
     }
     root.rotation.y = yaw.current;
-    actorSpots.set(id, { x: p.x, z: p.z });
+    actorSpots.set(id, { x: p.x, y, z: p.z });
 
     const g = active.current;
     if (g) {

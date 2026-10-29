@@ -8,7 +8,7 @@
 // mismo que world/budget/estimate.ts sobre el grafo de three que arma world/ en cada densidad (lo estimado es lo dibujado).
 import {
   addEstimates, BLOB_TRIANGLES, bodyAsset, codePropTriangles, DENSITY, DETAIL_TRIANGLES, headTriangles, isCodeProp,
-  isTreeProp, keptDetail, lookFromApariencia, pavingStoneCount, PLAYER_LOOK, SPRITE_TRIANGLES, ACTOR_DRAW_CALLS, TERRAIN_SKIRT,
+  isTreeProp, keptDetail, lookFromApariencia, OPEN_WORLD_DENSITY, pavingStoneCount, skyEstimate, PLAYER_LOOK, SPRITE_TRIANGLES, ACTOR_DRAW_CALLS, TERRAIN_APRON, TERRAIN_SKIRT,
   SHADOW_MAP_TIERS, terrainTriangles, TIER_BUDGETS, TIER_DENSITY, WATER_TRIANGLES, WORLD_TIERS, type BudgetEstimate, type CharacterLook,
   type SceneDensity, type WorldTier,
 } from "@lg/art";
@@ -83,7 +83,18 @@ export function estimarPresupuestoDiorama(d: Diorama, ctx: ContextoPresupuesto, 
   const sumar = (k: string, e: BudgetEstimate): void => { partes[k] = addEstimates(partes[k] ?? { drawCalls: 0, triangles: 0 }, e); };
   const densidad = TIER_DENSITY[tier];
 
-  sumar("terreno", { drawCalls: 1, triangles: terrainTriangles(d.bounds, d.terreno?.extension ?? TERRAIN_SKIRT, densidad) });
+  const extension = d.terreno?.extension ?? TERRAIN_SKIRT;
+  if (d.terreno?.relieve === true) {
+    // Open-world-3d T6 (D-819, D-823): el terreno del mundo abierto va en baldosas (una llamada cada una, todas a la vista
+    // en el mapa entero) con el paso del tier; la cúpula y las nubes (no en `low`) son parte del diorama.
+    const ow = OPEN_WORLD_DENSITY[tier];
+    sumar("terreno", { drawCalls: ow.terrainTiles[0] * ow.terrainTiles[1], triangles: terrainTriangles(d.bounds, extension, ow.terrain) });
+    // Open-world-3d M3 (AC35): el delantal alrededor de la extensión, una llamada más con el material del suelo.
+    sumar("terreno", { drawCalls: TERRAIN_APRON.drawCalls, triangles: TERRAIN_APRON.triangles });
+    sumar("cielo", skyEstimate(tier));
+  } else {
+    sumar("terreno", { drawCalls: 1, triangles: terrainTriangles(d.bounds, extension, densidad) });
+  }
   if (tieneAgua(d)) sumar("agua", { drawCalls: 1, triangles: WATER_TRIANGLES });
 
   const grupos = new Map<string, { asset: string; tam: readonly [number, number, number]; n: number }>();

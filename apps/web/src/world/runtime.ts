@@ -6,7 +6,14 @@
 import type { Camera } from "three";
 
 export const followTarget = { x: 0, z: 0, ready: false };
-export const actorSpots = new Map<string, { x: number; z: number }>();
+export const actorSpots = new Map<string, { x: number; y: number; z: number }>();
+/**
+ * Open-world-3d T6 (D-819): el suelo del diorama montado. Diorama pone `heightAt` (la malla dibujada) y `lift` (0,02 m
+ * con relieve, 0 sin él); los personajes apoyan los pies en `actorY`. Sin diorama, el suelo es y = 0.
+ */
+export const worldGround: { heightAt: (x: number, z: number) => number; lift: number } = { heightAt: () => 0, lift: 0 };
+/** La altura de los pies de un personaje en (x, z): el terreno más el levante. */
+export const actorY = (x: number, z: number): number => worldGround.heightAt(x, z) + worldGround.lift;
 /**
  * Open-world-3d T5: además el t de zoom ya suavizado (niebla, etiquetas y balizas lo siguen), el yaw dibujado y la
  * cámara misma (la caminata del navegador proyecta las balizas con sus matrices, AC30).

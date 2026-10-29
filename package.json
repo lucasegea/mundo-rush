@@ -27,6 +27,8 @@
     "walk:browser": "node scripts/dev/browser-walk.ts",
     "perf:probe": "node scripts/dev/perf-probe.ts",
     "assets:refetch": "node scripts/assets/refetch.ts",
+    "assets:texture-table": "node scripts/assets/texture-table.ts",
+    "assets:ktx2": "node scripts/assets/ktx2.ts",
     "dev:reset-encounter": "node apps/server/src/reset-encounter.ts",
     "dev:reset-farmer": "node apps/server/src/reset-encounter.ts --npc NPC-HARLAN",
     "dev:director": "vite --config tooling/director/vite.config.ts",

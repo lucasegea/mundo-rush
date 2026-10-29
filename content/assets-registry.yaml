@@ -241,6 +241,22 @@ packs:
       Casas suburbanas, tanque de agua (water-tower, detail-tank) y postes y carteles para armar la parada de colectivo.
       Buzón y parada no están en ningún pack: se hacen por código.
     fuente_investigacion: investigación 2026-10-13, V3
+  # ---------- open-world-3d M3 (T6): mapas fotográficos del suelo, servidos como .ktx2 (D-832, PD-4) ----------
+  - id: polyhaven
+    nombre: Poly Haven, texturas de suelo y roca (JPG 1k)
+    autor: Poly Haven (un autor por mapa en cada fila)
+    licencia: CC0-1.0
+    url: https://polyhaven.com/license
+    fecha_acceso: 2026-10-29
+    verificacion: [D1]
+    estado: usado
+    razon: >-
+      Los cinco mapas del suelo del mockup V6 (pasto, pasto ralo, tierra de camino, dos rocas). Poly Haven publica todo
+      su catálogo como CC0 (página de licencia y API api.polyhaven.com/info/<mapa>, que da los autores por mapa). Se bajan
+      los JPG 1k (difuso y normal OpenGL) a assets-src/polyhaven/ y scripts/assets/ktx2.ts los codifica con basisu 2.50
+      fijado; la tabla del paso 0 (npm run assets:texture-table) eligió ETC1S 1024 los difusos y ETC1S 512 los normales
+      (corte PD-4 paso 2).
+    fuente_investigacion: open-world-3d T6 2026-10-29, licencia D1 (polyhaven.com/license y api.polyhaven.com/info)
 assets:
   - id: quaternius-farm-buildings/gallinero
     archivo: apps/web/public/models/quaternius-farm-buildings/gallinero.glb
@@ -507,3 +523,154 @@ assets:
     personaje:
       tipo: animaciones
       clips: [Idle, Walking_A, Running_A, Sit_Chair_Idle, Interact, PickUp]
+  # ---------- open-world-3d M3 (T6): suelo .ktx2 (scripts/assets/ktx2.ts, D-832) ----------
+  - id: polyhaven/leafy-grass-diff
+    archivo: apps/web/public/textures/leafy-grass-diff.ktx2
+    fuente: assets-src/polyhaven/leafy_grass_diff_1k.jpg
+    pack: polyhaven
+    autor: Charlotte Baglioni (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/leafy_grass_diff_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "cfa40bc9d9417d1852db8753a8d5917f110c40101179f63543c382e39bc05e4a"
+    sha256: "1f97ab27d5d98e843db2cc817f5b89a8b15c4fbfeb0057c94c290c1fdbedb6ac"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -q 128; difuso 1024x1024, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/leafy-grass-nor
+    archivo: apps/web/public/textures/leafy-grass-nor.ktx2
+    fuente: assets-src/polyhaven/leafy_grass_nor_gl_1k.jpg
+    pack: polyhaven
+    autor: Charlotte Baglioni (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/leafy_grass/leafy_grass_nor_gl_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "832328216adc0a7e1f70a31d5ee48c9ab7f2152d83816122736cf42ac4b2ebd6"
+    sha256: "7d6397d5005bc4a3c6b261008e7c9e7763171cdfda76275f325dfa7bd41e79fe"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/sparse-grass-diff
+    archivo: apps/web/public/textures/sparse-grass-diff.ktx2
+    fuente: assets-src/polyhaven/sparse_grass_diff_1k.jpg
+    pack: polyhaven
+    autor: Amal Kumar (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sparse_grass/sparse_grass_diff_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "ae94f2b34597b9108eefd88217f55eccaec6d6b382e858a478ee92df90e66617"
+    sha256: "0dca5943e2263e2df4d2983b8efb32a65a3dd515b530357481bf30217a9889ce"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -q 128; difuso 1024x1024, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/sparse-grass-nor
+    archivo: apps/web/public/textures/sparse-grass-nor.ktx2
+    fuente: assets-src/polyhaven/sparse_grass_nor_gl_1k.jpg
+    pack: polyhaven
+    autor: Amal Kumar (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sparse_grass/sparse_grass_nor_gl_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "1c840a24807346ddaaf94a5057aee4078fcec3a4cd84bfe45da7d3b480ef460b"
+    sha256: "2f7b7293e41a12129a3ec34b70a671e90cad14cd7e5cb5d18efeff9ea7221827"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/forest-ground-04-diff
+    archivo: apps/web/public/textures/forest-ground-04-diff.ktx2
+    fuente: assets-src/polyhaven/forest_ground_04_diff_1k.jpg
+    pack: polyhaven
+    autor: Rob Tuytel y Rico Cilliers (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_ground_04/forest_ground_04_diff_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "50a4dda30875020c64385261aa7e00e2155b592302fa6794165f58fae73cbd2c"
+    sha256: "42ec892f7d4c865c2368e7af3e204d602bba08be27b2f2237b446c9eac25dd0a"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -q 128; difuso 1024x1024, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/forest-ground-04-nor
+    archivo: apps/web/public/textures/forest-ground-04-nor.ktx2
+    fuente: assets-src/polyhaven/forest_ground_04_nor_gl_1k.jpg
+    pack: polyhaven
+    autor: Rob Tuytel y Rico Cilliers (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forest_ground_04/forest_ground_04_nor_gl_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "9c3a0200e02ce40edffbbf9f5f623ef08ea9b1b7812b556182ec978f88887151"
+    sha256: "b457a0dd76e098dd82cfbf666bd8aa79467f7a51430fb4d321396e2a0b2f30dd"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rock-face-03-diff
+    archivo: apps/web/public/textures/rock-face-03-diff.ktx2
+    fuente: assets-src/polyhaven/rock_face_03_diff_1k.jpg
+    pack: polyhaven
+    autor: Dario Barresi y Rico Cilliers (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face_03/rock_face_03_diff_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "ea48e0e47ad42c8bd312476178b1248ec66f0eb19156a26a1c222f2a40caaf2d"
+    sha256: "e494fdf30c69ad3b0ab5eed0031aa02858ac9609d32782f2954cf5c477372151"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -q 128; difuso 1024x1024, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rock-face-03-nor
+    archivo: apps/web/public/textures/rock-face-03-nor.ktx2
+    fuente: assets-src/polyhaven/rock_face_03_nor_gl_1k.jpg
+    pack: polyhaven
+    autor: Dario Barresi y Rico Cilliers (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face_03/rock_face_03_nor_gl_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "c6423169583f31715cf0636954bad524e806848a5f2861fcea6794275f726ff0"
+    sha256: "329c21c5ebde55e3e0ff9051e54d17e2ab92b5c5b98c12b6c584d33d7301272a"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rocky-terrain-diff
+    archivo: apps/web/public/textures/rocky-terrain-diff.ktx2
+    fuente: assets-src/polyhaven/rocky_terrain_diff_1k.jpg
+    pack: polyhaven
+    autor: Amal Kumar (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain/rocky_terrain_diff_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "429315865fd89c150272592f6d93def174c6f69804a565ff08e53627a885579b"
+    sha256: "4333e1bb989d78104e19ee4cef8934ba8c12dd594af33d80264a7a8691374b20"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -q 128; difuso 1024x1024, ETC1S con mips.
+    atribucion_requerida: false
+  - id: polyhaven/rocky-terrain-nor
+    archivo: apps/web/public/textures/rocky-terrain-nor.ktx2
+    fuente: assets-src/polyhaven/rocky_terrain_nor_gl_1k.jpg
+    pack: polyhaven
+    autor: Amal Kumar (Poly Haven)
+    licencia: CC0-1.0
+    url_origen: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain/rocky_terrain_nor_gl_1k.jpg
+    fecha_descarga: 2026-10-29
+    sha256_original: "a6556e1220c6e6c822e68ceeb9589719e4db8c87340199657cc705fea6ecf391"
+    sha256: "69689299bb94de6d7a6f5a56daf60f00f73f7c6b3143431ee35870aecb3cf649"
+    procedencia: derived
+    modificaciones: >-
+      scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
+      -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
+    atribucion_requerida: false

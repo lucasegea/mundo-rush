@@ -18,6 +18,17 @@ export interface TerrainBounds {
  * dejaría ver el borde del mundo.
  */
 export const TERRAIN_SKIRT = 160;
+/**
+ * Open-world-3d M3 (AC35, D-837): el delantal del mundo abierto. Con el
+ * mapa entero (t = 1) y un aspecto ancho o alto (2:1, 19,5:9, 21:9, 9:19,5, 9:20) en yaw diagonal, las esquinas de la
+ * pantalla veían hasta 27 m más allá de la falda de 160 m: un borde duro contra el fondo. El delantal es un anillo plano
+ * de `width` m alrededor de la extensión (8 triángulos, una llamada, el mismo material `terreno`), `sink` m bajo el
+ * vértice más bajo de la malla y metido `overlap` m debajo de la falda; la falda se funde al color de la niebla en sus
+ * últimos metros (`fade`: de `fade[0]` a `fade[1]` m antes del borde de la extensión) y el delantal es todo color de
+ * niebla, igual que el fondo: no queda costura visible en ninguna parte. El estimador de validate:content lo cuenta
+ * (`drawCalls`, `triangles`) dentro de la parte `terreno`.
+ */
+export const TERRAIN_APRON = { width: 120, sink: 0.5, overlap: 2, fade: [44, 4], drawCalls: 1, triangles: 8 } as const;
 /** Altura máxima de las lomas del borde (propuesta C §2) y tope de `terreno.lomas`. */
 export const HILL_MAX = 5.5;
 export const HILL_LIMIT = 12;
@@ -57,9 +68,10 @@ export const terrainExtent = (b: TerrainBounds, skirt = TERRAIN_SKIRT): TerrainB
   ({ minX: b.minX - skirt, maxX: b.maxX + skirt, minZ: b.minZ - skirt, maxZ: b.maxZ + skirt });
 
 /** Las líneas en x y en z de la malla del terreno de un diorama, con la resolución de la densidad dada. */
-export function terrainLines(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: SceneDensity = "full"): { xs: Float64Array; zs: Float64Array } {
+export function terrainLines(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: SceneDensity | TerrainLod = "full"): { xs: Float64Array; zs: Float64Array } {
   const e = terrainExtent(b, skirt);
-  const lod = DENSITY[density].terrain;
+  // Open-world-3d T6 (D-819): el mundo abierto pasa el paso de su tier (OPEN_WORLD_DENSITY) en lugar de una densidad.
+  const lod = typeof density === "string" ? DENSITY[density].terrain : density;
   return {
     xs: terrainGridLines(e.minX, e.maxX, Math.floor(b.minX - FINE_MARGIN), Math.ceil(b.maxX + FINE_MARGIN), lod),
     zs: terrainGridLines(e.minZ, e.maxZ, Math.floor(b.minZ - FINE_MARGIN), Math.ceil(b.maxZ + FINE_MARGIN), lod),
@@ -67,7 +79,7 @@ export function terrainLines(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: S
 }
 
 /** Triángulos de la malla del terreno (dos por celda). */
-export function terrainTriangles(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: SceneDensity = "full"): number {
+export function terrainTriangles(b: TerrainBounds, skirt = TERRAIN_SKIRT, density: SceneDensity | TerrainLod = "full"): number {
   const { xs, zs } = terrainLines(b, skirt, density);
   return 2 * (xs.length - 1) * (zs.length - 1);
 }

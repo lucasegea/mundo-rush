@@ -44,41 +44,38 @@ mundo:
 
 dioramas:
   - id: muelle
-    bounds: { minX: 0, maxX: 28, minZ: 0, maxZ: 20 }
-    spawn: [3, 0, 10]
-    # open-world-3d T3 (D-818): el formato de la maqueta (plan estetica-c M5) en lugar de tiles. Mismos límites (28x20),
-    # spawn, props, NPCs y roca no caminable; el suelo pintado por tiles pasa a terreno con lomas en el borde, el camino
-    # del cerro por curvas y el detalle sembrado por zonas.
-    terreno: { extension: 160, lomas: 6, semilla: 1545 }
+    # open-world-3d T6 (D-819, mockup V6 fixture.js): el mundo abierto de 140x100 m caminables con relieve interior
+    # (`relieve: true`: reliefAt de @lg/art, llanos en la aparición y en cada NPC, el camino aplana su sección). Los
+    # tres NPCs a 53-67 m entre sí y el camino de tierra del mockup (Catmull-Rom) de la aparición a los tres llanos. El
+    # borde caminable es un anillo orgánico (`no_caminable`, un polígono con una ranura de 0,2 m: el contorno de los
+    # límites y, de vuelta, una curva de 20 vértices), así el borde no se lee como un rectángulo.
+    bounds: { minX: -70, maxX: 70, minZ: -50, maxZ: 50 }
+    spawn: [-48, 0, 30]
+    terreno: { extension: 160, lomas: 6, semilla: 1545, relieve: true }
     caminos:
-      # El camino de la villa al cerro, de oeste a este por la fila del spawn; sale de los límites entre las lomas.
-      - { puntos: [[-4, 10], [3, 10], [10, 10], [18, 10], [26, 10], [32, 10]], ancho: 2 }
-      # El ramal a la bocamina, al pie de la roca.
-      - { puntos: [[14, 10], [16, 7.5], [19, 5.5], [21, 5]], ancho: 1.6 }
+      - { puntos: [[-58, 33], [-48, 30], [-30, 26], [-18, 17], [-5, 12], [14, 6], [30, -4], [42, -18], [38, -32], [16, -42], [-6, -44], [-20, -38]], ancho: 3.2 }
     detalle:
-      # Pedregal al pie del cerro y junto a la bocamina; matas y flores lejos del camino.
-      - { tipo: piedritas, centro: [13, 3], radio: 2.5, cantidad: 5 }
-      - { tipo: piedritas, centro: [25.5, 6], radio: 2, cantidad: 4 }
-      - { tipo: piedritas, centro: [8, 4], radio: 2, cantidad: 3 }
-      - { tipo: matas, centro: [3, 3.5], radio: 2, cantidad: 4 }
-      - { tipo: matas, centro: [3.5, 16.5], radio: 2.5, cantidad: 4 }
-      - { tipo: matas, centro: [26, 17.5], radio: 1.5, cantidad: 3 }
-      - { tipo: flores, centro: [14.5, 17], radio: 2, cantidad: 4 }
-      - { tipo: flores, centro: [6, 13], radio: 1.5, cantidad: 3 }
+      # Pedregal al pie de la bocamina; matas y flores lejos del camino.
+      - { tipo: piedritas, centro: [50, -16], radio: 4, cantidad: 8 }
+      - { tipo: piedritas, centro: [-8, 20], radio: 3, cantidad: 5 }
+      - { tipo: matas, centro: [-40, 40], radio: 4, cantidad: 6 }
+      - { tipo: matas, centro: [-32, -28], radio: 4, cantidad: 6 }
+      - { tipo: flores, centro: [-38, 20], radio: 3, cantidad: 6 }
+      - { tipo: flores, centro: [22, 20], radio: 3, cantidad: 5 }
     props:
-      # La bocamina: un galpon-caja al pie de la roca, arriba a la derecha.
-      - { asset: codigo/galpon, pos: [21, 0, 3], tam: [5, 2.5, 3] }
+      # La bocamina: un galpon-caja al este del llano del cerro.
+      - { asset: codigo/galpon, pos: [51, 0, -24], tam: [5, 2.5, 3] }
       # Cargas de mineral junto al mitayo (cajas que se tocan solo por la esquina).
-      - { asset: codigo/caja, pos: [11.5, 0, 6.5], tam: [1, 1, 1] }
-      - { asset: codigo/caja, pos: [12.5, 0, 7.5], tam: [1, 1, 1] }
-      - { asset: codigo/cerco, pos: [8, 0, 15], tam: [8, 1, 0.2] }
-      - { asset: codigo/casa, pos: [20, 0, 16], tam: [4, 3, 3] }
+      - { asset: codigo/caja, pos: [-2, 0, 17], tam: [1, 1, 1] }
+      - { asset: codigo/caja, pos: [-1, 0, 18], tam: [1, 1, 1] }
+      - { asset: codigo/cerco, pos: [-14, 0, -30], tam: [8, 1, 0.2] }
+      - { asset: codigo/casa, pos: [-30, 0, -32], tam: [4, 3, 3] }
     npcs:
-      - { id: NPC-MITAYO, spawn: [10, 0, 8.5] }
-      - { id: NPC-CERRO, spawn: [17, 0, 6.5] }
-      - { id: NPC-FACTOR, spawn: [24.5, 0, 12.5] }
+      - { id: NPC-MITAYO, spawn: [-5, 0, 12] }
+      - { id: NPC-CERRO, spawn: [42, 0, -18] }
+      - { id: NPC-FACTOR, spawn: [-20, 0, -38] }
     no_caminable:
-      - { poligono: [[15, 0], [19, 0], [19, 2.5], [15, 2.5]] }
+      - poligono: [[-70, -0.1], [-70, -50], [70, -50], [70, 50], [-70, 50], [-70, 0.1], [-64.8, 0.1], [-66, 21.4], [-57.6, 41.8], [-34.6, 47.7], [-15, 46.2], [0, 45.6], [15.2, 46.6], [33.6, 46.3], [55.1, 40], [67.2, 21.8], [69.2, 0], [66.5, -21.6], [53.1, -38.6], [32.5, -44.8], [15.5, -47.7], [0, -48.4], [-15.4, -47.3], [-33.6, -46.2], [-55.6, -40.4], [-65.3, -21.2], [-64.8, -0.1]]
   - id: plaza
     bounds: { minX: 0, maxX: 24, minZ: 0, maxZ: 24 }
     spawn: [12, 0, 12]

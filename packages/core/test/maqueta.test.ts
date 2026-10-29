@@ -154,12 +154,12 @@ describe("formato del diorama", () => {
       paleta: { pasto: "copa" },
       detalle: [{ tipo: "flores", centro: [1, 2], radio: 3, cantidad: 10 }, { tipo: "matas", centro: [0, 0], radio: 2, cantidad: 4, semilla: 9 }],
     }));
-    expect(d.ground.terrain).toEqual({ extension: 200, hills: 3, seed: 5 });
+    expect(d.ground.terrain).toEqual({ extension: 200, hills: 3, seed: 5, relief: false });
     expect(d.ground.palette).toEqual({ pasto: "copa" });
     expect(d.ground.detail).toEqual([
       { kind: "flores", x: 1, z: 2, radius: 3, count: 10, seed: 1 },
       { kind: "matas", x: 0, z: 0, radius: 2, count: 4, seed: 9 },
     ]);
-    expect(prepareDiorama(base()).ground.terrain).toEqual({ extension: null, hills: null, seed: null });
+    expect(prepareDiorama(base()).ground.terrain).toEqual({ extension: null, hills: null, seed: null, relief: false });
   });
 });

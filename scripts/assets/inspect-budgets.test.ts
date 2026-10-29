@@ -5,7 +5,10 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import { loadBudgets } from "../budgets/bundle-size.ts";
-import { chequearDescarga, chequearMedidasRegistro, listarModelos, medirDioramas, medirPieza, run, type PiezaMedida } from "./inspect-budgets.ts";
+import {
+  cargaMundoAbierto, chequearCargaRegistrada, chequearDescarga, chequearMedidasRegistro, DECODIFICADOR_BASIS, listarModelos, medirDioramas, medirPieza, run,
+  type PiezaMedida,
+} from "./inspect-budgets.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const B = loadBudgets();
@@ -118,5 +121,44 @@ describe("presupuestos de descarga (03 §2.7.3)", () => {
     expect(chequearDescarga([pieza(archivo("s"), 10, { conColor: false })], [], B).ok).toBe(false);
     expect(chequearDescarga([pieza(archivo("m"), 10, { materiales: 2 })], [], B).ok).toBe(false);
     expect(chequearDescarga([pieza(archivo("ok"), 10)], [], B).ok).toBe(true);
+  });
+});
+
+describe("open-world-3d T6 (AC42, cambio registrado): la carga del muelle del mundo abierto", () => {
+  test("el árbol real: el muelle de U-GALEANO cuenta modelos, .ktx2 del suelo y transcodificador, todos con fila", async () => {
+    const lineas: string[] = [];
+    expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
+    const texto = lineas.join("\n");
+    expect(texto).toMatch(/OK {3}assets del primer diorama: [\d.]+ MB \([\d.]+ de modelos y [\d.]+ de 12 archivo\(s\) más/);
+    for (const a of cargaMundoAbierto()) expect(texto).toContain(`OK   carga del muelle ${a}:`);
+    expect(cargaMundoAbierto()).toEqual(expect.arrayContaining([...DECODIFICADOR_BASIS, "apps/web/public/textures/leafy-grass-diff.ktx2"]));
+  });
+
+  test("un diorama con relieve suma su carga; uno sin relieve no", () => {
+    const carga = [{ archivo: "apps/web/public/textures/x.ktx2", bytes: 1_000_000 }];
+    const [abierto, plano] = medirDioramas([
+      { id: "muelle", props: [{ asset: modelo("b") }], terreno: { relieve: true } },
+      { id: "plaza", props: [{ asset: modelo("b") }] },
+    ], new Map([[archivo("b"), pieza(archivo("b"), 3_000_000)]]), [], carga);
+    expect(abierto?.bytes).toBe(4_000_000);
+    expect(plano?.bytes).toBe(3_000_000);
+    expect(plano?.extras).toEqual([]);
+  });
+
+  test("teeth: un .ktx2 de 1 MB sin fila en la carga del muelle falla nombrando el archivo", () => {
+    const sinFila = "apps/web/public/textures/sin-fila.ktx2";
+    const r = chequearCargaRegistrada([{ archivo: "apps/web/public/textures/leafy-grass-diff.ktx2", bytes: 196_231 }, { archivo: sinFila, bytes: 1_000_000 }], new Set(["apps/web/public/textures/leafy-grass-diff.ktx2"]));
+    expect(r.ok).toBe(false);
+    expect(r.lineas.join("\n")).toContain(`FAIL carga del muelle ${sinFila}: 1000000 bytes; sin fila en content/assets-registry.yaml ni content/code-registry.yaml`);
+    // Y un archivo de la carga que no está en disco también.
+    expect(chequearCargaRegistrada([{ archivo: sinFila, bytes: null }], new Set([sinFila])).ok).toBe(false);
+  });
+
+  test("teeth: con la carga de 1 MB de más el muelle sigue contando cada byte contra assets_muelle_mb", () => {
+    const pesado = [{ archivo: "apps/web/public/textures/x.ktx2", bytes: 3_500_000 }];
+    const dioramas = medirDioramas([{ id: "muelle", props: [{ asset: modelo("b") }], terreno: { relieve: true } }], new Map([[archivo("b"), pieza(archivo("b"), 3_000_000)]]), [], pesado);
+    const r = chequearDescarga([pieza(archivo("b"), 3_000_000)], dioramas, B);
+    expect(r.ok).toBe(false);
+    expect(r.lineas.join("\n")).toContain("FAIL assets del primer diorama: 6.500 MB (3.000 de modelos y 3.500 de 1 archivo(s) más");
   });
 });

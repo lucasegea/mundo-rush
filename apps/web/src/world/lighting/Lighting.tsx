@@ -6,7 +6,7 @@
 // la propia del agua) sigue al t de zoom (PD-5).
 // Plan estetica-c M6: `fogScale` acorta la niebla por tier (la "distancia de dibujo" corta de `low`).
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Fog, type DirectionalLight } from "three";
 import { viewScale } from "../camera/rig";
 import { zoomPose } from "../camera/zoom";
@@ -24,6 +24,14 @@ export function Lighting({ shadows, fogScale = 1 }: { shadows: ShadowMode; fogSc
   const lastFog = useRef({ near: 0, far: 0 });
   const scene = useThree((s) => s.scene);
   const cast = shadows === "directional";
+  // Open-world-3d M3 (fuga al cambiar de tier): three no libera el mapa de sombra cuando `castShadow` se apaga; al bajar
+  // de `high` el mapa de 1024 (y su profundidad) quedaba vivo. Se libera acá y three lo vuelve a crear si se prende.
+  useEffect(() => {
+    const l = sun.current;
+    if (cast || !l?.shadow.map) return;
+    l.shadow.map.dispose();
+    l.shadow.map = null;
+  }, [cast]);
   useFrame(() => {
     const l = sun.current;
     if (!l) return;
@@ -44,7 +52,7 @@ export function Lighting({ shadows, fogScale = 1 }: { shadows: ShadowMode; fogSc
       sc.updateProjectionMatrix();
     }
     // Open-world-3d T5 (PD-5): la niebla sigue al t de zoom ya suavizado (de 45-250 m de cerca a 520-1.500 m con el
-    // mapa entero), con la escala del tier en el extremo cercano. T6 SEAM: `fogFor(scale, t)` de AC40 la reemplaza.
+    // mapa entero), con la escala del tier: `fogFor(scale, t)` de world/sky (open-world-3d T6, AC40) vía zoomPose.
     const pose = zoomPose(cameraLook.t, 1, 0, fogScale);
     const near = Math.round(pose.fogNear);
     const far = Math.round(pose.fogFar);

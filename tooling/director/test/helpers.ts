@@ -14,6 +14,8 @@ export const tempRoot = (withContent = false): string => {
     cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
     // Plan estetica-c M2: el registro de assets nombra archivos servidos; sin ellos el contenido real no compila.
     cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
+    // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+    cpSync(join(ROOT, "apps/web/public/textures"), join(dir, "apps/web/public/textures"), { recursive: true });
   }
   return dir;
 };

@@ -21,6 +21,8 @@ import { createServer, connect } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "playwright-core";
+import { OPEN_WORLD_DENSITY } from "@lg/art";
+import { AC41, diffMask, maskPixels, skyCheck, yellowShare, type Rgba } from "./defects/classify.ts";
 import { closeAllGlBrowsers, parseGlMode, withGlBrowser, type GlMode } from "./gl-mode.ts";
 import { angleDelta, beaconsOk, forwardOf, forwardWalkOk, onScreen, projectWithMatrices, rightOf, turnFollowsYaw, type BeaconSeen, type P2 } from "./third-person-walk.ts";
 
@@ -164,6 +166,26 @@ async function canvasStats(page: Page): Promise<PixelStats> {
   })()`);
 }
 
+/** La captura del canvas como RGBA (filas de arriba abajo), en pixeles CSS del rectangulo del canvas. */
+async function canvasImage(page: Page): Promise<Rgba> {
+  const png = await page.locator("canvas").first().screenshot();
+  const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
+  const r = await page.evaluate<{ w: number; h: number; b64: string }>(`(async () => {
+    const img = new Image();
+    img.src = ${JSON.stringify(dataUrl)};
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    let s = "";
+    for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+    return { w: c.width, h: c.height, b64: btoa(s) };
+  })()`);
+  return { width: r.w, height: r.h, data: new Uint8Array(Buffer.from(r.b64, "base64")) };
+}
+
 const WORLD_READY = "document.querySelector('canvas') !== null";
 
 /** Menu: espera `#menu-world` habilitado y entra al mapa. */
@@ -250,10 +272,14 @@ const cameraMatrices = (page: Page): Promise<{ view: number[]; proj: number[]; r
   return { view: Array.from(c.matrixWorldInverse.elements), proj: Array.from(c.projectionMatrix.elements), rect: { x: r.left, y: r.top, w: r.width, h: r.height } };
 })()`);
 
-/** Un punto del suelo a pixeles de la pagina (null si queda fuera de pantalla). */
+/**
+ * Un punto del suelo a pixeles de la pagina (null si queda fuera de pantalla). Cambio registrado (open-world-3d T6): el
+ * suelo ya no esta en y = 0; la altura sale de `worldGround.heightAt` (el mismo `heightAt` del terreno dibujado).
+ */
 async function groundToScreen(page: Page, p: P2): Promise<{ x: number; y: number } | null> {
   const m = await cameraMatrices(page);
-  const ndc = projectWithMatrices(m.view, m.proj, [p.x, 0, p.z]);
+  const y = await page.evaluate<number>(`import("/src/world/runtime.ts").then(({ worldGround }) => worldGround.heightAt(${p.x}, ${p.z}))`);
+  const ndc = projectWithMatrices(m.view, m.proj, [p.x, y, p.z]);
   if (!onScreen(ndc)) return null;
   return { x: m.rect.x + ((ndc[0] + 1) / 2) * m.rect.w, y: m.rect.y + ((1 - ndc[1]) / 2) * m.rect.h };
 }
@@ -340,6 +366,154 @@ async function waitGame(page: Page, cond: string, timeout: number): Promise<void
 const settle = (page: Page, ms = 600): Promise<void> =>
   waitGame(page, "Math.hypot(s.player.velocity.x, s.player.velocity.z) < 1e-3", 10_000).then(() => page.waitForTimeout(ms));
 
+/** La fila del canvas (de arriba) donde cae el horizonte: un punto a 5 km por delante, a la altura de la camara. */
+const horizonRow = (page: Page): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
+  const c = cameraLook.camera;
+  const pos = c.getWorldPosition(c.position.clone());
+  const dir = c.getWorldDirection(c.position.clone());
+  dir.y = 0;
+  dir.normalize();
+  const p = pos.clone().addScaledVector(dir, 5000).project(c);
+  const r = document.querySelector("canvas").getBoundingClientRect();
+  return ((1 - p.y) / 2) * r.height;
+})`);
+
+/** La primera fila del canvas que no tapa el HUD en la columna del centro (la barra del título va encima). */
+const worldTop = (page: Page): Promise<number> => page.evaluate<number>(`(() => {
+  const c = document.querySelector("canvas");
+  const r = c.getBoundingClientRect();
+  const x = r.left + r.width / 2;
+  for (let y = 0; y < r.height; y++) if (document.elementFromPoint(x, r.top + y + 0.5) === c) return y;
+  return 0;
+})()`);
+
+/** Los pixeles del canvas que ningun elemento del HUD tapa (elementFromPoint es el canvas), cada 2 px. */
+async function worldVisible(page: Page, w: number, h: number): Promise<Uint8Array> {
+  const b64 = await page.evaluate<string>(`(() => {
+    const c = document.querySelector("canvas");
+    const r = c.getBoundingClientRect();
+    const w = ${w}, h = ${h}, m = new Uint8Array(w * h);
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) {
+      if (document.elementFromPoint(r.left + (x + 1) * r.width / w, r.top + (y + 1) * r.height / h) !== c) continue;
+      for (let dy = 0; dy < 2 && y + dy < h; dy++) for (let dx = 0; dx < 2 && x + dx < w; dx++) m[(y + dy) * w + x + dx] = 1;
+    }
+    let s = "";
+    for (let i = 0; i < m.length; i += 0x8000) s += String.fromCharCode.apply(null, m.subarray(i, i + 0x8000));
+    return btoa(s);
+  })()`);
+  return new Uint8Array(Buffer.from(b64, "base64"));
+}
+
+/** Muestra el terreno (todo objeto llamado "terreno" de la escena dibujada) o lo esconde. */
+const setTerrainVisible = (page: Page, on: boolean): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
+  let root = cameraLook.camera;
+  while (root && root.parent) root = root.parent;
+  let n = 0;
+  if (root) root.traverse((o) => { if (o.name === "terreno") { o.visible = ${on}; n++; } });
+  return n;
+})`);
+
+/**
+ * La máscara del cielo de la captura `img` (open-world-3d M3, AC39): se dibuja el mismo cuadro con solo el cielo (todo
+ * lo demás escondido, menos el grupo "cielo") y es cielo lo que no cambió (diffMask en 0), como la doble captura de AC41.
+ */
+async function skyMask(page: Page, img: Rgba): Promise<Uint8Array> {
+  const toggle = (only: boolean): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
+    let root = cameraLook.camera;
+    while (root && root.parent) root = root.parent;
+    const hidden = (globalThis.__lgSkyHidden ??= []);
+    if (!${only}) { for (const o of hidden) o.visible = true; hidden.length = 0; return 0; }
+    const inSky = (o) => { for (let p = o; p; p = p.parent) if (p.name === "cielo") return true; return false; };
+    root.traverse((o) => { if ((o.isMesh || o.isSprite || o.isPoints || o.isLine) && o.visible && !inSky(o)) { o.visible = false; hidden.push(o); } });
+    return hidden.length;
+  })`);
+  const n = await toggle(true);
+  if (n === 0) throw new Error("skyMask: no se escondió nada");
+  await page.waitForTimeout(500);
+  const bare = await canvasImage(page);
+  await toggle(false);
+  await page.waitForTimeout(500);
+  return diffMask(img, bare).map((v) => 1 - v);
+}
+
+/** Las dos capturas del mismo cuadro, con y sin terreno (como las de tools/defects.cjs), y la mascara del terreno. */
+async function withAndWithoutTerrain(page: Page): Promise<{ img: Rgba; mask: Uint8Array }> {
+  const img = await canvasImage(page);
+  await setTerrainVisible(page, false);
+  await page.waitForTimeout(500);
+  const bare = await canvasImage(page);
+  await setTerrainVisible(page, true);
+  await page.waitForTimeout(500);
+  return { img, mask: diffMask(img, bare) };
+}
+
+/**
+ * AC41 (open-world-3d T6): en medium con movimiento reducido, el mapa entero (t = 1) y la vista t = 0,55, cada una dos
+ * veces (con y sin terreno). (1) Amarillo entre los pixeles de terreno a t = 1 a lo sumo 0,35. (2) A t = 0,55, el
+ * amarillo del anillo justo fuera del borde de la cama de pasto (radio del pasto de medium) menos el del anillo justo
+ * dentro, a lo sumo 0,15. Deja tier, movimiento reducido y zoom como estaban.
+ */
+async function walkGround(page: Page): Promise<void> {
+  const before = await page.evaluate<{ tier: string; reduce: boolean }>(`import("/src/state/store.ts").then((m) => {
+    const s = m.gameStore.getState();
+    return { tier: s.settings.graphics.tier, reduce: s.settings.accessibility.reduceMotion };
+  })`);
+  const t0 = (await camState(page)).t;
+  const act = (code: string): Promise<void> => page.evaluate(`import("/src/state/actions.ts").then(({ actions }) => { ${code}; })`);
+  await act(`actions.setTierChoice("medium"); actions.setReduceMotion(true)`);
+  await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
+  await act("actions.zoomTo(1)");
+  await page.waitForTimeout(4000); // la escena de medium, sus mapas y el zoom suavizado
+  const full = await withAndWithoutTerrain(page);
+  await shot(page, "ac41-mapa-completo");
+  const y1 = yellowShare(full.img, maskPixels(full.mask));
+  const terrainPx = full.mask.reduce((n, v) => n + v, 0);
+
+  await act("actions.zoomTo(0.55)");
+  await page.waitForTimeout(2500);
+  const mid = await withAndWithoutTerrain(page);
+  await shot(page, "ac41-t055");
+  const R = OPEN_WORLD_DENSITY.medium.grass.radius;
+  const player = (await camState(page)).pos;
+  const ring = (lo: number, hi: number): P2[] => {
+    const pts: P2[] = [];
+    for (let a = 0; a < 360; a += 1) {
+      for (let k = 0; k < 5; k++) {
+        const r = R * (lo + ((hi - lo) * k) / 4);
+        pts.push({ x: player.x + r * Math.cos((a * Math.PI) / 180), z: player.z + r * Math.sin((a * Math.PI) / 180) });
+      }
+    }
+    return pts;
+  };
+  const m = await cameraMatrices(page);
+  const pixelsOf = async (pts: P2[]): Promise<number[]> => {
+    const ys = await page.evaluate<number[]>(`import("/src/world/runtime.ts").then(({ worldGround }) => ${JSON.stringify(pts)}.map((p) => worldGround.heightAt(p.x, p.z)))`);
+    const out = new Set<number>();
+    pts.forEach((p, i) => {
+      const ndc = projectWithMatrices(m.view, m.proj, [p.x, ys[i] ?? 0, p.z]);
+      if (!onScreen(ndc)) return;
+      const x = Math.floor(((ndc[0] + 1) / 2) * mid.img.width);
+      const y = Math.floor(((1 - ndc[1]) / 2) * mid.img.height);
+      const idx = y * mid.img.width + x;
+      if (x >= 0 && y >= 0 && x < mid.img.width && y < mid.img.height && mid.mask[idx]) out.add(idx);
+    });
+    return [...out];
+  };
+  const inner = yellowShare(mid.img, await pixelsOf(ring(AC41.inner[0], AC41.inner[1])));
+  const outer = yellowShare(mid.img, await pixelsOf(ring(AC41.outer[0], AC41.outer[1])));
+  const step = (outer.share ?? 0) - (inner.share ?? 0);
+  const fmt = (v: number | null): string => (v === null ? "n/a" : v.toFixed(3));
+  check("AC41-mapa", y1.share !== null && y1.share <= AC41.maxYellowFull,
+    `t = 1, medium, movimiento reducido: ${terrainPx} pixeles de terreno, amarillo ${fmt(y1.share)} (${y1.yellow} amarillos, ${y1.green} verdes; tope ${AC41.maxYellowFull})`);
+  check("AC41-anillo", inner.share !== null && outer.share !== null && step <= AC41.maxRingStep,
+    `t = 0,55, radio del pasto ${R} m: anillo de adentro ${fmt(inner.share)} (${inner.yellow + inner.green} px), de afuera ${fmt(outer.share)} (${outer.yellow + outer.green} px), paso ${step.toFixed(3)} (tope ${AC41.maxRingStep})`);
+
+  await act(`actions.setTierChoice(${JSON.stringify(before.tier)}); actions.setReduceMotion(${String(before.reduce)})`);
+  await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
+  await act(`actions.zoomTo(${t0})`);
+  await page.waitForTimeout(3000);
+}
+
 async function walkThirdPerson(page: Page): Promise<void> {
   // AC28 (c): tres arrastres de 120 px soltados sobre el suelo: miran (el yaw cambia) y no caminan. El total deja la
   // camara mirando al este, por el camino del muelle (yaw 270), para que W tenga campo libre.
@@ -372,11 +546,11 @@ async function walkThirdPerson(page: Page): Promise<void> {
   check("AC28-Q", turn.ok, `Q giro el yaw ${angleDelta(w0.yaw, q0.yaw).toFixed(1)} grados y la marcha ${turn.rotated.toFixed(1)}`);
   await shot(page, "ac28-despues");
 
-  // AC29 (a): clic corto sobre un punto del suelo a 8 m (al este): llega a menos de 0,5 m. El punto va al norte del
-  // camino (z 11,5) para que el rayo del clic no pase por NPC-MITAYO (10; 8,5): un clic que cae sobre un NPC es
-  // "caminar hasta el NPC" (interactWith), no un moveTo al suelo.
+  // AC29 (a): clic corto sobre un punto del suelo a 8 m al este: llega a menos de 0,5 m. Cambio registrado
+  // (open-world-3d T6): antes el punto iba a z 11,5 (al norte del camino del muelle chico, lejos del rayo a NPC-MITAYO);
+  // en el mapa grande la aparicion esta en (-48, 30) y Mitayo a 45 m, asi que el punto es el de 8 m al este del jugador.
   const here = (await camState(page)).pos;
-  const goal = { x: here.x + Math.sqrt(64 - (11.5 - here.z) ** 2), z: 11.5 };
+  const goal = { x: here.x + 8, z: here.z };
   const goalYaw = 270; // mirar al este para que el punto este en pantalla
   await drag(page, angleDelta(goalYaw, (await camState(page)).yaw) / 0.25);
   await page.waitForTimeout(800);
@@ -463,6 +637,11 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   const stats = await canvasStats(page);
   await shot(page, "ac12-muelle");
   check("AC12", isNonUniform(stats), `colores ${stats.distinct} (min ${MIN_DISTINCT_COLORS}), dominante ${(stats.dominantShare * 100).toFixed(1)}% (max ${MAX_DOMINANT_SHARE * 100}%)`);
+  // AC39 (open-world-3d T6): la misma vista por defecto, recien entrado: cielo con gradiente, azul arriba, pasto abajo.
+  const skyImg = await canvasImage(page);
+  const sky = skyCheck(skyImg, await horizonRow(page), await worldTop(page), await worldVisible(page, skyImg.width, skyImg.height), await skyMask(page, skyImg));
+  check("AC39", sky.ok && isNonUniform(stats), `${sky.detail}; regla de pixeles ${isNonUniform(stats)}`);
+  await walkGround(page);
   await walkThirdPerson(page);
 
   const mitayo = await talkTo(page, "NPC-MITAYO");

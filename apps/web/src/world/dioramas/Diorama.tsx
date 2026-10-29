@@ -4,8 +4,11 @@
 // por state/bridge.ts (R3: nada de eventos del DOM; R10: el mismo traductor del núcleo que usa services/input).
 // Plan estetica-c M6: los NPCs usan el cuerpo de la densidad del tier y, con una escena de conversación arriba (`frozen`),
 // el agua y las burbujas quedan quietas y solo se animan el jugador y el NPC de la escena (`animatedOnly`).
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { useMemo } from "react";
+// Open-world-3d T6 (D-819, D-823): con relieve, el clic del suelo cae en la malla (el selector de scene.ts), los
+// personajes, etiquetas, burbujas y sombras se apoyan en `heightAt`, el suelo baja sus mapas .ktx2 con el renderer y el
+// cielo sigue a la cámara.
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import type { SceneDensity } from "@lg/art";
 import type { DioramaRuntime } from "@lg/core";
 import { bridge, LOOK_DRAG_PX } from "../../state/bridge";
@@ -20,9 +23,9 @@ import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
 import { RequestBubble } from "../labels/RequestBubble";
 import { ModelProps } from "../props/ModelProps";
-import { followTarget } from "../runtime";
+import { followTarget, worldGround } from "../runtime";
 import { tickWater, waterMaterial } from "../water/waterMaterial";
-import type { DioramaScene } from "./scene";
+import { ACTOR_LIFT, type DioramaScene } from "./scene";
 
 interface Props {
   diorama: DioramaRuntime;
@@ -100,6 +103,20 @@ function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
   return null;
 }
 
+/** Altura de las etiquetas y burbujas de un NPC: sobre la cabeza, apoyada en el suelo (open-world-3d T6, AC37). */
+export const labelAnchorY = (heightAt: (x: number, z: number) => number, lift: number, x: number, z: number): number =>
+  heightAt(x, z) + lift + LABEL_HEIGHT;
+
+/** El mundo abierto: el suelo baja sus mapas (si fallan, queda el color por vértice) y el cielo sigue a la cámara. */
+function OpenWorld({ scene, still }: { scene: DioramaScene; still: boolean }) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    scene.ground?.loadMaps(gl).catch((e: unknown) => console.warn("suelo: sin mapas .ktx2, queda el color por vértice", e));
+  }, [scene, gl]);
+  useFrame(({ camera }, delta) => scene.sky?.follow(camera.position.x, camera.position.y, camera.position.z, delta, still));
+  return null;
+}
+
 export function Diorama({
   diorama,
   scene,
@@ -119,27 +136,49 @@ export function Diorama({
   const { minX, maxX, minZ, maxZ } = diorama.bounds;
   const onGround = (e: ThreeEvent<MouseEvent>): void => onGroundClick(e);
   const labels = labelEntries(actors, highlightId, sceneNpcId, viewDistance, zoomT);
+  const relief = scene.picker !== null;
+  const lift = relief ? ACTOR_LIFT : 0;
+  const heightAt = scene.terrain.heightAt;
+  // Open-world-3d M3 (fuga de GPU al cambiar de tier, medida con perf:probe): la escena se libera acá, en la raíz de R3F,
+  // y no en GameCanvas. El Canvas confirma sus hijos después de la raíz del DOM: liberada desde GameCanvas, la escena
+  // vieja se dibujaba unos cuadros más con sus texturas ya liberadas, three las volvía a subir y nadie las borraba (los
+  // mapas del suelo y las nubes de cada tier quedaban vivos). Acá la limpieza corre cuando la escena vieja ya salió.
+  useEffect(() => () => scene.dispose(), [scene]);
+  // Antes del primer cuadro: los personajes (también el jugador, montado fuera) leen este suelo.
+  useLayoutEffect(() => {
+    worldGround.heightAt = heightAt;
+    worldGround.lift = lift;
+    return () => {
+      worldGround.heightAt = () => 0;
+      worldGround.lift = 0;
+    };
+  }, [heightAt, lift]);
   return (
     <group>
-      {/* Plano invisible para el raycast del suelo: dentro de los límites el terreno es plano en y = 0. */}
-      <mesh position={[(minX + maxX) / 2, 0, (minZ + maxZ) / 2]} rotation={[-Math.PI / 2, 0, 0]} onClick={onGround}>
-        <planeGeometry args={[maxX - minX, maxZ - minZ]} />
-        <meshBasicMaterial visible={false} />
-      </mesh>
+      {scene.picker ? (
+        <primitive object={scene.picker} onClick={onGround} />
+      ) : (
+        // Sin relieve, plano invisible para el raycast del suelo: dentro de los límites el terreno es plano en y = 0.
+        <mesh position={[(minX + maxX) / 2, 0, (minZ + maxZ) / 2]} rotation={[-Math.PI / 2, 0, 0]} onClick={onGround}>
+          <planeGeometry args={[maxX - minX, maxZ - minZ]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
       <primitive object={scene.root} />
+      {relief ? <OpenWorld scene={scene} still={cut || frozen} /> : null}
       <ModelProps slots={scene.models} />
       <WaterClock reduceMotion={cut || frozen} />
       <AnimationGovernor max={maxAnimated} only={animatedOnly} />
       {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} activity={activity} lod={density} />)}
       {labels.map((l) => {
         const a = actors.find((x) => x.id === l.id) as MapActor; // labelEntries sale de `actors`
-        return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={LABEL_HEIGHT} z={a.z} />;
+        return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={labelAnchorY(heightAt, lift, a.x, a.z)} z={a.z} />;
       })}
       {requestIds.map((id) => {
         const a = actors.find((x) => x.id === id);
-        return a ? <RequestBubble key={`pedido-${id}`} x={a.x} y={LABEL_HEIGHT} z={a.z} still={cut || frozen} /> : null;
+        return a ? <RequestBubble key={`pedido-${id}`} x={a.x} y={labelAnchorY(heightAt, lift, a.x, a.z)} z={a.z} still={cut || frozen} /> : null;
       })}
-      <BlobShadows anchors={scene.blobAnchors} />
+      <BlobShadows anchors={scene.blobAnchors} heightAt={heightAt} />
       <Beacons npcs={actors} heightAt={scene.terrain.heightAt} />
     </group>
   );

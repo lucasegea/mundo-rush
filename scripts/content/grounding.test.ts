@@ -81,6 +81,8 @@ describe("M4 grounding gate — teeth end-to-end por el build (AC9)", () => {
     // registro exige que cada archivo nombrado exista: van también los modelos servidos.
     for (const f of ["assets-registry.yaml", "creditos.yaml"]) cpSync(join(REPO, "content", f), join(root, "content", f));
     cpSync(join(REPO, "apps", "web", "public", "models"), join(root, "apps", "web", "public", "models"), { recursive: true });
+    // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+    cpSync(join(REPO, "apps", "web", "public", "textures"), join(root, "apps", "web", "public", "textures"), { recursive: true });
     return { root, conv: join(root, "content", "universes", "U-GALEANO", "conversaciones", "CONV-POTOSI.yaml") };
   };
   const log = (): void => {};

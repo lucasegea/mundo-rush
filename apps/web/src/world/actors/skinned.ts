@@ -222,5 +222,8 @@ export function disposeSkinnedCharacter(c: SkinnedCharacter): void {
   c.mixer.stopAllAction();
   c.mixer.uncacheRoot(c.mixer.getRoot());
   for (const m of c.meshes) m.geometry.dispose();
+  // Open-world-3d M3 (fuga al cambiar de tier, medida con perf:probe): la textura de huesos del esqueleto (16 × 16 en la
+  // GPU) no se liberaba; cada cambio de tier, que rearma los personajes, dejaba las viejas.
+  c.body.skeleton.dispose();
 }
 

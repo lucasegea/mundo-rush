@@ -15,3 +15,9 @@ export * from "./costs.ts";
 export * from "./shapes.ts";
 // Plan estetica-c M6: la densidad de la escena por tier (cómo entra `low` en su presupuesto).
 export * from "./density.ts";
+// Open-world-3d T6 (D-819): el relieve interior del mundo abierto.
+export * from "./relief.ts";
+// Open-world-3d T6 (D-832): el inventario de texturas del mundo abierto y la cuenta de bytes (KTX2 por cabecera).
+export * from "./textures.ts";
+// Open-world-3d T6 (D-823): las medidas del cielo (cúpula y nubes) que dibuja world/sky y cuenta el estimador.
+export * from "./sky.ts";

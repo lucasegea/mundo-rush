@@ -233,7 +233,10 @@ describe("A4 material único del mundo", () => {
     expect(audit.surfaceInstances).toBeLessThanOrEqual(2);
     expect(audit.byKind.toon).toBe(1);
     expect(audit.byKind.agua).toBe(1);
-    expect([...WORLD_MATERIAL_KINDS]).toEqual(["toon", "agua", "etiqueta", "sombra-blob"]);
+    // Open-world-3d T6 (AC71, D-828): cambio registrado. La aserción vieja era la lista de 4 clases ["toon", "agua",
+    // "etiqueta", "sombra-blob"]; la lista crece con las 6 del mundo abierto. El tope de 2 superficies del diorama
+    // campesino no cambia (la auditoría del mundo abierto está en apps/web/test/open-world.test.ts, AC71).
+    expect([...WORLD_MATERIAL_KINDS]).toEqual(["toon", "agua", "etiqueta", "sombra-blob", "terreno", "pasto", "follaje", "impostor", "cielo", "nube"]);
     const toon = toonMaterial();
     expect(toon.vertexColors).toBe(true);
     expect(toon.gradientMap).not.toBeNull();
@@ -413,7 +416,8 @@ describe("A13/A14 paleta: una sola fuente de los hex", () => {
   });
 
   test("ningún archivo nuevo de world/ escribe un hex fuera de palette.ts", () => {
-    const zones = "materials|terrain|water|labels|budget|lighting|actors|dioramas|camera|props";
+    // Cambio registrado (open-world-3d T6): se suma `sky` (el cielo nuevo tampoco escribe hex; sus colores salen de palette.ts).
+    const zones = "materials|terrain|water|labels|budget|lighting|actors|dioramas|camera|props|sky";
     const src = import.meta.glob("../src/world/*/**/*.{ts,tsx}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
     // Plan estetica-c M7: lo de HD-2D (props/Boxes.tsx) se retiró; ya no hay excepciones.
     const files = Object.entries(src)

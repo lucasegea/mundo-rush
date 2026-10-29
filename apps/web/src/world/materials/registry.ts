@@ -7,10 +7,15 @@ import { MeshBasicMaterial, MeshToonMaterial, SpriteMaterial, type Material, typ
 import { blobTexture } from "./blob";
 import { brushTexture, toonRamp } from "./toon";
 
-export const WORLD_MATERIAL_KINDS = ["toon", "agua", "etiqueta", "sombra-blob"] as const;
+//
+// Open-world-3d T6 (D-828, PD-1, AC71): cambio registrado de la lista. Se suman `terreno` (el splat del suelo, una
+// instancia), `pasto` (las tarjetas y las hojas de pasto, dos), `follaje` (hojas de los árboles), `impostor` (uno por
+// especie horneada), `cielo` (la cúpula) y `nube` (la malla de nubes). Las superficies dejan de ser solo toon y agua: el
+// tope de A4 (2 instancias) sigue para el diorama campesino y el mundo abierto tiene el suyo (`surfaceInstances` <= 17).
+export const WORLD_MATERIAL_KINDS = ["toon", "agua", "etiqueta", "sombra-blob", "terreno", "pasto", "follaje", "impostor", "cielo", "nube"] as const;
 export type WorldMaterialKind = (typeof WORLD_MATERIAL_KINDS)[number];
-/** Las superficies del mundo: como máximo 2 instancias en total (A4). */
-export const SURFACE_MATERIAL_KINDS: readonly WorldMaterialKind[] = ["toon", "agua"];
+/** Las superficies del mundo (lo que se dibuja como sólido o follaje): las cuenta `surfaceInstances`. */
+export const SURFACE_MATERIAL_KINDS: readonly WorldMaterialKind[] = ["toon", "agua", "terreno", "pasto", "follaje", "impostor"];
 
 const TAG = "lgMaterial";
 
@@ -59,7 +64,7 @@ export function beaconMaterial(map: Texture): SpriteMaterial {
 export interface MaterialAudit {
   /** Instancias distintas por clase. */
   byKind: Record<WorldMaterialKind, number>;
-  /** Instancias de superficie (toon + agua). */
+  /** Instancias de superficie (las clases de SURFACE_MATERIAL_KINDS). */
   surfaceInstances: number;
   /** Materiales sin marca o con una marca fuera de la lista. */
   unknown: Material[];

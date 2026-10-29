@@ -3,6 +3,9 @@
 // distancia log-lineal de 2,5 m (t = 0) a `fitDistance` (t = 1), la inclinación efectiva que sube a 82°, el pivote que
 // va del jugador al centro del mapa, la niebla y el plano lejano que crecen, las etiquetas que se apagan y las balizas
 // que aparecen. Los números son los del mockup V6 (`main.js` updateCamera, `world.js` applyView).
+// Open-world-3d T6 (AC40): la niebla y el plano lejano salen de `fogFor(scale, t)` y `farPlaneFor(t)` de world/sky (una
+// sola fuente); la escala del tier ahora acorta toda la niebla (antes solo el extremo cercano).
+import { farPlaneFor, fogFor } from "../sky/palette";
 
 /** Lente y medidas de la tercera persona (plan v3 T5; mockup V6 `fixture.js` ZOOM_MIN, ZOOM_DEFAULT). */
 export const THIRD_PERSON_VIEW = {
@@ -133,7 +136,7 @@ export interface ZoomPose {
   lookPitchDeg: number;
   /** 0 = el pivote es el jugador, 1 = el centro del mapa. */
   pivotBlend: number;
-  /** Niebla (m), con la escala del tier en el extremo cercano (`fogScale` de DENSITY). */
+  /** Niebla (m), con la escala del tier (`fogScale`): `fogFor` de world/sky. */
   fogNear: number;
   fogFar: number;
   /** Planos de recorte de la cámara (m). */
@@ -153,17 +156,17 @@ export function zoomPose(t: number, fit: number, userPitchDeg: number, fogScale 
   const distance = zoomDistanceAt(tt, fit);
   const pitchDeg = lerp(userPitchDeg, THIRD_PERSON_VIEW.overviewPitchDeg, smoothstep(0.3, 1, tt));
   const lookPitchDeg = lerp(pitchDeg * 0.55, pitchDeg, smoothstep(0.3, 0.8, tt));
-  const sT = smoothstep(0.3, 0.95, tt);
+  const fog = fogFor(fogScale, tt);
   return {
     t: tt,
     distance,
     pitchDeg,
     lookPitchDeg,
     pivotBlend: smoothstep(0.55, 1, tt),
-    fogNear: lerp(45 * fogScale, 520, sT),
-    fogFar: lerp(250 * fogScale, 1500, sT),
+    fogNear: fog.near,
+    fogFar: fog.far,
     near: Math.min(4, Math.max(0.1, distance * 0.03)),
-    far: Math.round(lerp(700, 2200, sT)),
+    far: farPlaneFor(tt),
     labelAlpha: 1 - smoothstep(0.3, 0.55, tt),
     beaconAlpha: smoothstep(0.4, 0.7, tt),
   };

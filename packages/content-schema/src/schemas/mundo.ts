@@ -123,6 +123,12 @@ export const Diorama = z.looseObject({
     /** Altura máxima de las lomas del borde (m). */
     lomas: z.number().min(0).max(HILL_LIMIT).optional(),
     semilla: z.number().int().optional(),
+    /**
+     * Open-world-3d T6 (D-819): relieve interior (`reliefAt` de @lg/art, 2 a 8 m) con llanos en la aparición y en cada
+     * NPC; el terreno usa el paso por tier del mundo abierto (OPEN_WORLD_DENSITY). Sin la clave, el suelo de adentro es
+     * plano como en campesino.
+     */
+    relieve: z.boolean().optional(),
   }).optional(),
   /** Colores del terreno de la zona: papel → token de la paleta. */
   paleta: z.partialRecord(z.enum(TERRAIN_PALETTE_ROLES), TokenPaleta).optional(),

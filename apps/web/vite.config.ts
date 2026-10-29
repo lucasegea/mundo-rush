@@ -49,6 +49,10 @@ export default defineConfig({
   // check:budgets lee dist/.vite/manifest.json y chunk-modules.json (03 §2.7.3, F1.1b, F2).
   // Los topes los fija check:budgets (450 KB gzip para el chunk 3D); el aviso de 500 kB sin comprimir de Vite no aplica.
   build: { manifest: true, chunkSizeWarningLimit: 1500 },
+  // Open-world-3d T6: KTX2Loader lo importa un chunk perezoso (world/terrain/groundMaterial.ts) que el escaneo inicial de
+  // Vite no descubre; sin esto, la primera visita con la caché fría re-optimiza y RECARGA la página a mitad de camino
+  // (medido: la Walk quedó en el menú). Incluirlo lo pre-empaqueta al arrancar.
+  optimizeDeps: { include: ["three/addons/loaders/KTX2Loader.js"] },
   resolve: {
     alias: {
       "@ui": src("ui"),

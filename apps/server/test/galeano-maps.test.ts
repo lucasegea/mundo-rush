@@ -5,6 +5,8 @@
 // el test "muelle es un mapa de tiles con al menos 4 ids distintos" afirmaba `atlas_tiles` y una capa `suelo` del tamaño
 // de los límites; ahora afirma el formato de la maqueta (`terreno`, al menos un camino, sin `tiles` ni `atlas_tiles`).
 // El A* hasta cada NPC ahora además comprueba que la celda de llegada queda a 3 m o menos del NPC.
+// Cambio registrado (open-world-3d T6, AC34, D-819): "28x20 como antes" pasa a "al menos 140x100 m": el muelle es el
+// mundo abierto del mockup V6 (relieve, NPCs a 53-67 m, anillo no caminable orgánico). AC34 y AC35 se suman abajo.
 import { compilarContenido } from "@lg/content-schema";
 import { cellAt, cellCenter, findPath, isWalkable, nearestWalkable, prepareDiorama, type DioramaLayout } from "@lg/core";
 import { describe, expect, test } from "vitest";
@@ -17,13 +19,14 @@ const dioramas = resultado.salida.cliente["dioramas.json"] as DioramaLayout[];
 const layout = (id: string): DioramaLayout => must(dioramas.find((d) => d.id === id), id);
 
 describe("AC13: muelle y plaza en el formato de la maqueta", () => {
-  test("muelle tiene terreno y al menos un camino, sin tiles ni atlas_tiles; 28x20 como antes", () => {
+  test("muelle tiene terreno y al menos un camino, sin tiles ni atlas_tiles; al menos 140x100 m (T6)", () => {
     const l = layout("muelle") as DioramaLayout & Record<string, unknown>;
     expect(l["terreno"]).toBeTruthy();
     expect((l["caminos"] as unknown[] | undefined)?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect("tiles" in l).toBe(false);
     expect("atlas_tiles" in l).toBe(false);
-    expect([l.bounds.maxX - l.bounds.minX, l.bounds.maxZ - l.bounds.minZ]).toEqual([28, 20]);
+    expect(l.bounds.maxX - l.bounds.minX).toBeGreaterThanOrEqual(140);
+    expect(l.bounds.maxZ - l.bounds.minZ).toBeGreaterThanOrEqual(100);
   });
 
   test("plaza compila, también sin tiles", () => {
@@ -58,6 +61,51 @@ describe("AC2: NPCs en el mapa y alcanzables desde el spawn", () => {
     for (const n of l.npcs ?? []) {
       const c = cellAt(sinNpcs.grid, n.spawn[0], n.spawn[2]);
       expect(isWalkable(sinNpcs.grid, c[0], c[1]), n.id).toBe(true);
+    }
+  });
+});
+
+/** Largo (m) de un camino de celdas: suma de pasos entre centros (1 o raíz de 2 celdas). */
+const pathLength = (cells: readonly (readonly [number, number])[], cell: number): number =>
+  cells.slice(1).reduce((n, c, i) => {
+    const [px, pz] = must(cells[i], "celda previa");
+    return n + Math.hypot(c[0] - px, c[1] - pz) * cell;
+  }, 0);
+
+describe("open-world-3d T6: el mundo abierto del muelle (AC34, AC35)", () => {
+  const run = prepareDiorama(layout("muelle"));
+
+  test("AC34: NPCs a 30 m o más entre sí; A* de la aparición al NPC más lejano de 70 m o más; todos alcanzables", () => {
+    const npcs = run.npcs;
+    expect(npcs.length).toBe(3);
+    for (let i = 0; i < npcs.length; i++) {
+      for (let j = i + 1; j < npcs.length; j++) {
+        const a = must(npcs[i], "npc");
+        const b = must(npcs[j], "npc");
+        expect(Math.hypot(a.x - b.x, a.z - b.z), `${a.id}-${b.id}`).toBeGreaterThanOrEqual(30);
+      }
+    }
+    const start = must(nearestWalkable(run.grid, cellAt(run.grid, run.spawn.x, run.spawn.z)), "spawn caminable");
+    const lengths = npcs.map((n) => {
+      const goal = must(nearestWalkable(run.grid, cellAt(run.grid, n.x, n.z), 3), n.id);
+      const path = must(findPath(run.grid, start, goal), `${n.id} inalcanzable`);
+      return { id: n.id, d: Math.hypot(n.x - run.spawn.x, n.z - run.spawn.z), len: pathLength(path, run.grid.cellSize) };
+    });
+    const farthest = lengths.reduce((a, b) => (b.d > a.d ? b : a));
+    expect(farthest.len).toBeGreaterThanOrEqual(70);
+  });
+
+  test("AC35: el anillo no_caminable tiene 12 vértices o más y 40 % o más de aristas no alineadas a los ejes", () => {
+    const ring = must(layout("muelle").no_caminable?.[0], "anillo").poligono;
+    expect(ring.length).toBeGreaterThanOrEqual(12);
+    const edges = ring.map((p, i) => [p, must(ring[(i + 1) % ring.length], "vértice")] as const);
+    const diagonal = edges.filter(([a, b]) => Math.abs(b[0] - a[0]) > 0.5 && Math.abs(b[1] - a[1]) > 0.5).length;
+    expect(diagonal / edges.length).toBeGreaterThanOrEqual(0.4);
+    // El anillo no corta la aparición ni a los NPCs (los llanos del relieve quedan caminables).
+    const sinNpcs = prepareDiorama({ ...layout("muelle"), npcs: [] });
+    for (const p of [run.spawn, ...run.npcs]) {
+      const c = cellAt(sinNpcs.grid, p.x, p.z);
+      expect(isWalkable(sinNpcs.grid, c[0], c[1])).toBe(true);
     }
   });
 });

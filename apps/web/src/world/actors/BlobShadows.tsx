@@ -13,10 +13,11 @@ export const MAX_ACTOR_BLOBS = 12;
 export const ACTOR_BLOB_SIZE = 1.5;
 const LIFT = 0.025;
 
-export function buildBlobShadows(anchors: readonly BlobAnchor[]): InstancedMesh {
+/** Open-world-3d T6: `heightAt` apoya las sombras fijas en el relieve (sin relieve, el terreno es plano en y = 0). */
+export function buildBlobShadows(anchors: readonly BlobAnchor[], heightAt: (x: number, z: number) => number = () => 0): InstancedMesh {
   const mesh = new InstancedMesh(new PlaneGeometry(1, 1).rotateX(-Math.PI / 2), blobShadowMaterial(), anchors.length + MAX_ACTOR_BLOBS);
   const m = new Matrix4();
-  anchors.forEach((a, i) => mesh.setMatrixAt(i, m.makeScale(a.size, 1, a.size).setPosition(a.x, LIFT, a.z)));
+  anchors.forEach((a, i) => mesh.setMatrixAt(i, m.makeScale(a.size, 1, a.size).setPosition(a.x, heightAt(a.x, a.z) + LIFT, a.z)));
   mesh.count = anchors.length;
   mesh.renderOrder = 1;
   mesh.frustumCulled = false;
@@ -24,15 +25,15 @@ export function buildBlobShadows(anchors: readonly BlobAnchor[]): InstancedMesh 
   return mesh;
 }
 
-export function BlobShadows({ anchors }: { anchors: readonly BlobAnchor[] }) {
-  const mesh = useMemo(() => buildBlobShadows(anchors), [anchors]);
+export function BlobShadows({ anchors, heightAt }: { anchors: readonly BlobAnchor[]; heightAt?: (x: number, z: number) => number }) {
+  const mesh = useMemo(() => buildBlobShadows(anchors, heightAt), [anchors, heightAt]);
   useEffect(() => () => mesh.geometry.dispose(), [mesh]);
   const m = useMemo(() => new Matrix4(), []);
   useFrame(() => {
     let i = anchors.length;
     for (const spot of actorSpots.values()) {
       if (i >= anchors.length + MAX_ACTOR_BLOBS) break;
-      mesh.setMatrixAt(i++, m.makeScale(ACTOR_BLOB_SIZE, 1, ACTOR_BLOB_SIZE).setPosition(spot.x, LIFT + 0.005, spot.z));
+      mesh.setMatrixAt(i++, m.makeScale(ACTOR_BLOB_SIZE, 1, ACTOR_BLOB_SIZE).setPosition(spot.x, spot.y + LIFT + 0.005, spot.z));
     }
     mesh.count = i;
     mesh.instanceMatrix.needsUpdate = true;

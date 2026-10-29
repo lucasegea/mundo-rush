@@ -28,7 +28,7 @@ export interface DioramaLayout {
   interactuables?: readonly { id: string; pos: Vec3; radio?: number }[];
   no_caminable?: readonly { poligono: readonly Vec2[] }[];
   // Formato de la maqueta (plan estetica-c M5).
-  terreno?: { extension?: number; lomas?: number; semilla?: number };
+  terreno?: { extension?: number; lomas?: number; semilla?: number; relieve?: boolean };
   paleta?: Readonly<Record<string, string>>;
   caminos?: readonly { puntos: readonly Vec2[]; ancho: number; superficie?: "camino" | "empedrado" }[];
   rio?: readonly { puntos: readonly Vec2[]; ancho: number }[];
@@ -68,7 +68,12 @@ export interface PathLine {
 /** Lo que world/terrain/ necesita del formato de la maqueta (plan estetica-c M5). */
 export interface DioramaGround {
   /** null = los defaults del look (world/ los toma de @lg/art). */
-  terrain: { extension: number | null; hills: number | null; seed: number | null };
+  terrain: { extension: number | null; hills: number | null; seed: number | null; relief: boolean };
+  /**
+   * Open-world-3d T6: los llanos del relieve (la aparición y cada NPC), en el orden del layout. Vacío sin relieve: el
+   * suelo de adentro es plano.
+   */
+  pads: Vec2[];
   /** Papel del terreno → token de la paleta. */
   palette: Readonly<Record<string, string>>;
   /** Caminos: la polilínea muestreada y sus puntos de control (las piedras del empedrado se cuentan sobre estos). */
@@ -122,9 +127,20 @@ function propBoxes(props: readonly LayoutProp[]): PropBox[] {
   });
 }
 
+/** La aparición (o el centro de los límites) y cada NPC: los llanos del relieve (open-world-3d T6, D-819). */
+function reliefPads(layout: DioramaLayout): Vec2[] {
+  const b = layout.bounds;
+  const spawn: Vec2 = layout.spawn ? [layout.spawn[0], layout.spawn[2]] : [(b.minX + b.maxX) / 2, (b.minZ + b.maxZ) / 2];
+  return [spawn, ...(layout.npcs ?? []).map((n): Vec2 => [n.spawn[0], n.spawn[2]])];
+}
+
 function groundOf(layout: DioramaLayout): DioramaGround {
   return {
-    terrain: { extension: layout.terreno?.extension ?? null, hills: layout.terreno?.lomas ?? null, seed: layout.terreno?.semilla ?? null },
+    terrain: {
+      extension: layout.terreno?.extension ?? null, hills: layout.terreno?.lomas ?? null, seed: layout.terreno?.semilla ?? null,
+      relief: layout.terreno?.relieve === true,
+    },
+    pads: layout.terreno?.relieve === true ? reliefPads(layout) : [],
     palette: { ...(layout.paleta ?? {}) },
     paths: (layout.caminos ?? []).map((c) => ({
       surface: c.superficie ?? "camino", width: c.ancho, line: sampleCatmullRom(c.puntos), points: c.puntos.map((p): Vec2 => [p[0], p[1]]),

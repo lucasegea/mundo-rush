@@ -49,3 +49,29 @@ export function polygonEdgeDistance(x: number, z: number, polygon: readonly (rea
   }
   return best;
 }
+
+/**
+ * El punto de una polilínea más cercano a (x, z) y su distancia (open-world-3d T6: el camino aplana su sección con la
+ * altura de su centro). null si la polilínea está vacía.
+ */
+export function polylineNearest(x: number, z: number, line: readonly XZ[]): { x: number; z: number; d: number } | null {
+  if (line.length === 0) return null;
+  if (line.length === 1) {
+    const p = line[0] as XZ;
+    return { x: p.x, z: p.z, d: Math.hypot(x - p.x, z - p.z) };
+  }
+  let best: { x: number; z: number; d: number } = { x: 0, z: 0, d: Infinity };
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1] as XZ;
+    const b = line[i] as XZ;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len2 = dx * dx + dz * dz;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / len2));
+    const qx = a.x + t * dx;
+    const qz = a.z + t * dz;
+    const d = Math.hypot(x - qx, z - qz);
+    if (d < best.d) best = { x: qx, z: qz, d };
+  }
+  return best;
+}

@@ -1,10 +1,12 @@
 // open-world-3d T2(e) (AC11): lo puro de scripts/assets/refetch.ts, sin red (la corrida real va por red, fuera de verify).
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, test } from "vitest";
-import { leerRegistroCodigo, refetchCodigo, resumen, urlDescarga, type Bajar, type Linea } from "./refetch.ts";
+import { BASISU } from "./ktx2.ts";
+import { leerRegistro } from "./optimize.ts";
+import { leerRegistroCodigo, refetchAsset, refetchCodigo, resumen, urlDescarga, type Bajar, type Linea } from "./refetch.ts";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const temporales: string[] = [];
@@ -63,5 +65,36 @@ describe("refetch: resumen", () => {
   test("ENCODER-MISMATCH se cuenta aparte y no falla; DIFF, SOURCE-MISMATCH y ERROR fallan", () => {
     expect(resumen([l("MATCH"), l("ENCODER-MISMATCH")])).toEqual({ ok: true, cuenta: { "MATCH": 1, "DIFF": 0, "SOURCE-MISMATCH": 0, "ENCODER-MISMATCH": 1, "ERROR": 0 } });
     for (const mal of ["DIFF", "SOURCE-MISMATCH", "ERROR"] as const) expect(resumen([l("MATCH"), l(mal)]).ok, mal).toBe(false);
+  });
+});
+
+// Open-world-3d T6 (PD-4, D-832): los .ktx2 del suelo se re-codifican con el basisu fijado. Los originales y el .wasm
+// viven en assets-src/ (gitignored): sin ellos (otra máquina, sin red en el test) el caso del MATCH se salta.
+describe("refetch: filas .ktx2 (basisu fijado)", () => {
+  const filas = leerRegistro(ROOT).assets;
+  const fila = filas.find((f) => f.archivo === "apps/web/public/textures/sparse-grass-nor.ktx2");
+  if (!fila?.fuente) throw new Error("falta la fila de sparse-grass-nor.ktx2 en content/assets-registry.yaml");
+  const conCache = existsSync(join(ROOT, fila.fuente)) && existsSync(join(ROOT, BASISU.cache));
+
+  test.skipIf(!conCache)("con el original y el codificador fijado, la re-codificación es idéntica byte a byte (MATCH)", async () => {
+    const original = new Uint8Array(readFileSync(join(ROOT, fila.fuente as string)));
+    const l = await refetchAsset(fila, undefined, scratch(), desde(original), ROOT);
+    expect(l.estado, l.detalle).toBe("MATCH");
+    expect(l.detalle).toContain("basisu 2.50.0");
+  }, 120_000);
+
+  test.skipIf(!conCache)("un codificador local que no es el fijado da ENCODER-MISMATCH, nunca MATCH ni DIFF", async () => {
+    const otraRaiz = scratch();
+    mkdirSync(dirname(join(otraRaiz, BASISU.cache)), { recursive: true });
+    writeFileSync(join(otraRaiz, BASISU.cache), new TextEncoder().encode("otro basisu"));
+    const original = new Uint8Array(readFileSync(join(ROOT, fila.fuente as string)));
+    const l = await refetchAsset(fila, undefined, scratch(), desde(original), otraRaiz);
+    expect(l.estado).toBe("ENCODER-MISMATCH");
+    expect(l.detalle).toContain("2.50.0");
+  });
+
+  test("un original que no es el del registro da SOURCE-MISMATCH antes de codificar", async () => {
+    const l = await refetchAsset(fila, undefined, scratch(), desde(new TextEncoder().encode("otro jpg")), ROOT);
+    expect(l.estado).toBe("SOURCE-MISMATCH");
   });
 });

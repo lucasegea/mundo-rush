@@ -58,6 +58,18 @@ export const PALETTE = {
   "papel-borde": "#E6DCC8",
   "flor-centro": "#F7F2E6",
   chimenea: "#B98A6A",
+  // Open-world-3d T6 (D-819, D-823): el suelo del mundo abierto (color por vértice bajo el splat; del mockup V6, con el
+  // alto y el alterno más verdes: AC41 pide menos amarillo que V6) y el cielo. `cielo-horizonte` es la niebla del
+  // mundo abierto (world/sky: el horizonte de la cúpula ES el color de la niebla, AC38).
+  "suelo-bajo": "#4F9A35",
+  "suelo-alto": "#7FB944",
+  "suelo-alterno": "#93BE4A",
+  "suelo-bosque": "#2F6A34",
+  roca: "#8C928A",
+  "roca-calida": "#9A8F80",
+  "cielo-cenit": "#2F86D6",
+  "cielo-medio": "#68B6EA",
+  "cielo-horizonte": "#CFE7EE",
   // Luces de la propuesta C §5 (no se pintan, pero sus hex también viven acá):
   sol: "#FFF1D6",
   "luz-cielo": "#D6ECF2",

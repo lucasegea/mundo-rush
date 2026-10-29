@@ -6,7 +6,8 @@ export default mergeConfig(
   defineProject({
     // Plan estetica-c M2: los tests leen los .glb servidos como data URL (`?inline`) sin node:fs. Solo en tests: el
     // build del cliente no importa modelos (los carga por URL desde public/models).
-    assetsInclude: ["**/*.glb"],
+    // Open-world-3d T6: también los .ktx2 del suelo (AC42 lee sus cabeceras).
+    assetsInclude: ["**/*.glb", "**/*.ktx2"],
     test: {
       name: "@lg/web",
       include: ["test/**/*.test.{ts,tsx}"],

@@ -3,7 +3,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { glArgs } from "./gl-mode.ts";
-import { CONFIGS, frameStats, markdownSection, MEM_HOOK, parseProbeArgs, poseAvailable, POSE_ZOOM_T, timingOk, upsertSection, WARMUP_MS, WINDOW_MS, type Row } from "./perf-probe.ts";
+import {
+  CONFIGS, frameStats, HILLTOP, markdownSection, MEM_HOOK, parseProbeArgs, poseAvailable, POSE_ZOOM_T, timingOk, upsertSection, WARMUP_MS, WINDOW_MS, type Row,
+} from "./perf-probe.ts";
 
 const row = (over: Partial<Row> = {}): Row => ({
   config: "main", tier: "medium", pose: "spawn", stats: { frames: 100, mean: 5, p50: 4.9, p95: 7 }, calls: 120, triangles: 50_000, programs: 14,
@@ -52,11 +54,24 @@ describe("perf-probe: medida", () => {
     expect(glArgs("gpu", { uncapped: true })).toEqual(expect.arrayContaining(["--disable-gpu-vsync", "--disable-frame-rate-limit", "--force_high_performance_gpu"]));
   });
   // Cambio registrado (open-world-3d T5, PD-5): antes «al cierre de M1 solo spawn está disponible» y close/mid/full
-  // daban false; con el zoom continuo de thirdPerson las tres poses existen (t = 0, 0,5 y 1). hilltop sigue para T6.
-  test("con T5 spawn, close, mid y full están disponibles (hilltop con T6)", () => {
-    for (const p of ["spawn", "close", "mid", "full"] as const) expect(poseAvailable(p)).toBe(true);
-    expect(poseAvailable("hilltop")).toBe(false);
+  // daban false; con el zoom continuo de thirdPerson las tres poses existen (t = 0, 0,5 y 1). Cambio registrado (T6):
+  // hilltop daba false hasta el mapa grande; ahora existe (la pose con nombre HILLTOP).
+  test("con T6 todas las poses están disponibles, hilltop incluida", () => {
+    for (const p of ["spawn", "close", "mid", "full", "hilltop"] as const) expect(poseAvailable(p)).toBe(true);
     expect(POSE_ZOOM_T).toEqual({ spawn: "default", close: 0, mid: 0.5, full: 1 });
+  });
+  test("hilltop: los tres NPCs del muelle caen dentro del FOV horizontal de 16:9 mirando con su yaw", () => {
+    // La vista mira hacia (-sin yaw, -cos yaw) (world/camera/zoom.ts: yaw 0 = cámara del lado +z mirando a -z).
+    const yaw = (HILLTOP.yawDeg * Math.PI) / 180;
+    const vx = -Math.sin(yaw);
+    const vz = -Math.cos(yaw);
+    const halfFov = Math.atan(Math.tan((25 * Math.PI) / 180) * (16 / 9));
+    for (const [x, z] of [[-5, 12], [42, -18], [-20, -38]] as const) {
+      const dx = x - HILLTOP.x;
+      const dz = z - HILLTOP.z;
+      const cos = (dx * vx + dz * vz) / Math.hypot(dx, dz);
+      expect(Math.acos(cos)).toBeLessThan(halfFov - (5 * Math.PI) / 180);
+    }
   });
   test("el gancho de memoria cuenta las subidas comprimidas", () => {
     expect(MEM_HOOK).toContain("compressedTexImage2D");
