@@ -13,7 +13,7 @@ import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { paintColors, tokenRgb } from "@lg/art";
 import { toonMaterial } from "../materials/registry";
 import type { AnimChoice } from "./animState";
-import { openWorldAccessories } from "./accessories";
+import { openWorldAccessories, type AccessoryCast } from "./accessories";
 import type { ClipId } from "./clips";
 import { gesturePose, PROCEDURAL_GESTURES, type ProceduralGesture } from "./gestures";
 import { characterHeadGeometry, mouthGeometry } from "./head";
@@ -91,7 +91,13 @@ export const characterBone = (c: Pick<SkinnedCharacter, "bones" | "rig">, name: 
  * del archivo compartido. Una malla de cuerpo, una de cabeza (o el accesorio de la cabeza) y la boca (oculta hasta que
  * habla).
  */
-export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly AnimationClip[], look: CharacterLook, seed = 0, rig: RigSpec = KAYKIT_RIG): SkinnedCharacter {
+/**
+ * `cast` (open-world-3d T7b, D-840): el juego de accesorios y la gorra del look, que necesita un esqueleto sin cabeza por
+ * código (Quaternius); con KayKit no se usa.
+ */
+export function buildSkinnedCharacter(
+  bodyScene: Object3D, clips: readonly AnimationClip[], look: CharacterLook, seed = 0, rig: RigSpec = KAYKIT_RIG, cast: AccessoryCast | null = null,
+): SkinnedCharacter {
   const model = cloneSkinned(bodyScene);
   let body: SkinnedMesh | null = null;
   const bones = new Map<string, Bone>();
@@ -113,7 +119,10 @@ export function buildSkinnedCharacter(bodyScene: Object3D, clips: readonly Anima
 
   const root = new Group();
   root.add(model);
-  if (!rig.codeHead) return withAccessories(root, model, skinned, headBone, hips, bones, clips, look, seed, rig);
+  if (!rig.codeHead) {
+    if (!cast) throw new Error(`cuerpo ${look.body} (${rig.id}): sin cabeza por código hace falta el juego de accesorios del look`);
+    return withAccessories(root, model, skinned, headBone, hips, bones, clips, look, seed, rig, cast);
+  }
   root.scale.setScalar(rig.scale * look.scale);
   root.updateMatrixWorld(true);
 
@@ -150,10 +159,10 @@ const MODEL_MOUTH = { y: 2.08, z: 0.43 } as const;
  */
 function withAccessories(
   root: Group, model: Object3D, skinned: SkinnedMesh, headBone: Bone, hips: Bone, bones: Map<string, Bone>,
-  clips: readonly AnimationClip[], look: CharacterLook, seed: number, rig: RigSpec,
+  clips: readonly AnimationClip[], look: CharacterLook, seed: number, rig: RigSpec, cast: AccessoryCast,
 ): SkinnedCharacter {
   model.updateMatrixWorld(true);
-  const acc = openWorldAccessories(look, seed);
+  const acc = openWorldAccessories(look, cast, seed);
   const hang = (geo: BufferGeometry | null, bone: Bone | undefined): Mesh | null => {
     if (!geo || !bone) return null;
     const m = new Mesh(geo, toonMaterial());

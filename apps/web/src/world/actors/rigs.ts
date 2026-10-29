@@ -8,13 +8,17 @@
 // de KayKit y la cabeza por código también en el mundo abierto (3.148 + cabeza contra 3.264 + accesorios: menos de 5 %
 // de diferencia); pasa a leer este esqueleto cuando el contenido declare el mundo abierto. El ritmo de Walk y Run sigue
 // el `rate` de animState.ts (calibrado para KayKit); la maqueta usa velocidad / 1,75 y / 4,2 (T9 afina el paso).
-import { bodyAsset, OPEN_WORLD_BODY_ASSET, OPEN_WORLD_CLIPS_ASSET, REDUCED_BODY_SUFFIX, type SceneDensity } from "@lg/art";
+import {
+  bodyAsset, CHARACTER_RIGS, OPEN_WORLD_BODY_ASSET, OPEN_WORLD_CLIPS_ASSET, REDUCED_BODY_SUFFIX, type CharacterRig, type SceneDensity,
+  type WorldLook,
+} from "@lg/art";
 import { CLIP_MANIFEST, CLIPS_ASSET, type ClipId, type ClipSource } from "./clips";
 import { GESTURES } from "./gestures";
 import type { BodyId } from "./looks";
 
-export const RIG_IDS = ["kaykit", "quaternius"] as const;
-export type RigId = (typeof RIG_IDS)[number];
+/** Los esqueletos: los ids son los de @lg/art (un look nombra el suyo en `characters.rig`). */
+export const RIG_IDS = CHARACTER_RIGS;
+export type RigId = CharacterRig;
 
 export interface RigSpec {
   id: RigId;
@@ -99,5 +103,9 @@ export function npcDistanceRule(distance: number, inFrustum: boolean): { visible
   return { visible, accessories: visible && distance <= NPC_ACCESSORY_M };
 }
 
-/** El esqueleto de los personajes de un diorama: con relieve (el mundo abierto) Quaternius, si no KayKit. */
-export const actorRig = (relief: boolean): RigId => (relief ? "quaternius" : "kaykit");
+/**
+ * El esqueleto de los personajes de un diorama: el de su look (open-world-3d T7b, D-840, LK3 enmendado). Hasta 0034931
+ * salía del relieve (`actorRig(relief)`); ahora `relieve` decide solo la forma del terreno. Es la única elección del
+ * esqueleto: Character la llama con los personajes del look (`cast`); sin ellos (tests, retrato), KayKit.
+ */
+export const actorRig = (cast: WorldLook["characters"] | null | undefined): RigId => cast?.rig ?? "kaykit";

@@ -3,9 +3,10 @@
 // distancia log-lineal de 2,5 m (t = 0) a `fitDistance` (t = 1), la inclinación efectiva que sube a 82°, el pivote que
 // va del jugador al centro del mapa, la niebla y el plano lejano que crecen, las etiquetas que se apagan y las balizas
 // que aparecen. Los números son los del mockup V6 (`main.js` updateCamera, `world.js` applyView).
-// Open-world-3d T6 (AC40): la niebla y el plano lejano salen de `fogFor(scale, t)` y `farPlaneFor(t)` de world/sky (una
-// sola fuente); la escala del tier ahora acorta toda la niebla (antes solo el extremo cercano).
-import { farPlaneFor, fogFor } from "../sky/palette";
+// Open-world-3d T6 (AC40): el plano lejano sale de `farPlaneFor(t)` de world/sky. Open-world-3d T7b (D-839): la niebla
+// ya no está en la pose (su rango es del look; la cámara es núcleo): la arma `fogFor(look.fog.range, fogScale, t)` de
+// world/sky con el mismo t (Lighting).
+import { farPlaneFor } from "../sky/palette";
 
 /** Lente y medidas de la tercera persona (plan v3 T5; mockup V6 `fixture.js` ZOOM_MIN, ZOOM_DEFAULT). */
 export const THIRD_PERSON_VIEW = {
@@ -136,9 +137,6 @@ export interface ZoomPose {
   lookPitchDeg: number;
   /** 0 = el pivote es el jugador, 1 = el centro del mapa. */
   pivotBlend: number;
-  /** Niebla (m), con la escala del tier (`fogScale`): `fogFor` de world/sky. */
-  fogNear: number;
-  fogFar: number;
   /** Planos de recorte de la cámara (m). */
   near: number;
   far: number;
@@ -149,22 +147,19 @@ export interface ZoomPose {
 
 /**
  * La pose de un t de zoom (PD-5, AC26). `fit` es `fitDistance` del yaw y el aspecto vigentes; `userPitchDeg` la
- * inclinación del jugador; `fogScale` la del tier (1 en medium y high).
+ * inclinación del jugador.
  */
-export function zoomPose(t: number, fit: number, userPitchDeg: number, fogScale = 1): ZoomPose {
+export function zoomPose(t: number, fit: number, userPitchDeg: number): ZoomPose {
   const tt = clamp01(t);
   const distance = zoomDistanceAt(tt, fit);
   const pitchDeg = lerp(userPitchDeg, THIRD_PERSON_VIEW.overviewPitchDeg, smoothstep(0.3, 1, tt));
   const lookPitchDeg = lerp(pitchDeg * 0.55, pitchDeg, smoothstep(0.3, 0.8, tt));
-  const fog = fogFor(fogScale, tt);
   return {
     t: tt,
     distance,
     pitchDeg,
     lookPitchDeg,
     pivotBlend: smoothstep(0.55, 1, tt),
-    fogNear: fog.near,
-    fogFar: fog.far,
     near: Math.min(4, Math.max(0.1, distance * 0.03)),
     far: farPlaneFor(tt),
     labelAlpha: 1 - smoothstep(0.3, 0.55, tt),

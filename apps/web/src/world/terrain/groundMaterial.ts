@@ -6,9 +6,13 @@
 // ktx2.ts) cargados con KTX2Loader de three/addons y el transcodificador Basis autoalojado en /decoders/; los normales
 // van apagados en `low`. Mientras los mapas no llegaron (o si fallan) el suelo queda con su color por vértice: la escena
 // nunca espera ni se rompe por una textura.
-import { DataTexture, MeshStandardMaterial, RepeatWrapping, RGBAFormat, SRGBColorSpace, Vector2, Vector4, type Texture, type WebGLRenderer } from "three";
+// Open-world-3d T7b (D-839, D-842): qué mapa va en cada ranura del splat y el grado del pasto son del look
+// (`WorldLook.ground`); el grado entra como uniforms (no como texto del sombreador), así dos looks comparten el programa.
+import { DataTexture, MeshStandardMaterial, RepeatWrapping, RGBAFormat, SRGBColorSpace, Vector2, Vector3, Vector4, type Texture, type WebGLRenderer } from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-import { GROUND_MAPS, groundTextureFile, OPEN_WORLD_DENSITY, TEXTURES_DIR, type GroundMap, type WorldTier } from "@lg/art";
+import {
+  GROUND_SLOTS, groundTextureFile, OPEN_WORLD_DENSITY, TEXTURES_DIR, type GroundMap, type GroundSlot, type WorldLook, type WorldTier,
+} from "@lg/art";
 import { tagMaterial } from "../materials/registry";
 
 /** Ruido de valor y fbm en GLSL (el del mockup V6). */
@@ -19,25 +23,23 @@ export const NOISE_GLSL = /* glsl */ `
   float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * vn(p); p = p * 2.03 + 11.7; a *= 0.5; } return s / 0.9375; }
 `;
 
-/** Uniform del sampler de cada mapa (difuso `t*`, normal `n*`), en el orden de GROUND_MAPS. */
-const SAMPLER: Readonly<Record<GroundMap, readonly [string, string]>> = {
-  leafy_grass: ["tG1", "nG1"],
-  sparse_grass: ["tG2", "nG2"],
-  forest_ground_04: ["tD", "nD"],
-  rock_face_03: ["tR1", "nR1"],
-  rocky_terrain: ["tR2", "nR2"],
+/** Uniform del sampler de cada ranura (difuso `t*`, normal `n*`), en el orden de GROUND_SLOTS. */
+const SAMPLER: Readonly<Record<GroundSlot, readonly [string, string]>> = {
+  grass: ["tG1", "nG1"],
+  sparse: ["tG2", "nG2"],
+  dirt: ["tD", "nD"],
+  rock: ["tR1", "nR1"],
+  rockAlt: ["tR2", "nR2"],
 };
 
-/**
- * El grado del pasto (AC41): de dónde a dónde va el tono según el ruido grande. V6 iba de (0,34, 0,66, 0,13) a (0,62,
- * 0,74, 0,17) con el ralo a 1,7, y el mapa entero se leía mostaza. Medido en LG_GL=gpu, medium, t = 1 (amarillo entre
- * los píxeles de terreno, tope 0,35): V6 0,83; el primer grado de T6 (0,3, 0,64, 0,14)-(0,44, 0,7, 0,15) también 0,83
- * (el tonemapping y el sol cálido corren el verde al amarillo); (0,2, 0,62, 0,18)-(0,3, 0,68, 0,2) 0,015 con el tono
- * pegado a 72°; este, 0,012 con el tono en 80-88°.
+/*
+ * El grado del pasto (AC41, `WorldLook.ground.grassGrade`, uniforms uGrassLow, uGrassHigh y uSparseGain): de dónde a
+ * dónde va el tono según el ruido grande. V6 iba de (0,34, 0,66, 0,13) a (0,62, 0,74, 0,17) con el ralo a 1,7, y el mapa
+ * entero se leía mostaza. Medido en LG_GL=gpu, medium, t = 1 (amarillo entre los píxeles de terreno, tope 0,35): V6
+ * 0,83; el primer grado de T6 (0,3, 0,64, 0,14)-(0,44, 0,7, 0,15) también 0,83 (el tonemapping y el sol cálido corren el
+ * verde al amarillo); (0,2, 0,62, 0,18)-(0,3, 0,68, 0,2) 0,015 con el tono pegado a 72°; el de DEFAULT_LOOK, 0,012 con el
+ * tono en 80-88°.
  */
-export const GRASS_GRADE = { low: [0.17, 0.62, 0.2], high: [0.25, 0.68, 0.22], sparseGain: 1.45 } as const;
-
-const vec3 = (v: readonly number[]): string => `vec3(${v.map((x) => x.toFixed(3)).join(", ")})`;
 
 /** Fragmento del color del suelo (reemplaza `color_fragment`); `vColor` es el color por vértice de buildTerrain. */
 const COLOR_GLSL = /* glsl */ `#include <color_fragment>
@@ -54,9 +56,9 @@ const COLOR_GLSL = /* glsl */ `#include <color_fragment>
     vec2 pG = gq / 2.4, pD = gq / 2.0, pR = gq / 3.6;
     vec4 g1 = tx(tG1, pG), g2 = tx(tG2, pG * 1.3 + 4.7);
     float gm = smoothstep(0.3, 0.7, big);
-    vec3 gc = mix(g1.rgb, g2.rgb * ${GRASS_GRADE.sparseGain.toFixed(2)}, gm * 0.6);
+    vec3 gc = mix(g1.rgb, g2.rgb * uSparseGain, gm * 0.6);
     float gl = dot(gc, vec3(0.3, 0.59, 0.11));
-    vec3 tone = mix(${vec3(GRASS_GRADE.low)}, ${vec3(GRASS_GRADE.high)}, smoothstep(0.3, 0.72, big));
+    vec3 tone = mix(uGrassLow, uGrassHigh, smoothstep(0.3, 0.72, big));
     gc = (vec3(gl) * 2.6 * tone + (gc - vec3(gl)) * 0.7) * (0.85 + 0.35 * mid) * 1.15;
     gc *= 0.55 + 0.9 * dot(vColor.rgb, vec3(0.3, 0.5, 0.2));
     vec3 dc = tx(tD, pD).rgb * 1.5;
@@ -134,10 +136,10 @@ export interface GroundMaterial {
 export const groundMapUrl = (map: GroundMap, kind: "diff" | "nor", base = "/"): string =>
   `${base}${groundTextureFile(map, kind).slice(TEXTURES_DIR.length - "textures".length)}`;
 
-/** Los mapas que pide un tier: los 5 difusos siempre, los 5 normales solo si el tier los usa. */
-export function groundMapsFor(tier: WorldTier): { map: GroundMap; kind: "diff" | "nor" }[] {
+/** Los mapas que pide un tier con un look: los 5 difusos siempre, los 5 normales solo si el tier los usa. */
+export function groundMapsFor(tier: WorldTier, look: WorldLook): { slot: GroundSlot; map: GroundMap; kind: "diff" | "nor" }[] {
   const kinds: ("diff" | "nor")[] = OPEN_WORLD_DENSITY[tier].groundNormals ? ["diff", "nor"] : ["diff"];
-  return GROUND_MAPS.flatMap((map) => kinds.map((kind) => ({ map, kind })));
+  return GROUND_SLOTS.flatMap((slot) => kinds.map((kind) => ({ slot, map: look.ground.maps[slot], kind })));
 }
 
 let ktx2: KTX2Loader | null = null;
@@ -148,8 +150,8 @@ export function ktx2Loader(renderer: WebGLRenderer): KTX2Loader {
   return ktx2;
 }
 
-/** El material del suelo del mundo abierto (uno por escena). */
-export function groundMaterial(tier: WorldTier, edge: GroundEdge | null = null): GroundMaterial {
+/** El material del suelo del mundo abierto (uno por escena), con los mapas y el grado del look. */
+export function groundMaterial(tier: WorldTier, look: WorldLook, edge: GroundEdge | null = null): GroundMaterial {
   const normals = OPEN_WORLD_DENSITY[tier].groundNormals;
   const material = tagMaterial(new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }), "terreno");
   const grassBed = new Vector4(0, 0, 1, 0);
@@ -160,6 +162,9 @@ export function groundMaterial(tier: WorldTier, edge: GroundEdge | null = null):
     // Sin borde, el fundido queda fuera de alcance (de 1e5 a 2e5 m; dos bordes distintos también en float32).
     uEdge: { value: edge ? new Vector4(edge.bounds.minX, edge.bounds.minZ, edge.bounds.maxX, edge.bounds.maxZ) : new Vector4() },
     uEdgeFade: { value: edge ? new Vector2(edge.fade[0], edge.fade[1]) : new Vector2(1e5, 2e5) },
+    uGrassLow: { value: new Vector3(...look.ground.grassGrade.low) },
+    uGrassHigh: { value: new Vector3(...look.ground.grassGrade.high) },
+    uSparseGain: { value: look.ground.grassGrade.sparseGain },
   };
   const fallback = placeholder();
   for (const [t, n] of Object.values(SAMPLER)) {
@@ -175,7 +180,7 @@ export function groundMaterial(tier: WorldTier, edge: GroundEdge | null = null):
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", `#include <common>
         varying float vDirt; varying vec3 vWPos; varying vec3 vNW; uniform float uMaps; uniform float uNormOn; uniform vec4 uGrassBed;
-        uniform vec4 uEdge; uniform vec2 uEdgeFade;
+        uniform vec4 uEdge; uniform vec2 uEdgeFade; uniform vec3 uGrassLow; uniform vec3 uGrassHigh; uniform float uSparseGain;
         ${samplers}
         ${NOISE_GLSL}
         vec4 tx(sampler2D t, vec2 p) {
@@ -203,13 +208,13 @@ export function groundMaterial(tier: WorldTier, edge: GroundEdge | null = null):
       alive = true;
       loading ??= (async () => {
         const loader = ktx2Loader(renderer);
-        const maps = await Promise.all(groundMapsFor(tier).map(async ({ map, kind }) => {
+        const maps = await Promise.all(groundMapsFor(tier, look).map(async ({ slot, map, kind }) => {
           const tex = await loader.loadAsync(groundMapUrl(map, kind, import.meta.env.BASE_URL));
           tex.wrapS = tex.wrapT = RepeatWrapping;
           tex.anisotropy = 4;
           if (kind === "diff") tex.colorSpace = SRGBColorSpace;
           tex.needsUpdate = true;
-          return { name: SAMPLER[map][kind === "diff" ? 0 : 1], tex };
+          return { name: SAMPLER[slot][kind === "diff" ? 0 : 1], tex };
         }));
         if (!alive) {
           // Liberado mientras bajaban (cambio de tier rápido): no se asignan; la próxima carga, si la hay, baja de nuevo.

@@ -12,9 +12,11 @@
 // Open-world-3d T6 (D-819, D-823): un diorama con relieve se arma con el tier del mundo abierto (OPEN_WORLD_DENSITY:
 // paso del terreno, baldosas, nubes, niebla); su fondo y su niebla son el horizonte de la cúpula (world/sky) y la niebla
 // sale de `fogFor(scale, t)`. El tilt-shift queda fuera de `thirdPerson` (Post).
+// Open-world-3d T7b (D-839, D-840): el look del diorama se resuelve una vez al cargarlo (`lookForDiorama`) y de él salen
+// fondo, niebla, tono, luz, la escena entera y los personajes; el relieve decide solo la forma del terreno.
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { ACESFilmicToneMapping } from "three";
 import { DENSITY, OPEN_WORLD_DENSITY, WORLD_TIERS, type SceneDensity, type WorldTier } from "@lg/art";
 import type { SelectableTier } from "@lg/core";
@@ -23,19 +25,19 @@ import { selectConversationFrame, selectHighlightedNpc, selectMapView, selectReq
 import { sceneAnimated } from "./actors/animState";
 import { PLAYER_LOOK_ID } from "./actors/looks";
 import { Player } from "./actors/Player";
-import { actorRig } from "./actors/rigs";
 import { CameraRig } from "./camera/CameraRig";
 import { TWO_SHOT, viewScale } from "./camera/rig";
 import { zoomDistanceAt } from "./camera/zoom";
 import { Diorama } from "./dioramas/Diorama";
+import { lookForDiorama } from "./dioramas/look";
 import { buildDioramaScene } from "./dioramas/scene";
 import { FrameRegulator } from "./FrameRegulator";
 import { canvasLoop } from "./frameRate";
+import { activeLook } from "./runtime";
 import { Lighting, type ShadowMode } from "./lighting/Lighting";
-import { BACKGROUND, FOG, TONE } from "./lighting/params";
 import { postLevel, type PostLevel } from "./post/level";
 import { tiltShiftOn } from "./post/tiltShift";
-import { fogFor, OPEN_FOG_COLOR } from "./sky/palette";
+import { fogFor } from "./sky/palette";
 
 // El postprocesado va en su propio chunk: `low` y `dialog-only` nunca lo descargan (03 §2.9, D-160).
 const Post = lazy(() => import("./post/Post"));
@@ -85,13 +87,20 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const animatedOnly = useMemo(() => sceneAnimated(inScene, [PLAYER_LOOK_ID, conversation?.npcId ?? null]), [inScene, conversation?.npcId]);
   const worldTier = worldTierOf(render.tier);
   const openWorld = map.diorama?.ground.terrain.relief === true;
+  // La escala de la niebla es del tier (núcleo): la del mundo abierto con relieve, la de DENSITY sin él.
   const fogScale = openWorld ? OPEN_WORLD_DENSITY[worldTier].fogScale : DENSITY[density].fogScale;
-  const fog = fogFor(fogScale, render.zoomBand);
-  const fogColor = openWorld ? OPEN_FOG_COLOR : FOG.color;
+  const look = useMemo(() => lookForDiorama(map.diorama), [map.diorama]);
+  useEffect(() => {
+    activeLook.id = map.diorama ? look.id : null;
+    return () => {
+      activeLook.id = null;
+    };
+  }, [map.diorama, look]);
+  const fog = fogFor(look.fog.range, fogScale, render.zoomBand);
   // Distancia pedida de la cámara (open-world-3d T5): la del plano de a dos durante la charla; en el mapa, una referencia
   // del t de zoom cuantizado (post y etiquetas). La exacta la lleva CameraRig por cuadro.
   const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : zoomDistanceAt(render.zoomBand, VIEW_FIT_REFERENCE);
-  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density, worldTier) : null), [map.diorama, density, worldTier]);
+  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density, worldTier, look) : null), [map.diorama, density, worldTier, look]);
   // La escena se libera en Diorama (dentro del Canvas), no acá: ver el comentario de su efecto.
 
   return (
@@ -104,7 +113,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         gl={{ antialias: false }}
         onCreated={({ gl }) => {
           gl.toneMapping = ACESFilmicToneMapping;
-          gl.toneMappingExposure = TONE.exposure;
+          gl.toneMappingExposure = look.light.exposure;
           // Pérdida de contexto (frecuente en GPUs débiles, §2.7.2.4): a solo-diálogo sin perder la escena.
           gl.domElement.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
@@ -112,13 +121,13 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           });
         }}
       >
-        <color attach="background" args={[openWorld ? OPEN_FOG_COLOR : BACKGROUND]} />
-        <fog attach="fog" args={[fogColor, fog.near, fog.far]} />
+        <color attach="background" args={[look.background]} />
+        <fog attach="fog" args={[look.fog.color, fog.near, fog.far]} />
         {loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}
         {/* Fuera de la charla mide y puede bajar el tier; durante la charla se desmonta (al volver arranca de cero). Los
             bounds salen del tope de cuadros, así el tope propio no se lee como caída (canvasLoop en frameRate.ts). */}
         {loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} onDecline={() => bridge.performanceDeclined()} /> : null}
-        <Lighting shadows={params.shadows} fogScale={fogScale} />
+        <Lighting shadows={params.shadows} look={look} fogScale={fogScale} />
         {map.diorama && scene ? (
           <Diorama
             diorama={map.diorama}
@@ -138,8 +147,8 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           />
         ) : null}
         {/* Player antes que CameraRig: en cada cuadro la cámara sigue la posición ya dibujada. */}
-        {/* Open-world-3d T7 (AC47): con relieve (el mundo abierto), el jugador es el personaje de Quaternius. */}
-        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} rig={actorRig(Boolean(scene?.picker))} /> : null}
+        {/* Open-world-3d T7b (D-840): el jugador con los personajes del look (Quaternius en DEFAULT_LOOK, AC47). */}
+        {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} cast={look.characters} /> : null}
         <CameraRig
           preset={render.preset}
           motion={render.cameraMotion}
@@ -147,7 +156,6 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
           obstacles={scene?.obstacles ?? []}
           heightAt={scene ? scene.terrain.heightAt : null}
           bounds={map.diorama?.bounds ?? null}
-          fogScale={fogScale}
         />
         {post !== "none" ? (
           <Suspense fallback={null}>

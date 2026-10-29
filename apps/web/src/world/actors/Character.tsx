@@ -11,14 +11,14 @@
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Frustum, Matrix4, Sphere, Vector3, type Camera, type Object3D } from "three";
-import type { SceneDensity } from "@lg/art";
+import type { SceneDensity, WorldLook } from "@lg/art";
 import { actorSpots, actorY, animatedActors } from "../runtime";
 import { chooseAnimation, type GestureId, type SceneRole } from "./animState";
 import { loadCharacterAssets } from "./characterAssets";
 import { applyChibiPose, buildChibi, chibiPose, disposeChibi } from "./chibiModel";
 import { gestureDone, PROCEDURAL_GESTURES, type ProceduralGesture } from "./gestures";
 import type { CharacterLook } from "./looks";
-import { npcDistanceRule, RIGS, type RigId } from "./rigs";
+import { actorRig, npcDistanceRule, RIGS, type RigId } from "./rigs";
 import { buildSkinnedCharacter, disposeSkinnedCharacter, driveCharacter, type SkinnedCharacter } from "./skinned";
 
 export interface ActorPose {
@@ -45,8 +45,11 @@ interface Props {
   initialYaw?: number;
   /** Densidad del tier: el cuerpo completo o el simplificado de `low` (plan estetica-c M6). */
   lod?: SceneDensity;
-  /** El esqueleto (open-world-3d T7): KayKit en los dioramas planos, Quaternius en el mundo abierto. */
-  rig?: RigId;
+  /**
+   * Open-world-3d T7b (D-840): los personajes del look del diorama (esqueleto, juego de accesorios, gorra). Sin él,
+   * KayKit con cabeza por código (los tests y el retrato).
+   */
+  cast?: WorldLook["characters"] | null;
   /** NPC del mundo abierto: se oculta fuera del encuadre o lejos, y sin accesorios de lejos (AC47). */
   distanceRules?: boolean;
 }
@@ -82,7 +85,9 @@ const seedOf = (id: string): number => {
 
 const isProcedural = (g: string): g is ProceduralGesture => (PROCEDURAL_GESTURES as readonly string[]).includes(g);
 
-export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4, lod = "full", rig = "kaykit", distanceRules = false }: Props) {
+export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4, lod = "full", cast = null, distanceRules = false }: Props) {
+  // LK3 (enmienda): el esqueleto sale solo de los personajes del look, nunca de distanceRules, del relieve ni del mundo abierto.
+  const rig: RigId = actorRig(cast);
   const seed = useMemo(() => seedOf(id), [id]);
   const chibi = useMemo(() => buildChibi(look, seed), [look, seed]);
   const [skinned, setSkinned] = useState<SkinnedCharacter | null>(null);
@@ -96,7 +101,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     loadCharacterAssets(look.body, lod, RIGS[rig])
       .then((a) => {
         if (!alive) return;
-        setSkinned(buildSkinnedCharacter(a.body, a.clips, look, seed, RIGS[rig]));
+        setSkinned(buildSkinnedCharacter(a.body, a.clips, look, seed, RIGS[rig], cast));
       })
       .catch((err: unknown) => {
         // Se queda con el cuerpo de cápsulas, pero no en silencio: el aviso nombra el cuerpo que no bajó.
@@ -105,7 +110,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     return () => {
       alive = false;
     };
-  }, [look, seed, id, lod, rig]);
+  }, [look, seed, id, lod, rig, cast]);
   // Open-world-3d M3 (fuga al cambiar de tier): se libera el cuerpo cuando deja de ser el dibujado, no en la limpieza de
   // la carga. Liberado ahí, el cuerpo viejo seguía en la escena hasta el próximo commit, three rearmaba su textura de
   // huesos en ese cuadro y quedaba viva (4 texturas de 16 × 16 por cambio de tier, medido con la sonda).

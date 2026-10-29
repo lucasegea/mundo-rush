@@ -9,7 +9,7 @@
 // La pendiente se mide con `reliefAt` (el relieve puro de T6), no con la malla: así el núcleo, que no tiene three, siembra
 // exactamente lo mismo que world/.
 
-import { OPEN_WORLD_DENSITY, type WorldTier } from "./density.ts";
+import { OPEN_WORLD_DENSITY, type OpenWorldDensity, type WorldTier } from "./density.ts";
 import { reliefAt, type ReliefPad } from "./relief.ts";
 import { RUNTIME_TEXTURE_PX, TEXTURES_DIR } from "./textures.ts";
 
@@ -43,7 +43,6 @@ export const TREE_SPECIES: readonly TreeSpecies[] = [
   { name: "bushA", file: "bush-a", kind: "bush", height: 1.15, low: 0x4a8a35, high: 0x9ccb55, tintSeed: 21 },
   { name: "bushB", file: "bush-b", kind: "bush", height: 1.0, low: 0x558f38, high: 0xa8d25a, tintSeed: 22 },
 ];
-export const speciesOf = (kind: TreeKind): TreeSpecies[] => TREE_SPECIES.filter((s) => s.kind === kind);
 /** Sufijo del archivo de la versión liviana (mockup `liteCfg`). */
 export const LIGHT_TREE_SUFFIX = "-liviano";
 /** Carpeta servida de los árboles horneados (desde la raíz del repo y desde la raíz del sitio). */
@@ -103,11 +102,12 @@ export const IMPOSTOR_PX = RUNTIME_TEXTURE_PX.impostor;
 // variante; `outcrop` es el afloramiento grande.
 
 export const ROCK_SCANS = [
-  { scan: "rock_07", kind: "small", near: 900, far: 200 },
-  { scan: "rock_09", kind: "small", near: 900, far: 200 },
-  { scan: "rock_moss_set_01", kind: "small", near: 1800, far: 600 },
-  { scan: "rock_face_01", kind: "outcrop", near: 2200, far: 420 },
+  { scan: "rock_07", kind: "small", near: 900, far: 200, meshes: 1 },
+  { scan: "rock_09", kind: "small", near: 900, far: 200, meshes: 1 },
+  { scan: "rock_moss_set_01", kind: "small", near: 1800, far: 600, meshes: 6 },
+  { scan: "rock_face_01", kind: "outcrop", near: 2200, far: 420, meshes: 1 },
 ] as const;
+/** Open-world-3d T7b: `meshes` es cuántas mallas (variantes) dibuja world/nature de cada escaneo (antes un literal allá). */
 export type RockScan = (typeof ROCK_SCANS)[number]["scan"];
 export const ROCK_MODELS_DIR = "apps/web/public/models/polyhaven";
 /** El .glb de un escaneo (scripts/assets/nature.ts): cerca o lejos. */
@@ -121,11 +121,6 @@ export const NATURE_TEXTURES = {
 } as const;
 /** Ruta del repo → URL servida (`apps/web/public/x` → `/x`). */
 export const publicUrl = (file: string): string => file.slice("apps/web/public".length);
-/** Los .glb de la naturaleza que baja el mundo abierto (todos los tiers: el tier cambia cuántos, no cuáles). */
-export const natureModelFiles = (): string[] => [
-  ...TREE_SPECIES.flatMap((s) => [treeFile(s, false), treeFile(s, true)]),
-  ...ROCK_SCANS.flatMap((r) => [rockFile(r.scan, false), rockFile(r.scan, true)]),
-];
 /**
  * Colores del detalle hecho por código (mockup V6): helechos (abajo y arriba, como las hojas de un árbol), piedritas
  * (roca, roca cálida y musgo arriba) y las cuatro flores del atlas de lienzo (pétalo y centro: margarita, botón de oro,
@@ -471,8 +466,13 @@ const inside = (b: VegetationInput["bounds"], s: VegetationSpot): boolean => s.x
  * ve. El conteo del tier recorta lo de afuera (la falda, que la grilla ya no camina): primero lo de adentro, después lo
  * de afuera en el orden del sembrado hasta el conteo (si lo de adentro ya lo pasa, no entra nada de afuera).
  */
-export function takeVegetation(scatter: VegetationScatter, bounds: VegetationInput["bounds"], tier: WorldTier): VegetationScatter {
-  const t = OPEN_WORLD_DENSITY[tier].trees;
+export function takeVegetation(
+  scatter: VegetationScatter, bounds: VegetationInput["bounds"], tier: WorldTier,
+  /** Open-world-3d T7b: los multiplicadores del look (<= 1, `WorldLook.vegetation.density`); sin ellos, 1. */
+  scale: Readonly<Partial<Record<keyof OpenWorldDensity["trees"], number>>> = {},
+): VegetationScatter {
+  const base = OPEN_WORLD_DENSITY[tier].trees;
+  const t = Object.fromEntries(Object.entries(base).map(([k, n]) => [k, Math.floor(n * Math.min(1, scale[k as keyof typeof base] ?? 1))])) as typeof base;
   const keep = (list: readonly VegetationSpot[], n: number): VegetationSpot[] => {
     const inner = list.filter((s) => inside(bounds, s));
     const outer = list.filter((s) => !inside(bounds, s));

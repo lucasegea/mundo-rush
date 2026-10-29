@@ -3,7 +3,7 @@
 // suelo cae en la malla), AC38 (cielo), AC40 (niebla por zoom), AC42 (texturas: cabeceras KTX2 y memoria por tier) y
 // AC71 (la auditoría de materiales del mundo abierto), y la mitad de AC35 que mira la cámara (t = 1 sin vacío). El muelle es el de U-GALEANO compilado en memoria.
 import {
-  GROUND_MAPS, groundTextureFile, OPEN_WORLD_DENSITY, parseKtx2Header, skyEstimate, TERRAIN_APRON, TIER_BUDGETS, WORLD_TIERS,
+  DEFAULT_LOOK, GROUND_MAPS, groundTextureFile, OPEN_WORLD_DENSITY, parseKtx2Header, skyEstimate, TERRAIN_APRON, TIER_BUDGETS, WORLD_TIERS,
   type WorldTier,
 } from "@lg/art";
 import { Diorama as DioramaSchema, estimarPresupuestoDiorama } from "@lg/content-schema";
@@ -23,7 +23,7 @@ import { createNameLabel } from "../src/world/labels/labelSprite";
 import { auditMaterials, materialKind } from "../src/world/materials/registry";
 import { tiltShiftOn } from "../src/world/post/tiltShift";
 import { actorY, worldGround } from "../src/world/runtime";
-import { fogFor, OPEN_FOG_COLOR, SKY_PALETTE } from "../src/world/sky/palette";
+import { fogFor } from "../src/world/sky/palette";
 import { buildSky, domeColor } from "../src/world/sky/sky";
 import { buildTerrain } from "../src/world/terrain/buildTerrain";
 import { groundMapsFor, groundMapUrl } from "../src/world/terrain/groundMaterial";
@@ -41,7 +41,7 @@ const muelleLayout = (): DioramaLayout => {
 const muelle = (): DioramaRuntime => prepareDiorama(muelleLayout());
 const terrainOf = (tier: WorldTier) => {
   const d = muelle();
-  return { d, t: buildTerrain({ bounds: d.bounds, ground: d.ground, tier }) };
+  return { d, t: buildTerrain({ bounds: d.bounds, ground: d.ground, tier, look: DEFAULT_LOOK }) };
 };
 
 describe("AC36: relieve de 2 a 8 m, pendiente de 25° como mucho, de 8° como mucho en los llanos", () => {
@@ -83,7 +83,7 @@ describe("AC32: un camino de 3 m en low no tiene huecos", () => {
     const base = muelleLayout();
     const layout: DioramaLayout = { ...base, caminos: [{ puntos: [[-50, -20], [-20, -5], [10, -10], [40, 10]], ancho: 3 }] };
     const d = prepareDiorama(layout);
-    const t = buildTerrain({ bounds: d.bounds, ground: d.ground, tier: "low" });
+    const t = buildTerrain({ bounds: d.bounds, ground: d.ground, tier: "low", look: DEFAULT_LOOK });
     const road = d.ground.paths[0]?.line ?? [];
     const near: number[] = [];
     for (let k = 0; k < t.dirt.length; k++) {
@@ -164,17 +164,21 @@ describe("AC37: actores, etiquetas, props y árboles sobre `heightAt`; el clic d
   });
 });
 
-describe("AC38: cielo de degradé cuyo horizonte es la niebla", () => {
+// LK6 (open-world-3d T7b): AC38 es una regla de DEFAULT_LOOK (el horizonte del cielo es la niebla), no del motor; corre
+// sobre DEFAULT_LOOK explícito. Un look de otro universo puede tener otro cielo.
+describe("AC38 (DEFAULT_LOOK): cielo de degradé cuyo horizonte es la niebla", () => {
+  const SKY = DEFAULT_LOOK.sky;
   test("cénit, bruma y horizonte distintos; el horizonte es el token de la niebla; la cúpula pinta horizonte abajo", () => {
-    expect(new Set([SKY_PALETTE.zenith, SKY_PALETTE.haze, SKY_PALETTE.horizon]).size).toBe(3);
-    expect(OPEN_FOG_COLOR).toBe(SKY_PALETTE.horizon);
-    expect(domeColor(-0.5).getHex()).toBe(new Color(OPEN_FOG_COLOR).getHex());
-    expect(domeColor(1).getHex()).toBe(new Color(SKY_PALETTE.zenith).getHex());
+    expect(new Set([SKY.zenith, SKY.haze, SKY.horizon]).size).toBe(3);
+    expect(DEFAULT_LOOK.fog.color).toBe(SKY.horizon);
+    expect(DEFAULT_LOOK.background).toBe(SKY.horizon);
+    expect(domeColor(SKY, -0.5).getHex()).toBe(new Color(DEFAULT_LOOK.fog.color).getHex());
+    expect(domeColor(SKY, 1).getHex()).toBe(new Color(SKY.zenith).getHex());
   });
 
   for (const tier of WORLD_TIERS) {
     test(`${tier}: llamadas del cielo (1 en low, 2 si hay nubes), clases cielo y nube, sin profundidad ni niebla`, () => {
-      const sky = buildSky(tier);
+      const sky = buildSky(tier, DEFAULT_LOOK);
       const e = estimateBudget([sky.group]);
       expect(e).toEqual(skyEstimate(tier));
       expect(e.drawCalls).toBe(tier === "low" ? 1 : 2);
@@ -240,7 +244,7 @@ describe("AC35: en el mapa entero (t = 1) el suelo que ve la cámara no pasa lo 
 
   test("teeth: sin el delantal (solo la extensión de la falda), 21:9 y 9:19,5 en yaw diagonal sí caen fuera", () => {
     const d = muelle();
-    const t = buildTerrain({ bounds: d.bounds, ground: d.ground, tier: "low" });
+    const t = buildTerrain({ bounds: d.bounds, ground: d.ground, tier: "low", look: DEFAULT_LOOK });
     const cx = (d.bounds.minX + d.bounds.maxX) / 2;
     const cz = (d.bounds.minZ + d.bounds.maxZ) / 2;
     let groundMin = Infinity;
@@ -277,7 +281,7 @@ describe("AC35: en el mapa entero (t = 1) el suelo que ve la cámara no pasa lo 
 describe("AC40: la niebla sigue al zoom y al tier", () => {
   test("near < far <= plano lejano, low la más corta en todo t, y el color a `far` es el de la niebla", () => {
     for (const t of [0, 0.5, 1]) {
-      const fogs = WORLD_TIERS.map((tier) => fogFor(OPEN_WORLD_DENSITY[tier].fogScale, t));
+      const fogs = WORLD_TIERS.map((tier) => fogFor(DEFAULT_LOOK.fog.range, OPEN_WORLD_DENSITY[tier].fogScale, t));
       for (const f of fogs) {
         expect(f.near).toBeLessThan(f.far);
         expect(f.far).toBeLessThanOrEqual(farPlaneFor(t));
@@ -292,7 +296,7 @@ describe("AC40: la niebla sigue al zoom y al tier", () => {
   // QA M3 (hallazgo 4): antes la prueba recalculaba el smoothstep de la niebla adentro de la prueba. Ahora fija el
   // camino real: el suelo es un MeshStandardMaterial con niebla, su sombreador conserva `fog_fragment` de three, que
   // mezcla al `fogColor` con smoothstep(fogNear, fogFar, profundidad) (factor 1 en `far`), y el color de la niebla de la
-  // escena es OPEN_FOG_COLOR, el horizonte de la cúpula.
+  // escena es la del look (DEFAULT_LOOK: el horizonte de la cúpula, AC38).
   test("la loma lejana en `far` toma el color de la niebla: el suelo pasa por fog_fragment de three con fog: true", () => {
     expect(ShaderChunk.fog_fragment).toMatch(/smoothstep\(\s*fogNear,\s*fogFar,\s*vFogDepth\s*\)/);
     expect(ShaderChunk.fog_fragment).toMatch(/mix\(\s*gl_FragColor\.rgb,\s*fogColor,\s*fogFactor\s*\)/);
@@ -304,7 +308,8 @@ describe("AC40: la niebla sigue al zoom y al tier", () => {
     expect(sh.fragmentShader).toContain("#include <fog_fragment>");
     expect(sh.vertexShader).toContain("#include <fog_vertex>");
     scene.dispose();
-    expect(new Color(OPEN_FOG_COLOR).getHex()).toBe(domeColor(0).getHex());
+    expect(scene.look).toBe(DEFAULT_LOOK);
+    expect(new Color(DEFAULT_LOOK.fog.color).getHex()).toBe(domeColor(DEFAULT_LOOK.sky, 0).getHex());
   });
 
   test("D-823: el tilt-shift no va en thirdPerson", () => {
@@ -328,21 +333,21 @@ describe("AC42: los mapas del suelo son .ktx2 y la memoria de texturas sale de s
       expect(h.width).toBe(file.endsWith("-diff.ktx2") ? 1024 : 512);
       expect(h.levels).toBe(file.endsWith("-diff.ktx2") ? 11 : 10);
     }
-    expect(groundMapsFor("low").every((m) => m.kind === "diff")).toBe(true);
-    expect(groundMapsFor("high").length).toBe(10);
+    expect(groundMapsFor("low", DEFAULT_LOOK).every((m) => m.kind === "diff")).toBe(true);
+    expect(groundMapsFor("high", DEFAULT_LOOK).length).toBe(10);
     expect(groundMapUrl("leafy_grass", "diff", "/")).toBe("/textures/leafy-grass-diff.ktx2");
   });
 
   test("estimateTextureMemory cuenta todo el mundo abierto por tier dentro de 24 / 48 / 96 MB", () => {
     for (const tier of WORLD_TIERS) {
       const labels = [{ width: 300, height: 58 }, { width: 300, height: 58 }, { width: 300, height: 58 }];
-      const e = estimateTextureMemory({ labels, bubbles: 3, shadowMap: tier === "high", openWorld: { tier, headers } });
+      const e = estimateTextureMemory({ labels, bubbles: 3, shadowMap: tier === "high", openWorld: { tier, look: DEFAULT_LOOK, headers } });
       expect(e.mb, `${tier}: ${JSON.stringify(e.parts)}`).toBeLessThanOrEqual(TIER_BUDGETS[tier].maxTextureMb);
       for (const id of ["suelo/leafy_grass-diff", "impostores", "pasto/atlas", "pasto/altura"]) expect(e.parts[id], id).toBeGreaterThan(0);
     }
     // Con cabecera, el difuso (ETC1S) cuenta los bytes de bloque BC7 de sus 11 niveles: el destino real de KTX2Loader con
     // BPTC (cambio registrado M3, antes BC1 de 8 bytes; QA AC42).
-    const diff = openWorldTextureParts("low", headers)["suelo/leafy_grass-diff"] as number;
+    const diff = openWorldTextureParts("low", DEFAULT_LOOK, headers)["suelo/leafy_grass-diff"] as number;
     let bc7 = 0;
     for (let l = 0; l < 11; l++) bc7 += Math.ceil(Math.max(1, 1024 >> l) / 4) ** 2 * 16;
     expect(diff).toBe(bc7);

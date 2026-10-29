@@ -11,7 +11,7 @@
 // de esa densidad; `low` dentro de 60 llamadas y 25k triángulos con todo a la vista (el zoom más lejano, 160 m).
 import {
   BODY_IDS, CODE_PROP_ASSETS, codePropTriangles, DETAIL_TRIANGLES, HAIR_STYLES, HATS, headTriangles, insidePolygon, isCodeProp,
-  PLAYER_LOOK, polylineDistance, SCARVES, TIER_BUDGETS, tokenRgb, WORLD_TIERS, type CodePropAsset, type SceneDensity,
+  PAINTED_LOOK, PLAYER_LOOK, polylineDistance, SCARVES, TIER_BUDGETS, tokenRgb, WORLD_TIERS, type CodePropAsset, type SceneDensity,
 } from "@lg/art";
 import { Diorama as DioramaSchema, estimarPresupuestoDiorama, PARTE_SOMBRA, type Diorama as DioramaSource } from "@lg/content-schema";
 import {
@@ -135,7 +135,7 @@ describe("conectividad (03 §6.4.5): cada NPC se alcanza desde el spawn por pasi
 
 describe("terreno de la maqueta", () => {
   const d = testDiorama();
-  const t = buildTerrain({ bounds: d.bounds, ground: d.ground });
+  const t = buildTerrain({ bounds: d.bounds, ground: d.ground, look: PAINTED_LOOK });
 
   test("toda celda caminable tiene altura 0; el estanque está bajo 0 y sus celdas no se caminan", () => {
     for (let r = 0; r < d.grid.rows; r++) {
@@ -163,8 +163,8 @@ describe("terreno de la maqueta", () => {
     const bounds = { minX: -8, maxX: 8, minZ: -8, maxZ: 8 };
     const con = prepareDiorama({ id: "c", bounds, caminos: [{ puntos: [[0, 0], [60, 0]], ancho: 3 }] });
     const sin = prepareDiorama({ id: "s", bounds, caminos: [] });
-    const hCon = buildTerrain({ bounds, ground: con.ground }).heightAt(30, 0);
-    const hSin = buildTerrain({ bounds, ground: sin.ground }).heightAt(30, 0);
+    const hCon = buildTerrain({ bounds, ground: con.ground, look: PAINTED_LOOK }).heightAt(30, 0);
+    const hSin = buildTerrain({ bounds, ground: sin.ground, look: PAINTED_LOOK }).heightAt(30, 0);
     expect(hSin).toBeGreaterThan(1);
     // Lejos la malla es gruesa: el punto interpola vértices de los costados del camino, por eso no da 0 justo.
     expect(Math.abs(hCon), `${hCon} contra ${hSin}`).toBeLessThan(0.25 * hSin);
@@ -182,14 +182,14 @@ describe("terreno de la maqueta", () => {
 
   test("la paleta por zona cambia el color; determinístico", () => {
     const g2 = { ...d.ground, palette: { pasto: "copa" } };
-    expect(buildTerrain({ bounds: d.bounds, ground: g2 }).colors).not.toEqual(t.colors);
-    expect(buildTerrain({ bounds: d.bounds, ground: d.ground }).colors).toEqual(t.colors);
+    expect(buildTerrain({ bounds: d.bounds, ground: g2, look: PAINTED_LOOK }).colors).not.toEqual(t.colors);
+    expect(buildTerrain({ bounds: d.bounds, ground: d.ground, look: PAINTED_LOOK }).colors).toEqual(t.colors);
   });
 
   test("un río hunde el terreno a lo largo de la curva y se dibuja con agua", () => {
     const bounds = { minX: -8, maxX: 8, minZ: -8, maxZ: 8 };
     const r = prepareDiorama({ id: "r", bounds, rio: [{ puntos: [[-8, 0], [0, 1], [8, 0]], ancho: 2 }] });
-    expect(buildTerrain({ bounds, ground: r.ground }).heightAt(0, 1)).toBeLessThan(-0.3);
+    expect(buildTerrain({ bounds, ground: r.ground, look: PAINTED_LOOK }).heightAt(0, 1)).toBeLessThan(-0.3);
     expect(buildDioramaScene(r).root.getObjectByName("agua")).toBeDefined();
     expect(buildDioramaScene(prepareDiorama({ id: "seco", bounds })).root.getObjectByName("agua")).toBeUndefined();
   });

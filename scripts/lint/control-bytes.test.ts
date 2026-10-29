@@ -10,7 +10,11 @@ import { describe, expect, test } from "vitest";
 const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const ZONES = ["apps", "packages", "scripts", "tooling"];
 const TEXT = /\.(ts|tsx|js|mjs|cjs|json|jsonl|ya?ml|md|css|html|glsl|patch|txt|svg|snap)$|(^|\/)LICENSE$/;
-const SKIP = /(^|\/)(node_modules|dist|\.vitest|coverage)(\/|$)/;
+// Cambio registrado (open-world-3d T7b): fuera también apps/web/public/content/, la salida de build:content (en
+// .gitignore, no es fuente). Los tests de contenido la reescriben en paralelo y el recorrido la leía a medio borrar
+// (ENOENT en habilidades.json, verify en rojo 1 de 4 corridas). T7b fix 1 (QA): lo mismo con apps/server/generated/
+// (en .gitignore, salida generada que la suite reescribe en paralelo; ENOENT en generated/content/).
+const SKIP = /(^|\/)(node_modules|dist|\.vitest|coverage)(\/|$)|^apps\/web\/public\/content(\/|$)|^apps\/server\/generated(\/|$)/;
 const ALLOWED = new Set([0x09, 0x0a, 0x0d]);
 
 const textFiles = (): string[] => {

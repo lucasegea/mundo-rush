@@ -164,6 +164,19 @@ describe("AC45: culling por instancia y portón del recorrido", () => {
     expect(runs() - r0).toBe(2);
   });
 
+  test("un giro de 4° sostenido recorre una vez, en el segundo cuadro quieto (desviación registrada de AC45, T7b)", () => {
+    // QA T7 (pendiente 1): desde el recorrido al asentarse, "4° de giro 0" vale para un cuadro suelto; sostenido, el
+    // segundo cuadro quieto en el lugar nuevo recorre una vez (está quieto y no es donde se recorrió) y después nunca.
+    const gate = new CullGate();
+    const s = { x: 0, z: 0, yawDeg: 10, pitchDeg: -30, distance: 12 };
+    gate.shouldUpdate(s);
+    const r0 = gate.runs;
+    expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(false); // primer cuadro a 4°: sin recorrer (bajo CULL_TURN_DEG)
+    expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(true); // segundo cuadro quieto: el recorrido al asentarse
+    for (let i = 0; i < 60; i++) expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(false);
+    expect(gate.runs - r0).toBe(1);
+  });
+
   test("al asentarse la cámara por menos del umbral, recorre una sola vez más (pose fija, recorrido fijo)", () => {
     // Fix 1 de QA (hallazgo 5): la cámara que se asienta 3° y 0,5 m sin cruzar umbrales queda con un recorrido viejo.
     expect([CULL_REST_M, CULL_REST_DEG]).toEqual([1e-3, 0.02]);

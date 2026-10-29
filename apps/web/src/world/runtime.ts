@@ -31,3 +31,8 @@ export const cameraLook: { x: number; y: number; z: number; distance: number; t:
  * pantalla). Mientras no hay gobernador montado (`active` false) se anima a todos.
  */
 export const animatedActors = { active: false, ids: new Set<string>() };
+/**
+ * Open-world-3d T7b (LK6): el id del look del diorama montado (lo pone GameCanvas). La caminata del navegador lo lee para
+ * correr AC39 y AC41 contra DEFAULT_LOOK explícito (son reglas de ese look, no del motor).
+ */
+export const activeLook: { id: string | null } = { id: null };

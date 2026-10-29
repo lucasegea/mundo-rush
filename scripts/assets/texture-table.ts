@@ -7,6 +7,9 @@
 // en ETC1S, 3 sin normales de roca en medium, 4 sin normales del suelo en medium, 5 parar y preguntar) y dice el primer
 // paso con el que todo entra: ese es el formato y tamaño elegido en `@lg/art` textures.ts. Con los .ktx2 ya versionados
 // usa sus bytes y su cabecera reales en vez de la estimación.
+// Open-world-3d T7b (D-841): el inventario es el de un look (`worldTextures(look)`) y la descarga suma sus árboles y rocas
+// (`natureModelFiles(look)`); run() imprime la tabla de cada look del catálogo WORLD_LOOKS y cada uno tiene que entrar
+// solo en 24 / 48 / 96 MB y en la descarga de 6 MB.
 //
 //   node scripts/assets/texture-table.ts [--report <archivo.md>]   (npm run assets:texture-table)
 //
@@ -15,8 +18,8 @@ import { existsSync, readFileSync, appendFileSync, readdirSync, statSync } from 
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
-  estimatedFileBytes, gpuBytes, M7_TEXTURE_PX, mipLevels, OPEN_WORLD_TEXTURES, parseKtx2Header, ktx2GpuBytes,
-  TIER_BUDGETS, WORLD_TIERS, type TextureFormat, type WorldTexture, type WorldTier,
+  estimatedFileBytes, gpuBytes, M7_TEXTURE_PX, mipLevels, natureModelFiles, parseKtx2Header, ktx2GpuBytes, ROCK_MODELS_DIR,
+  TIER_BUDGETS, TREES_DIR, WORLD_LOOKS, WORLD_TIERS, worldTextures, type TextureFormat, type WorldLook, type WorldTexture, type WorldTier,
 } from "@lg/art";
 import { loadBudgets } from "../budgets/bundle-size.ts";
 import { DECODIFICADOR_BASIS } from "./inspect-budgets.ts";
@@ -48,7 +51,11 @@ const dirSize = (rel: string): number => {
   return readdirSync(abs).reduce((n, f) => n + statSync(join(abs, f)).size, 0);
 };
 
-export function otherDownloads(): OtherDownload[] {
+/** Los .glb de la naturaleza del look que caen en `dir` (árboles o rocas), sumados. */
+const natureBytes = (look: WorldLook, dir: string): number =>
+  natureModelFiles(look).filter((f) => f.startsWith(`${dir}/`)).reduce((n, f) => n + (fileSize(f) ?? 0), 0);
+
+export function otherDownloads(look: WorldLook): OtherDownload[] {
   // T7: el transcodificador servido es el de DECODIFICADOR_BASIS (apps/web/public/decoders/), el mismo que cuenta
   // inspect-budgets; el de three en node_modules queda como respaldo si todavía no está copiado.
   const transcoder = (pub: string): OtherDownload => {
@@ -60,8 +67,8 @@ export function otherDownloads(): OtherDownload[] {
     { id: "decoders/meshopt_decoder.module.js", bytes: fileSize("apps/web/public/decoders/meshopt_decoder.module.js") ?? 0, measured: true },
     ...DECODIFICADOR_BASIS.map(transcoder),
     { id: "models/kaykit-adventurers-1 (personajes m7, cota de arriba)", bytes: dirSize("apps/web/public/models/kaykit-adventurers-1"), measured: true },
-    { id: "models/generated/trees (T7, 7 especies × completo y liviano)", bytes: dirSize("apps/web/public/models/generated/trees"), measured: true },
-    { id: "models/polyhaven (T7, 4 rocas × cerca y lejos)", bytes: dirSize("apps/web/public/models/polyhaven"), measured: true },
+    { id: `models/generated/trees (T7, ${look.vegetation.species.length} especies × completo y liviano)`, bytes: natureBytes(look, TREES_DIR), measured: true },
+    { id: `models/polyhaven (T7, ${look.vegetation.rockScans.length} rocas × cerca y lejos)`, bytes: natureBytes(look, ROCK_MODELS_DIR), measured: true },
     { id: "models/quaternius-character-animated (personaje del mundo abierto, T7)", bytes: dirSize("apps/web/public/models/quaternius-character-animated"), measured: true },
   ];
 }
@@ -138,11 +145,14 @@ const kb = (b: number): string => `${Math.round(b / 1024)} KB`;
 // M3 (QA, AC42/AC74): ETC1S cuenta en BC7 como UASTC (`BASIS_TARGET`: KTX2Loader elige BPTC antes que DXT).
 const fmt = (f: TextureFormat): string => (f === "etc1s" ? "ETC1S→BC7" : f === "uastc" ? "UASTC→BC7" : f.toUpperCase());
 
-export function renderTable(chosenStep: number, rows: readonly { step: number; label: string; t: TierTotals }[], others: readonly OtherDownload[], capMb: number): string {
+export function renderTable(
+  chosenStep: number, rows: readonly { step: number; label: string; t: TierTotals }[], others: readonly OtherDownload[], capMb: number,
+  inv: readonly WorldTexture[], lookId: string,
+): string {
   const out: string[] = [];
-  out.push(`### Texturas del mundo abierto por tier (T6 paso 0, D-832, AC74)`, "");
+  out.push(`### Texturas del mundo abierto por tier, look \`${lookId}\` (T6 paso 0, D-832, AC74; T7b D-841)`, "");
   out.push("| Textura | Tarea | px | mips | Formato candidato: GPU (BC) / archivo | Elegido | low / medium / high |", "|---|---|---|---|---|---|---|");
-  for (const t of OPEN_WORLD_TEXTURES) {
+  for (const t of inv) {
     // Los candidatos se miden al tamaño del mockup V6 (antes de cualquier recorte); el elegido, al de @lg/art.
     const v6size = { ...t, width: t.v6Px ?? t.width, height: t.v6Px ?? t.height };
     const cands = t.candidates.map((f) => `${fmt(f)}: ${kb(gpuBytes(v6size, f))} / ${kb(estimatedFileBytes(v6size, f))}`).join("; ");
@@ -166,25 +176,33 @@ export function renderTable(chosenStep: number, rows: readonly { step: number; l
   return out.join("\n");
 }
 
-/** Los totales de cada paso y el primero que entra (-1 si ninguno). */
-export function evaluate(others: readonly OtherDownload[], capMb: number): { rows: { step: number; label: string; t: TierTotals }[]; chosen: number } {
-  const rows = CUT_STEPS.map((s) => ({ step: s.step, label: s.label, t: totals(OPEN_WORLD_TEXTURES.map(s.apply), others, capMb) }));
+/** Los totales de cada paso y el primero que entra (-1 si ninguno), sobre el inventario de un look. */
+export function evaluate(
+  others: readonly OtherDownload[], capMb: number, inv: readonly WorldTexture[],
+): { rows: { step: number; label: string; t: TierTotals }[]; chosen: number } {
+  const rows = CUT_STEPS.map((s) => ({ step: s.step, label: s.label, t: totals(inv.map(s.apply), others, capMb) }));
   return { rows, chosen: rows.find((r) => r.t.fits)?.step ?? -1 };
 }
 
 export function run(argv: readonly string[] = process.argv.slice(2), log: (s: string) => void = console.log): number {
   const capMb = loadBudgets().assets_muelle_mb;
-  const others = otherDownloads();
-  const { rows, chosen } = evaluate(others, capMb);
-  const md = renderTable(chosen, rows, others, capMb);
-  log(md);
-  // Lo elegido en @lg/art tiene que ser el paso que salió (sin esto, la tabla y el código podrían discrepar).
-  const current = totals(OPEN_WORLD_TEXTURES, others, capMb);
-  log(`
-Inventario versionado (@lg/art): GPU ${WORLD_TIERS.map((t) => `${t} ${current.gpuMb[t].toFixed(1)} MB`).join(", ")}; descarga high ${current.downloadMb.toFixed(2)} MB; ${current.fits ? "entra" : "NO ENTRA"}.`);
-  const i = argv.indexOf("--report");
-  if (i >= 0 && argv[i + 1]) appendFileSync(resolve(argv[i + 1] as string), `\n${md}\n`);
-  return chosen >= 0 && current.fits ? 0 : 1;
+  let code = 0;
+  for (const look of Object.values(WORLD_LOOKS)) {
+    const inv = worldTextures(look);
+    const others = otherDownloads(look);
+    const { rows, chosen } = evaluate(others, capMb, inv);
+    const md = renderTable(chosen, rows, others, capMb, inv, look.id);
+    log(md);
+    // Lo elegido en @lg/art tiene que ser el paso que salió (sin esto, la tabla y el código podrían discrepar).
+    const current = totals(inv, others, capMb);
+    log(`
+Inventario versionado (@lg/art), look ${look.id}: GPU ${WORLD_TIERS.map((t) => `${t} ${current.gpuMb[t].toFixed(1)} MB`).join(", ")}; descarga high ${current.downloadMb.toFixed(2)} MB; ${current.fits ? "entra" : "NO ENTRA"}.
+`);
+    const i = argv.indexOf("--report");
+    if (i >= 0 && argv[i + 1]) appendFileSync(resolve(argv[i + 1] as string), `\n${md}\n`);
+    if (!(chosen >= 0 && current.fits)) code = 1;
+  }
+  return code;
 }
 
 const invocado = process.argv[1];

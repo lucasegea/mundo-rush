@@ -5,20 +5,22 @@
 // sombra sigue cada cuadro a la distancia ya suavizada de la cámara; desde open-world-3d T5 la niebla (la de la escena y
 // la propia del agua) sigue al t de zoom (PD-5).
 // Plan estetica-c M6: `fogScale` acorta la niebla por tier (la "distancia de dibujo" corta de `low`).
+// Open-world-3d T7b (D-839): la luz (sol, hemisférica) y el rango de la niebla salen del look del diorama (`look`).
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Fog, type DirectionalLight } from "three";
+import type { WorldLook } from "@lg/art";
 import { viewScale } from "../camera/rig";
-import { zoomPose } from "../camera/zoom";
 import { cameraLook } from "../runtime";
+import { fogFor } from "../sky/palette";
 import { setWaterFog, waterMaterial } from "../water/waterMaterial";
-import { HEMI, SUN, SUN_SHADOW, sunDirection, sunShadowFor } from "./params";
+import { SUN_SHADOW, sunDirection, sunShadowFor } from "./params";
 
 export type ShadowMode = "none" | "blob" | "directional";
 
-const DIR = sunDirection();
-
-export function Lighting({ shadows, fogScale = 1 }: { shadows: ShadowMode; fogScale?: number }) {
+export function Lighting({ shadows, look, fogScale = 1 }: { shadows: ShadowMode; look: WorldLook; fogScale?: number }) {
+  const { sun: SUN, hemi: HEMI } = look.light;
+  const DIR = useMemo(() => sunDirection(SUN.elevationDeg, SUN.azimuthDeg), [SUN.elevationDeg, SUN.azimuthDeg]);
   const sun = useRef<DirectionalLight>(null);
   const lastScale = useRef(0);
   const lastFog = useRef({ near: 0, far: 0 });
@@ -51,18 +53,18 @@ export function Lighting({ shadows, fogScale = 1 }: { shadows: ShadowMode; fogSc
       sc.far = box.far;
       sc.updateProjectionMatrix();
     }
-    // Open-world-3d T5 (PD-5): la niebla sigue al t de zoom ya suavizado (de 45-250 m de cerca a 520-1.500 m con el
-    // mapa entero), con la escala del tier: `fogFor(scale, t)` de world/sky (open-world-3d T6, AC40) vía zoomPose.
-    const pose = zoomPose(cameraLook.t, 1, 0, fogScale);
-    const near = Math.round(pose.fogNear);
-    const far = Math.round(pose.fogFar);
+    // Open-world-3d T5 (PD-5): la niebla sigue al t de zoom ya suavizado (con DEFAULT_LOOK, de 45-250 m de cerca a
+    // 520-1.500 m con el mapa entero), con la escala del tier: `fogFor` de world/sky (AC40) con el rango del look.
+    const fog = fogFor(look.fog.range, fogScale, cameraLook.t);
+    const near = Math.round(fog.near);
+    const far = Math.round(fog.far);
     if (near === lastFog.current.near && far === lastFog.current.far) return;
     lastFog.current = { near, far };
     if (scene.fog instanceof Fog) {
       scene.fog.near = near;
       scene.fog.far = far;
     }
-    setWaterFog(waterMaterial(), near, far);
+    setWaterFog(waterMaterial(look), near, far);
   });
   const h = SUN_SHADOW.half;
   return (

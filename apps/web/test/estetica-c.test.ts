@@ -21,9 +21,13 @@ import {
 import { buildDioramaScene } from "../src/world/dioramas/scene";
 import { LABEL_HIDE_DISTANCE, labelEntries, LABEL_STYLES, labelVisibleAt } from "../src/world/labels/labels";
 import { createNameLabel } from "../src/world/labels/labelSprite";
-import { SUN, HEMI, FOG, TONE, BACKGROUND, fogFor, SUN_SHADOW, sunShadowFor } from "../src/world/lighting/params";
+// Cambio registrado (open-world-3d T7b, D-838/D-839): SUN, HEMI, FOG, TONE y BACKGROUND pasaron al look (`WorldLook.light`,
+// `fog`, `background` de @lg/art) y la `fogFor` de distancia de D-208 se fundió en la del zoom (world/sky/palette.ts).
+import { SUN_SHADOW, sunShadowFor } from "../src/world/lighting/params";
+import { fogFor } from "../src/world/sky/palette";
+import { zoomTAt } from "../src/world/camera/zoom";
 import { TILT_SHIFT_BASE, tiltShiftFor } from "../src/world/post/tiltShift";
-import { hexToLinear, insidePolygon, LABEL_CONTRAST_MIN, polylineDistance, LABEL_CONTRAST_PAIRS, maxDihedralDeg, MAX_DIHEDRAL_DEG, paintColors, PAINT_DEFAULTS, PALETTE, tokenRgb } from "@lg/art";
+import { DEFAULT_LOOK, DENSITY, PAINTED_LOOK, SCENE_DENSITIES, hexToLinear, insidePolygon, LABEL_CONTRAST_MIN, polylineDistance, LABEL_CONTRAST_PAIRS, maxDihedralDeg, MAX_DIHEDRAL_DEG, paintColors, PAINT_DEFAULTS, PALETTE, tokenRgb } from "@lg/art";
 import { auditMaterials, materialKind, tagMaterial, toonMaterial, WORLD_MATERIAL_KINDS } from "../src/world/materials/registry";
 import { BRUSH_MAX, BRUSH_MIN, BRUSH_SIZE, brushPixels, brushTexture, toonRamp, toonRampData, TOON_BANDS } from "../src/world/materials/toon";
 import { buildProp, PROP_BUILDERS } from "../src/world/props/builders";
@@ -83,7 +87,7 @@ describe("A1 cámara de lente largo (perspective3D)", () => {
 describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () => {
   test("para cada celda caminable, cada zoom y aspectos 16:9, 21:9, 4:3, 9:16 y 9:19,5, la huella cae dentro del terreno", () => {
     const d = testDiorama();
-    const { extent } = buildTerrain({ bounds: d.bounds, ground: d.ground });
+    const { extent } = buildTerrain({ bounds: d.bounds, ground: d.ground, look: PAINTED_LOOK });
     const { pitchDeg, yawDeg } = presetAngles("perspective3D");
     let checked = 0;
     for (const c of walkableCenters(d)) {
@@ -145,7 +149,7 @@ describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () =>
 
 describe("A3 terreno por alturas (test.yaml en el formato de la maqueta; plan estetica-c M7 retiró el adaptador de tiles)", () => {
   const d = testDiorama();
-  const t = buildTerrain({ bounds: d.bounds, ground: d.ground });
+  const t = buildTerrain({ bounds: d.bounds, ground: d.ground, look: PAINTED_LOOK });
 
   test("toda celda caminable tiene altura 0 en su centro; toda celda del estanque está por debajo de 0", () => {
     for (const c of walkableCenters(d)) expect(Math.abs(t.heightAt(c.x, c.z)), `${c.x},${c.z}`).toBeLessThanOrEqual(1e-6);
@@ -193,10 +197,10 @@ describe("A3 terreno por alturas (test.yaml en el formato de la maqueta; plan es
   });
 
   test("determinística con la misma semilla; otra semilla cambia el color", () => {
-    const again = buildTerrain({ bounds: d.bounds, ground: d.ground });
+    const again = buildTerrain({ bounds: d.bounds, ground: d.ground, look: PAINTED_LOOK });
     expect(again.positions).toEqual(t.positions);
     expect(again.colors).toEqual(t.colors);
-    expect(buildTerrain({ bounds: d.bounds, ground: d.ground, seed: 99 }).colors).not.toEqual(t.colors);
+    expect(buildTerrain({ bounds: d.bounds, ground: d.ground, seed: 99, look: PAINTED_LOOK }).colors).not.toEqual(t.colors);
   });
 });
 
@@ -408,11 +412,15 @@ describe("A12 etiquetas de nombre", () => {
 
 describe("A13/A14 paleta: una sola fuente de los hex", () => {
   test("luz, niebla y fondo de la propuesta C §5 salen de la paleta", () => {
-    expect(SUN).toMatchObject({ color: "#FFF1D6", intensity: 2.3, elevationDeg: 48, azimuthDeg: -30 });
-    expect(HEMI).toMatchObject({ sky: "#D6ECF2", ground: "#6E8B4A", intensity: 1.15 });
-    expect(FOG).toEqual({ color: "#F3E7CF", near: 34, far: 78 });
-    expect(TONE.exposure).toBe(1.05);
-    expect(BACKGROUND).toBe(PALETTE.bruma);
+    // Cambio registrado (T7b): los valores viven en los looks (los dos looks del catálogo comparten la luz de C §5). La
+    // niebla de 34 a 78 m (D-208) ya no existe: desde T5 la niebla es la del zoom, igual para todo diorama (AC40).
+    for (const look of [PAINTED_LOOK, DEFAULT_LOOK]) {
+      expect(look.light.sun).toMatchObject({ color: "#FFF1D6", intensity: 2.3, elevationDeg: 48, azimuthDeg: -30 });
+      expect(look.light.hemi).toMatchObject({ sky: "#D6ECF2", ground: "#6E8B4A", intensity: 1.15 });
+      expect(look.light.exposure).toBe(1.05);
+    }
+    expect(PAINTED_LOOK.fog.color).toBe("#F3E7CF");
+    expect(PAINTED_LOOK.background).toBe(PALETTE.bruma);
   });
 
   test("ningún archivo nuevo de world/ escribe un hex fuera de palette.ts", () => {
@@ -478,11 +486,14 @@ describe("A15 presupuesto estimado (medium)", () => {
 
 describe("agua (ítem 9)", () => {
   test("material propio de la clase agua, con niebla; con «reducir movimiento» los brillos quedan quietos", () => {
-    const m = waterMaterial();
+    const m = waterMaterial(PAINTED_LOOK);
     expect(materialKind(m)).toBe("agua");
-    // Niebla propia con los valores de la propuesta C §5 (los mismos que la escena).
-    expect(m.uniforms["uFogNear"]?.value).toBe(FOG.near);
-    expect(m.uniforms["uFogFar"]?.value).toBe(FOG.far);
+    // Niebla propia: la de la escena en t = 0. Cambio registrado (T7b): antes los 34/78 m de D-208, que la luz pisaba en
+    // el primer cuadro con la del zoom; ahora arranca con la del zoom del look (45/250 m), la que dibuja.
+    const fog0 = fogFor(PAINTED_LOOK.fog.range, 1, 0);
+    expect(m.uniforms["uFogNear"]?.value).toBe(fog0.near);
+    expect(m.uniforms["uFogFar"]?.value).toBe(fog0.far);
+    expect(m.uniforms["uFog"]?.value.getHexString()).toBe(PALETTE.bruma.slice(1).toLowerCase());
     const t0 = m.uniforms["uTime"]?.value as number;
     tickWater(m, 0.5, true);
     expect(m.uniforms["uTime"]?.value).toBe(t0);
@@ -503,31 +514,35 @@ describe("D-208 zoom lejano: niebla, sombra, tilt-shift, etiquetas y presupuesto
     expect(viewScale(160)).toBeCloseTo(160 / 30, 9);
   });
 
-  test("niebla: la de la propuesta de cerca (sin bruma nueva) y, de lejos, el jugador y la mitad de abajo nítidos", () => {
-    for (const d of [TWO_SHOT.distance, 22, 30]) expect(fogFor(viewScale(d))).toEqual({ near: FOG.near, far: FOG.far });
-    for (const dist of ZOOM_DISTANCES) {
-      const fog = fogFor(viewScale(dist));
+  // Cambio registrado (open-world-3d T7b, "los dos fogFor se funden en uno"): la niebla de distancia de D-208
+  // (`fogFor(viewScale(d))`, 34-78 m escalada) no tenía llamadas desde T5; la escena usa la del zoom con el rango del look.
+  // El test sigue pidiendo lo mismo de esa niebla, la que se dibuja: en cada paso de zoom del núcleo, con la escala de
+  // niebla de cada densidad y cada look del catálogo, el jugador nunca entra en la niebla y el rayo más largo al suelo
+  // queda a lo sumo con 60 % de bruma. La parte "34-78 m de cerca" y su teeth eran de la niebla fija de M1 y se van.
+  test("niebla: de cerca y de lejos el jugador y la mitad de abajo nítidos (la del zoom, para cada look)", () => {
+    const fit = zoomDistance(0);
+    for (const look of [PAINTED_LOOK, DEFAULT_LOOK]) for (const density of SCENE_DENSITIES) for (const dist of ZOOM_DISTANCES) {
+      const fog = fogFor(look.fog.range, DENSITY[density].fogScale, zoomTAt(dist, fit));
       expect(fog.far).toBeGreaterThan(fog.near);
       // El jugador (a `dist` de la cámara) nunca entra en la niebla.
-      expect(fog.near, `${dist} m`).toBeGreaterThan(dist);
+      expect(fog.near, `${look.id} ${density} ${dist} m`).toBeGreaterThan(dist);
       // El rayo más largo al suelo (arriba de la pantalla) no queda tapado del todo: a lo sumo 60 % de bruma.
       for (const aspect of ASPECTS) {
         const t = (longestRay(dist, aspect, pitchDeg) - fog.near) / (fog.far - fog.near);
-        expect(t, `${dist} m, ${aspect.toFixed(2)}`).toBeLessThan(0.6);
+        expect(t, `${look.id} ${density} ${dist} m, ${aspect.toFixed(2)}`).toBeLessThan(0.6);
       }
     }
-    // Teeth: con la niebla fija de M1, a 160 m todo el mapa quedaría bajo bruma completa.
-    expect(FOG.far).toBeLessThan(zoomDistance(0));
   });
 
   test("el agua sigue a la niebla de la escena", () => {
-    const m = waterMaterial();
-    const fog = fogFor(viewScale(160));
+    const m = waterMaterial(PAINTED_LOOK);
+    const fog = fogFor(PAINTED_LOOK.fog.range, 1, 1);
     setWaterFog(m, fog.near, fog.far);
     expect(m.uniforms["uFogNear"]?.value).toBe(fog.near);
     expect(m.uniforms["uFogFar"]?.value).toBe(fog.far);
-    setWaterFog(m, FOG.near, FOG.far);
-    expect(m.uniforms["uFogNear"]?.value).toBe(FOG.near);
+    const fog0 = fogFor(PAINTED_LOOK.fog.range, 1, 0);
+    setWaterFog(m, fog0.near, fog0.far);
+    expect(m.uniforms["uFogNear"]?.value).toBe(fog0.near);
   });
 
   test("caja de sombra: la de 44 m hasta 30 m; de lejos cubre la huella del frustum alrededor del jugador", () => {

@@ -3,14 +3,16 @@
 // cámara, sin escribir profundidad y sin niebla; y una sola malla de nubes (clase `nube`, el atlas del mockup V6: 3
 // cúmulos y 2 jirones en un canvas de 512 x 1280), ausente en `low`. Sin canvas 2D (tests), el atlas queda en blanco y
 // el resto igual. Las medidas (segmentos, cantidad de nubes) son las de @lg/art sky.ts, que cuenta el estimador.
+// Open-world-3d T7b (D-839): los colores de la cúpula y del atlas de nubes son del look (`WorldLook.sky`).
 import {
   BackSide, BufferGeometry, CanvasTexture, Color, DataTexture, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial,
   RGBAFormat, SphereGeometry, SRGBColorSpace, Vector3, type Texture,
 } from "three";
-import { OPEN_WORLD_DENSITY, RUNTIME_TEXTURE_PX, SKY_CLOUDS, SKY_DOME, type WorldTier } from "@lg/art";
+import { OPEN_WORLD_DENSITY, RUNTIME_TEXTURE_PX, SKY_CLOUDS, SKY_DOME, type CloudStop, type WorldLook, type WorldTier } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
 import { rng } from "../materials/rng";
-import { SKY_PALETTE } from "./palette";
+
+type SkyLook = WorldLook["sky"];
 
 const smooth = (a: number, b: number, x: number): number => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -24,21 +26,21 @@ const smooth = (a: number, b: number, x: number): number => {
  * horizonte; con anillos cada 15° y el cénit en el de 15°, a 7,6 % (los colores se interpolan entre anillos y la
  * luminancia la manda el verde, que casi no cambia entre celeste y bruma); con anillos cada 7,5° el azul llega antes.
  */
-export function domeColor(y: number): Color {
-  const h = new Color(SKY_PALETTE.horizon);
-  const m = new Color(SKY_PALETTE.haze);
-  const z = new Color(SKY_PALETTE.zenith);
+export function domeColor(sky: SkyLook, y: number): Color {
+  const h = new Color(sky.horizon);
+  const m = new Color(sky.haze);
+  const z = new Color(sky.zenith);
   if (y <= 0.02) return h;
   if (y < 0.12) return h.lerp(m, smooth(0.02, 0.12, y));
   return m.lerp(z, smooth(0.12, 0.26, y));
 }
 
-function buildDome(): Mesh {
+function buildDome(sky: SkyLook): Mesh {
   const g = new SphereGeometry(SKY_DOME.radius, SKY_DOME.widthSegments, SKY_DOME.heightSegments);
   const pos = g.getAttribute("position");
   const col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    const c = domeColor(pos.getY(i) / SKY_DOME.radius);
+    const c = domeColor(sky, pos.getY(i) / SKY_DOME.radius);
     col.set([c.r, c.g, c.b], i * 3);
   }
   g.setAttribute("color", new Float32BufferAttribute(col, 3));
@@ -51,22 +53,24 @@ function buildDome(): Mesh {
 
 type Ctx = CanvasRenderingContext2D;
 
-function cumulus(g: Ctx, oy: number, seed: number): void {
+const addStops = (gr: CanvasGradient, stops: readonly CloudStop[]): void => {
+  for (const [at, color] of stops) gr.addColorStop(at, color);
+};
+
+function cumulus(g: Ctx, oy: number, seed: number, stops: readonly CloudStop[]): void {
   const r = rng(seed);
   for (let k = 0; k < 26; k++) {
     const x = 70 + r() * 372;
     const y = oy + 120 + (r() - 0.5) * 60 - Math.sin(((x - 70) / 372) * Math.PI) * 50;
     const rad = 26 + r() * 46;
     const gr = g.createRadialGradient(x, y, 1, x, y, rad);
-    gr.addColorStop(0, "rgba(255,255,255,0.9)");
-    gr.addColorStop(0.6, "rgba(250,252,255,0.55)");
-    gr.addColorStop(1, "rgba(240,246,252,0)");
+    addStops(gr, stops);
     g.fillStyle = gr;
     g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
   }
 }
 
-function wisp(g: Ctx, oy: number, seed: number): void {
+function wisp(g: Ctx, oy: number, seed: number, stops: readonly CloudStop[]): void {
   const r = rng(seed);
   for (let k = 0; k < 5; k++) {
     const y = oy + 90 + r() * 80;
@@ -74,10 +78,7 @@ function wisp(g: Ctx, oy: number, seed: number): void {
     const len = 220 + r() * 250;
     const th = 5 + r() * 10;
     const gr = g.createLinearGradient(x0, 0, x0 + len, 0);
-    gr.addColorStop(0, "rgba(255,255,255,0)");
-    gr.addColorStop(0.3, "rgba(255,255,255,0.8)");
-    gr.addColorStop(0.7, "rgba(255,255,255,0.7)");
-    gr.addColorStop(1, "rgba(255,255,255,0)");
+    addStops(gr, stops);
     g.fillStyle = gr;
     g.beginPath();
     g.moveTo(x0, y);
@@ -88,7 +89,7 @@ function wisp(g: Ctx, oy: number, seed: number): void {
 }
 
 /** El atlas de nubes: 5 filas de 256 px (3 cúmulos, 2 jirones), dibujado una vez. */
-export function cloudAtlas(): Texture {
+export function cloudAtlas(clouds: SkyLook["clouds"]): Texture {
   const [w, h] = RUNTIME_TEXTURE_PX.cloudAtlas;
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
   const g = canvas?.getContext("2d") ?? null;
@@ -99,15 +100,15 @@ export function cloudAtlas(): Texture {
   }
   canvas.width = w;
   canvas.height = h;
-  [3, 8, 13].forEach((s, k) => cumulus(g, k * 256, s));
-  [5, 9].forEach((s, k) => wisp(g, (3 + k) * 256, s));
+  [3, 8, 13].forEach((s, k) => cumulus(g, k * 256, s, clouds.cumulus));
+  [5, 9].forEach((s, k) => wisp(g, (3 + k) * 256, s, clouds.wisp));
   const t = new CanvasTexture(canvas);
   t.colorSpace = SRGBColorSpace;
   return t;
 }
 
 /** Las nubes: un quad por nube, a SKY_CLOUDS.distance m, mirando al centro; una sola malla y un solo material. */
-function buildClouds(): Mesh {
+function buildClouds(clouds: SkyLook["clouds"]): Mesh {
   const r = rng(99);
   const items: { row: number; w: number; el: number }[] = [];
   for (let i = 0; i < SKY_CLOUDS.cumulus; i++) items.push({ row: i % 3, w: 150 + r() * 120, el: 9 + r() * 36 });
@@ -138,7 +139,7 @@ function buildClouds(): Mesh {
   g.setAttribute("position", new Float32BufferAttribute(pos, 3));
   g.setAttribute("uv", new Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
-  const mat = tagMaterial(new MeshBasicMaterial({ map: cloudAtlas(), transparent: true, depthWrite: false, fog: false, side: DoubleSide, opacity: 0.97 }), "nube");
+  const mat = tagMaterial(new MeshBasicMaterial({ map: cloudAtlas(clouds), transparent: true, depthWrite: false, fog: false, side: DoubleSide, opacity: clouds.opacity }), "nube");
   const m = new Mesh(g, mat);
   m.name = "nubes";
   m.renderOrder = -5;
@@ -155,12 +156,12 @@ export interface Sky {
   dispose(): void;
 }
 
-export function buildSky(tier: WorldTier): Sky {
+export function buildSky(tier: WorldTier, look: WorldLook): Sky {
   const group = new Group();
   group.name = "cielo";
-  const dome = buildDome();
+  const dome = buildDome(look.sky);
   group.add(dome);
-  const clouds = OPEN_WORLD_DENSITY[tier].clouds ? buildClouds() : null;
+  const clouds = OPEN_WORLD_DENSITY[tier].clouds ? buildClouds(look.sky.clouds) : null;
   if (clouds) group.add(clouds);
   return {
     group,

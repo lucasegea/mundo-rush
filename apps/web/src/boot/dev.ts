@@ -51,14 +51,16 @@ export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null
   const search = deps.search ?? globalThis.location?.search ?? "";
   const mount = deps.portraitsMount ?? globalThis.document?.body;
   if (new URLSearchParams(search).has("retratos") && mount) {
-    const [{ startPortraitPanel }, studio] = await Promise.all([import("../dev/portraits"), import("../world/portraits/studio")]);
+    // Open-world-3d T7b: el look de los retratos llega con import() como el estudio (fuera de la carga inicial del build).
+    const [{ startPortraitPanel }, studio, { PAINTED_LOOK }] = await Promise.all([import("../dev/portraits"), import("../world/portraits/studio"), import("@lg/art")]);
     // Plan estetica-c M5: las apariencias vienen del catálogo de contenido (boot ya lo cargó antes de este gancho).
     const looks = new Map(deps.store.getState().world.npcs.flatMap((n) => (n.look ? [[n.id, n.look] as const] : [])));
     stopPortraits = startPortraitPanel({
       ids: studio.portraitIds(looks),
       render: (id) => {
         const look = looks.get(id);
-        return look ? studio.renderPortrait(id, look) : Promise.reject(new Error(`retrato ${id}: sin apariencia en el catálogo`));
+        // Open-world-3d T7b: los retratos son del look C pintado (KayKit, cabeza por código), con su luz y su fondo.
+        return look ? studio.renderPortrait(id, look, PAINTED_LOOK) : Promise.reject(new Error(`retrato ${id}: sin apariencia en el catálogo`));
       },
       mount,
     });

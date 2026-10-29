@@ -26,8 +26,6 @@ interface Props {
   heightAt: ((x: number, z: number) => number) | null;
   /** Límites caminables del diorama: el mapa entero que encuadra t = 1. */
   bounds: Bounds | null;
-  /** Escala de niebla del tier (`fogScale` de DENSITY). */
-  fogScale: number;
 }
 
 type V3 = [number, number, number];
@@ -58,7 +56,7 @@ interface RigState {
 const lerp3 = (a: V3, b: V3, k: number): V3 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 const dist3 = (a: V3, b: V3): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
-export function CameraRig({ preset, motion, conversation, obstacles, heightAt, bounds, fogScale }: Props) {
+export function CameraRig({ preset, motion, conversation, obstacles, heightAt, bounds }: Props) {
   const cam = useRef<PerspCam>(null);
   const st = useRef<RigState | null>(null);
   const clip = useRef({ near: 0, far: 0, fov: 0 });
@@ -88,7 +86,7 @@ export function CameraRig({ preset, motion, conversation, obstacles, heightAt, b
     const first = !prev || !followTarget.ready;
     const logDist = first ? Math.log(wantDist) : approach(prev.logDist, Math.log(wantDist), delta, RATE.zoom, cut);
     const t = zoomTAt(Math.exp(logDist), fit);
-    const pose = zoomPose(t, fit, v.pitchDeg, fogScale);
+    const pose = zoomPose(t, fit, v.pitchDeg);
     const pitch = first ? pose.pitchDeg : approach(prev.pitch, pose.pitchDeg, delta, RATE.pitch, cut);
     const yaw = first || cut ? v.yawDeg : prev.yaw + shortestYawDelta(prev.yaw, v.yawDeg) * followAlpha(delta, RATE.yaw);
     const playerPivot: V3 = [followTarget.x, ground(followTarget.x, followTarget.z) + THIRD_PERSON_VIEW.targetHeight, followTarget.z];

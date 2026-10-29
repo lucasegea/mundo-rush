@@ -1,10 +1,13 @@
 // world/water/waterMaterial.ts — el agua con shader propio (propuesta C §7, plan estetica-c M1 ítem 9): bandas de
 // `agua` y `agua-honda` y brillos que corren, con la niebla y el tono incluidos (el shader no usa los de three). Una sola
-// instancia (clase `agua` del registro). Con "reducir movimiento" el tiempo no avanza y los brillos quedan quietos.
+// instancia por look (clase `agua` del registro). Con "reducir movimiento" el tiempo no avanza y los brillos quedan quietos.
+// Open-world-3d T7b (D-839, D-842): los colores (bandas, brillo, bruma propia) son tokens del look en su paleta, y la
+// niebla de partida es la del look en t = 0 (Lighting la mueve cada cuadro, antes del primer dibujo). Looks distintos
+// dan materiales distintos del MISMO sombreador: difieren solo en uniforms.
 import { Color, ShaderMaterial } from "three";
-import { PALETTE } from "@lg/art";
+import type { LookId, WorldLook } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
-import { FOG } from "../lighting/params";
+import { fogFor } from "../sky/palette";
 
 const VERT = /* glsl */ `
 varying vec2 vW;
@@ -45,25 +48,32 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-let water: ShaderMaterial | null = null;
+const waters = new Map<LookId, ShaderMaterial>();
 
-export function waterMaterial(): ShaderMaterial {
-  water ??= tagMaterial(
-    new ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uA: { value: new Color(PALETTE.agua) },
-        uB: { value: new Color(PALETTE["agua-honda"]) },
-        uH: { value: new Color(PALETTE.brillo) },
-        uFog: { value: new Color(PALETTE.bruma) },
-        uFogNear: { value: FOG.near },
-        uFogFar: { value: FOG.far },
-      },
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-    }),
-    "agua",
-  );
+/** El agua de un look (una instancia por look, creada la primera vez que se pide). */
+export function waterMaterial(look: WorldLook): ShaderMaterial {
+  let water = waters.get(look.id);
+  if (!water) {
+    const c = (token: keyof WorldLook["palette"]): Color => new Color(look.palette[token]);
+    const fog = fogFor(look.fog.range, 1, 0);
+    water = tagMaterial(
+      new ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uA: { value: c(look.water.shallow) },
+          uB: { value: c(look.water.deep) },
+          uH: { value: c(look.water.glint) },
+          uFog: { value: c(look.water.fog) },
+          uFogNear: { value: fog.near },
+          uFogFar: { value: fog.far },
+        },
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+      }),
+      "agua",
+    );
+    waters.set(look.id, water);
+  }
   return water;
 }
 

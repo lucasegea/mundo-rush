@@ -7,9 +7,11 @@
 // Open-world-3d T6 (D-819, D-823): con relieve, el clic del suelo cae en la malla (el selector de scene.ts), los
 // personajes, etiquetas, burbujas y sombras se apoyan en `heightAt`, el suelo baja sus mapas .ktx2 con el renderer y el
 // cielo sigue a la cámara.
+// Open-world-3d T7b (D-840): los personajes toman esqueleto y accesorios del look de la escena (`scene.look`); el
+// relieve (que hay selector del suelo) decide solo la forma del terreno: apoyo de actores, cielo y naturaleza.
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo } from "react";
-import type { SceneDensity } from "@lg/art";
+import type { SceneDensity, WorldLook } from "@lg/art";
 import type { DioramaRuntime } from "@lg/core";
 import { bridge, LOOK_DRAG_PX } from "../../state/bridge";
 import type { MapActor, SceneActivityView } from "../../state/selectors";
@@ -18,7 +20,6 @@ import { BlobShadows } from "../actors/BlobShadows";
 import { Character, type ActorPose } from "../actors/Character";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
 import { fallbackLook } from "../actors/looks";
-import { actorRig } from "../actors/rigs";
 import { Beacons } from "../labels/Beacons";
 import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
@@ -72,7 +73,9 @@ export function onGroundClick(e: { delta: number; point: { x: number; z: number 
 /** A menos de esto el NPC gira cabeza y cuerpo hacia el jugador (propuesta C §3). */
 const LOOK_AT_PLAYER_M = 6;
 
-function Npc({ actor, cut, activity, lod, openWorld }: { actor: MapActor; cut: boolean; activity: SceneActivityView; lod: SceneDensity; openWorld: boolean }) {
+function Npc({ actor, cut, activity, lod, cast, openWorld }: {
+  actor: MapActor; cut: boolean; activity: SceneActivityView; lod: SceneDensity; cast: WorldLook["characters"]; openWorld: boolean;
+}) {
   const pose = useMemo((): (() => ActorPose) => {
     return () => {
       const near = followTarget.ready && Math.hypot(followTarget.x - actor.x, followTarget.z - actor.z) < LOOK_AT_PLAYER_M;
@@ -95,15 +98,15 @@ function Npc({ actor, cut, activity, lod, openWorld }: { actor: MapActor; cut: b
       gesture={mine && activity.greet ? "saludar" : null}
       onSelect={onSelect}
       lod={lod}
-      // Open-world-3d T7 (AC47): en el mundo abierto, el personaje de Quaternius con la regla de distancia.
-      rig={actorRig(openWorld)}
+      // Open-world-3d T7b (D-840): el esqueleto es el del look; la regla de distancia (AC47) es del mundo abierto.
+      cast={cast}
       distanceRules={openWorld}
     />
   );
 }
 
-function WaterClock({ reduceMotion }: { reduceMotion: boolean }) {
-  useFrame((_, delta) => tickWater(waterMaterial(), delta, reduceMotion));
+function WaterClock({ look, reduceMotion }: { look: WorldLook; reduceMotion: boolean }) {
+  useFrame((_, delta) => tickWater(waterMaterial(look), delta, reduceMotion));
   return null;
 }
 
@@ -187,9 +190,9 @@ export function Diorama({
       <primitive object={scene.root} />
       {relief ? <OpenWorld scene={scene} still={cut || frozen} /> : null}
       <ModelProps slots={scene.models} />
-      <WaterClock reduceMotion={cut || frozen} />
+      <WaterClock look={scene.look} reduceMotion={cut || frozen} />
       <AnimationGovernor max={maxAnimated} only={animatedOnly} />
-      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} activity={activity} lod={density} openWorld={relief} />)}
+      {actors.map((a) => <Npc key={a.id} actor={a} cut={cut} activity={activity} lod={density} cast={scene.look.characters} openWorld={relief} />)}
       {labels.map((l) => {
         const a = actors.find((x) => x.id === l.id) as MapActor; // labelEntries sale de `actors`
         return <NameLabel key={l.id} name={l.name} highlighted={l.highlighted} x={a.x} y={labelAnchorY(heightAt, lift, a.x, a.z)} z={a.z} />;

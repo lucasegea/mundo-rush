@@ -14,12 +14,14 @@
 // llanos, con la regla suave de D-819) para el sombreador del suelo. `heightAt` interpola sobre los triángulos de la
 // malla (no bilineal, que queda para los dioramas sin relieve): lo que se dibuja es lo que se mide (actores, props,
 // cámara, pasto y el raycast del suelo).
+// Open-world-3d T7b (D-839): los colores salen de la paleta del look (`spec.look`): los papeles del terreno toman su token
+// del mismo nombre (o el del camino del look) y la `paleta` de cada diorama los re-apunta DENTRO de esa paleta.
 import type { Bounds, DioramaGround, WalkGrid } from "@lg/core";
 import {
   DENSITY, FINE_STEP as ART_FINE_STEP, HILL_MAX as ART_HILL_MAX, insidePolygon, noise2, OPEN_WORLD_DENSITY, pavingStoneCount,
   polygonEdgeDistance, polylineDistance, polylineNearest, reliefAt, TERRAIN_SEED as ART_TERRAIN_SEED,
-  TERRAIN_SKIRT as ART_TERRAIN_SKIRT, terrainExtent, terrainLines, tokenRgb, type PaletteToken, type ReliefPad, type Rgb,
-  type SceneDensity, type TerrainLod, type TerrainPaletteRole, type WorldTier,
+  TERRAIN_SKIRT as ART_TERRAIN_SKIRT, terrainExtent, terrainLines, hexToLinear, type PaletteToken, type ReliefPad, type Rgb,
+  type SceneDensity, type TerrainLod, type TerrainPaletteRole, type WorldLook, type WorldTier,
 } from "@lg/art";
 import { mixRgb, scaleRgb } from "./color";
 import { rng } from "../materials/rng";
@@ -46,6 +48,8 @@ export interface TerrainSpec {
   density?: SceneDensity;
   /** Open-world-3d T6: el tier del mundo abierto (paso del terreno de OPEN_WORLD_DENSITY si el suelo tiene relieve). */
   tier?: WorldTier;
+  /** Open-world-3d T7b: el look del diorama (su paleta, su camino y los colores del suelo del mundo abierto). */
+  look: Pick<WorldLook, "palette" | "road" | "ground">;
 }
 
 export interface Terrain {
@@ -212,11 +216,16 @@ function groundHeight(shape: TerrainShape, src: GroundSource, x: number, z: numb
 
 type Palette = Record<"pasto" | "luz" | "sombra" | "camino" | "borde" | "orilla" | "honda" | "piedra", Rgb>;
 
-function palette(overrides: Readonly<Record<string, string>> = {}): Palette {
-  const tone = (role: TerrainPaletteRole): Rgb => tokenRgb((overrides[role] ?? role) as PaletteToken);
+type TerrainLook = TerrainSpec["look"];
+
+/** Un token (o un hex suelto de la `paleta` del diorama) en lineal, en la paleta del look. */
+const lookRgb = (look: TerrainLook, v: string): Rgb => hexToLinear(v.startsWith("#") ? v : look.palette[v as PaletteToken]);
+
+function palette(look: TerrainLook, overrides: Readonly<Record<string, string>> = {}): Palette {
+  const tone = (role: TerrainPaletteRole, token: PaletteToken = role): Rgb => lookRgb(look, overrides[role] ?? token);
   return {
-    pasto: tone("pasto"), luz: tone("pasto-luz"), sombra: tone("pasto-sombra"), camino: tone("camino"),
-    borde: tone("tierra-borde"), orilla: tone("orilla"), honda: tone("agua-honda"), piedra: tone("piedra"),
+    pasto: tone("pasto"), luz: tone("pasto-luz"), sombra: tone("pasto-sombra"), camino: tone("camino", look.road.surface),
+    borde: tone("tierra-borde", look.road.border), orilla: tone("orilla"), honda: tone("agua-honda"), piedra: tone("piedra", look.road.paving),
   };
 }
 
@@ -243,10 +252,11 @@ function groundColor(p: Palette, shape: TerrainShape, src: GroundSource, x: numb
 }
 
 /** Los colores del suelo del mundo abierto (mockup V6 `buildTerrain`, con el alto y el alterno más verdes). */
-function openPalette(): Record<"bajo" | "alto" | "alterno" | "bosque" | "roca" | "rocaCalida", Rgb> {
+function openPalette(look: TerrainLook): Record<"bajo" | "alto" | "alterno" | "bosque" | "roca" | "rocaCalida", Rgb> {
+  const v = look.ground.vertex;
   return {
-    bajo: tokenRgb("suelo-bajo"), alto: tokenRgb("suelo-alto"), alterno: tokenRgb("suelo-alterno"),
-    bosque: tokenRgb("suelo-bosque"), roca: tokenRgb("roca"), rocaCalida: tokenRgb("roca-calida"),
+    bajo: lookRgb(look, v.low), alto: lookRgb(look, v.high), alterno: lookRgb(look, v.alternate),
+    bosque: lookRgb(look, v.forest), roca: lookRgb(look, v.rock), rocaCalida: lookRgb(look, v.rockWarm),
   };
 }
 
@@ -377,7 +387,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
   if (relief) {
     // Mundo abierto: el color y la tierra dependen de la pendiente (roca), así se pintan después de las normales.
     const normals = vertexNormals(positions, indices);
-    const op = openPalette();
+    const op = openPalette(spec.look);
     for (let k = 0; k < nx * nz; k++) {
       const x = positions[k * 3] as number;
       const z = positions[k * 3 + 2] as number;
@@ -386,7 +396,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
       dirt[k] = roadWeight(shape, x, z, step) * (1 - rockT * 0.8);
     }
   } else {
-    const p = palette(spec.ground.palette);
+    const p = palette(spec.look, spec.ground.palette);
     for (let k = 0; k < nx * nz; k++) {
       colors.set(groundColor(p, shape, src, positions[k * 3] as number, positions[k * 3 + 2] as number, heights[k] as number), k * 3);
     }

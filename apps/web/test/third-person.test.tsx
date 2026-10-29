@@ -5,6 +5,7 @@ import {
   CAMERA_PRESET_IDS, CAMERA_PRESETS, KEY_LOOK_PX_PER_STEP, LOOK_DRAG_PX as CORE_LOOK_DRAG_PX, screenDirToWorld, SIM_DT, THIRD_PERSON,
   zoomDistanceAt as coreZoomDistanceAt, zoomTAt as coreZoomTAt, type DioramaLayout, type SemanticAction,
 } from "@lg/core";
+import { DEFAULT_LOOK, WORLD_LOOKS } from "@lg/art";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createDragLook, startInput, WORLD_SURFACE_ATTR } from "../src/services/input";
 import { createActions } from "../src/state/actions";
@@ -17,6 +18,7 @@ import { solveThirdPerson, type Obstacle } from "../src/world/camera/rig";
 import { approach, boundsCenter, fitDistance, projectNdc, thirdPersonFov, THIRD_PERSON_VIEW, zoomDistanceAt, zoomPose, zoomTAt } from "../src/world/camera/zoom";
 import { isDragClick, onGroundClick } from "../src/world/dioramas/Diorama";
 import { LABEL_HIDE_T, labelEntries } from "../src/world/labels/labels";
+import { fogFor } from "../src/world/sky/palette";
 import { compiledUniverseClientContent } from "./helpers";
 
 const FIELD: DioramaLayout = { id: "campo", bounds: { minX: -70, maxX: 70, minZ: -50, maxZ: 50 }, spawn: [0, 0, 0] };
@@ -297,17 +299,20 @@ describe("AC26 fitDistance y zoomPose (140 × 100 m)", () => {
       const p = zoomPose(i / 20, fit, 17);
       expect(p.distance).toBeGreaterThan(prev.distance);
       expect(p.pitchDeg).toBeGreaterThanOrEqual(prev.pitchDeg);
-      expect(p.fogFar).toBeLessThanOrEqual(p.far);
+      expect(fogFor(DEFAULT_LOOK.fog.range, 1, p.t).far).toBeLessThanOrEqual(p.far);
       ratios.push(p.distance / prev.distance);
       prev = p;
     }
     for (const r of ratios) expect(Math.abs(r / (ratios[0] as number) - 1)).toBeLessThanOrEqual(0.01);
   });
-  test("la niebla nunca pasa el plano lejano, en ningún t ni tier", () => {
-    for (const fogScale of [0.85, 1]) for (let i = 0; i <= 100; i++) {
-      const p = zoomPose(i / 100, 150, 30, fogScale);
-      expect(p.fogFar).toBeLessThanOrEqual(p.far);
-      expect(p.fogNear).toBeLessThan(p.fogFar);
+  // Cambio registrado (open-world-3d T7b, D-839): la niebla salió de la pose (su rango es del look); la regla es la misma
+  // y ahora vale para cada look del catálogo y cada escala de niebla de tier (0,85 / 1 / 1,15).
+  test("la niebla nunca pasa el plano lejano, en ningún t, tier ni look", () => {
+    for (const look of Object.values(WORLD_LOOKS)) for (const fogScale of [0.85, 1, 1.15]) for (let i = 0; i <= 100; i++) {
+      const p = zoomPose(i / 100, 150, 30);
+      const fog = fogFor(look.fog.range, fogScale, p.t);
+      expect(fog.far, `${look.id} ${fogScale} ${p.t}`).toBeLessThanOrEqual(p.far);
+      expect(fog.near).toBeLessThan(fog.far);
     }
   });
   test("con «reducir movimiento» un zoomOut llega a su objetivo en el mismo cuadro; si no, se acerca suave", () => {

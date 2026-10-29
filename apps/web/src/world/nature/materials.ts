@@ -9,11 +9,13 @@
 //   · `toon` (rocas cerca y lejos con el atlas 2 × 2 de los escaneos, piedritas con moteado)
 //   · `impostor` (uno por especie horneada, su textura es el horneado de impostor.ts)
 //   · `sombra-blob` (el contacto oscuro bajo troncos y rocas)
+// Open-world-3d T7b (D-842): la ganancia de la hoja es del look y entra como uniform (`uLeafGain`), no como texto del
+// sombreador: dos looks dan los mismos programas.
 import {
   DataTexture, DoubleSide, FrontSide, LinearFilter, MeshBasicMaterial, MeshToonMaterial, RedFormat, RGBAFormat, SRGBColorSpace,
   Vector2, type Material, type Texture,
 } from "three";
-import { BAND_DITHER, CARD_FADE, type ShaderBand, TREE_LEAF_GAIN } from "@lg/art";
+import { BAND_DITHER, CARD_FADE, type ShaderBand } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
 import { NOISE_GLSL } from "../terrain/groundMaterial";
 
@@ -23,13 +25,16 @@ export interface NatureUniforms {
   uLod: { value: Vector2 };
   uSwayT: { value: number };
   uSwayA: { value: number };
+  /** La ganancia de la hoja del look (`WorldLook.vegetation.leafGain`). */
+  uLeafGain: { value: number };
 }
 
-export const natureUniforms = (full: number, mid: number): NatureUniforms => ({
+export const natureUniforms = (full: number, mid: number, leafGain: number): NatureUniforms => ({
   uPl: { value: new Vector2() },
   uLod: { value: new Vector2(full, mid) },
   uSwayT: { value: 0 },
   uSwayA: { value: 1 },
+  uLeafGain: { value: leafGain },
 });
 
 /** Bordes de cada banda contra uLod = (completo, liviano), como en el mockup (`BAND`). */
@@ -108,7 +113,10 @@ interface Patch {
 function patch<M extends Material>(m: M, u: NatureUniforms, o: Patch, key: string): M {
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, { uPl: u.uPl, uLod: u.uLod, uSwayT: u.uSwayT, uSwayA: u.uSwayA });
-    if (o.foliage) sh.uniforms["uBark"] = o.foliage.bark;
+    if (o.foliage) {
+      sh.uniforms["uBark"] = o.foliage.bark;
+      sh.uniforms["uLeafGain"] = u.uLeafGain;
+    }
     let vs = sh.vertexShader.replace("#include <common>", `#include <common>
       uniform vec2 uPl; uniform float uSwayT; uniform float uSwayA; varying float vDistP;
       ${o.mottle ? "varying vec3 vPosO;" : ""}${o.faceFade ? "varying float vFace;" : ""}`)
@@ -126,7 +134,7 @@ function patch<M extends Material>(m: M, u: NatureUniforms, o: Patch, key: strin
     let fs = sh.fragmentShader.replace("#include <common>", `#include <common>
       uniform vec2 uLod; varying float vDistP; float leafW = 0.0;
       ${o.mottle ? `varying vec3 vPosO;\n${NOISE_GLSL}` : ""}${o.faceFade ? "varying float vFace;" : ""}
-      ${o.foliage ? "uniform sampler2D uBark;" : ""}`);
+      ${o.foliage ? "uniform sampler2D uBark; uniform float uLeafGain;" : ""}`);
     if (o.foliage) {
       // La hoja va en uv.y de 0,25 a 1 (arriba de la imagen en 1) y el .ktx2 no se da vuelta: v de la hoja = 1 - ...
       fs = fs.replace("#include <map_fragment>", `
@@ -138,7 +146,7 @@ function patch<M extends Material>(m: M, u: NatureUniforms, o: Patch, key: strin
         #endif`);
     }
     fs = fs.replace("#include <color_fragment>", `#include <color_fragment>
-      ${o.foliage ? `diffuseColor.rgb *= mix(1.0, ${TREE_LEAF_GAIN.toFixed(2)}, leafW);` : ""}
+      ${o.foliage ? "diffuseColor.rgb *= mix(1.0, uLeafGain, leafW);" : ""}
       ${o.mottle ? `float mt = vn(vPosO.xz * 13.0 + vPosO.y * 7.0) * 0.6 + vn(vPosO.xy * 31.0 + vPosO.z * 17.0) * 0.4;
       diffuseColor.rgb *= 0.72 + 0.56 * mt;` : ""}
       ${o.band ? bandDiscard(o.band) : ""}

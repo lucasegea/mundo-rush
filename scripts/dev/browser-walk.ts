@@ -21,7 +21,7 @@ import { createServer, connect } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "playwright-core";
-import { OPEN_WORLD_DENSITY } from "@lg/art";
+import { DEFAULT_LOOK, OPEN_WORLD_DENSITY } from "@lg/art";
 import { AC41, diffMask, maskPixels, skyCheck, yellowShare, type Rgba } from "./defects/classify.ts";
 import { closeAllGlBrowsers, parseGlMode, withGlBrowser, type GlMode } from "./gl-mode.ts";
 import { angleDelta, beaconsOk, forwardOf, forwardWalkOk, onScreen, projectWithMatrices, rightOf, turnFollowsYaw, type BeaconSeen, type P2 } from "./third-person-walk.ts";
@@ -436,7 +436,15 @@ async function skyMask(page: Page, img: Rgba): Promise<Uint8Array> {
   return diffMask(img, bare).map((v) => 1 - v);
 }
 
+/**
+ * Open-world-3d T7b (LK6): el id del look del diorama montado. AC39 y AC41 son reglas de DEFAULT_LOOK (no del motor):
+ * corren solo si el muelle se dibuja con DEFAULT_LOOK, y si no, fallan diciendo con qué look se dibujó.
+ */
+const activeLookId = (page: Page): Promise<string | null> =>
+  page.evaluate<string | null>(`import("/src/world/runtime.ts").then(({ activeLook }) => activeLook.id)`);
+
 /** Las dos capturas del mismo cuadro, con y sin terreno (como las de tools/defects.cjs), y la mascara del terreno. */
+
 async function withAndWithoutTerrain(page: Page): Promise<{ img: Rgba; mask: Uint8Array }> {
   const img = await canvasImage(page);
   await setTerrainVisible(page, false);
@@ -503,9 +511,11 @@ async function walkGround(page: Page): Promise<void> {
   const outer = yellowShare(mid.img, await pixelsOf(ring(AC41.outer[0], AC41.outer[1])));
   const step = (outer.share ?? 0) - (inner.share ?? 0);
   const fmt = (v: number | null): string => (v === null ? "n/a" : v.toFixed(3));
-  check("AC41-mapa", y1.share !== null && y1.share <= AC41.maxYellowFull,
-    `t = 1, medium, movimiento reducido: ${terrainPx} pixeles de terreno, amarillo ${fmt(y1.share)} (${y1.yellow} amarillos, ${y1.green} verdes; tope ${AC41.maxYellowFull})`);
-  check("AC41-anillo", inner.share !== null && outer.share !== null && step <= AC41.maxRingStep,
+  const look = await activeLookId(page);
+  const isDefault = look === DEFAULT_LOOK.id;
+  check("AC41-mapa", isDefault && y1.share !== null && y1.share <= AC41.maxYellowFull,
+    `look ${String(look)} (DEFAULT_LOOK = ${DEFAULT_LOOK.id}); t = 1, medium, movimiento reducido: ${terrainPx} pixeles de terreno, amarillo ${fmt(y1.share)} (${y1.yellow} amarillos, ${y1.green} verdes; tope ${AC41.maxYellowFull})`);
+  check("AC41-anillo", isDefault && inner.share !== null && outer.share !== null && step <= AC41.maxRingStep,
     `t = 0,55, radio del pasto ${R} m: anillo de adentro ${fmt(inner.share)} (${inner.yellow + inner.green} px), de afuera ${fmt(outer.share)} (${outer.yellow + outer.green} px), paso ${step.toFixed(3)} (tope ${AC41.maxRingStep})`);
 
   await act(`actions.setTierChoice(${JSON.stringify(before.tier)}); actions.setReduceMotion(${String(before.reduce)})`);
@@ -723,9 +733,11 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   await shot(page, "ac12-muelle");
   check("AC12", isNonUniform(stats), `colores ${stats.distinct} (min ${MIN_DISTINCT_COLORS}), dominante ${(stats.dominantShare * 100).toFixed(1)}% (max ${MAX_DOMINANT_SHARE * 100}%)`);
   // AC39 (open-world-3d T6): la misma vista por defecto, recien entrado: cielo con gradiente, azul arriba, pasto abajo.
+  // LK6 (T7b): es una regla de DEFAULT_LOOK; corre contra ese look explícito.
   const skyImg = await canvasImage(page);
   const sky = skyCheck(skyImg, await horizonRow(page), await worldTop(page), await worldVisible(page, skyImg.width, skyImg.height), await skyMask(page, skyImg));
-  check("AC39", sky.ok && isNonUniform(stats), `${sky.detail}; regla de pixeles ${isNonUniform(stats)}`);
+  const skyLook = await activeLookId(page);
+  check("AC39", skyLook === DEFAULT_LOOK.id && sky.ok && isNonUniform(stats), `look ${String(skyLook)} (DEFAULT_LOOK = ${DEFAULT_LOOK.id}); ${sky.detail}; regla de pixeles ${isNonUniform(stats)}`);
   await walkForest(page);
   await walkGround(page);
   await walkThirdPerson(page);

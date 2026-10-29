@@ -1,10 +1,10 @@
 // @lg/art textures.ts: el inventario de texturas del mundo abierto (open-world-3d T6 paso 0, D-832, AC74) y la cuenta
-// de sus bytes, en dato puro y sin three. Una sola lista: la leen el script `assets:texture-table` (la tabla por tier que
+// de sus bytes, en dato puro y sin three. Una sola lista por look (`worldTextures(look)`, worldLook.ts, T7b): la leen el script `assets:texture-table` (la tabla por tier que
 // decide formato y tamaño ANTES de codificar), `estimateTextureMemory` de world/budget (memoria de GPU contra los topes
 // 24 / 48 / 96 MB de TIER_BUDGETS) y los módulos de world/ que crean cada textura (sus medidas salen de acá). Los .ktx2
 // se cuentan por su cabecera (`parseKtx2Header`): ancho, alto, niveles y modelo de color (ETC1S o UASTC) dan los bytes
 // del formato al que transcodifica el escritorio: BC7 para las dos variantes (D-832; ver `BASIS_TARGET`).
-import { OPEN_WORLD_DENSITY, WORLD_TIERS, type WorldTier } from "./density.ts";
+import type { WorldTier } from "./density.ts";
 
 /** Formatos candidatos (D-832): las dos variantes de Basis y lo que se crea en tiempo de ejecución. */
 export const TEXTURE_FORMATS = ["etc1s", "uastc", "rgba8", "rg16f", "r8", "depth32"] as const;
@@ -33,9 +33,6 @@ export interface WorldTexture {
   /** Lado en el mockup V6, si el elegido es otro (PD-4 paso 1: normales de 1024 a 512). */
   v6Px?: number;
 }
-
-const all = (n: number): Record<WorldTier, number> => ({ low: n, medium: n, high: n });
-const tiers = (low: number, medium: number, high: number): Record<WorldTier, number> => ({ low, medium, high });
 
 /** Mapas fotográficos del suelo (Poly Haven, CC0): difuso en todo tier, normal donde DENSITY lo pide (D-832, PD-4). */
 export const GROUND_MAPS = ["leafy_grass", "sparse_grass", "forest_ground_04", "rock_face_03", "rocky_terrain"] as const;
@@ -68,46 +65,8 @@ export const RUNTIME_TEXTURE_PX = {
 /** Especies con impostor (pinos y latifoliadas; los arbustos no tienen, T7). */
 export const IMPOSTOR_SPECIES = 5;
 
-/** El inventario completo del mundo abierto (el de m7, como la pincelada y las etiquetas, lo suma world/budget aparte). */
-export const OPEN_WORLD_TEXTURES: readonly WorldTexture[] = [
-  ...GROUND_MAPS.map((m): WorldTexture => ({
-    id: `suelo/${m}-diff`, group: "suelo", width: GROUND_DIFFUSE_PX, height: GROUND_DIFFUSE_PX, mips: true, alpha: false,
-    format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), file: groundTextureFile(m, "diff"), task: "T6",
-  })),
-  ...GROUND_MAPS.map((m): WorldTexture => ({
-    id: `suelo/${m}-nor`, group: "suelo", width: GROUND_NORMAL_PX, height: GROUND_NORMAL_PX, mips: true, alpha: false,
-    format: "etc1s", candidates: ["uastc", "etc1s", "rgba8"],
-    count: tiers(...WORLD_TIERS.map((t) => (OPEN_WORLD_DENSITY[t].groundNormals ? 1 : 0)) as [number, number, number]),
-    file: groundTextureFile(m, "nor"), task: "T6", normal: true, v6Px: GROUND_NORMAL_V6_PX,
-  })),
-  // T7: un atlas 2 × 2 de los 4 escaneos de roca (difuso en todo tier, normal en medium y high: un material por banda,
-  // AC71), hoja y corteza (PD-9). Archivos de scripts/assets/nature.ts.
-  { id: "rocas/difuso", group: "rocas", width: 1024, height: 1024, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc"], count: all(1), file: `${TEXTURES_DIR}/rocas-diff.ktx2`, task: "T7" },
-  { id: "rocas/normal", group: "rocas", width: 1024, height: 1024, mips: true, alpha: false, format: "etc1s", candidates: ["uastc", "etc1s"], count: tiers(0, 1, 1), file: `${TEXTURES_DIR}/rocas-nor.ktx2`, task: "T7", normal: true },
-  { id: "arboles/hoja", group: "árboles", width: 512, height: 512, mips: true, alpha: true, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), file: `${TEXTURES_DIR}/hoja-diff.ktx2`, task: "T7" },
-  { id: "arboles/corteza", group: "árboles", width: 512, height: 512, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), file: `${TEXTURES_DIR}/corteza-diff.ktx2`, task: "T7" },
-  {
-    id: "impostores", group: "impostores", width: RUNTIME_TEXTURE_PX.impostor[0], height: RUNTIME_TEXTURE_PX.impostor[1], mips: true, alpha: true,
-    format: "rgba8", candidates: ["rgba8"], count: all(IMPOSTOR_SPECIES), task: "T7",
-  },
-  {
-    id: "flores", group: "detalle", width: RUNTIME_TEXTURE_PX.flowerAtlas[0], height: RUNTIME_TEXTURE_PX.flowerAtlas[1], mips: true, alpha: true,
-    format: "rgba8", candidates: ["rgba8"], count: all(1), task: "T7",
-  },
-  {
-    id: "pasto/atlas", group: "pasto", width: RUNTIME_TEXTURE_PX.grassAtlas[0], height: RUNTIME_TEXTURE_PX.grassAtlas[1], mips: true, alpha: true,
-    format: "rgba8", candidates: ["rgba8"], count: all(1), task: "T8",
-  },
-  {
-    id: "pasto/altura", group: "pasto", width: RUNTIME_TEXTURE_PX.grassHeight[0], height: RUNTIME_TEXTURE_PX.grassHeight[1], mips: false, alpha: false,
-    format: "rg16f", candidates: ["rg16f"], count: all(1), task: "T8",
-  },
-  {
-    id: "cielo/nubes", group: "cielo", width: RUNTIME_TEXTURE_PX.cloudAtlas[0], height: RUNTIME_TEXTURE_PX.cloudAtlas[1], mips: true, alpha: true,
-    format: "rgba8", candidates: ["rgba8"], count: tiers(...WORLD_TIERS.map((t) => (OPEN_WORLD_DENSITY[t].clouds ? 1 : 0)) as [number, number, number]),
-    task: "T6",
-  },
-];
+// Open-world-3d T7b (D-841): el inventario es una función del look, `worldTextures(look)` de worldLook.ts (antes la
+// constante OPEN_WORLD_TEXTURES); las medidas, formatos y conteos por tier de arriba siguen siendo del núcleo.
 
 /** Bytes por bloque de 4 × 4 del formato de escritorio al que transcodifica cada variante de Basis (D-832). */
 export const BC_BLOCK_BYTES = { bc1: 8, bc3: 16, bc7: 16 } as const;

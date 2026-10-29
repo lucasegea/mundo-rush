@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
+import { DEFAULT_LOOK, WORLD_LOOKS } from "@lg/art";
 import { loadBudgets } from "../budgets/bundle-size.ts";
 import {
   cargaMundoAbierto, chequearCargaRegistrada, chequearDescarga, chequearMedidasRegistro, DECODIFICADOR_BASIS, listarModelos, medirDioramas, medirPieza, run,
@@ -132,9 +133,15 @@ describe("open-world-3d T6 (AC42, cambio registrado): la carga del muelle del mu
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
     const texto = lineas.join("\n");
     // T7 (cambio registrado): la carga suma los árboles horneados y las rocas; la cuenta sale de cargaMundoAbierto.
-    expect(texto).toMatch(new RegExp(`OK {3}assets del primer diorama: [\\d.]+ MB \\([\\d.]+ de modelos y [\\d.]+ de ${cargaMundoAbierto().length} archivo\\(s\\) más`));
-    for (const a of cargaMundoAbierto()) expect(texto).toContain(`OK   carga del muelle ${a}:`);
-    expect(cargaMundoAbierto()).toEqual(expect.arrayContaining([...DECODIFICADOR_BASIS, "apps/web/public/textures/leafy-grass-diff.ktx2"]));
+    // T7b (cambio registrado, D-841): la carga es la de cada look del catálogo, y run() los recorre todos.
+    for (const look of Object.values(WORLD_LOOKS)) {
+      const carga = cargaMundoAbierto(look);
+      expect(texto).toContain(`look ${look.id}:`);
+      expect(texto).toMatch(new RegExp(`OK {3}assets del primer diorama: [\\d.]+ MB \\([\\d.]+ de modelos y [\\d.]+ de ${carga.length} archivo\\(s\\) más`));
+      for (const a of carga) expect(texto).toContain(`OK   carga del muelle ${a}:`);
+      expect(carga).toEqual(expect.arrayContaining([...DECODIFICADOR_BASIS, "apps/web/public/textures/leafy-grass-diff.ktx2"]));
+    }
+    expect(cargaMundoAbierto(DEFAULT_LOOK)).toHaveLength(38); // 0034931: 14 .ktx2, 22 .glb, 2 del transcodificador
   });
 
   test("un diorama con relieve suma su carga; uno sin relieve no", () => {

@@ -3,7 +3,10 @@
 // árboles), piedritas (icosaedro abollado con color por vértice) y matas de flores (cuatro tarjetas cruzadas de la
 // textura de lienzo propia). Más la geometría de las tarjetas de impostor (AC44: 3 quads, la copa horizontal al 58 %).
 import { BufferGeometry, Color, Float32BufferAttribute, IcosahedronGeometry, Vector3 } from "three";
-import { hash2, IMPOSTOR_CROWN_HEIGHT, mulberry32, NATURE_COLORS, TREE_LEAF_GAIN } from "@lg/art";
+import { hash2, IMPOSTOR_CROWN_HEIGHT, mulberry32, type WorldLook } from "@lg/art";
+
+/** Los colores del detalle del look (open-world-3d T7b, D-839). */
+type NatureColors = WorldLook["vegetation"]["colors"];
 import type { BakeBox } from "../camera/bakeCamera";
 import { impostorFraming } from "../camera/bakeCamera";
 
@@ -15,13 +18,14 @@ const smooth = (a: number, b: number, x: number): number => {
 
 /**
  * Un helecho (mockup `crownGeometry` con `far`, una tarjeta por hoja): `count` tarjetas de la hoja del atlas alrededor
- * de un elipsoide bajo. El color va dividido por TREE_LEAF_GAIN: el follaje lo multiplica donde muestrea hoja.
+ * de un elipsoide bajo. El color va dividido por la ganancia de la hoja del look (`leafGain`): el follaje la multiplica
+ * donde muestrea hoja.
  */
-export function fernGeometry(variant: number): BufferGeometry {
+export function fernGeometry(variant: number, colors: NatureColors["fern"], leafGain: number): BufferGeometry {
   const o = { seed: 90 + variant * 7, cy: 0.12, rx: 0.4, ry: 0.16, rz: 0.4, count: 6, size: 0.5 };
   const rnd = mulberry32(o.seed);
   const pos: number[] = [], nor: number[] = [], uv: number[] = [], col: number[] = [], idx: number[] = [];
-  const low = new Color(NATURE_COLORS.fern.low), high = new Color(NATURE_COLORS.fern.high);
+  const low = new Color(colors.low), high = new Color(colors.high);
   const up = new Vector3(0, 1, 0);
   for (let i = 0; i < o.count; i++) {
     const d = new Vector3();
@@ -37,7 +41,7 @@ export function fernGeometry(variant: number): BufferGeometry {
     const v = new Vector3().crossVectors(out, u).normalize();
     const s = o.size * (0.7 + 0.6 * rnd());
     const h = clamp(((c.y - o.cy) / o.ry) * 0.5 + 0.5, 0, 1);
-    const tint = low.clone().lerp(high, smooth(0.15, 0.95, h) * (0.6 + 0.4 * rnd())).multiplyScalar(((0.85 + 0.3 * rnd()) * 3.2) / TREE_LEAF_GAIN);
+    const tint = low.clone().lerp(high, smooth(0.15, 0.95, h) * (0.6 + 0.4 * rnd())).multiplyScalar(((0.85 + 0.3 * rnd()) * 3.2) / leafGain);
     const base = pos.length / 3;
     const nn = out.clone().lerp(up, 0.28).normalize();
     for (const [a, b, tu, tv] of [[-1, -1, 0, 0.25], [1, -1, 1, 0.25], [1, 1, 1, 1], [-1, 1, 0, 1]] as const) {
@@ -53,7 +57,7 @@ export function fernGeometry(variant: number): BufferGeometry {
 }
 
 /** Una piedrita (mockup `rockGeometry(31, 0.55, 0)`): icosaedro abollado, musgo arriba y oscuro abajo. */
-export function pebbleGeometry(seed = 31, squash = 0.55): BufferGeometry {
+export function pebbleGeometry(colors: NatureColors["pebble"], seed = 31, squash = 0.55): BufferGeometry {
   const src = new IcosahedronGeometry(1, 0);
   // Soldar por posición: las normales quedan suaves.
   const p = src.getAttribute("position");
@@ -83,7 +87,7 @@ export function pebbleGeometry(seed = 31, squash = 0.55): BufferGeometry {
   g.setIndex(idx);
   g.computeVertexNormals();
   const n = g.getAttribute("normal");
-  const rock = new Color(NATURE_COLORS.pebble.rock), warm = new Color(NATURE_COLORS.pebble.warm), moss = new Color(NATURE_COLORS.pebble.moss);
+  const rock = new Color(colors.rock), warm = new Color(colors.warm), moss = new Color(colors.moss);
   const col = new Float32Array(n.count * 3);
   for (let i = 0; i < n.count; i++) {
     const c = rock.clone().lerp(warm, hash2(i, seed, 9));

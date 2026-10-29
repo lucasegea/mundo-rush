@@ -13,13 +13,16 @@
 // dentro del grafo, así el estimador y el auditor lo cuentan. Sin relieve, todo sigue como en estetica-c.
 // Open-world-3d T7: con relieve, los árboles, las rocas y el detalle salen de `diorama.vegetation` (el sembrado del mockup
 // V6 que también bloquea la grilla) por world/nature; los pinos del borde por código quedan para los dioramas sin relieve.
+// Open-world-3d T7b (D-839): la escena se arma con el look del diorama (`look`, resuelto una vez por lookForDiorama) y lo
+// guarda en `scene.look`: terreno, suelo, cielo, agua y naturaleza lo leen de ahí; el relieve decide solo la forma.
 import {
   Box3, BufferAttribute, BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, Object3D, PlaneGeometry, Quaternion, Sphere, Vector3,
   type Intersection, type Raycaster,
 } from "three";
 import type { DioramaRuntime, PropBox } from "@lg/core";
 import {
-  DENSITY, keepDetail, OPEN_WORLD_DENSITY, TERRAIN_APRON, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity, type WorldTier,
+  DENSITY, keepDetail, OPEN_WORLD_DENSITY, TERRAIN_APRON, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity, type WorldLook,
+  type WorldTier,
 } from "@lg/art";
 import type { Obstacle } from "../camera/rig";
 import { toonMaterial } from "../materials/registry";
@@ -35,6 +38,7 @@ import { rng } from "../materials/rng";
 import { buildSky, type Sky } from "../sky/sky";
 import { groundMaterial, type GroundMaterial } from "../terrain/groundMaterial";
 import { buildNature, type Nature } from "../nature/buildNature";
+import { lookForDiorama } from "./look";
 
 /** Altura del plano de agua (el terreno se hunde debajo). */
 export const WATER_LEVEL = -0.15;
@@ -49,6 +53,8 @@ export interface BlobAnchor {
 }
 
 export interface DioramaScene {
+  /** Open-world-3d T7b: el look con el que se armó (los personajes toman de acá su esqueleto, D-840). */
+  look: WorldLook;
   root: Group;
   terrain: Terrain;
   /** Lo que puede tapar el plano de a dos (A8). */
@@ -216,10 +222,10 @@ function waterBox(diorama: DioramaRuntime): Box2 | null {
 }
 
 /** Un solo plano de agua bajo todos los estanques y ríos (el terreno, más alto, lo tapa donde no hay agua). */
-function waterMesh(diorama: DioramaRuntime): Mesh | null {
+function waterMesh(diorama: DioramaRuntime, look: WorldLook): Mesh | null {
   const b = waterBox(diorama);
   if (!b) return null;
-  const m = new Mesh(new PlaneGeometry(b.maxX - b.minX + 0.6, b.maxZ - b.minZ + 0.6).rotateX(-Math.PI / 2), waterMaterial());
+  const m = new Mesh(new PlaneGeometry(b.maxX - b.minX + 0.6, b.maxZ - b.minZ + 0.6).rotateX(-Math.PI / 2), waterMaterial(look));
   m.position.set((b.minX + b.maxX) / 2, WATER_LEVEL, (b.minZ + b.maxZ) / 2);
   m.name = "agua";
   return m;
@@ -258,31 +264,33 @@ export function dioramaDetail(diorama: DioramaRuntime): DetailScatter {
   return curveDetailScatter(diorama.ground, diorama.grid, diorama.ground.terrain.seed ?? ART_SEED);
 }
 
-export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity = "full", tier: WorldTier = "medium"): DioramaScene {
+export function buildDioramaScene(
+  diorama: DioramaRuntime, density: SceneDensity = "full", tier: WorldTier = "medium", look: WorldLook = lookForDiorama(diorama),
+): DioramaScene {
   const root = new Group();
   root.name = `diorama:${diorama.id}`;
   const spec = DENSITY[density];
   const relief = diorama.ground.terrain.relief;
-  const terrain = buildTerrain({ bounds: diorama.bounds, ground: diorama.ground, density, tier });
+  const terrain = buildTerrain({ bounds: diorama.bounds, ground: diorama.ground, density, tier, look });
   let ground: GroundMaterial | null = null;
   let sky: Sky | null = null;
   let picker: Object3D | null = null;
   if (relief) {
     // AC35: la falda se funde a la niebla en sus últimos metros y el delantal sigue de ese color (TERRAIN_APRON).
     const skirt = terrain.extent.maxX - diorama.bounds.maxX;
-    ground = groundMaterial(tier, { bounds: diorama.bounds, fade: [skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]] });
+    ground = groundMaterial(tier, look, { bounds: diorama.bounds, fade: [skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]] });
     const tiles = terrainTiles(terrain, OPEN_WORLD_DENSITY[tier].terrainTiles, ground);
     tiles.add(terrainApron(terrain, ground));
     root.add(tiles);
     picker = groundPicker(tiles);
-    sky = buildSky(tier);
+    sky = buildSky(tier, look);
     root.add(sky.group);
   } else {
     root.add(terrainMesh(terrain));
   }
   // Con relieve, la base de lo apoyado sigue al terreno (0,1 m abajo); sin relieve, la `y` del layout tal cual.
   const baseY = (x: number, z: number, y: number): number => (relief ? terrain.heightAt(x, z) - PROP_SINK + y : y);
-  const water = waterMesh(diorama);
+  const water = waterMesh(diorama, look);
   if (water) root.add(water);
 
   const obstacles: Obstacle[] = [];
@@ -337,7 +345,7 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
   // el bosque de world/nature (T7).
   let nature: Nature | null = null;
   if (relief && diorama.vegetation) {
-    nature = buildNature({ scatter: diorama.vegetation, bounds: diorama.bounds, tier, heightAt: terrain.heightAt });
+    nature = buildNature({ scatter: diorama.vegetation, bounds: diorama.bounds, tier, heightAt: terrain.heightAt, look });
     root.add(nature.group);
     for (const o of nature.obstacles) obstacles.push({ kind: "circle", x: o.x, z: o.z, r: o.r, height: o.height });
   } else {
@@ -367,6 +375,7 @@ export function buildDioramaScene(diorama: DioramaRuntime, density: SceneDensity
   // V2, sombra blob y lugar en el gobernador de animación); su costo entra al estimador de validate:content.
 
   return {
+    look,
     root,
     terrain,
     obstacles,

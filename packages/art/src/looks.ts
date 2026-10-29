@@ -96,6 +96,8 @@ export const PLAYER_LOOK: CharacterLook = {
  * Open-world-3d T7 (AC47, D3): en el mundo abierto (dioramas con relieve) el jugador y los NPCs usan el personaje de
  * Quaternius de la maqueta V6 (un solo cuerpo con pelo y cara; la apariencia de cada uno repinta remera y pantalón y
  * elige sombrero y cuello). Los dioramas planos (campesino) siguen con los tres cuerpos de KayKit.
+ * Open-world-3d T7b (D-840): qué esqueleto usa un diorama lo dice su look (`characters.rig` de worldLook.ts); estos son
+ * los archivos del esqueleto `quaternius` (world/actors/rigs.ts) y CAP_COLOR es el valor de DEFAULT_LOOK.
  */
 export const OPEN_WORLD_BODY_ASSET = "quaternius-character-animated/cuerpo";
 export const OPEN_WORLD_CLIPS_ASSET = "quaternius-character-animated/animaciones";

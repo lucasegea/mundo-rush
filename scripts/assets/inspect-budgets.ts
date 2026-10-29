@@ -14,12 +14,15 @@
 // con `terreno.relieve`), y su carga suma los .ktx2 del inventario de @lg/art que `high` crea y el transcodificador Basis
 // (js y wasm). T7 SEAM: los árboles horneados (.glb de models/generated/trees) entran acá. Cada archivo de esa carga
 // tiene que tener fila en content/assets-registry.yaml o content/code-registry.yaml; uno sin fila falla nombrándolo.
+// Open-world-3d T7b (D-841): la carga del mundo abierto es la de un look (`cargaMundoAbierto(look)`: sus mapas y su
+// vegetación) y run() recorre TODO el catálogo WORLD_LOOKS: cada look tiene que entrar solo en `assets_muelle_mb` y tener
+// cada archivo registrado (un look nuevo no entra al juego si se pasa).
 //
 // Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { natureModelFiles, OPEN_WORLD_TEXTURES } from "@lg/art";
+import { natureModelFiles, WORLD_LOOKS, worldTextures, type WorldLook } from "@lg/art";
 import { archivoDeModelo, compilarContenido, PREFIJO_MODELO } from "@lg/content-schema";
 import { loadBudgets, type Budgets } from "../budgets/bundle-size.ts";
 import { leerContenido } from "../content/build.ts";
@@ -51,11 +54,14 @@ export const DECODIFICADOR_BASIS = ["apps/web/public/decoders/basis_transcoder.j
 /** El universo cuyo muelle es el mundo abierto (open-world-3d): su carga entra en `assets_muelle_mb`. */
 export const UNIVERSO_MUELLE = "U-GALEANO";
 
-/** Lo que baja un diorama con relieve en `high` además de sus props: los .ktx2 del inventario, el transcodificador y (T7) los árboles y las rocas. */
-export function cargaMundoAbierto(): string[] {
-  const ktx2 = OPEN_WORLD_TEXTURES.flatMap((t) => (t.file && t.count.high > 0 ? [t.file] : []));
+/**
+ * Lo que baja un diorama con relieve en `high` con un look, además de sus props: los .ktx2 de su inventario, el
+ * transcodificador y (T7) sus árboles y rocas.
+ */
+export function cargaMundoAbierto(look: WorldLook): string[] {
+  const ktx2 = worldTextures(look).flatMap((t) => (t.file && t.count.high > 0 ? [t.file] : []));
   // T7: los árboles horneados y las rocas (el mundo los baja enteros: el tier cambia cuántos se dibujan, no cuáles).
-  return [...new Set([...ktx2, ...natureModelFiles(), ...DECODIFICADOR_BASIS])].sort();
+  return [...new Set([...ktx2, ...natureModelFiles(look), ...DECODIFICADOR_BASIS])].sort();
 }
 
 export interface DioramaMedido {
@@ -249,23 +255,30 @@ export async function run(root = ROOT, log: (s: string) => void = console.log, b
       return null;
     }
   };
-  const carga = cargaMundoAbierto().map((archivo) => ({ archivo, bytes: tamano(archivo) }));
   const registrados = new Set([
     ...(contenido.conjunto.registroAssets?.data.assets ?? []).map((a) => a.archivo),
     ...(contenido.conjunto.registroCodigo?.data.codigo ?? []).map((c) => c.archivo),
   ]);
   const abiertos = universo.conjunto.dioramas.map((d) => d.data).filter((d) => d.terreno?.relieve === true);
-  const dioramas = medirDioramas(
-    [...contenido.conjunto.dioramas.map((d) => d.data), ...abiertos],
-    new Map(piezas.map((p) => [p.archivo, p])),
-    personajes,
-    carga.map((c) => ({ archivo: c.archivo, bytes: c.bytes ?? 0 })),
-  );
-  const r = chequearDescarga(piezas, dioramas, budgets);
   const m = chequearMedidasRegistro(piezas, contenido.conjunto.registroAssets?.data.assets ?? []);
-  const k = chequearCargaRegistrada(carga, registrados);
-  for (const l of [...r.lineas, ...m.lineas, ...k.lineas]) log(l);
-  return r.ok && m.ok && k.ok ? 0 : 1;
+  let ok = m.ok;
+  // T7b (D-841): cada look del catálogo, solo, contra los mismos topes (los modelos y personajes son los mismos).
+  for (const look of Object.values(WORLD_LOOKS)) {
+    const carga = cargaMundoAbierto(look).map((archivo) => ({ archivo, bytes: tamano(archivo) }));
+    const dioramas = medirDioramas(
+      [...contenido.conjunto.dioramas.map((d) => d.data), ...abiertos],
+      new Map(piezas.map((p) => [p.archivo, p])),
+      personajes,
+      carga.map((c) => ({ archivo: c.archivo, bytes: c.bytes ?? 0 })),
+    );
+    const r = chequearDescarga(piezas, dioramas, budgets);
+    const k = chequearCargaRegistrada(carga, registrados);
+    log(`look ${look.id}:`);
+    for (const l of [...r.lineas, ...k.lineas]) log(l);
+    ok = ok && r.ok && k.ok;
+  }
+  for (const l of m.lineas) log(l);
+  return ok ? 0 : 1;
 }
 
 const invocado = process.argv[1];

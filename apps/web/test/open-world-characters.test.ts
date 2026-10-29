@@ -4,7 +4,7 @@
 // de color 0xd6342c colgado del hueso Head; cada clip del manifiesto existe en el archivo y cada hueso que mueve, en el
 // esqueleto. Los NPCs más lejos que 62 m o fuera del encuadre no se dibujan y más lejos que 28 m van sin accesorios. Los
 // dioramas planos siguen con KayKit (sus tests, characters.test.ts, no cambian). No hay otro armador de personajes.
-import { CAP_COLOR, parseApariencia, PLAYER_LOOK, tokenRgb, withinPaint, type CharacterLook } from "@lg/art";
+import { CAP_COLOR, DEFAULT_LOOK, parseApariencia, PLAYER_LOOK, tokenRgb, withinPaint, type CharacterLook } from "@lg/art";
 import { prepareDiorama, type DioramaLayout } from "@lg/core";
 import { Bone, Vector3, type AnimationClip, type Mesh, type Object3D } from "three";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
@@ -49,20 +49,24 @@ const galeanoLook = (id: string): CharacterLook => {
 
 async function openWorldCharacter(look: CharacterLook, lod: "full" | "reduced" = "full"): Promise<SkinnedCharacter> {
   const [body, clips] = await Promise.all([load(QUATERNIUS_RIG.bodyAsset(look.body, lod)), load(QUATERNIUS_RIG.clipsAsset)]);
-  return buildSkinnedCharacter(body.scene, clips.clips, look, 3, QUATERNIUS_RIG);
+  // Open-world-3d T7b (D-840): los accesorios son los del juego del look (DEFAULT_LOOK, el del mundo abierto).
+  return buildSkinnedCharacter(body.scene, clips.clips, look, 3, QUATERNIUS_RIG, DEFAULT_LOOK.characters);
 }
 
 describe("AC47: el jugador y los NPCs del mundo abierto con el personaje de Quaternius", () => {
   test("el mundo abierto (con relieve) usa quaternius y los dioramas planos KayKit; el muelle tiene los tres NPCs de Galeano", () => {
     const layouts = galeano["dioramas.json"] as DioramaLayout[];
     const muelle = prepareDiorama(layouts.find((d) => d.id === "muelle") as DioramaLayout);
+    // Cambio registrado (open-world-3d T7b, D-840): el esqueleto sale del look de la escena, no de `picker !== null`.
     const scene = buildDioramaScene(muelle, "reduced", "low");
-    expect(actorRig(scene.picker !== null)).toBe("quaternius");
+    expect(scene.picker).not.toBeNull();
+    expect(actorRig(scene.look.characters)).toBe("quaternius");
     expect([...(muelle.npcs ?? []).map((n) => n.id)].sort()).toEqual([...GALEANO_NPCS]);
     scene.dispose();
     const plano = (compiledClientContent()["dioramas.json"] as DioramaLayout[]).find((d) => d.id === "test") as DioramaLayout;
     const flat = buildDioramaScene(prepareDiorama(plano));
-    expect(actorRig(flat.picker !== null)).toBe("kaykit");
+    expect(flat.picker).toBeNull();
+    expect(actorRig(flat.look.characters)).toBe("kaykit");
     flat.dispose();
     expect(KAYKIT_RIG.codeHead).toBe(true);
   });

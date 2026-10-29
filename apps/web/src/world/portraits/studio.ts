@@ -3,14 +3,15 @@
 // usa desde el panel de dev/portraits/ en su navegador (sin render 3D sin navegador, D-016). Arma cada personaje con el
 // mismo modelo del juego (cuerpo con esqueleto, cabeza por código, idle), lo encuadra de busto con la cámara de
 // world/camera/portrait.ts y devuelve un PNG. El marcador de abajo hace que check:dev-only falle si esto llega a un build.
+// Open-world-3d T7b (D-838, D-839): luz, tono y fondo salen del look que se le pasa (`world`; el panel usa el pintado).
 import { ACESFilmicToneMapping, Color, DirectionalLight, HemisphereLight, Scene, Vector3, WebGLRenderer } from "three";
+import type { WorldLook } from "@lg/art";
 import { chooseAnimation } from "../actors/animState";
 import { loadCharacterAssets } from "../actors/characterAssets";
 import { HEAD_RADIUS } from "../actors/head";
 import type { CharacterLook } from "../actors/looks";
 import { buildSkinnedCharacter, disposeSkinnedCharacter, driveCharacter } from "../actors/skinned";
 import { createPortraitCamera, portraitFraming } from "../camera/portrait";
-import { HEMI, SUN, TONE } from "../lighting/params";
 
 /** Marcador de solo-desarrollo (scripts/budgets/dev-only.ts busca "__lg_director"). */
 export const STUDIO_MARKER = "__lg_director:retratos";
@@ -23,17 +24,21 @@ export const portraitIds = (looks: ReadonlyMap<string, CharacterLook>): string[]
 
 let renderer: WebGLRenderer | null = null;
 
-function studioRenderer(size: number): WebGLRenderer {
+function studioRenderer(size: number, exposure: number): WebGLRenderer {
   renderer ??= new WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: false });
   renderer.setPixelRatio(1);
   renderer.setSize(size, size, false);
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = TONE.exposure;
+  renderer.toneMappingExposure = exposure;
   return renderer;
 }
 
-/** Renderiza el retrato de `id` con su apariencia (el modelo del juego en idle, de busto) y lo devuelve como PNG. */
-export async function renderPortrait(id: string, look: CharacterLook, size = PORTRAIT_SIZE, background = "#f4ede2"): Promise<Blob> {
+/**
+ * Renderiza el retrato de `id` con su apariencia (el modelo del juego en idle, de busto) y lo devuelve como PNG. La luz,
+ * el tono y el fondo (por defecto el `muro` de su paleta) son los del look `world`.
+ */
+export async function renderPortrait(id: string, look: CharacterLook, world: WorldLook, size = PORTRAIT_SIZE, background = world.palette.muro): Promise<Blob> {
+  const { hemi: HEMI, sun: SUN, exposure } = world.light;
   const assets = await loadCharacterAssets(look.body);
   const c = buildSkinnedCharacter(assets.body, assets.clips, look, 0);
   try {
@@ -47,7 +52,7 @@ export async function renderPortrait(id: string, look: CharacterLook, size = POR
     c.root.updateMatrixWorld(true);
     const head = c.head.getWorldPosition(new Vector3());
     const cam = createPortraitCamera(portraitFraming([head.x, head.y, head.z], HEAD_RADIUS * c.root.scale.x));
-    const r = studioRenderer(size);
+    const r = studioRenderer(size, exposure);
     r.render(scene, cam);
     return await new Promise<Blob>((resolve, reject) => {
       r.domElement.toBlob((b) => (b ? resolve(b) : reject(new Error(`retrato ${id}: el canvas no dio un PNG`))), "image/png");

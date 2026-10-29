@@ -9,15 +9,16 @@
 // Todo se arma sin GPU (las mallas instanciadas empiezan vacías, con geometría de espera): el auditor de materiales y el
 // estimador miden este mismo grafo. `load` baja los .glb y .ktx2 y hornea los impostores con el renderer; `update`
 // recorre las instancias solo cuando la vista cambió (CullGate) y sube las que se ven.
+// Open-world-3d T7b (D-839): especies, escaneos de roca, mapas, colores, ganancia de la hoja, luces del horneado y
+// multiplicadores de densidad salen del look (`input.look`); el sembrado, las bandas, el recorte y los topes son núcleo.
 import {
   BufferAttribute, BufferGeometry, Frustum, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, Quaternion, RepeatWrapping,
   SRGBColorSpace, Euler, Vector3, Color, type Camera, type Material, type Texture, type WebGLRenderer, type WebGLRenderTarget,
 } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
-  hash2, NATURE_COLORS, NATURE_TEXTURES, OPEN_WORLD_DENSITY, publicUrl, ROCK_SCANS, rockFile, SMALL_ROCK_MAX_DISTANCE,
-  speciesOf, takeVegetation, treeFile, type ShaderBand, type TreeSpecies, type VegetationScatter, type VegetationSpot,
-  type WorldTier,
+  hash2, lookSpecies, OPEN_WORLD_DENSITY, publicUrl, rockFile, SMALL_ROCK_MAX_DISTANCE, takeVegetation, treeFile,
+  type RockScan, type ShaderBand, type TreeSpecies, type VegetationScatter, type VegetationSpot, type WorldLook, type WorldTier,
 } from "@lg/art";
 import { blobTexture } from "../materials/blob";
 import { loadMeshoptDecoder } from "../props/gltf";
@@ -46,20 +47,30 @@ const tealTint = (h1: number, h2: number): [number, number, number] => {
   return [b * (1 - 0.24 * h1), b * (1 + 0.05 * h1), b * (1 + 0.3 * h1)];
 };
 
-/** Las variantes de roca: cada malla de cada escaneo chico, y el afloramiento al final (mockup `rockSets`). */
-export const ROCK_VARIANTS: readonly { scan: (typeof ROCK_SCANS)[number]["scan"]; mesh: number; outcrop: boolean }[] = [
-  ...ROCK_SCANS.filter((r) => r.kind === "small").flatMap((r) => Array.from({ length: r.scan === "rock_moss_set_01" ? 6 : 1 }, (_, mesh) => ({ scan: r.scan, mesh, outcrop: false }))),
-  ...ROCK_SCANS.filter((r) => r.kind === "outcrop").map((r) => ({ scan: r.scan, mesh: 0, outcrop: true })),
+export interface RockVariant {
+  scan: RockScan;
+  mesh: number;
+  outcrop: boolean;
+}
+
+/** Las variantes de roca de un look: cada malla de cada escaneo chico, y el afloramiento al final (mockup `rockSets`). */
+export const rockVariants = (scans: WorldLook["vegetation"]["rockScans"]): RockVariant[] => [
+  ...scans.filter((r) => r.kind === "small").flatMap((r) => Array.from({ length: r.meshes }, (_, mesh) => ({ scan: r.scan, mesh, outcrop: false }))),
+  ...scans.filter((r) => r.kind === "outcrop").map((r) => ({ scan: r.scan, mesh: 0, outcrop: true })),
 ];
-const SMALL_ROCKS = ROCK_VARIANTS.filter((r) => !r.outcrop).length;
 /** La variante de roca de un sitio (los afloramientos al afloramiento; las chicas en rueda). */
-export const rockVariant = (s: VegetationSpot): number => (s.out ? ROCK_VARIANTS.length - 1 : s.v % SMALL_ROCKS);
+export function rockVariant(s: VegetationSpot, variants: readonly RockVariant[]): number {
+  const small = variants.filter((r) => !r.outcrop).length;
+  return s.out ? variants.length - 1 : s.v % small;
+}
 
 export interface NatureInput {
   scatter: VegetationScatter;
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   tier: WorldTier;
   heightAt(x: number, z: number): number;
+  /** El look del diorama (open-world-3d T7b). */
+  look: WorldLook;
 }
 
 /** Un tronco o una roca grande dentro de los límites, para la cámara (no tapar el plano de a dos). */
@@ -129,12 +140,14 @@ export function bakedGeometry(o: Mesh): BufferGeometry {
 const _m = new Matrix4(), _q = new Quaternion(), _e = new Euler(), _p = new Vector3(), _s = new Vector3();
 
 export function buildNature(input: NatureInput): Nature {
-  const { tier, heightAt } = input;
+  const { tier, heightAt, look } = input;
+  const veg = look.vegetation;
+  const rocks = rockVariants(veg.rockScans);
   const lod = OPEN_WORLD_DENSITY[tier].treeLod;
   const normals = OPEN_WORLD_DENSITY[tier].groundNormals;
   const shadows = tier === "high";
-  const take = takeVegetation(input.scatter, input.bounds, tier);
-  const u = natureUniforms(lod.full, lod.mid);
+  const take = takeVegetation(input.scatter, input.bounds, tier, veg.density);
+  const u = natureUniforms(lod.full, lod.mid, veg.leafGain);
   const maps: NatureMaps = { leaf: { value: placeholderTexture() }, bark: { value: placeholderTexture() }, rockDiff: { value: placeholderTexture() }, rockNor: { value: placeholderTexture() } };
   const flowerTex = { value: placeholderTexture() as Texture };
   const leafNear = foliageMaterial(u, maps, "near");
@@ -144,7 +157,7 @@ export function buildNature(input: NatureInput): Nature {
   const rockNear = rockMaterial(u, maps, "near", normals);
   const rockFar = rockMaterial(u, maps, "midFar", false);
   const pebbles = pebbleMaterial(u);
-  const trees = [...speciesOf("pine"), ...speciesOf("broad")];
+  const trees = [...lookSpecies(look, "pine"), ...lookSpecies(look, "broad")];
   const impostors = new Map(trees.map((sp) => [sp.name, impostorMaterial(u, sp.name)]));
   // El blob como color sRGB (oscuro de verdad): en lineal, el verde oscuro se aclaraba sobre la base del tronco.
   const aoTex = blobTexture();
@@ -180,7 +193,7 @@ export function buildNature(input: NatureInput): Nature {
       if (kind === "pine" || kind === "broad" || kind === "bush") treeBases.push({ x: s.x, z: s.z, y, s: s.s, kind });
       const k = s.s * Math.max(sxz, sy);
       const tint: [number, number, number] = rock ? [1, 1, 1] : kind === "flower"
-        ? [...NATURE_COLORS.flowerTint[i % NATURE_COLORS.flowerTint.length] as [number, number, number]]
+        ? [...veg.colors.flowerTint[i % veg.colors.flowerTint.length] as [number, number, number]]
         : tealTint(hash2(i, vi, 14), hash2(i, vi, 15));
       return {
         x: s.x, z: s.z, base: y, k, cy: y + (height / 2) * k, rad: (height / 2) * k * 1.15 + 0.5,
@@ -190,7 +203,7 @@ export function buildNature(input: NatureInput): Nature {
 
   /** Pinos, latifoliadas y arbustos: un grupo por especie, niveles completo, liviano e impostor (sin impostor los arbustos). */
   const treeGroups = (kind: "pine" | "broad" | "bush", list: VegetationSpot[], aoScale: number): void => {
-    const species = speciesOf(kind);
+    const species = lookSpecies(look, kind);
     species.forEach((sp, vi) => {
       const mine = list.filter((s) => s.v % species.length === vi);
       if (mine.length === 0) return;
@@ -216,8 +229,8 @@ export function buildNature(input: NatureInput): Nature {
   treeGroups("bush", take.bushes, 1.8);
 
   // Rocas: una variante por malla de escaneo; cerca y lejos (en low, el afloramiento de cerca es el de lejos: mockup).
-  ROCK_VARIANTS.forEach((rv, vi) => {
-    const mine = take.rocks.filter((s) => rockVariant(s) === vi);
+  rocks.forEach((rv, vi) => {
+    const mine = take.rocks.filter((s) => rockVariant(s, rocks) === vi);
     if (mine.length === 0) return;
     const g: NatureGroup = { entries: entries(mine, vi, "rock", DETAIL_HEIGHT.rock, 2.4), levels: [] };
     const near = instanced(rockNear, mine.length, shadows, `${rv.scan}:${rv.mesh}:cerca`);
@@ -244,9 +257,9 @@ export function buildNature(input: NatureInput): Nature {
       groups.push(g);
     });
   };
-  detail("fern", take.ferns, [fernGeometry(0), fernGeometry(1)], leafNearMid);
+  detail("fern", take.ferns, [fernGeometry(0, veg.colors.fern, veg.leafGain), fernGeometry(1, veg.colors.fern, veg.leafGain)], leafNearMid);
   detail("flower", take.flowers, [flowerClumpGeometry()], flowers);
-  detail("pebble", take.pebbles, [pebbleGeometry()], pebbles);
+  detail("pebble", take.pebbles, [pebbleGeometry(veg.colors.pebble)], pebbles);
 
   // El contacto oscuro: estático, una llamada.
   const aoGeo = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -340,10 +353,10 @@ export function buildNature(input: NatureInput): Nature {
           return t;
         };
         const [leaf, bark, rockDiff, rockNor] = await Promise.all([
-          tex(NATURE_TEXTURES.leaf, true, false),
-          tex(NATURE_TEXTURES.bark, true, true),
-          tex(NATURE_TEXTURES.rockDiff, true, false),
-          normals ? tex(NATURE_TEXTURES.rockNor, false, false) : Promise.resolve(null),
+          tex(veg.textures.leaf, true, false),
+          tex(veg.textures.bark, true, true),
+          tex(veg.textures.rockDiff, true, false),
+          normals ? tex(veg.textures.rockNor, false, false) : Promise.resolve(null),
         ]);
         const geos = await Promise.all(pending.map(async (p) => ({ p, geo: (await geometriesOf(p.url))[p.index] })));
         if (!alive) return;
@@ -366,7 +379,7 @@ export function buildNature(input: NatureInput): Nature {
           maps.rockNor.value = rockNor;
           rockNear.normalMap = rockNor;
         }
-        const fl = flowerAtlas();
+        const fl = flowerAtlas(veg.colors);
         flowerTex.value.dispose();
         flowerTex.value = fl;
         flowers.map = fl;
@@ -378,7 +391,7 @@ export function buildNature(input: NatureInput): Nature {
             const full = geos.find(({ p }) => p.tree === sp)?.geo;
             const imp = impostors.get(sp.name);
             if (!full || !imp) continue;
-            const rt = bakeImpostor(renderer, full, bakeMat);
+            const rt = bakeImpostor(renderer, full, bakeMat, look.light.impostor);
             targets.push(rt);
             imp.map = rt.texture;
             imp.needsUpdate = true;
