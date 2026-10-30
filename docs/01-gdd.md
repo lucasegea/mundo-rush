@@ -1123,6 +1123,8 @@ La guía completa (30 reglas, esquemas y lint) está en `02` §6.3 y §6.6. Lo e
 
 ### 5.3 Estilo (HD-2D, D-139)
 
+> **Nota (2026-10-30):** esta sección quedó como historia. El estilo vigente es la maqueta pintada (D-207, `docs/estetica/propuesta-c-maqueta-pintada.md`), vista en tercera persona en un mundo abierto (D-209). La técnica está en `03-arquitectura.md` §2.8 y §2.9.
+
 - **HD-2D** (referencia *Octopath Traveler*): el escenario es 3D y simple (tiles con textura pixel art y volúmenes de pocas caras: casas, galpones, alambrados, el tanque, el árbol grande) con luz 3D real y sombras suaves; los **personajes son sprites pixel art** que siempre miran a la cámara; la profundidad de campo y el bloom (solo en calidad media y alta) hacen que el valle se vea como una maqueta iluminada. Detalle técnico: `03-arquitectura.md` §2.9.
 - **Densidad de píxel:** 1 tile = 1 m = 32×32 px; personajes de ~32×48 px a la misma densidad; filtrado sin suavizado (pixel art nítido). Parámetros finales los fija el operador mirando F0.2 (D-154).
 - **Objetos interactivos** se distinguen por un brillo suave del color de la rama (o un ícono en modo daltonismo), no por contornos parpadeantes.
@@ -1151,6 +1153,8 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 - **HUD:** fondo crema/papel (#FBF6EC) con tinta oscura (#2A2A33) en modo claro; invertido en modo oscuro; contraste mínimo WCAG AA (objetivo AAA para texto de diálogo).
 
 ### 5.5 Cámara y controles
+
+> **Enmienda D-209 (2026-10-30):** cámara en tercera persona detrás del personaje. Mirada por arrastre o con Q y R, recentrado automático tras 1,5 s sin mirar, zoom continuo de 2,5 m al mapa entero (rueda, `+`/`-`, botones; V para el mapa entero), WASD relativo a la cámara, `Shift` para correr y un minimapa con los NPCs que faltan. El clic en el suelo sigue caminando, y un arrastre no camina. La cámara sigue sin pedir habilidad: nada se pierde si el jugador nunca la gira. Lo de abajo describe la cámara anterior (D-053).
 
 - **Cámara desde arriba en ángulo** (D-053, por presets): `topdownOrtho` por defecto (ortográfica, inclinación 55-60°, ~15 tiles de ancho visibles, sigue al jugador con suavizado), `isoOrtho` (girada 45°) como opción, y un encuadre de diálogo al conversar (NPC y jugador a los costados, subtítulos sin tapar caras). **Sin órbita libre**; 3 niveles de zoom. La cámara libre torpe es la lección más cara de las referencias [Referencias §4.2.4, §4.4.2]. Con "reducir movimiento", corte en vez de paneo.
 - **Movimiento:** click en el suelo para caminar (pathfinding simple) o WASD/flechas. Sin saltar, sin correr obligatorio (correr opcional con `Shift`). Colisiones simples (no física) por defecto (DP-14).
@@ -1317,7 +1321,7 @@ Tokens de color (valores de partida, a validar con contraste y modos daltónicos
 | DP-15 | Construcción/tycoon/economía de la propuesta de terceros | Adoptar en modo 1 / diferir a modo 2 / descartar | **Diferir como candidata del modo 2, sin dinero del jugador**; nunca en el modo 1 — **Decidido (2026-10-06, D-018).** | Choca con "sin dinero" y con el foco en el habla | §1.9, §4.2 |
 | DP-16 | Vehículo lúdico estilo Bruno Simon | Ninguno / traslado animado / bicicleta manejable con física | **Traslado animado en la v1**; manejable después del vertical slice si el rendimiento lo permite | Delight sin costo de física | §5.5 |
 | DP-17 | Estilo de render | Low-poly plano / cel-shading con contornos / mezcla | **Decidido (2026-10-06, D-139): HD-2D** (sprites pixel art sobre escenario 3D, postprocesado por tier; D-077) | Legible, barato | §5.3 |
-| DP-18 | Cámara | Tercera persona asistida / isométrica fija / libre | **Cámara ortográfica desde arriba en ángulo por presets** (`topdownOrtho` default, `isoOrtho` opción; D-053, actualizado por D-139) | Lección de la investigación de referencias §4.4.2 | §5.5 |
+| DP-18 | Cámara | Tercera persona asistida / isométrica fija / libre | **Cámara ortográfica desde arriba en ángulo por presets** (`topdownOrtho` default, `isoOrtho` opción; D-053, actualizado por D-139). **Hoy (D-209, 2026-10-30): tercera persona detrás del personaje (`thirdPerson`), con mirada por arrastre o Q/R, recentrado automático y zoom continuo hasta el mapa entero; D-207 había pasado antes a perspectiva de lente largo** | Lección de la investigación de referencias §4.4.2 | §5.5 |
 | DP-19 | Fuente de personajes animados | Kenney / Quaternius / encargo | **Sprites pixel art de un pack con licencia registrada** (D-078, D-153); glTF CC0 solo para volúmenes | Las IA no modelan ni animan | §5.7 |
 | DP-20 | Voces de NPCs | Voces del motor de tiempo real / TTS aparte / actores | **Voces del motor de tiempo real** con las mismas voces para líneas pre-generadas | Coherencia de timbre | §5.8 |
 | DP-21 | Líneas guionadas: TTS cacheado o voz humana | TTS / humanos | **TTS cacheado** en la v1; humanos para trailer o si hay presupuesto | Costo | §2.5.7 |

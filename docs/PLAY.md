@@ -69,6 +69,22 @@ esta en la cache de Playwright (no descarga nada; `LG_CHROMIUM=<ruta>` para eleg
    **T** (o **E**, o otro click sobre ella) abre la escena.
 3. Sin WebGL, o si preferís: **Modo solo diálogo** → elegí el lugar de Inés → **Hablar con Inés Calder**.
 
+### Controles del mapa (tercera persona, D-209)
+
+La cámara va detrás del personaje. Si nunca la tocás, se recentra sola.
+
+| Control | Qué hace |
+|---|---|
+| **WASD** o **flechas** | caminar, relativo a la cámara (W = hacia adelante de la vista) |
+| **Shift** (mantenido) | correr |
+| **Q** / **R** (mantenidas) | girar la vista a la izquierda / derecha |
+| **Arrastrar** con el mouse | mirar alrededor (horizontal gira, vertical sube o baja la cámara); un arrastre no camina, aunque lo sueltes sobre el piso |
+| **Click** en el piso o en una persona | caminar hasta ahí |
+| **Rueda**, **`+`** / **`-`** o los botones de zoom | acercar y alejar sin saltos, desde 2,5 m hasta el mapa entero (`+` y `-` andan también en teclado español) |
+| **V** | ver el mapa entero; otra V vuelve a la distancia anterior |
+| **T** o **E** cerca de una persona | abrir la escena |
+| **Minimapa** (abajo a la derecha) | 60 m alrededor, con el rumbo hacia arriba; los anillos rojos son las personas con las que todavía no cerraste la escena, y una flecha roja en el borde marca a las que están más lejos. Se oculta durante la charla |
+
 Al abrir la escena el navegador **pide permiso para el micrófono** (la primera vez). Aceptalo.
 
 ## 3. Hablar

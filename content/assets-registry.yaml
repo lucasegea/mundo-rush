@@ -1,8 +1,18 @@
-# content/assets-registry.yaml: registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2, D-207).
+# content/assets-registry.yaml: registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2, D-207;
+# política de licencias D1 del plan open-world-3d, D-209 y D-831).
 # Todo archivo servido en apps/web/public/{models,textures,audio,sprites} tiene una fila en `assets`; validate:content
-# falla si falta, si la licencia no está en la lista permitida (CC0-1.0, o CC-BY-4.0 con atribución; todo lo demás,
-# "uso personal" o "no comercial" en cualquier grafía incluido, se rechaza), o si una fila con atribucion_requerida no
-# está en content/creditos.yaml. `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
+# falla si falta, si la licencia no está en la lista cerrada D1, si una fila con atribucion_requerida no está en
+# content/creditos.yaml, o si una licencia de software no trae su archivo_licencia. Lista cerrada D1: CC0-1.0,
+# CC-BY-3.0 y CC-BY-4.0 (con atribución en los créditos), MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD,
+# Zlib y OFL-1.1 (las de software, con su texto versionado en el repo). Falla cerrada todo lo demás en cualquier
+# grafía: no comercial, sin derivadas, compartir igual (CC-BY-SA), GPL/LGPL/AGPL, "uso personal", licencia
+# desconocida y procedencia sin probar. Cada fila servida lleva `sha256` (bytes servidos) y `procedencia`
+# (refetched, derived, generated o edited), que scripts/content/provenance.test.ts recalcula; las filas generadas
+# (árboles de ez-tree, MIT) llevan `generador` en lugar de url_origen, fecha_descarga y sha256_original.
+# `npm run assets:refetch` vuelve a bajar y derivar cada fila y compara bytes. Nada derivado de juegos comerciales
+# ajenos entra (sin extracción, ripeo, ingeniería inversa ni emuladores): lo prueba la lista negra de AC10
+# (scripts/content/denylist.test.ts). Las licencias de npm se verifican aparte, con content/npm-licence-overrides.yaml.
+# `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
 # diferido al operador o pendiente para un hito posterior). Fuente de todas las verificaciones: investigación de assets
 # del 2026-10-13 (documento interno), con fuente y fecha de acceso por pack.
 # `pintura` es la tabla del pack de material de origen a token de la paleta (@lg/art) que usa scripts/assets/optimize.ts.

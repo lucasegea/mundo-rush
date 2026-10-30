@@ -1,6 +1,6 @@
 # ADR-028: Render maqueta pintada dentro de R3F
 
-- **Estado:** Aceptado (D-207, decidida) · reemplaza a ADR-022 · enmienda a ADR-011
+- **Estado:** Aceptado (D-207, decidida) · reemplaza a ADR-022 · enmienda a ADR-011 · enmendado 2026-10-30 por D-209
 - **Fecha:** 2026-10-12 (decisión del operador, D-207) · extensión de cámara 2026-10-13 (D-208) · escrito el 2026-10-13 (plan estetica-c M7)
 - **Fuente:** `docs/03-arquitectura.md` §2.8, §2.9 y §11 (estado en la tabla de `03`: Aceptado (D-207, decidida)); biblia de arte `docs/estetica/propuesta-c-maqueta-pintada.md`; plan `docs/plans/estetica-c-refactor.md`
 
@@ -26,6 +26,17 @@ La lectura de píxel de HD-2D; texturas pintadas a mano por pieza (el color va p
 ## Notas
 
 Reemplaza a **ADR-022** (D-207 reemplaza a D-139 y a D-154) y enmienda a **ADR-011** (el toon pasa a ser el material de todo el mundo). El código de HD-2D se retiró en el plan estetica-c M7 y `scripts/lint/retiro-hd2d.test.ts` impide que vuelva: no hay `OrthographicCamera` en `apps/` ni en `packages/`, y el filtro `nearest` solo vive en la rampa del toon. El esquema de contenido rechaza las claves `tiles` y `atlas_tiles` con un mensaje que apunta al formato de la maqueta.
+
+## Enmienda D-209 (2026-10-30)
+
+Plan open-world-3d, por dirección del operador del 2026-10-27; fila D-209 de `00-decisiones.md`. Este archivo no se reescribe; la enmienda se suma acá.
+
+- **Cámara:** el default pasa a `thirdPerson`, detrás del personaje, con mirada por arrastre o con Q y R y zoom continuo de 2,5 m al mapa entero (V alterna). `perspective3D` y su escalera de 8 pasos quedan registrados como panorama; `dialogueFrame` no cambia.
+- **Mundo:** abierto, de unos 140 × 100 m, con relieve, pasto instanciado, árboles horneados en build con impostores, cielo de domo y minimapa.
+- **Material:** sin contornos en ningún tier. El registro cerrado pasa a diez clases (`toon`, `agua`, `etiqueta`, `sombra-blob`, `terreno`, `pasto`, `follaje`, `impostor`, `cielo`, `nube`).
+- **Texturas:** el color sigue por vértice. Solo los mapas fotográficos de suelo y roca, el atlas de hojas y la corteza se sirven como KTX2 externos registrados.
+- **Postprocesado:** el tilt-shift corre solo en el panorama y en la charla.
+- **Personaje:** el del mundo abierto entra por el mismo pipeline de personajes.
 
 ## Cómo se cambia
 

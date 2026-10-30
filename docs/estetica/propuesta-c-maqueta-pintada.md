@@ -2,6 +2,7 @@
 
 **Proyecto:** learning-game (*Mundo Rush*, modo 1 *Kestrel Valley*) · **Fecha:** 2026-10-12 · **Autor:** construcción (el entorno de desarrollo), corrida nocturna sin operador
 **Estado:** propuesta para elegir (**la recomendada**). Si el operador la elige, este documento pasa a ser la biblia de arte del juego y reemplaza la dirección HD-2D (D-139) y la densidad de píxel (D-154). La cámara desde arriba por presets (D-053) se mantiene con otro lente.
+**Enmienda D-209 (2026-10-30, plan open-world-3d):** por dirección del operador del 2026-10-27, la cámara del mapa pasa a tercera persona y el mundo a abierto. Este documento no se reescribe: las secciones afectadas (§1, §2, §4, §5, §9) llevan una nota fechada "Enmienda D-209", y lo demás de la biblia (formas redondas, color por vértice, toon, paleta) sigue vigente.
 **Mockup:** [`propuesta-c-maqueta-pintada.html`](propuesta-c-maqueta-pintada.html) (abrilo con doble clic; `#charla` al final de la URL abre directo la conversación). Comparación con las otras: [`index.html`](index.html).
 
 > **En una frase:** el valle como una maqueta de juguete pintada a mano: 3D de formas redondas (sin un solo cubo a la vista), sombreado en bandas suaves con pincelada, visto desde arriba en diagonal con un lente largo que lo hace parecer un diorama, la legibilidad del mapa de *Heroes IV* y el color soleado de los juegos móviles.
@@ -16,7 +17,7 @@
   - *Heroes IV* (1): la vista desde arriba en diagonal que deja leer caminos, río, puentes y casas de un vistazo; la densidad de bosque en los bordes; la sensación de "mapa de aventura".
   - Juegos móviles (2 a 4): el color saturado y luminoso, el verde de lomas, el sol, los personajes 3D estilizados con animación, el carro con fardos.
   - *Townscaper* y *A Short Hike* (ya en el GDD §5.2): juguete, pastel saturado, calidez, pueblo chico.
-- **Qué no toma:** el pixel art (rechazado), los cubos (rechazados: "todo cuadrado"), la cámara que hay que manejar y la oscuridad épica.
+- **Qué no toma:** el pixel art (rechazado), los cubos (rechazados: "todo cuadrado"), la cámara que hay que manejar y la oscuridad épica. *Enmienda D-209 (2026-10-30): la cámara pasa a tercera persona, que el jugador gira con arrastre o con Q y R; se mantiene que nada exige habilidad de videojuego: el recentrado es automático y el clic en el suelo sigue caminando.*
 
 ## 2. Mundo: estructura y escala
 
@@ -24,6 +25,7 @@
 - **Zonas:** cada zona del GDD es un **diorama de ~80 × 80 m caminables** sobre un terreno de 96 × 96 m. El borde son lomas suaves de hasta ~5.5 m que suben desde los 22 m del centro con pinos, más la niebla cálida; nunca hay "fin del mundo" visible desde la cámara de juego.
 - **Grilla:** el núcleo sigue en celdas de 1 m (colisión, "celda actual", interactuables), pero el terreno es una **malla de alturas continua**: caminos y río se dibujan por curvas (catmull-rom) y el terreno se aplana bajo los caminos y se hunde bajo el agua.
 - **Densidad de detalle:** cada 6 a 10 m hay algo que mirar (pozo, buzón, piedras del camino, matas de flores, carro con fardos, cerco). Los caminos tienen 2.6 m libres a cada lado. Los objetos interactivos reciben un brillo suave del color de la rama (GDD §5.3), nunca un contorno que titila.
+- *Enmienda D-209 (2026-10-30): el mundo abierto mide unos 140 × 100 m caminables, con relieve de 2 a 6 m y mesetas planas donde están los NPCs, más 160 m de faldón y un delantal del color de la niebla.*
 - **Escala de un recorrido:** a 4 m/s (6.2 trotando) se cruza la zona en ~20 s; con el zoom medio se ven ~28 m de ancho.
 
 ## 3. Personajes
@@ -40,17 +42,18 @@
 - **Zoom:** 3 pasos de distancia **22 / 30 / 40 m** (rueda o `+` `-`, atados por `KeyboardEvent.key`, lección F2). El medio muestra ~28 m de ancho en 16:9.
 - **Seguimiento:** el objetivo es el jugador a 0.8 m de altura, con suavizado exponencial a tasa 5/s. Sin órbita libre. Con "reducir movimiento", `cutFollow` (ya existe).
 - **Conversación (plano de a dos, 3/4):** el jugador se acomoda solo a **2.6 m del NPC**; la cámara baja a **20° de inclinación, 12.5 m de distancia**, y gira hasta quedar **perpendicular a la línea jugador-NPC, corrida ~27° hacia la cara del NPC**. Elige el lado con **menos obstáculos** (un test de oclusión contra árboles, casa y huerta) y baja la mira 0.9 m para que los dos queden en el tercio de arriba, encima del panel. Resultado: NPC de frente en 3/4, jugador de espaldas en 3/4, sin nada tapándolos. Transición suave a tasa 3/s; corte con "reducir movimiento".
+- *Enmienda D-209 (2026-10-30): la cámara del mapa es `thirdPerson`, detrás del personaje. Inclinación de 6 a 55° (17° al entrar), mirada por arrastre o con Q y R, recentrado tras 1,5 s sin mirar y zoom continuo de 2,5 m al mapa entero (rueda, `+`/`-`, V para el mapa entero). El lente largo de arriba queda como panorama (`perspective3D`). La charla en plano de a dos no cambia.*
 - **Retrato aparte:** no hace falta; la cara del NPC se lee en el plano de charla. Para el modo "solo diálogo" (D-030) se renderiza un retrato del mismo modelo 3D.
 
 ## 5. Luz
 
 - **Hora de referencia:** media mañana cálida (la del amanecer de Kestrel Valley ya avanzado).
 - **Sol:** `DirectionalLight` color `#FFF1D6`, **intensidad 2.3**, elevación **48°**, azimut **-30°**. Sombras **PCF suaves**, mapa de **1024 px (medio) / 2048 (alto)**, radio 3, en una caja de 44 × 44 m que sigue al objetivo de cámara; `bias -0.0004`, `normalBias 0.03`.
-- **Cielo:** `HemisphereLight` cielo `#D6ECF2`, suelo `#6E8B4A`, intensidad 1.15. Con la cámara a 50° el cielo casi no se ve; el fondo es la bruma.
+- **Cielo:** `HemisphereLight` cielo `#D6ECF2`, suelo `#6E8B4A`, intensidad 1.15. Con la cámara a 50° el cielo casi no se ve; el fondo es la bruma. *Enmienda D-209 (2026-10-30): en tercera persona el cielo se ve. Es un domo centrado en la cámara con cénit, horizonte y bruma, con el horizonte exactamente del color de la niebla, y nubes planas desde medium. La hemisférica no cambia.*
 - **Bandas toon:** rampa de 4 pasos en luminancia **150 / 195 / 232 / 255** (sombra clara, nunca negra). Así las sombras son de color, no grises.
 - **Niebla:** lineal color `#F3E7CF` (bruma cálida), de **34 a 78 m**. Envuelve los bordes y le da aire de diorama.
 - **Tono:** ACES Filmic, exposición **1.05**, salida sRGB. El agua usa su propio shader con niebla y tono incluidos.
-- **Postprocesado por tier:** bajo, nada; medio, bloom solo en emisivos (Lumi, ventanas) con umbral 0.85 a media resolución; alto, bloom + **tilt-shift** (desenfoque arriba y abajo, 22 % de la pantalla, que remata el efecto maqueta) + viñeta suave. El mockup imita el tilt-shift con un `backdrop-filter` de CSS en el tier alto; en el juego se usa `TiltShift2` de `@react-three/postprocessing`, que ya está en `world/post/Post.tsx`.
+- **Postprocesado por tier:** bajo, nada; medio, bloom solo en emisivos (Lumi, ventanas) con umbral 0.85 a media resolución; alto, bloom + **tilt-shift** (desenfoque arriba y abajo, 22 % de la pantalla, que remata el efecto maqueta) + viñeta suave. *Enmienda D-209 (2026-10-30): el tilt-shift corre solo en el panorama y en la charla, nunca detrás del personaje (taparía el cielo y los pies).* El mockup imita el tilt-shift con un `backdrop-filter` de CSS en el tier alto; en el juego se usa `TiltShift2` de `@react-three/postprocessing`, que ya está en `world/post/Post.tsx`.
 - **Atardecer y noche (GDD):** presets por hora (D-051): atardecer con sol `#FFB27A` a 15°, bruma `#F2C8A0`; noche con hemisférica azul `#2B3550`, ventanas y caminitos de bichos de luz emisivos. La **saturación del Cruce** por progreso (GDD §5.4) es un parámetro del color por vértice (se desatura la zona hasta un 30 % y vuelve al fundar).
 
 ## 6. Paleta
@@ -107,7 +110,7 @@ Parte de la paleta del GDD §5.4 (se respetan `agua`, `cielo-dia`, `casa-1..6`, 
 
 ## 9. Controles
 
-- **PC (principal):** **clic en el suelo para caminar** o WASD/flechas relativos a la pantalla (W = hacia arriba de la pantalla, que con la cámara fija siempre es la misma dirección del mundo). `E` o clic en el NPC para hablar, `Espacio`/`Enter` Terminé, `Esc` salir, rueda o `+` `-` zoom, `Shift` trotar.
+- **PC (principal):** **clic en el suelo para caminar** o WASD/flechas relativos a la pantalla (W = hacia arriba de la pantalla, que con la cámara fija siempre es la misma dirección del mundo). `E` o clic en el NPC para hablar, `Espacio`/`Enter` Terminé, `Esc` salir, rueda o `+` `-` zoom, `Shift` trotar. *Enmienda D-209 (2026-10-30): WASD y las flechas son relativos a la cámara (W = hacia adelante de la vista); arrastrar con el mouse o mantener Q y R gira la vista; la rueda, `+`/`-` y los botones del HUD hacen zoom continuo; V alterna con el mapa entero; `Shift` corre; abajo a la derecha, un minimapa con los NPCs que faltan.*
 - **Gamepad:** stick izquierdo mover (ejes de pantalla), `A` hablar y Terminé, `B` salir, `Y` repetir, `X` pista, gatillos zoom, cruceta para el HUD.
 - **Móvil (después):** tocar para caminar y tocar al NPC (como A); joystick virtual opcional para quien lo prefiera (como B). Pellizcar para zoom.
 
