@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { glArgs } from "./gl-mode.ts";
 import {
-  CONFIGS, frameStats, HILLTOP, markdownSection, MEM_HOOK, parseProbeArgs, poseAvailable, POSE_ZOOM_T, timingOk, upsertSection, WARMUP_MS, WINDOW_MS, type Row,
+  CONFIGS, frameStats, HILLTOP, markdownSection, MEM_HOOK, missingFactors, parseProbeArgs, poseAvailable, POSE_ZOOM_T, probeUrl, timingOk, upsertSection, WARMUP_MS,
+  WINDOW_MS, type Row,
 } from "./perf-probe.ts";
 
 const row = (over: Partial<Row> = {}): Row => ({
@@ -19,7 +20,23 @@ describe("perf-probe: argumentos", () => {
   });
   test("--gl, --tier, --pose, --label, --build", () => {
     expect(parseProbeArgs(["--gl=igpu", "--tier=low", "--pose=spawn", "--label=T3", "--build"], {}))
-      .toEqual({ gl: "igpu", tiers: ["low"], poses: ["spawn"], label: "T3", build: true, failOnPurpose: false });
+      .toEqual({ gl: "igpu", tiers: ["low"], poses: ["spawn"], label: "T3", build: true, failOnPurpose: false, factors: [] });
+  });
+  // Open-world-3d T10 (b): factores de medición de desarrollo (el registro es el de la página; acá solo la forma).
+  test("--factor: coma o repetido, sin repetir; etiqueta por defecto con los factores; no con --build", () => {
+    const a = parseProbeArgs(["--tier=medium", "--factor=grass-off,dpr-1.0", "--factor=grass-off", "--factor=post-off"], {});
+    expect(a.factors).toEqual(["grass-off", "dpr-1.0", "post-off"]);
+    expect(a.label).toBe("factor-grass-off+dpr-1.0+post-off");
+    expect(parseProbeArgs(["--factor=grass-off", "--label=T10-f1"], {}).label).toBe("T10-f1");
+    expect(() => parseProbeArgs(["--factor=Grass Off"], {})).toThrow("factor mal escrito");
+    expect(() => parseProbeArgs(["--factor=grass-off", "--build"], {})).toThrow("--factor no aplica a --build");
+  });
+  test("la url lleva los factores; lo que la página no reconoció se detecta", () => {
+    expect(probeUrl("http://x", [])).toBe("http://x/?universe=U-GALEANO&voz=0");
+    expect(probeUrl("http://x", ["grass-off", "post-off"])).toBe("http://x/?universe=U-GALEANO&voz=0&factor=grass-off,post-off");
+    expect(missingFactors(["grass-off", "bogus"], "grass-off")).toEqual(["bogus"]);
+    expect(missingFactors(["grass-off"], null)).toEqual(["grass-off"]);
+    expect(missingFactors([], null)).toEqual([]);
   });
   test("valores desconocidos fallan antes de lanzar", () => {
     expect(() => parseProbeArgs(["--gl=bogus"], {})).toThrow("modo de GL desconocido");
@@ -91,6 +108,12 @@ describe("perf-probe: informe", () => {
     const md = markdownSection({ gl: "gpu", label: "T3 (build)" }, "c1", [], ["close"], [{ ms: 800, programs: null, source: "dom" }, { ms: 400, programs: null, source: "dom" }, { ms: 900, programs: null, source: "dom" }]);
     expect(md).not.toContain("| tier |");
     expect(md).toContain("mediana 800 ms");
+  });
+  test("T10: los factores y los programas del primer cuadro van al informe", () => {
+    expect(markdownSection({ gl: "igpu", label: "f", factors: ["grass-off"] }, "c1", [row()], [], [])).toContain("Factores de desarrollo (T10 (b)): grass-off.");
+    const md = markdownSection({ gl: "igpu", label: "T10 (build)" }, "c1", [], [], [{ ms: 2100, programs: 31, source: "marks" }]);
+    expect(md).toContain("Programas después del primer cuadro: 31.");
+    expect(md).not.toContain("Medida provisoria");
   });
   test("una etiqueta repetida reemplaza su sección; las otras quedan", () => {
     const a = markdownSection({ gl: "gpu", label: "T3" }, "c1", [row()], [], []);

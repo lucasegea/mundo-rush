@@ -14,9 +14,13 @@
 // sale de `fogFor(scale, t)`. El tilt-shift queda fuera de `thirdPerson` (Post).
 // Open-world-3d T7b (D-839, D-840): el look del diorama se resuelve una vez al cargarlo (`lookForDiorama`) y de él salen
 // fondo, niebla, tono, luz, la escena entera y los personajes; el relieve decide solo la forma del terreno.
+// Open-world-3d T10 (d, D-835): con la escena lista, el frameloop queda retenido ("never") hasta que compileAsync compiló
+// sus programas (ShaderWarmup); el primer cuadro dibujado marca `lg:world-first-frame` (FirstFrameMark). T10 (b): en
+// desarrollo, los factores de medición de la query (`?factor=...`, world/budget/devFactors.ts) mueven las perillas del
+// tier, del composer, del contexto y de la escena; en `vite build` la rama no existe (check:dev-only).
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { lazy, Suspense, useEffect, useMemo } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ACESFilmicToneMapping } from "three";
 import { DENSITY, OPEN_WORLD_DENSITY, WORLD_TIERS, type SceneDensity, type WorldTier } from "@lg/art";
 import type { SelectableTier } from "@lg/core";
@@ -31,6 +35,8 @@ import { zoomDistanceAt } from "./camera/zoom";
 import { Diorama } from "./dioramas/Diorama";
 import { lookForDiorama } from "./dioramas/look";
 import { buildDioramaScene } from "./dioramas/scene";
+import { composerWithFactors, DEV_FACTORS_ATTR, parseDevFactors, sceneWithFactors, tierWithFactors } from "./budget/devFactors";
+import { FirstFrameMark, ShaderWarmup } from "./budget/WorldLoad";
 import { FrameRegulator } from "./FrameRegulator";
 import { canvasLoop } from "./frameRate";
 import { activeLook } from "./runtime";
@@ -49,6 +55,12 @@ const RenderStatsProbe = import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR
 // los contadores en globalThis. En `vite build` la condición es falsa y nada de esto se emite (check:dev-only).
 const PERF_PROBE = import.meta.env.DEV && import.meta.env.VITE_LG_PERF_PROBE === "1";
 const PerfProbe = PERF_PROBE ? lazy(() => import("./budget/perfProbe")) : null;
+// Factores de medición (open-world-3d T10 (b), D-846): solo en desarrollo; en `vite build` es null, cada uso de abajo
+// queda en su rama muerta y el registro no se emite (check:dev-only busca DEV_FACTORS_ATTR en el dist).
+const FACTORS = import.meta.env.DEV ? parseDevFactors(globalThis.location?.search ?? "", true) : null;
+const SCENE_KNOBS = FACTORS ? sceneWithFactors(FACTORS.effect) : undefined;
+const COMPOSER = FACTORS ? composerWithFactors(FACTORS.effect) : undefined;
+const DEV_SURFACE = FACTORS ? { [DEV_FACTORS_ATTR]: FACTORS.names.join(",") } : {};
 
 /** Lo que el mapa necesita de cada tier (la forma de TIER_PARAMS de services/quality, sin importarlo). */
 export interface WorldTierParams {
@@ -78,7 +90,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const highlightId = useGameView(selectHighlightedNpc);
   const activity = useGameView(selectSceneActivity);
   const requestIds = useGameView(selectRequestBubbles);
-  const params = tierParams[render.tier];
+  const params = FACTORS ? tierWithFactors(tierParams[render.tier], FACTORS.effect) : tierParams[render.tier];
   const density = params.density;
   const post = postLevel(render.post, params.post);
   const cut = render.cameraMotion === "cut";
@@ -100,17 +112,21 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   // Distancia pedida de la cámara (open-world-3d T5): la del plano de a dos durante la charla; en el mapa, una referencia
   // del t de zoom cuantizado (post y etiquetas). La exacta la lleva CameraRig por cuadro.
   const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : zoomDistanceAt(render.zoomBand, VIEW_FIT_REFERENCE);
-  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density, worldTier, look) : null), [map.diorama, density, worldTier, look]);
+  const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density, worldTier, look, SCENE_KNOBS) : null), [map.diorama, density, worldTier, look]);
+  // T10 (d): una sola vez por canvas, la primera escena se compila antes de dibujarse (los cambios de tier, no).
+  const [warm, setWarm] = useState(false);
+  const onWarm = useCallback(() => setWarm(true), []);
+  const warming = scene !== null && !warm;
   // La escena se libera en Diorama (dentro del Canvas), no acá: ver el comentario de su efecto.
 
   return (
     // touch-action: none (D-820): un arrastre táctil mira en vez de desplazar la página (Pointer Events, sin pointer lock).
-    <div {...WORLD_SURFACE} className="fixed inset-0 z-0" style={{ touchAction: "none" }} aria-hidden="true">
+    <div {...WORLD_SURFACE} {...DEV_SURFACE} className="fixed inset-0 z-0" style={{ touchAction: "none" }} aria-hidden="true">
       <Canvas
-        frameloop={loop.frameloop}
+        frameloop={warming ? "never" : loop.frameloop}
         dpr={[1, params.maxDpr ?? 1]}
         shadows={params.shadows === "directional"}
-        gl={{ antialias: false }}
+        gl={{ antialias: FACTORS?.effect.antialias ?? false }}
         onCreated={({ gl }) => {
           gl.toneMapping = ACESFilmicToneMapping;
           gl.toneMappingExposure = look.light.exposure;
@@ -159,9 +175,12 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         />
         {post !== "none" ? (
           <Suspense fallback={null}>
-            <Post level={post} viewScale={viewScale(viewDistance)} tiltShift={tiltShiftOn(render.preset)} />
+            <Post level={post} viewScale={viewScale(viewDistance)} tiltShift={tiltShiftOn(render.preset)} composer={COMPOSER} />
           </Suspense>
         ) : null}
+        {/* T10 (d): después de todo lo montado, así compileAsync ve la escena del diorama, el jugador y la luz. */}
+        {warming ? <ShaderWarmup onReady={onWarm} /> : null}
+        {scene && warm ? <FirstFrameMark /> : null}
         {RenderStatsProbe ? (
           <Suspense fallback={null}>
             <RenderStatsProbe />

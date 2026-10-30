@@ -1,5 +1,6 @@
 // Menú principal: lista de botones nativos. Tab y Shift+Tab recorren; además flechas, Inicio y Fin mueven el
-// foco dentro de la lista; Escape cierra el menú cuando hay una vista detrás.
+// foco dentro de la lista; Escape cierra el menú cuando hay una vista detrás. Open-world-3d T10 (d): el clic en
+// "Explorar el mapa" despacha enterWorld, que marca `lg:world-enter` (inicio de la medida de carga, AC63).
 import type { KeyboardEvent } from "react";
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";

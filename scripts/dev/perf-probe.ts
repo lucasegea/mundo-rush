@@ -8,6 +8,13 @@
 // es 1280x720 a DPR 1 (la del gate); DPR 1.5 y 1920x1080 son informativas (O-5).
 //
 //   npm run perf:probe -- --gl=gpu|igpu|swiftshader --tier=low|medium|high|all --pose=spawn[,...] [--label=T3] [--build]
+//                          [--factor=grass-off[,post-off]]
+//
+// `--factor` (open-world-3d T10 (b), D-846) pasa factores de medición de desarrollo a la página (`?factor=...`). El
+// registro único es apps/web/src/world/budget/devFactors.ts; la sonda no lo copia: después de entrar al mapa lee el
+// atributo `data-lg-dev-factors` del contenedor (lo que la página reconoció) y falla si falta alguno de los pedidos.
+// No aplica a `--build` (en producción no hay factores). Desde T10 (d) la medida espera la marca
+// `lg:world-first-frame` (el frameloop queda retenido mientras compileAsync compila la primera escena).
 //
 // `--build` mide la carga sobre un `vite build` servido con `vite preview` (perfil de navegador nuevo por muestra, 3
 // muestras a medium; D-835). Escribe JSON y una sección por etiqueta en
@@ -117,7 +124,28 @@ export interface ProbeArgs {
   label: string;
   build: boolean;
   failOnPurpose: boolean;
+  /** Factores de medición de desarrollo (T10 (b)); vacío = ninguno. */
+  factors: string[];
 }
+
+/** Forma de un nombre de factor (los nombres válidos los decide el registro de la página). */
+const FACTOR_NAME = /^[a-z0-9][a-z0-9.-]*$/;
+/** Parámetro de la query y atributo del contenedor: los de apps/web/src/world/budget/devFactors.ts. */
+export const FACTOR_PARAM = "factor";
+export const FACTORS_ATTR = "data-lg-dev-factors";
+/** Las marcas de carga de @lg/core (runtime/loadMarks.ts). */
+export const MARK_ENTER = "lg:world-enter";
+export const MARK_FIRST_FRAME = "lg:world-first-frame";
+
+/** La url de la página con el universo, sin voz y con los factores pedidos. */
+export const probeUrl = (base: string, factors: readonly string[] = []): string =>
+  `${base}/?universe=${UNIVERSE}&voz=0${factors.length > 0 ? `&${FACTOR_PARAM}=${factors.join(",")}` : ""}`;
+
+/** Los pedidos que la página no reconoció (`applied` es el atributo del contenedor, null si no está). */
+export const missingFactors = (requested: readonly string[], applied: string | null): string[] => {
+  const got = new Set((applied ?? "").split(",").filter(Boolean));
+  return requested.filter((f) => !got.has(f));
+};
 
 /** Argumentos de la línea de comandos; un valor inválido es un error antes de lanzar nada. */
 export function parseProbeArgs(argv: readonly string[], env: NodeJS.ProcessEnv = process.env): ProbeArgs {
@@ -133,7 +161,12 @@ export function parseProbeArgs(argv: readonly string[], env: NodeJS.ProcessEnv =
     if (!(POSES as readonly string[]).includes(p)) throw new Error(`pose desconocida "${p}" (${POSES.join(", ")} o all)`);
     return p as Pose;
   });
-  return { gl, tiers, poses, label: val("label") ?? "adhoc", build: argv.includes("--build"), failOnPurpose: argv.includes("--fail-on-purpose") };
+  const factors = [...new Set(argv.filter((x) => x.startsWith("--factor=")).flatMap((x) => x.slice("--factor=".length).split(",")).map((f) => f.trim()))];
+  for (const f of factors) if (!FACTOR_NAME.test(f)) throw new Error(`factor mal escrito "${f}" (p. ej. grass-off, dpr-1.0)`);
+  const build = argv.includes("--build");
+  if (build && factors.length > 0) throw new Error("--factor no aplica a --build (en producción no hay factores de desarrollo)");
+  const label = val("label") ?? (factors.length > 0 ? `factor-${factors.join("+")}` : "adhoc");
+  return { gl, tiers, poses, label, build, failOnPurpose: argv.includes("--fail-on-purpose"), factors };
 }
 
 export interface FrameStats { frames: number; mean: number; p50: number; p95: number }
@@ -290,8 +323,14 @@ async function runConfig(exe: string, a: ProbeArgs, stack: Stack, cfg: (typeof C
     async (page, info: GlLaunch) => {
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(e.message));
-      await page.goto(`${stack.url}/?universe=${UNIVERSE}&voz=0`);
+      await page.goto(probeUrl(stack.url, a.factors));
       await enterWorld(page);
+      // T10 (d): el primer cuadro del mundo llega después de compileAsync; antes de eso el frameloop está en "never".
+      await page.waitForFunction(`performance.getEntriesByName(${JSON.stringify(MARK_FIRST_FRAME)}).length > 0`, undefined, { timeout: 60_000 });
+      const applied = await page.getAttribute("[data-lg-world]", FACTORS_ATTR);
+      const missing = missingFactors(a.factors, applied);
+      if (missing.length > 0) throw new Error(`la página no reconoció los factores ${missing.join(", ")} (aplicados: "${applied ?? ""}")`);
+      if (a.factors.length > 0) log(`[probe] ${cfg.id}: factores ${applied}`);
       await page.evaluate(SAVE_SPAWN);
       await page.waitForFunction("globalThis.__lgPerfProbe !== undefined", undefined, { timeout: 30_000 });
       const hook = await readHook(page);
@@ -316,29 +355,33 @@ export interface LoadSample { ms: number; programs: number | null; source: "mark
 
 /**
  * Carga sobre el build (D-835): perfil nuevo por muestra (un navegador nuevo cada vez). Mide del clic en
- * `#menu-world` al primer cuadro del mundo. SEAM (T10(d)): con las marcas `lg:world-enter` y `lg:world-first-frame`
- * (y compileAsync antes del primer cuadro) la medida sale de las marcas; hasta entonces, del DOM (canvas + dos rAF).
+ * `#menu-world` al primer cuadro del mundo. Desde T10 (d) la medida sale de las marcas `lg:world-enter` y
+ * `lg:world-first-frame` (compileAsync antes del primer cuadro; `detail.programs`); sin ellas, del DOM (canvas + dos rAF).
  */
 async function loadSample(exe: string, a: ProbeArgs, url: string, log: (s: string) => void): Promise<LoadSample> {
   return withGlBrowser(exe, { mode: a.gl, uncapped: true, failOnPurpose: a.failOnPurpose, log }, async (page) => {
-    await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
+    await page.goto(probeUrl(url));
     await page.waitForSelector("#menu-world:not([aria-disabled='true'])", { timeout: 60_000 });
     const t0 = await page.evaluate("performance.now()") as number;
     await page.click("#menu-world");
     // Open-world-3d T9: el canvas del mundo, no el del minimapa (que también es un canvas y va antes en el DOM).
     await page.waitForFunction(`document.querySelector(${JSON.stringify(WORLD_CANVAS)}) !== null`, undefined, { timeout: 60_000 });
+    // T10 (d): con las marcas, se espera la del primer cuadro (que lleva programs.length en `detail`); sin ellas, el DOM.
+    await page.waitForFunction(`performance.getEntriesByName(${JSON.stringify(MARK_FIRST_FRAME)}).length > 0`, undefined, { timeout: 60_000 }).catch(() => {});
     const r = await page.evaluate(`new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(() => {
-      const enter = performance.getEntriesByName("lg:world-enter")[0], first = performance.getEntriesByName("lg:world-first-frame")[0];
-      ok(enter && first ? { ms: first.startTime - enter.startTime, source: "marks" } : { ms: performance.now() - ${t0}, source: "dom" });
-    })))`) as { ms: number; source: "marks" | "dom" };
-    return { ms: Math.round(r.ms), programs: null, source: r.source };
+      const enter = performance.getEntriesByName(${JSON.stringify(MARK_ENTER)})[0], first = performance.getEntriesByName(${JSON.stringify(MARK_FIRST_FRAME)})[0];
+      ok(enter && first ? { ms: first.startTime - enter.startTime, source: "marks", programs: first.detail?.programs ?? null } : { ms: performance.now() - ${t0}, source: "dom", programs: null });
+    })))`) as { ms: number; source: "marks" | "dom"; programs: number | null };
+    return { ms: Math.round(r.ms), programs: r.programs, source: r.source };
   });
 }
 
 const median = (xs: readonly number[]): number => [...xs].sort((x, y) => x - y)[Math.floor(xs.length / 2)] ?? 0;
 
 /** Tabla markdown de una corrida (una fila por tier y pose; DPR 1.5 y 1920x1080 como columnas informativas). */
-export function markdownSection(a: Pick<ProbeArgs, "gl" | "label">, commit: string, rows: readonly Row[], skipped: readonly Pose[], load: readonly LoadSample[]): string {
+export function markdownSection(
+  a: Pick<ProbeArgs, "gl" | "label"> & { factors?: readonly string[] }, commit: string, rows: readonly Row[], skipped: readonly Pose[], load: readonly LoadSample[],
+): string {
   const main = rows.filter((r) => r.config === "main");
   const other = (cfg: ConfigId, r: Row): Row | undefined => rows.find((x) => x.config === cfg && x.tier === r.tier && x.pose === r.pose);
   const renderer = rows[0]?.renderer ?? "(sin filas)";
@@ -359,9 +402,12 @@ export function markdownSection(a: Pick<ProbeArgs, "gl" | "label">, commit: stri
   // Una corrida `--build` no mide cuadros: solo la línea de carga.
   if (main.length === 0) lines.splice(1);
   if (main.length > 0 && skipped.length > 0) lines.push("", `Poses todavía no disponibles: ${skipped.join(", ")}.`);
+  if (main.length > 0 && a.factors && a.factors.length > 0) lines.push("", `Factores de desarrollo (T10 (b)): ${a.factors.join(", ")}.`);
   if (load.length > 0) {
+    const programs = load.map((l) => l.programs).filter((p): p is number => p !== null);
     lines.push("", `Carga sobre el build (vite build + vite preview, perfil nuevo por muestra): ${load.map((l) => `${l.ms} ms (${l.source})`).join(", ")}; mediana ${median(load.map((l) => l.ms))} ms.` +
-      (load.some((l) => l.source === "dom") ? " Medida provisoria por DOM (clic a canvas + dos cuadros): las marcas lg:world-enter y lg:world-first-frame llegan con T10(d)." : ""));
+      (programs.length > 0 ? ` Programas después del primer cuadro: ${programs.join(", ")}.` : "") +
+      (load.some((l) => l.source === "dom") ? " Medida provisoria por DOM (clic a canvas + dos cuadros): faltó una de las marcas lg:world-enter o lg:world-first-frame (T10 (d))." : ""));
   }
   return `${lines.join("\n")}\n`;
 }
@@ -433,9 +479,9 @@ async function main(): Promise<void> {
     const commit = commitLabel();
     mkdirSync(REPORT_JSON_DIR, { recursive: true });
     const json = join(REPORT_JSON_DIR, `${a.label}-${a.gl}${a.build ? "-build" : ""}.json`);
-    writeFileSync(json, `${JSON.stringify({ label: a.label, gl: a.gl, commit, warmupMs: WARMUP_MS, windowMs: WINDOW_MS, rows, skipped, load }, null, 2)}\n`);
+    writeFileSync(json, `${JSON.stringify({ label: a.label, gl: a.gl, commit, warmupMs: WARMUP_MS, windowMs: WINDOW_MS, rows, skipped, load, factors: a.factors }, null, 2)}\n`);
     const prev = existsSync(REPORT_MD) ? readFileSync(REPORT_MD, "utf8") : "";
-    writeFileSync(REPORT_MD, upsertSection(prev, a.build ? `${a.label} (build)` : a.label, a.gl, markdownSection({ gl: a.gl, label: a.build ? `${a.label} (build)` : a.label }, commit, rows, skipped, load)));
+    writeFileSync(REPORT_MD, upsertSection(prev, a.build ? `${a.label} (build)` : a.label, a.gl, markdownSection({ gl: a.gl, label: a.build ? `${a.label} (build)` : a.label, factors: a.factors }, commit, rows, skipped, load)));
     const above30 = rows.some((r) => r.config === "main" && r.stats.frames > 0 && r.stats.mean < 1000 / 30);
     log(`[probe] ${rows.length} fila(s); una muestra arriba de 30 FPS: ${above30}; JSON ${json}; informe ${REPORT_MD}`);
     process.exitCode = 0;

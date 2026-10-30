@@ -27,7 +27,8 @@ afterEach(() => rmSync(dist, { recursive: true, force: true }));
 
 describe("check:dev-only (03 §6.5.1 punto 3)", () => {
   test("los marcadores son exactamente los de 03 §6.5.1", () => {
-    expect([...DEV_ONLY_MARKERS]).toEqual(["__lg_director", "/__director/", "lg:director:", "DirectorPanel", "claude-agent-sdk", "LG_ANTHROPIC"]);
+    // Cambio registrado (open-world-3d T10 (b)): se suma `data-lg-dev-factors` (factores de medición de desarrollo).
+    expect([...DEV_ONLY_MARKERS]).toEqual(["__lg_director", "/__director/", "lg:director:", "DirectorPanel", "claude-agent-sdk", "LG_ANTHROPIC", "data-lg-dev-factors"]);
   });
 
   test("un dist limpio pasa", () => {

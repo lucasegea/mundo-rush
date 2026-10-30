@@ -18,7 +18,7 @@ import {
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
   hash2, lookSpecies, OPEN_WORLD_DENSITY, publicUrl, rockFile, SMALL_ROCK_MAX_DISTANCE, takeVegetation, treeFile, treeLodShrink,
-  type RockScan, type ShaderBand, type TreeSpecies, type VegetationScatter, type VegetationSpot, type WorldLook, type WorldTier,
+  type RockScan, type ShaderBand, type TreeLodRadii, type TreeSpecies, type VegetationScatter, type VegetationSpot, type WorldLook, type WorldTier,
 } from "@lg/art";
 import { blobTexture } from "../materials/blob";
 import { loadMeshoptDecoder } from "../props/gltf";
@@ -71,6 +71,8 @@ export interface NatureInput {
   heightAt(x: number, z: number): number;
   /** El look del diorama (open-world-3d T7b). */
   look: WorldLook;
+  /** Open-world-3d T10 (b): radios de LOD de los árboles; por defecto los del tier (OPEN_WORLD_DENSITY.treeLod). */
+  treeLod?: TreeLodRadii;
 }
 
 /** Un tronco o una roca grande dentro de los límites, para la cámara (no tapar el plano de a dos). */
@@ -146,7 +148,7 @@ export function buildNature(input: NatureInput): Nature {
   const { tier, heightAt, look } = input;
   const veg = look.vegetation;
   const rocks = rockVariants(veg.rockScans);
-  const lod = OPEN_WORLD_DENSITY[tier].treeLod;
+  const lod = input.treeLod ?? OPEN_WORLD_DENSITY[tier].treeLod;
   const normals = OPEN_WORLD_DENSITY[tier].groundNormals;
   const shadows = tier === "high";
   const take = takeVegetation(input.scatter, input.bounds, tier, veg.density);

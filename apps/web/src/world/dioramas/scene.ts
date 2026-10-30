@@ -23,8 +23,8 @@ import {
 } from "three";
 import type { DioramaRuntime, PropBox } from "@lg/core";
 import {
-  DENSITY, keepDetail, OPEN_WORLD_DENSITY, TERRAIN_APRON, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity, type WorldLook,
-  type WorldTier,
+  DENSITY, keepDetail, OPEN_WORLD_DENSITY, TERRAIN_APRON, TERRAIN_SEED as ART_SEED, type PaletteToken, type SceneDensity, type TreeLodRadii,
+  type WorldLook, type WorldTier,
 } from "@lg/art";
 import type { Obstacle } from "../camera/rig";
 import { toonMaterial } from "../materials/registry";
@@ -85,6 +85,27 @@ export interface DioramaScene {
 }
 
 const Y = new Vector3(0, 1, 0);
+
+/**
+ * Open-world-3d T10 (b): perillas de la escena del mundo abierto. Sin ellas (o sin un campo), lo del tier en
+ * OPEN_WORLD_DENSITY. Hoy las mueven solo los factores de medición de desarrollo (world/budget/devFactors.ts).
+ */
+export interface SceneKnobs {
+  /** false = sin pasto V6. */
+  grass?: boolean;
+  /** Mapas normales del suelo; por defecto los del tier. */
+  groundNormals?: boolean;
+  /** "light" = sin árboles completos; "impostor" = solo impostores. */
+  treeBand?: "light" | "impostor";
+}
+
+/** Los radios de LOD de los árboles del tier con la banda pedida (completos y livianos a 0 según la banda). */
+export function treeLodFor(tier: WorldTier, band: SceneKnobs["treeBand"]): TreeLodRadii {
+  const base = OPEN_WORLD_DENSITY[tier].treeLod;
+  if (band === "impostor") return { full: 0, mid: 0 };
+  if (band === "light") return { full: 0, mid: base.mid };
+  return base;
+}
 
 function instanced(name: string, geo: BufferGeometry, items: readonly { x: number; y: number; z: number; rot: number; scale: number }[], castShadow = false): InstancedMesh {
   const m = new InstancedMesh(geo, toonMaterial(), Math.max(1, items.length));
@@ -276,6 +297,7 @@ export function dioramaDetail(diorama: DioramaRuntime): DetailScatter {
 
 export function buildDioramaScene(
   diorama: DioramaRuntime, density: SceneDensity = "full", tier: WorldTier = "medium", look: WorldLook = lookForDiorama(diorama),
+  knobs: SceneKnobs = {},
 ): DioramaScene {
   const root = new Group();
   root.name = `diorama:${diorama.id}`;
@@ -290,7 +312,7 @@ export function buildDioramaScene(
   if (relief) {
     // AC35: la falda se funde a la niebla en sus últimos metros y el delantal sigue de ese color (TERRAIN_APRON).
     const skirt = terrain.extent.maxX - diorama.bounds.maxX;
-    ground = groundMaterial(tier, look, { bounds: diorama.bounds, fade: [skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]] });
+    ground = groundMaterial(tier, look, { bounds: diorama.bounds, fade: [skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]] }, knobs.groundNormals);
     const tiles = terrainTiles(terrain, OPEN_WORLD_DENSITY[tier].terrainTiles, ground);
     tiles.add(terrainApron(terrain, ground));
     root.add(tiles);
@@ -298,8 +320,10 @@ export function buildDioramaScene(
     sky = buildSky(tier, look);
     root.add(sky.group);
     heightDirt = heightDirtTexture(terrain, diorama.bounds);
-    grass = buildGrass({ tier, look, heightDirt, bed: ground.grassBed });
-    root.add(grass.group);
+    if (knobs.grass !== false) {
+      grass = buildGrass({ tier, look, heightDirt, bed: ground.grassBed });
+      root.add(grass.group);
+    }
   } else {
     root.add(terrainMesh(terrain));
   }
@@ -360,7 +384,7 @@ export function buildDioramaScene(
   // el bosque de world/nature (T7).
   let nature: Nature | null = null;
   if (relief && diorama.vegetation) {
-    nature = buildNature({ scatter: diorama.vegetation, bounds: diorama.bounds, tier, heightAt: terrain.heightAt, look });
+    nature = buildNature({ scatter: diorama.vegetation, bounds: diorama.bounds, tier, heightAt: terrain.heightAt, look, treeLod: treeLodFor(tier, knobs.treeBand) });
     root.add(nature.group);
     for (const o of nature.obstacles) obstacles.push({ kind: "circle", x: o.x, z: o.z, r: o.r, height: o.height });
   } else {

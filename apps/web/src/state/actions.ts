@@ -2,7 +2,7 @@
 // Acciones delgadas: las reglas (tiers, saneo de ajustes, fase, pila de paneles) viven en @lg/core.
 import {
   applyLook, applySettingsPatch, applyWorldEffects, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom,
-  headingYaw, IDLE, isWalkable, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, pushPanel, recenterYaw,
+  headingYaw, IDLE, isWalkable, markWorldEnter, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, pushPanel, recenterYaw,
   RUN_MOVEMENT, sameIds, screenDirToWorld, SIM_DT, standoffPoint, stepBody, stepZoomDistance, suggestTier, THIRD_PERSON, zoomDistanceAt, zoomTAt,
   type Capabilities, type Settings, type DioramaLayout, type FeedbackMode, type MoveIntent, type NpcSpeed, type Panel,
   type SemanticAction, type SettingsPatch, type TextScale, type TierChoice, type WorldEffect,
@@ -412,8 +412,12 @@ export function createActions(store: GameStore) {
       }));
     },
 
-    /** Al mapa solo si el tier lo permite; si no, se explica por aria-live y no se cambia nada. */
+    /**
+     * Al mapa solo si el tier lo permite; si no, se explica por aria-live y no se cambia nada. Open-world-3d T10 (d): la
+     * despacha el clic de "Explorar el mapa" (MainMenu); si deja entrar, marca `lg:world-enter` (una vez por página).
+     */
     enterWorld(): void {
+      if (canEnterWorld(tierOf(get()))) markWorldEnter(globalThis.performance);
       set((s) => {
         if (!canEnterWorld(tierOf(s))) return { ui: { ...s.ui, announcement: announcement(s, "announce.worldUnavailable") } };
         return {

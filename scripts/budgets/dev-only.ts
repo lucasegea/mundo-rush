@@ -11,7 +11,9 @@ import { basename, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 /** Marcadores del modo director (03 §6.5.1). Distinguen mayúsculas: son los textos exactos. */
-export const DEV_ONLY_MARKERS = ["__lg_director", "/__director/", "lg:director:", "DirectorPanel", "claude-agent-sdk", "LG_ANTHROPIC"] as const;
+// Open-world-3d T10 (b): `data-lg-dev-factors` es el atributo que GameCanvas pone solo con los factores de medición de
+// desarrollo (world/budget/devFactors.ts); en un dist de producción significa que la rama de desarrollo se coló.
+export const DEV_ONLY_MARKERS = ["__lg_director", "/__director/", "lg:director:", "DirectorPanel", "claude-agent-sdk", "LG_ANTHROPIC", "data-lg-dev-factors"] as const;
 
 /** Archivos de texto del dist que se leen (los binarios, como imágenes, solo cuentan por nombre). */
 const TEXT_EXT = new Set([".js", ".mjs", ".cjs", ".css", ".html", ".json", ".map", ".txt", ".svg", ".webmanifest"]);

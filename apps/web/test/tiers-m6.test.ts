@@ -193,7 +193,9 @@ describe("canvasLoop: modo de R3F, regulador y PerformanceMonitor", () => {
     // tope solo bajo la doble llave de desarrollo; el tercer argumento es esa llave y nada más.
     expect(src).toContain("const loop = canvasLoop(render, params.targetFps, PERF_PROBE);");
     expect(src).toContain('const PERF_PROBE = import.meta.env.DEV && import.meta.env.VITE_LG_PERF_PROBE === "1";');
-    expect(src).toContain("frameloop={loop.frameloop}");
+    // Cambio registrado (open-world-3d T10 (d), D-835): antes `frameloop={loop.frameloop}`. Mientras compileAsync compila
+    // la primera escena el frameloop queda en "never"; después, canvasLoop tal cual.
+    expect(src).toContain('frameloop={warming ? "never" : loop.frameloop}');
     expect(src).toContain("{loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}");
     expect(src).toContain("{loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} ");
     expect(src.split("<PerformanceMonitor ")).toHaveLength(2);

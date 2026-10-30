@@ -5,17 +5,24 @@
 // en `thirdPerson` no hay tilt-shift (borronea el cielo y los pies en una vista detrás del personaje); queda en la vista
 // de conjunto y en el plano de a dos de `high`.
 import { Bloom, EffectComposer, TiltShift2, Vignette } from "@react-three/postprocessing";
-import type { PostLevel } from "./level";
+import { UnsignedByteType } from "three";
+import type { PostComposer, PostLevel } from "./level";
 import { tiltShiftFor } from "./tiltShift";
 
-export type { PostLevel } from "./level";
+export type { PostComposer, PostLevel } from "./level";
 
-/** `viewScale` es el de la distancia pedida de la cámara (world/camera/rig.ts). */
-export default function Post({ level, viewScale, tiltShift = true }: { level: PostLevel; viewScale: number; tiltShift?: boolean }) {
+/**
+ * `viewScale` es el de la distancia pedida de la cámara (world/camera/rig.ts). `composer` (T10 (b)): sin él,
+ * multisampling 0 y el frame buffer por defecto del composer.
+ */
+export default function Post({ level, viewScale, tiltShift = true, composer }: {
+  level: PostLevel; viewScale: number; tiltShift?: boolean; composer?: PostComposer | undefined;
+}) {
   if (level === "none") return null;
+  const cp = { multisampling: composer?.multisampling ?? 0, ...(composer?.eightBit ? { frameBufferType: UnsignedByteType } : {}) };
   if (level === "bloom") {
     return (
-      <EffectComposer multisampling={0}>
+      <EffectComposer {...cp}>
         <Bloom luminanceThreshold={0.9} luminanceSmoothing={0.1} intensity={0.8} resolutionScale={0.5} />
       </EffectComposer>
     );
@@ -23,14 +30,14 @@ export default function Post({ level, viewScale, tiltShift = true }: { level: Po
   const ts = tiltShiftFor(viewScale);
   if (!tiltShift) {
     return (
-      <EffectComposer multisampling={0}>
+      <EffectComposer {...cp}>
         <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.15} intensity={1.1} />
         <Vignette offset={0.3} darkness={0.55} />
       </EffectComposer>
     );
   }
   return (
-    <EffectComposer multisampling={0}>
+    <EffectComposer {...cp}>
       <Bloom mipmapBlur luminanceThreshold={0.85} luminanceSmoothing={0.15} intensity={1.1} />
       <TiltShift2 blur={ts.blur} taper={ts.taper} start={ts.start} end={ts.end} samples={10} />
       <Vignette offset={0.3} darkness={0.55} />

@@ -2,7 +2,7 @@
 // mundo 3D puede despachar. world/ lee solo de state/selectors/ y nunca escribe `nearbyInteractables` (lo deriva
 // el núcleo en cada paso de simulación). Un clic de R3F sobre una malla entra como acción semántica (R10, P0
 // ADR-025): el mismo traductor del núcleo que usa services/input.
-import { LOOK_DRAG_PX as CORE_LOOK_DRAG_PX, pointerAction, type PointerHit } from "@lg/core";
+import { LOOK_DRAG_PX as CORE_LOOK_DRAG_PX, markWorldFirstFrame, pointerAction, type PointerHit } from "@lg/core";
 import { actions } from "./actions";
 
 export type { PointerHit };
@@ -29,6 +29,11 @@ export const bridge = {
   cameraFit: (fitDistance: number): void => actions.cameraFitted(fitDistance),
   /** `webglcontextlost` (§2.7.2.4). */
   contextLost: (): void => actions.contextLost(),
+  /**
+   * Open-world-3d T10 (d): el primer cuadro del mundo se dibujó, con `programs` = renderer.info.programs.length. Marca
+   * `lg:world-first-frame` (una vez, y solo después de `lg:world-enter`; la regla es de @lg/core). No toca el store.
+   */
+  worldFirstFrame: (programs: number): boolean => markWorldFirstFrame(globalThis.performance, { programs }),
 } as const;
 
 export type WorldBridge = typeof bridge;

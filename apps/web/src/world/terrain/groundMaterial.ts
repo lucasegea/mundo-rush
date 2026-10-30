@@ -136,9 +136,14 @@ export interface GroundMaterial {
 export const groundMapUrl = (map: GroundMap, kind: "diff" | "nor", base = "/"): string =>
   `${base}${groundTextureFile(map, kind).slice(TEXTURES_DIR.length - "textures".length)}`;
 
-/** Los mapas que pide un tier con un look: los 5 difusos siempre, los 5 normales solo si el tier los usa. */
-export function groundMapsFor(tier: WorldTier, look: WorldLook): { slot: GroundSlot; map: GroundMap; kind: "diff" | "nor" }[] {
-  const kinds: ("diff" | "nor")[] = OPEN_WORLD_DENSITY[tier].groundNormals ? ["diff", "nor"] : ["diff"];
+/**
+ * Los mapas que pide un tier con un look: los 5 difusos siempre, los 5 normales solo si el tier los usa (o si `normals`,
+ * la perilla de T10 (b), lo dice).
+ */
+export function groundMapsFor(
+  tier: WorldTier, look: WorldLook, normals = OPEN_WORLD_DENSITY[tier].groundNormals,
+): { slot: GroundSlot; map: GroundMap; kind: "diff" | "nor" }[] {
+  const kinds: ("diff" | "nor")[] = normals ? ["diff", "nor"] : ["diff"];
   return GROUND_SLOTS.flatMap((slot) => kinds.map((kind) => ({ slot, map: look.ground.maps[slot], kind })));
 }
 
@@ -150,9 +155,13 @@ export function ktx2Loader(renderer: WebGLRenderer): KTX2Loader {
   return ktx2;
 }
 
-/** El material del suelo del mundo abierto (uno por escena), con los mapas y el grado del look. */
-export function groundMaterial(tier: WorldTier, look: WorldLook, edge: GroundEdge | null = null): GroundMaterial {
-  const normals = OPEN_WORLD_DENSITY[tier].groundNormals;
+/**
+ * El material del suelo del mundo abierto (uno por escena), con los mapas y el grado del look. `normals` (T10 (b)): por
+ * defecto los del tier; false arma el sombreador sin mapas normales y no los baja.
+ */
+export function groundMaterial(
+  tier: WorldTier, look: WorldLook, edge: GroundEdge | null = null, normals = OPEN_WORLD_DENSITY[tier].groundNormals,
+): GroundMaterial {
   const material = tagMaterial(new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 }), "terreno");
   const grassBed = new Vector4(0, 0, 1, 0);
   const uniforms: Record<string, { value: unknown }> = {
@@ -210,7 +219,7 @@ export function groundMaterial(tier: WorldTier, look: WorldLook, edge: GroundEdg
       alive = true;
       loading ??= (async () => {
         const loader = ktx2Loader(renderer);
-        const maps = await Promise.all(groundMapsFor(tier, look).map(async ({ slot, map, kind }) => {
+        const maps = await Promise.all(groundMapsFor(tier, look, normals).map(async ({ slot, map, kind }) => {
           const tex = await loader.loadAsync(groundMapUrl(map, kind, import.meta.env.BASE_URL));
           tex.wrapS = tex.wrapT = RepeatWrapping;
           tex.anisotropy = 4;
