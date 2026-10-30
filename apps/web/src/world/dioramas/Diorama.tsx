@@ -16,6 +16,7 @@ import type { DioramaRuntime } from "@lg/core";
 import { bridge, LOOK_DRAG_PX } from "../../state/bridge";
 import type { MapActor, SceneActivityView } from "../../state/selectors";
 import { AnimationGovernor } from "../actors/AnimationGovernor";
+import { usePrecompile } from "../budget/WorldLoad";
 import { BlobShadows } from "../actors/BlobShadows";
 import { Character, type ActorPose } from "../actors/Character";
 import { LABEL_HEIGHT } from "../actors/chibiModel";
@@ -121,6 +122,7 @@ export const labelAnchorY = (heightAt: (x: number, z: number) => number, lift: n
  */
 function OpenWorld({ scene, still }: { scene: DioramaScene; still: boolean }) {
   const gl = useThree((s) => s.gl);
+  const precompile = usePrecompile();
   useEffect(() => {
     worldRenderer.gl = gl;
     return () => {
@@ -129,8 +131,9 @@ function OpenWorld({ scene, still }: { scene: DioramaScene; still: boolean }) {
   }, [gl]);
   useEffect(() => {
     scene.ground?.loadMaps(gl).catch((e: unknown) => console.warn("suelo: sin mapas .ktx2, queda el color por vértice", e));
-    scene.nature?.load(gl).catch((e: unknown) => console.warn("naturaleza: sin árboles ni rocas", e));
-  }, [scene, gl]);
+    // T10-integrate: los programas nuevos de la naturaleza compilan antes de que el recorrido la muestre.
+    scene.nature?.load(gl, precompile).catch((e: unknown) => console.warn("naturaleza: sin árboles ni rocas", e));
+  }, [scene, gl, precompile]);
   useFrame(({ camera, scene: three }, delta) => {
     scene.sky?.follow(camera.position.x, camera.position.y, camera.position.z, delta, still);
     if (scene.nature && followTarget.ready) {

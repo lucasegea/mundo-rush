@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./styles/tokens.css";
 import { App } from "./App";
 import { boot } from "./boot";
+import { universeFromSearch } from "./services/content";
 import { browserQualityEnv } from "./services/quality";
 import { createWebPlatform } from "./services/platform";
 import { browserSceneConnector } from "./services/scene/connector";
@@ -19,7 +20,7 @@ const audio = voiceOn
 
 // S4/D-806: `?universe=<id>` elige el universo a jugar (dev:play lo arma con el mismo id que LG_UNIVERSE del servidor).
 // Sin el param, el cliente juega la campesino (el árbol de contenido legacy), verbatim.
-const universeId = new URLSearchParams(window.location.search).get("universe") ?? undefined;
+const universeId = universeFromSearch(window.location.search);
 
 const container = document.getElementById("root");
 if (container) {

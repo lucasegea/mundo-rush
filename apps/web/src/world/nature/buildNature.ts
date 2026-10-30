@@ -95,8 +95,11 @@ export interface Nature {
    * treeLodShrink; 0 = los del tier). Devuelve si recorrió.
    */
   update(camera: Camera, px: number, pz: number, fogFar: number, dt: number, still: boolean, t?: number): boolean;
-  /** Baja mallas y mapas y hornea los impostores (una vez). Si algo falla, la naturaleza queda sin dibujar. */
-  load(renderer: WebGLRenderer): Promise<void>;
+  /**
+   * Baja mallas y mapas y hornea los impostores (una vez). Si algo falla, la naturaleza queda sin dibujar. T10-integrate:
+   * `precompile` (si viene) compila el grupo ya armado antes de que el recorrido lo muestre; nunca debe rechazar.
+   */
+  load(renderer: WebGLRenderer, precompile?: (group: Group) => Promise<unknown>): Promise<void>;
   dispose(): void;
 }
 
@@ -328,7 +331,7 @@ export function buildNature(input: NatureInput): Nature {
       for (const g of groups) cullGroup(g, view);
       return true;
     },
-    load(renderer) {
+    load(renderer, precompile) {
       alive = true;
       loading ??= (async () => {
         const meshopt = await loadMeshoptDecoder();
@@ -416,6 +419,9 @@ export function buildNature(input: NatureInput): Nature {
           bakeMat.dispose();
         }
         for (const m of materials) m.needsUpdate = true;
+        // Los programas nuevos (mapa normal de las rocas, impostores) compilan antes del primer recorrido que los muestra.
+        if (precompile) await precompile(group);
+        if (!alive) return;
         loaded = true;
         gate.reset();
       })();

@@ -5,12 +5,14 @@
 // abajo a la izquierda la ayuda de controles; abajo al centro el aviso; abajo a la derecha el zoom y, solo en
 // desarrollo, el chip de calidad. En pantallas angostas se ocultan la ayuda y el chip. En la charla este HUD no se
 // muestra (el shell pone el de diálogo), así que la ayuda desaparece sola. Open-world-3d T9: abajo a la derecha, debajo
-// del zoom, el minimapa (ui/hud/Minimap.tsx), que por eso tampoco se ve en la charla.
+// del zoom, el minimapa (ui/hud/Minimap.tsx), que por eso tampoco se ve en la charla. T10-integrate: en pantallas
+// angostas el aviso y el zoom se apilan sobre el minimapa (ui/hud/layout.ts), así el aviso nunca lo tapa.
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";
 import { selectWorldHudView, useGameView } from "../../state/selectors";
 import { useFocusOnMount } from "../a11y/hooks";
 import { Button } from "../primitives";
+import { MINIMAP_CLEARANCE_NARROW, MINIMAP_CLEARANCE_SIDE } from "./layout";
 import { Minimap } from "./Minimap";
 
 const CARD = "rounded-card border-2 border-card-line bg-paper shadow-card";
@@ -38,14 +40,16 @@ export function WorldHud() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+      {/* T10-integrate: en pantallas angostas una sola columna (el aviso arriba del zoom) que deja libre el alto del
+          minimapa, así el aviso nunca lo tapa (a 375 px el aviso centrado caía encima del círculo); desde md, tres. */}
+      <div className={`grid grid-cols-1 items-end gap-2 md:grid-cols-[1fr_auto_1fr] ${MINIMAP_CLEARANCE_NARROW}`}>
         {/* Abajo a la izquierda: la ayuda de controles (oculta en pantallas angostas). */}
         <p data-testid="world-controls" className={`hidden max-w-[22rem] px-3 py-2 text-sm md:block ${CARD}`}>{t("world.controls")}</p>
         {/* Abajo al centro: a quién le va a responder la E. Sale de selectInteractionPrompt, el mismo selector que
             resalta al NPC en el mundo (plan estetica-c M1 ítem 15), así el nombre del aviso y el resaltado no difieren. */}
-        <div role="status" aria-live="polite" className="col-start-2 flex justify-center">
+        <div role="status" aria-live="polite" className="flex justify-center md:col-start-2">
           {view.prompt ? (
-            <p id="world-prompt" className={`pointer-events-auto flex items-center gap-2 px-3 py-2 ${CARD}`}>
+            <p id="world-prompt" className={`pointer-events-auto flex max-w-full items-center gap-2 px-3 py-2 ${CARD}`}>
               <kbd className="rounded-md border-2 border-amber-strong bg-amber px-2 font-semibold text-on-amber">{t("world.prompt.key")}</kbd>{" "}
               <Button id="world-talk" variant="primary" onClick={() => actions.interact(view.prompt?.id ?? null)}>
                 {t("world.talk", { name: view.prompt.name })}
@@ -53,9 +57,9 @@ export function WorldHud() {
             </p>
           ) : null}
         </div>
-        {/* Open-world-3d T9: el minimapa va fijo abajo a la derecha; esta columna deja su alto libre debajo (7rem o
-            10rem más 1rem de aire) para que el zoom quede encima y no lo tape. */}
-        <div className="col-start-3 flex flex-col items-end gap-2 justify-self-end pb-[8rem] md:pb-[11rem]">
+        {/* Open-world-3d T9: el minimapa va fijo abajo a la derecha; desde md esta columna deja su alto libre debajo
+            (10rem más 1rem de aire) para que el zoom quede encima y no lo tape (en angosto lo deja el bloque entero). */}
+        <div className={`flex flex-col items-end gap-2 justify-self-end md:col-start-3 ${MINIMAP_CLEARANCE_SIDE}`}>
           {/* Abajo a la derecha, solo en desarrollo: la calidad efectiva. M4 SEAM: los FPS y los contadores de
               renderer.info llegan en M6 (instantánea del modo director); hasta entonces se leen en el navegador. */}
           {import.meta.env.DEV ? (

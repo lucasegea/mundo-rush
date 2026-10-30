@@ -42,3 +42,9 @@ export const activeLook: { id: string | null } = { id: null };
  * tier (con el zoom el disco se achica y su centro va delante del jugador).
  */
 export const grassBedView: { x: number; z: number; radius: number; on: number } = { x: 0, z: 0, radius: 0, on: 0 };
+/**
+ * T10-integrate: el destino de los cuadros del mundo según el tier (lo pone GameCanvas al dibujar). Con postprocesado
+ * la escena se dibuja en el render target del composer y sus programas son otros (sin tono, espacio lineal); la
+ * precompilación (world/budget/WorldLoad.tsx) compila para ese destino.
+ */
+export const worldFrame: { post: boolean } = { post: false };

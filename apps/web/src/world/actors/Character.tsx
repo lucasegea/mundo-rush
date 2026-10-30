@@ -7,11 +7,12 @@
 // Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido). Plan estetica-c M6:
 // `lod` elige el cuerpo completo o el simplificado de `low`. Open-world-3d T7 (AC47): `rig` elige el esqueleto (KayKit o
 // el de Quaternius del mundo abierto) y, con `distanceRules`, un NPC fuera del encuadre o a más de 62 m no se dibuja y a
-// más de 28 m pierde los accesorios (rigs.ts).
+// más de 28 m pierde los accesorios (rigs.ts). T10-integrate: el cuerpo con esqueleto se precompila antes de cambiarse.
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Frustum, Matrix4, Sphere, Vector3, type Camera, type Object3D } from "three";
 import type { SceneDensity, WorldLook } from "@lg/art";
+import { usePrecompile } from "../budget/WorldLoad";
 import { actorSpots, actorY, animatedActors } from "../runtime";
 import { chooseAnimation, type GestureId, type SceneRole } from "./animState";
 import { loadCharacterAssets } from "./characterAssets";
@@ -91,6 +92,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
   const seed = useMemo(() => seedOf(id), [id]);
   const chibi = useMemo(() => buildChibi(look, seed), [look, seed]);
   const [skinned, setSkinned] = useState<SkinnedCharacter | null>(null);
+  const precompile = usePrecompile();
   useEffect(() => () => {
     disposeChibi(chibi);
     actorSpots.delete(id);
@@ -99,9 +101,14 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     let alive = true;
     setSkinned(null);
     loadCharacterAssets(look.body, lod, RIGS[rig])
-      .then((a) => {
+      .then(async (a) => {
         if (!alive) return;
-        setSkinned(buildSkinnedCharacter(a.body, a.clips, look, seed, RIGS[rig], cast));
+        const built = buildSkinnedCharacter(a.body, a.clips, look, seed, RIGS[rig], cast);
+        // T10-integrate: el cuerpo se cambia cuando sus programas ya compilaron (mientras, sigue el de cápsulas), así
+        // su primer cuadro no compila en medio del juego. precompile nunca rechaza ni retiene el frameloop.
+        await precompile(built.root);
+        if (alive) setSkinned(built);
+        else disposeSkinnedCharacter(built);
       })
       .catch((err: unknown) => {
         // Se queda con el cuerpo de cápsulas, pero no en silencio: el aviso nombra el cuerpo que no bajó.
@@ -110,7 +117,7 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
     return () => {
       alive = false;
     };
-  }, [look, seed, id, lod, rig, cast]);
+  }, [look, seed, id, lod, rig, cast, precompile]);
   // Open-world-3d M3 (fuga al cambiar de tier): se libera el cuerpo cuando deja de ser el dibujado, no en la limpieza de
   // la carga. Liberado ahí, el cuerpo viejo seguía en la escena hasta el próximo commit, three rearmaba su textura de
   // huesos en ese cuadro y quedaba viva (4 texturas de 16 × 16 por cambio de tier, medido con la sonda).

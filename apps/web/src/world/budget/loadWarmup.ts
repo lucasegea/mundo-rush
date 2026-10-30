@@ -2,7 +2,8 @@
 // `renderer.compileAsync(scene, camera)` antes del primer cuadro del mundo (GameCanvas retiene el frameloop hasta que
 // termina), y el primer cuadro deja la marca `lg:world-first-frame` con `renderer.info.programs.length` (por el puente:
 // world/ usa el núcleo solo como tipos), que además se registra una vez en la consola. Puro sobre un compilador y una
-// marca inyectados; los componentes de R3F que lo usan están en WorldLoad.tsx.
+// marca inyectados; los componentes de R3F que lo usan están en WorldLoad.tsx. T10-integrate: lo que llega después
+// (naturaleza, personajes, postprocesado) se precompila al llegar con `precompile`, sin retener el frameloop.
 
 /**
  * Si compileAsync no termina en este tiempo, el mundo se dibuja igual (compila en el primer cuadro, como antes de T10).
@@ -45,6 +46,79 @@ export function warmShaders<S, C>(
     }
     compiling.then(() => settle("compiled"), () => settle("failed"));
   });
+}
+
+/** Lo que `precompile` usa del renderer (WebGLRenderer): compilar contra la escena del mundo y cambiar el destino. */
+export interface LateCompiler<O, C, S, T> {
+  compileAsync(object: O, camera: C, targetScene?: S | null): Promise<unknown>;
+  getRenderTarget(): T | null;
+  setRenderTarget(target: T | null): void;
+}
+
+/**
+ * T10-integrate: precompila algo que llega después de la primera escena (mallas de la naturaleza, cuerpos de personajes,
+ * pasadas del postprocesado) sin retener el frameloop. `scene` es la escena donde se va a dibujar (sus luces y su niebla
+ * entran en el programa) y `target` el destino del cuadro: null es la pantalla; con postprocesado la escena se dibuja en
+ * un render target y three arma otro programa (sin tono y en espacio lineal), así que se compila con uno puesto. El
+ * destino anterior vuelve enseguida: la parte síncrona de compileAsync (armar los programas) corre adentro. Nunca rechaza.
+ */
+export function precompile<O, C, S, T>(
+  renderer: LateCompiler<O, C, S, T>, object: O, camera: C, scene: S, target: T | null,
+  timeoutMs = SHADER_WARMUP_TIMEOUT_MS, timers: WarmupTimers = browserTimers,
+): Promise<WarmupResult> {
+  const prev = renderer.getRenderTarget();
+  const swap = prev !== target;
+  try {
+    if (swap) renderer.setRenderTarget(target);
+    return warmShaders({ compileAsync: (o: O, c: C) => renderer.compileAsync(o, c, scene) }, object, camera, timeoutMs, timers);
+  } catch {
+    return Promise.resolve("failed");
+  } finally {
+    if (swap) renderer.setRenderTarget(prev);
+  }
+}
+
+/** Lo que se lee de una pasada del composer de postprocessing (por forma: world/ no importa postprocessing). */
+export interface PassLike {
+  scene?: unknown;
+  camera?: unknown;
+  fullscreenMaterial?: unknown;
+  renderToScreen?: boolean;
+}
+
+export interface FullscreenPass {
+  scene: unknown;
+  camera: unknown;
+  /** Dibuja en la pantalla (la última pasada); si no, en un render target. */
+  screen: boolean;
+}
+
+const isPass = (v: unknown): v is PassLike =>
+  typeof v === "object" && v !== null && "fullscreenMaterial" in v && (v as PassLike).fullscreenMaterial != null &&
+  (v as PassLike).scene != null && (v as PassLike).camera != null;
+
+/**
+ * Las escenas de pantalla completa de un composer para precompilarlas: cada pasada con material (la RenderPass no tiene;
+ * su escena es la del mundo) y las pasadas internas de sus efectos (el umbral y el desenfoque del bloom), sin repetir.
+ */
+export function fullscreenPasses(composer: { passes: readonly unknown[] }): FullscreenPass[] {
+  const out: FullscreenPass[] = [];
+  const seen = new Set<unknown>();
+  const add = (p: PassLike, screen: boolean): void => {
+    if (seen.has(p.scene)) return;
+    seen.add(p.scene);
+    out.push({ scene: p.scene, camera: p.camera, screen });
+  };
+  for (const pass of composer.passes) {
+    if (isPass(pass)) add(pass, pass.renderToScreen === true);
+    const effects = (pass as { effects?: unknown }).effects;
+    if (!Array.isArray(effects)) continue;
+    for (const effect of effects as unknown[]) {
+      if (typeof effect !== "object" || effect === null) continue;
+      for (const inner of Object.values(effect)) if (isPass(inner)) add(inner, false);
+    }
+  }
+  return out;
 }
 
 /** ¿Ya se registró `programs.length`? (una vez por página, aunque el canvas se vuelva a montar). */

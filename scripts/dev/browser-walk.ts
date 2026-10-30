@@ -1094,7 +1094,7 @@ async function minimapPlacement(page: Page, label: string, side: number): Promis
   await page.waitForTimeout(300);
   const vp = page.viewportSize() ?? { width: 0, height: 0 };
   const box = (await minimapSeen(page)).box;
-  const rootFontPx = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  const rootFontPx = await page.evaluate<number>("parseFloat(getComputedStyle(document.documentElement).fontSize)");
   const want = minimapSideFor(side, rootFontPx);
   const right = box ? vp.width - (box.x + box.width) : -1;
   const bottom = box ? vp.height - (box.y + box.height) : -1;

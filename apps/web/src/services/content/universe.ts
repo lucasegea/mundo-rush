@@ -14,3 +14,6 @@ export const universeContentBase = (baseUrl: string, universeId?: string): strin
   const id = universeId ?? UNIVERSO_DEFECTO;
   return id === UNIVERSO_DEFECTO ? `${baseUrl}content/` : `${baseUrl}content/${id}/`;
 };
+
+/** El universo pedido por la url (`?universe=<id>`, S4/D-806); sin el param, undefined (la campesino). */
+export const universeFromSearch = (search: string): string | undefined => new URLSearchParams(search).get("universe") ?? undefined;

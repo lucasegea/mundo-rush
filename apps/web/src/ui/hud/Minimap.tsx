@@ -20,6 +20,7 @@ import { t } from "../../i18n";
 import {
   MINIMAP_REDRAW_MS, readGame, selectMinimap, selectMinimapVisible, selectPendingNpcs, useGameView, type MinimapView,
 } from "../../state/selectors";
+import { MINIMAP_OFFSET, MINIMAP_SIZE } from "./layout";
 
 /** Lado del punto de NPC y de la flecha del borde (rem), y su contorno de tinta. */
 const DOT = "1.125rem";
@@ -79,9 +80,9 @@ function MinimapPanel() {
       ref={root}
       data-testid="minimap"
       aria-label={first.label}
-      className="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-10"
+      className={`pointer-events-none fixed ${MINIMAP_OFFSET} z-10`}
     >
-      <div ref={wrap} data-testid="minimap-map" className="pointer-events-auto relative size-[7rem] rounded-full border-2 border-card-line shadow-card md:size-[10rem]">
+      <div ref={wrap} data-testid="minimap-map" className={`pointer-events-auto relative ${MINIMAP_SIZE} rounded-full border-2 border-card-line shadow-card`}>
         <canvas ref={canvas} aria-hidden="true" className="absolute inset-0 h-full w-full rounded-full" />
         <div aria-hidden="true" className="absolute inset-0">
           {pending.map((n) => (

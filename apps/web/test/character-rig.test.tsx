@@ -14,7 +14,8 @@ import { buildDioramaScene } from "../src/world/dioramas/scene";
 import { compiledUniverseClientContent } from "./helpers";
 
 const loads = vi.hoisted(() => [] as RigSpec[]);
-vi.mock("@react-three/fiber", () => ({ useFrame: () => {} }));
+// T10-integrate: Character precompila el cuerpo con usePrecompile (useThree); acá el cuerpo nunca llega, no se llama.
+vi.mock("@react-three/fiber", () => ({ useFrame: () => {}, useThree: (pick: (s: { get: () => never }) => unknown) => pick({ get: () => { throw new Error("sin canvas"); } }) }));
 vi.mock("../src/world/actors/characterAssets", () => ({
   loadCharacterAssets: (_body: unknown, _lod: unknown, rig: RigSpec) => {
     loads.push(rig);

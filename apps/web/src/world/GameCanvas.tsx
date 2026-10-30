@@ -18,6 +18,8 @@
 // sus programas (ShaderWarmup); el primer cuadro dibujado marca `lg:world-first-frame` (FirstFrameMark). T10 (b): en
 // desarrollo, los factores de medición de la query (`?factor=...`, world/budget/devFactors.ts) mueven las perillas del
 // tier, del composer, del contexto y de la escena; en `vite build` la rama no existe (check:dev-only).
+// T10-integrate: lo que llega después de la primera escena (naturaleza, cuerpos, pasadas del post) se precompila al llegar,
+// sin retener el frameloop (world/budget/WorldLoad.tsx), para el destino de `worldFrame.post`.
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -36,10 +38,10 @@ import { Diorama } from "./dioramas/Diorama";
 import { lookForDiorama } from "./dioramas/look";
 import { buildDioramaScene } from "./dioramas/scene";
 import { composerWithFactors, DEV_FACTORS_ATTR, parseDevFactors, sceneWithFactors, tierWithFactors } from "./budget/devFactors";
-import { FirstFrameMark, ShaderWarmup } from "./budget/WorldLoad";
+import { FirstFrameMark, precompilePasses, ShaderWarmup } from "./budget/WorldLoad";
 import { FrameRegulator } from "./FrameRegulator";
 import { canvasLoop } from "./frameRate";
-import { activeLook } from "./runtime";
+import { activeLook, worldFrame } from "./runtime";
 import { Lighting, type ShadowMode } from "./lighting/Lighting";
 import { postLevel, type PostLevel } from "./post/level";
 import { tiltShiftOn } from "./post/tiltShift";
@@ -93,6 +95,9 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const params = FACTORS ? tierWithFactors(tierParams[render.tier], FACTORS.effect) : tierParams[render.tier];
   const density = params.density;
   const post = postLevel(render.post, params.post);
+  // T10-integrate: la precompilación compila para el destino de este tier (render target con post, pantalla sin él).
+  // Es un valor derivado de las props, asignado antes de que el Canvas monte a sus hijos.
+  worldFrame.post = post !== "none";
   const cut = render.cameraMotion === "cut";
   const loop = canvasLoop(render, params.targetFps, PERF_PROBE);
   const inScene = render.conversationFps !== null;
@@ -175,7 +180,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         />
         {post !== "none" ? (
           <Suspense fallback={null}>
-            <Post level={post} viewScale={viewScale(viewDistance)} tiltShift={tiltShiftOn(render.preset)} composer={COMPOSER} />
+            <Post level={post} viewScale={viewScale(viewDistance)} tiltShift={tiltShiftOn(render.preset)} composer={COMPOSER} precompile={precompilePasses} />
           </Suspense>
         ) : null}
         {/* T10 (d): después de todo lo montado, así compileAsync ve la escena del diorama, el jugador y la luz. */}

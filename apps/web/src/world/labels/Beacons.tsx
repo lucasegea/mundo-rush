@@ -2,7 +2,10 @@
 // alejar la cámara (t de 0,4 a 0,7) aparecen un disco ámbar sobre el jugador y uno rojo sobre cada NPC, de tamaño
 // proporcional a la distancia de la cámara, sin test de profundidad, para encontrar a la gente con el mapa entero. La
 // opacidad y la escala salen de `cameraLook` (el t y la distancia ya suavizados) en useFrame, sin re-render.
-// T9 SEAM: el minimapa trae `completedNpcs`; entonces solo los NPCs pendientes llevan baliza (hoy, todos los del diorama).
+// Todos los NPCs del diorama llevan baliza, también los ya visitados (T10-integrate, revisado contra AC30): AC30 pide las
+// balizas de los tres NPCs en el mapa entero y la Walk la corre después de una charla (AC29); con balizas solo para los
+// pendientes, un NPC completado antes dejaría dos y AC30 fallaría. Los pendientes los marca el minimapa (T9). Pasar a
+// solo pendientes es una decisión de plan que enmienda AC30, no un cambio de este archivo.
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, Sprite, type Texture } from "three";
