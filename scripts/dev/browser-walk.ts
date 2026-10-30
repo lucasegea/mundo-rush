@@ -199,6 +199,9 @@ const canvasImage = (page: Page): Promise<Rgba> => elementImage(page, WORLD_CANV
 
 const WORLD_READY = `document.querySelector(${JSON.stringify(WORLD_CANVAS)}) !== null`;
 
+/** La marca del primer cuadro del mundo (@lg/core LOAD_MARKS.worldFirstFrame; browser-walk.test.ts fija que son iguales). */
+export const WORLD_FIRST_FRAME_MARK = "lg:world-first-frame";
+
 /** Menu: espera `#menu-world` habilitado y entra al mapa. */
 export async function enterWorld(page: Page): Promise<void> {
   await page.waitForSelector("#menu-world:not([aria-disabled='true'])", { timeout: 30_000 });
@@ -206,6 +209,8 @@ export async function enterWorld(page: Page): Promise<void> {
   await page.waitForFunction(WORLD_READY, undefined, { timeout: 30_000 });
   // waitGame: un predicado que devuelve la promesa de import() es truthy y no esperaba nada.
   await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
+  // T10: el primer cuadro espera a compileAsync; se espera su marca (como la sonda) y después unos cuadros más.
+  await page.waitForFunction(`performance.getEntriesByName(${JSON.stringify(WORLD_FIRST_FRAME_MARK)}).length > 0`, undefined, { timeout: 60_000 });
   await page.waitForTimeout(1500); // unos cuadros para que el render dibuje
 }
 
@@ -1042,6 +1047,11 @@ export const MIN_RED_CLUSTER_PX = 6;
 /** AC55: a lo sumo 24 px del borde derecho e inferior; lado de 160 px (escritorio) y 112 px (teléfono). */
 export const MINIMAP_MAX_INSET_PX = 24;
 export const MINIMAP_SIDE_PX = { desktop: 160, phone: 112 } as const;
+/**
+ * El lado esperado con el tamaño de texto del juego: el minimapa va en rem como el resto del HUD (160 y 112 px son con
+ * texto al 100 %, raíz de 16 px; por defecto el juego usa 125 %, así que mide 200 y 140).
+ */
+export const minimapSideFor = (basePx: number, rootFontPx: number): number => basePx * rootFontPx / 16;
 
 /** Grupos de píxeles rojos conectados (vecinos de 4) de al menos `minPx`: los puntos y flechas rojas del minimapa. */
 export function redClusters(img: Rgba, minPx: number = MIN_RED_CLUSTER_PX): number {
@@ -1084,11 +1094,13 @@ async function minimapPlacement(page: Page, label: string, side: number): Promis
   await page.waitForTimeout(300);
   const vp = page.viewportSize() ?? { width: 0, height: 0 };
   const box = (await minimapSeen(page)).box;
+  const rootFontPx = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  const want = minimapSideFor(side, rootFontPx);
   const right = box ? vp.width - (box.x + box.width) : -1;
   const bottom = box ? vp.height - (box.y + box.height) : -1;
-  const ok = box !== null && Math.abs(box.width - side) <= 1 && Math.abs(box.height - side) <= 1
+  const ok = box !== null && Math.abs(box.width - want) <= 1 && Math.abs(box.height - want) <= 1
     && right >= 0 && right <= MINIMAP_MAX_INSET_PX && bottom >= 0 && bottom <= MINIMAP_MAX_INSET_PX;
-  check(`AC55-${label}`, ok, `${vp.width}x${vp.height}: lado ${box?.width.toFixed(1)}x${box?.height.toFixed(1)} (pedido ${side}), derecha ${right.toFixed(1)} px, abajo ${bottom.toFixed(1)} px (tope ${MINIMAP_MAX_INSET_PX})`);
+  check(`AC55-${label}`, ok, `${vp.width}x${vp.height}: lado ${box?.width.toFixed(1)}x${box?.height.toFixed(1)} (pedido ${want.toFixed(1)}: ${side} con texto al 100 %, raíz ${rootFontPx} px), derecha ${right.toFixed(1)} px, abajo ${bottom.toFixed(1)} px (tope ${MINIMAP_MAX_INSET_PX})`);
 }
 
 /**

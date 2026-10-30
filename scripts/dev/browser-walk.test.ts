@@ -5,11 +5,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { THIRD_PERSON } from "@lg/core";
+import { LOAD_MARKS, THIRD_PERSON } from "@lg/core";
 import { MINIMAP_NPC_RED, minimapColors, WORLD_LOOKS } from "@lg/art";
 import {
   AC51_CROWN_GATE_FROM, AC51_GRASS_POSES, AC51_TREE_PITCH, AC51_TREE_ZOOMS, findChromium, isMinimapRed, isNonUniform, MAX_DOMINANT_SHARE, MIN_DISTINCT_COLORS,
-  redClusters, WORLD_CANVAS,
+  MINIMAP_SIDE_PX, minimapSideFor,
+  redClusters, WORLD_CANVAS, WORLD_FIRST_FRAME_MARK,
 } from "./browser-walk.ts";
 
 const dirs: string[] = [];
@@ -124,5 +125,19 @@ describe("AC57 (open-world-3d T9): puntos rojos del minimapa en una captura", ()
 
   test("el canvas del mundo es el de la superficie del juego, no el primero del DOM (el minimapa también es un canvas)", () => {
     expect(WORLD_CANVAS).toBe("[data-lg-world] canvas");
+  });
+});
+
+describe("T10: la caminata espera el primer cuadro compilado antes de capturar", () => {
+  test("la marca que espera es la de @lg/core", () => {
+    expect(WORLD_FIRST_FRAME_MARK).toBe(LOAD_MARKS.worldFirstFrame);
+  });
+});
+
+describe("AC55: el lado del minimapa sigue el tamaño de texto (va en rem)", () => {
+  test("160 y 112 px con texto al 100 %; 200 y 140 al 125 % por defecto", () => {
+    expect(minimapSideFor(MINIMAP_SIDE_PX.desktop, 16)).toBe(160);
+    expect(minimapSideFor(MINIMAP_SIDE_PX.desktop, 20)).toBe(200);
+    expect(minimapSideFor(MINIMAP_SIDE_PX.phone, 20)).toBe(140);
   });
 });
