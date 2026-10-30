@@ -25,7 +25,7 @@ import { labelEntries } from "../labels/labels";
 import { NameLabel } from "../labels/NameLabel";
 import { RequestBubble } from "../labels/RequestBubble";
 import { ModelProps } from "../props/ModelProps";
-import { followTarget, worldGround, worldRenderer } from "../runtime";
+import { cameraLook, followTarget, grassBedView, worldGround, worldRenderer } from "../runtime";
 import { tickWater, waterMaterial } from "../water/waterMaterial";
 import { ACTOR_LIFT, type DioramaScene } from "./scene";
 
@@ -115,8 +115,9 @@ export const labelAnchorY = (heightAt: (x: number, z: number) => number, lift: n
   heightAt(x, z) + lift + LABEL_HEIGHT;
 
 /**
- * El mundo abierto: el suelo baja sus mapas (si fallan, queda el color por vértice), el cielo sigue a la cámara y la
- * naturaleza (T7) baja sus mallas y mapas, hornea los impostores y sube por cuadro solo lo que se ve.
+ * El mundo abierto: el suelo baja sus mapas (si fallan, queda el color por vértice), el cielo sigue a la cámara, la
+ * naturaleza (T7) baja sus mallas y mapas, hornea los impostores y sube por cuadro solo lo que se ve, y el pasto (T8) sube
+ * las matas del disco que se ven cuando la vista cambió.
  */
 function OpenWorld({ scene, still }: { scene: DioramaScene; still: boolean }) {
   const gl = useThree((s) => s.gl);
@@ -134,7 +135,13 @@ function OpenWorld({ scene, still }: { scene: DioramaScene; still: boolean }) {
     scene.sky?.follow(camera.position.x, camera.position.y, camera.position.z, delta, still);
     if (scene.nature && followTarget.ready) {
       const fog = three.fog as { far?: number } | null;
-      scene.nature.update(camera, followTarget.x, followTarget.z, fog?.far ?? Infinity, delta, still);
+      scene.nature.update(camera, followTarget.x, followTarget.z, fog?.far ?? Infinity, delta, still, cameraLook.t);
+    }
+    // T8: el pasto con el t de zoom ya suavizado de CameraRig; su disco (la cama del suelo) queda en runtime para la Walk.
+    if (scene.grass && followTarget.ready) {
+      scene.grass.update(camera, followTarget.x, followTarget.z, cameraLook.t, delta, still);
+      const b = scene.ground?.grassBed;
+      if (b) Object.assign(grassBedView, { x: b.x, z: b.y, radius: b.z, on: b.w });
     }
   });
   return null;

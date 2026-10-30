@@ -102,6 +102,18 @@ describe("LK1: DEFAULT_LOOK fija cada valor de 0034931", () => {
     expect(v.density).toEqual({ pines: 1, farPines: 1, broads: 1, bushes: 1, rocks: 1, ferns: 1, flowers: 1, pebbles: 1 });
   });
 
+  test("pasto (T8, D-839): los valores de la maqueta V6 (world.js grassAtlas, GRASS_VERT, GRASS_FRAG y la cama del suelo)", () => {
+    // El pasto no existía en 0034931: estos son los literales de la maqueta V6 que T8 sacó de world/ (D-838).
+    expect(DEFAULT_LOOK.grass).toEqual({
+      atlas: { base: 0x1f4f1c, mid: [0x4c9a2c, 0x6aa832], tips: [0xa9d65a, 0xc4d95c, 0x8fcb4e, 0xd8dc6a], flowers: [0xf6f2e6, 0xf3d34a, 0xe98fb5], flowerStem: 0x3f8a2c },
+      blade: { base: [0.122, 0.31, 0.11], mid: [[0.298, 0.604, 0.173], [0.416, 0.659, 0.196]], tip: [[0.56, 0.8, 0.31], [0.85, 0.86, 0.42]] },
+      tint: { dark: [0.62, 0.84, 0.66], warm: [1.2, 1.07, 0.6], gain: [0.9, 0.92, 0.8] },
+      bed: [0.56, 1.08, 0.3],
+      density: 1,
+    });
+    expect(PAINTED_LOOK.grass).toBe(DEFAULT_LOOK.grass); // el pintado lo hereda
+  });
+
   test("personajes, agua y camino", () => {
     expect(DEFAULT_LOOK.characters).toEqual({
       rig: "quaternius", accessories: "v6", capColor: 0xd6342c, bodies: ["saco", "tunica", "ancho"],
@@ -136,6 +148,8 @@ describe("el catálogo WORLD_LOOKS", () => {
       for (const t of tokens) expect(isPaletteToken(t) && look.palette[t] !== undefined, `${id}: ${t}`).toBe(true);
       expect(CHARACTER_RIGS).toContain(look.characters.rig);
       expect(ACCESSORY_SETS).toContain(look.characters.accessories);
+      expect(look.grass.density).toBeGreaterThan(0);
+      expect(look.grass.density).toBeLessThanOrEqual(1);
       for (const k of Object.values(look.vegetation.density)) {
         expect(k).toBeGreaterThan(0);
         expect(k).toBeLessThanOrEqual(1);

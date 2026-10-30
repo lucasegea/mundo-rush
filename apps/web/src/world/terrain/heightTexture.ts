@@ -13,6 +13,31 @@ export interface HeightDirtMap {
   originX: number;
   originZ: number;
   metersPerTexel: number;
+  /** Ancho y alto en texels (el `uHmBox` del pasto es origen y tamaño en metros). */
+  width: number;
+  height: number;
+}
+
+const texel = (map: HeightDirtMap, i: number, j: number, c: 0 | 1): number => {
+  const ii = Math.min(map.width - 1, Math.max(0, i));
+  const jj = Math.min(map.height - 1, Math.max(0, j));
+  return DataUtils.fromHalfFloat((map.texture.image.data as Uint16Array)[(jj * map.width + ii) * 2 + c] as number);
+};
+
+/**
+ * Open-world-3d T8: altura y tierra en (x, z) leídas de la MISMA textura como la lee la GPU (filtro lineal entre los
+ * centros de texel, borde a borde): el recorte del pasto en la CPU decide con lo que el sombreador va a dibujar.
+ */
+export function sampleHeightDirt(map: HeightDirtMap, x: number, z: number): { height: number; dirt: number } {
+  const u = (x - map.originX) / map.metersPerTexel - 0.5;
+  const v = (z - map.originZ) / map.metersPerTexel - 0.5;
+  const i = Math.floor(u);
+  const j = Math.floor(v);
+  const fu = u - i;
+  const fv = v - j;
+  const at = (c: 0 | 1): number =>
+    (texel(map, i, j, c) * (1 - fu) + texel(map, i + 1, j, c) * fu) * (1 - fv) + (texel(map, i, j + 1, c) * (1 - fu) + texel(map, i + 1, j + 1, c) * fu) * fv;
+  return { height: at(0), dirt: at(1) };
 }
 
 export function heightDirtTexture(terrain: Terrain, bounds: Bounds): HeightDirtMap {
@@ -36,5 +61,5 @@ export function heightDirtTexture(terrain: Terrain, bounds: Bounds): HeightDirtM
   texture.generateMipmaps = false;
   texture.name = "pasto/altura";
   texture.needsUpdate = true;
-  return { texture, originX, originZ, metersPerTexel: 1 };
+  return { texture, originX, originZ, metersPerTexel: 1, width: w, height: h };
 }

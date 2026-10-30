@@ -5,7 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { findChromium, isNonUniform, MAX_DOMINANT_SHARE, MIN_DISTINCT_COLORS } from "./browser-walk.ts";
+import { THIRD_PERSON } from "@lg/core";
+import { AC51_CROWN_GATE_FROM, AC51_GRASS_POSES, AC51_TREE_PITCH, AC51_TREE_ZOOMS, findChromium, isNonUniform, MAX_DOMINANT_SHARE, MIN_DISTINCT_COLORS } from "./browser-walk.ts";
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -73,5 +74,17 @@ describe("condicion del operador (D-815): el navegador siempre se cierra", () =>
   test("existe la falla deliberada para que QA compruebe que no queda chromium vivo", () => {
     expect(src).toContain("--fail-on-purpose");
     expect(launcher).toContain("failOnPurpose");
+  });
+});
+
+describe("AC51 (open-world-3d T8): las poses de las capturas de defectos son las del mockup", () => {
+  test("pasto a 30, 45 y 57°; copas de t 0,65 a 1 con la inclinación por defecto de la tercera persona", () => {
+    expect(AC51_GRASS_POSES.map((p) => p[2])).toEqual([30, 45, 57]);
+    expect([...AC51_TREE_ZOOMS]).toEqual([0.65, 0.72, 0.8, 0.9, 1]);
+    expect(AC51_TREE_PITCH).toBe(THIRD_PERSON.defaultPitchDeg);
+  });
+  test("D-844: las copas cuentan desde t 0,8; 0,65 y 0,72 se miden sin gate (K-1)", () => {
+    expect(AC51_CROWN_GATE_FROM).toBe(0.8);
+    expect(AC51_TREE_ZOOMS.filter((t) => t < AC51_CROWN_GATE_FROM)).toEqual([0.65, 0.72]);
   });
 });

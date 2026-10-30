@@ -69,6 +69,17 @@ export function treeBand(distance: number, tier: WorldTier): TreeBand {
   return "impostor";
 }
 
+/**
+ * Open-world-3d T8 (mockup V6 `applyView`, AC51): con el zoom los radios de LOD se achican hasta 0 (de t 0,3 a 0,72, y
+ * en 0 desde t 0,7): de lejos todo árbol es impostor, cuya copa horizontal al 58 % se lee sólida desde arriba. T7 usaba
+ * los radios del tier a todo zoom y las copas reales vistas desde arriba fallaban la solidez de AC51 a t 0,65 a 0,8.
+ */
+export function treeLodShrink(t: number): number {
+  if (t > 0.7) return 0;
+  const x = Math.min(1, Math.max(0, (t - 0.3) / (0.72 - 0.3)));
+  return 1 - x * x * (3 - 2 * x);
+}
+
 /** Las bandas de los sombreadores (mockup `BAND`): [desde, hasta] en metros, contra uLod = (full, mid). */
 export const SHADER_BANDS = ["near", "mid", "far", "nearMid", "midFar"] as const;
 export type ShaderBand = (typeof SHADER_BANDS)[number];

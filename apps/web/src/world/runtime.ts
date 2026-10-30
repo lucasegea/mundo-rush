@@ -36,3 +36,9 @@ export const animatedActors = { active: false, ids: new Set<string>() };
  * correr AC39 y AC41 contra DEFAULT_LOOK explícito (son reglas de ese look, no del motor).
  */
 export const activeLook: { id: string | null } = { id: null };
+/**
+ * Open-world-3d T8 (AC41): la cama de pasto dibujada (centro, radio y encendido del disco, el `grassBed` del suelo). La
+ * pone Diorama cada cuadro; la caminata del navegador mide los anillos de AC41 contra este disco, no contra el radio del
+ * tier (con el zoom el disco se achica y su centro va delante del jugador).
+ */
+export const grassBedView: { x: number; z: number; radius: number; on: number } = { x: 0, z: 0, radius: 0, on: 0 };

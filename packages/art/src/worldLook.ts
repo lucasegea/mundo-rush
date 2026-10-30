@@ -11,8 +11,8 @@
 //     tres diferencias, que hasta 0034931 se elegían con `relieve` en cada componente (D-840 las saca de ahí).
 // T7b SEAM (diferido por el plan): el campo `look` del manifiesto del universo, las carpetas de assets por look, la
 // validación por look de sombreros y cuerpos de las fichas y los looks nuevos del catálogo.
-// T8 SEAM (D-839): el pasto suma su bloque acá (colores de las matas, atlas, grado de la cama) y world/ lo lee del look;
-// la cama de pasto del suelo ya es un uniform. T9 SEAM (D-839): los colores del minimapa (suelo, camino, agua) salen de
+// T8 (D-839): el bloque `grass` (colores del atlas y de las hojas, tinte de parches, tinte de la cama, multiplicador de
+// matas); world/nature/grass.ts y la cama del suelo lo leen como uniforms y textura. T9 SEAM (D-839): los colores del minimapa (suelo, camino, agua) salen de
 // `palette`/`road`/`water` del look; el punto de NPC es núcleo y su contraste >= 3:1 se prueba contra cada look.
 import { CAP_COLOR, BODY_IDS, HATS, SCARVES, type BodyId, type Hat, type Scarf, type ShirtToken } from "./looks.ts";
 import { PALETTE, SHIRT_TOKENS, type PaletteToken } from "./palette.ts";
@@ -67,6 +67,20 @@ export interface NatureColorSet {
   flowerTint: readonly (readonly [number, number, number])[];
 }
 
+/** El bloque del pasto de un look (T8): ver `WorldLook.grass`. */
+export interface GrassLook {
+  /** Atlas de tarjetas (4 variantes de 256 px): pie de cada hoja, dos medios, cuatro puntas, motas de flor y su tallo. */
+  atlas: { base: number; mid: readonly [number, number]; tips: readonly [number, number, number, number]; flowers: readonly [number, number, number]; flowerStem: number };
+  /** Hojas reales cerca del jugador (sRGB 0..1): pie, medio (dos), punta (dos, según la hoja). */
+  blade: { base: Vec3; mid: readonly [Vec3, Vec3]; tip: readonly [Vec3, Vec3] };
+  /** Tinte de parches: de `dark` a `warm` según un patrón grande, por `gain`. */
+  tint: { dark: Vec3; warm: Vec3; gain: Vec3 };
+  /** Multiplicador del color del suelo bajo el disco de pasto (la cama, ground shader `uBedTint`). */
+  bed: Vec3;
+  /** Multiplicador de las matas del tier (<= 1). */
+  density: number;
+}
+
 export interface WorldLook {
   id: LookId;
   /** Los hex de la paleta (palette.ts). Los `paleta` de cada diorama re-apuntan nombres DENTRO de esta paleta. */
@@ -118,6 +132,13 @@ export interface WorldLook {
     hats: readonly Hat[];
     scarves: readonly Scarf[];
   };
+  /**
+   * Pasto V6 del mundo abierto (open-world-3d T8, D-839): colores del atlas de matas (dibujado por código), colores de
+   * las hojas reales (sRGB 0..1; el sombreador los linealiza), el tinte de parches grandes (oscuro a cálido, con su
+   * ganancia), el tinte de la cama de pasto del suelo y un multiplicador de matas <= 1 (el tope del tier es del núcleo).
+   * Todo entra como uniforms o como textura (D-842): dos looks comparten los dos programas del pasto.
+   */
+  grass: GrassLook;
   /** Agua (tokens de la paleta): bandas, brillo y la bruma propia de su sombreador. */
   water: { shallow: PaletteToken; deep: PaletteToken; glint: PaletteToken; fog: PaletteToken };
   /** Camino (tokens): la superficie, el borde ruidoso y la piedra del empedrado. */
@@ -169,6 +190,14 @@ export const DEFAULT_LOOK: WorldLook = {
     shirts: SHIRT_TOKENS,
     hats: HATS,
     scarves: SCARVES,
+  },
+  // T8: los valores del pasto de la maqueta V6 (`world.js` grassAtlas, GRASS_VERT vTint, GRASS_FRAG y la cama del suelo).
+  grass: {
+    atlas: { base: 0x1f4f1c, mid: [0x4c9a2c, 0x6aa832], tips: [0xa9d65a, 0xc4d95c, 0x8fcb4e, 0xd8dc6a], flowers: [0xf6f2e6, 0xf3d34a, 0xe98fb5], flowerStem: 0x3f8a2c },
+    blade: { base: [0.122, 0.31, 0.11], mid: [[0.298, 0.604, 0.173], [0.416, 0.659, 0.196]], tip: [[0.56, 0.8, 0.31], [0.85, 0.86, 0.42]] },
+    tint: { dark: [0.62, 0.84, 0.66], warm: [1.2, 1.07, 0.6], gain: [0.9, 0.92, 0.8] },
+    bed: [0.56, 1.08, 0.3],
+    density: 1,
   },
   water: { shallow: "agua", deep: "agua-honda", glint: "brillo", fog: "bruma" },
   road: { surface: "camino", border: "tierra-borde", paving: "piedra" },
@@ -235,7 +264,7 @@ export function worldTextures(look: WorldLook): WorldTexture[] {
       id: "flores", group: "detalle", width: RUNTIME_TEXTURE_PX.flowerAtlas[0], height: RUNTIME_TEXTURE_PX.flowerAtlas[1], mips: true, alpha: true,
       format: "rgba8", candidates: ["rgba8"], count: all(1), task: "T7",
     },
-    // T8 SEAM (D-839): el atlas de matas sale del look (colores del pasto) cuando T8 lo dibuje; la medida es del núcleo.
+    // T8 (D-839): el atlas de matas se dibuja con los colores del look (`grass.atlas`); la medida es del núcleo.
     {
       id: "pasto/atlas", group: "pasto", width: RUNTIME_TEXTURE_PX.grassAtlas[0], height: RUNTIME_TEXTURE_PX.grassAtlas[1], mips: true, alpha: true,
       format: "rgba8", candidates: ["rgba8"], count: all(1), task: "T8",

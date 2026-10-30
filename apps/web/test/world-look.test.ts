@@ -53,6 +53,8 @@ const TINTED_LOOK: WorldLook = {
     density: { ...DEFAULT_LOOK.vegetation.density, flowers: 0.5 },
   },
   characters: { ...DEFAULT_LOOK.characters, capColor: 0x402060 },
+  // T8 (D-839): otro pasto, por uniforms y atlas.
+  grass: { ...DEFAULT_LOOK.grass, tint: { ...DEFAULT_LOOK.grass.tint, warm: [0.7, 0.6, 0.9] }, bed: [0.5, 0.5, 0.7], density: 0.5 },
 };
 
 describe("LK3: el look se resuelve una vez por diorama y baja como parámetro", () => {
@@ -206,6 +208,11 @@ describe("LK5 (D-842): los looks difieren solo en uniforms, nunca en variantes d
       expect((ground(sb)?.["uGrassLow"] as Vector3).toArray()).toEqual([0.3, 0.3, 0.4]);
       const leaf = (s: typeof sa) => s.find((x) => x.uniforms["uLeafGain"] !== undefined)?.uniforms["uLeafGain"];
       expect([leaf(sa), leaf(sb)]).toEqual([3.4, 2.2]);
+      // T8: el pasto teñido llega a sus uniforms (tinte de parches) y a la cama del suelo; sus dos programas son los mismos.
+      const warm = (s: typeof sa) => s.filter((x) => x.uniforms["uTintWarm"] !== undefined).map((x) => (x.uniforms["uTintWarm"] as Vector3).toArray());
+      expect(warm(sa)).toEqual([[1.2, 1.07, 0.6], [1.2, 1.07, 0.6]]);
+      expect(warm(sb)).toEqual([[0.7, 0.6, 0.9], [0.7, 0.6, 0.9]]);
+      expect((ground(sb)?.["uBedTint"] as Vector3).toArray()).toEqual([0.5, 0.5, 0.7]);
       expect(a.sky?.dome.geometry.getAttribute("color").array.slice(-3)).not.toEqual(b.sky?.dome.geometry.getAttribute("color").array.slice(-3));
       a.dispose();
       b.dispose();

@@ -369,8 +369,9 @@ describe("AC71: la auditoría de materiales del mundo abierto (cambio registrado
     expect(a.byKind.agua).toBeLessThanOrEqual(1);
     expect(a.byKind.follaje).toBeLessThanOrEqual(4);
     expect(a.byKind.impostor).toBeLessThanOrEqual(5);
-    // T8 SEAM: el pasto llega con T8 (sus dos materiales `pasto`); hasta entonces ninguno.
-    expect(a.byKind.pasto).toBeLessThanOrEqual(2);
+    // Cambio registrado (open-world-3d T8, AC71, D-828): antes `pasto` <= 2 (el pasto no existía); ahora sus dos
+    // materiales (tarjetas y hojas reales), exactamente 2.
+    expect(a.byKind.pasto).toBe(2);
     expect(a.surfaceInstances).toBeLessThanOrEqual(17);
     scene.dispose();
   });

@@ -17,7 +17,7 @@ import {
 } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
-  hash2, lookSpecies, OPEN_WORLD_DENSITY, publicUrl, rockFile, SMALL_ROCK_MAX_DISTANCE, takeVegetation, treeFile,
+  hash2, lookSpecies, OPEN_WORLD_DENSITY, publicUrl, rockFile, SMALL_ROCK_MAX_DISTANCE, takeVegetation, treeFile, treeLodShrink,
   type RockScan, type ShaderBand, type TreeSpecies, type VegetationScatter, type VegetationSpot, type WorldLook, type WorldTier,
 } from "@lg/art";
 import { blobTexture } from "../materials/blob";
@@ -88,8 +88,11 @@ export interface Nature {
   treeBases: { x: number; z: number; y: number; s: number; kind: "pine" | "broad" | "bush" }[];
   obstacles: NatureObstacle[];
   gate: CullGate;
-  /** Por cuadro: viento y, si la vista cambió, el recorrido. Devuelve si recorrió. */
-  update(camera: Camera, px: number, pz: number, fogFar: number, dt: number, still: boolean): boolean;
+  /**
+   * Por cuadro: viento y, si la vista cambió, el recorrido. `t` es el zoom (T8: los radios de LOD se achican con él,
+   * treeLodShrink; 0 = los del tier). Devuelve si recorrió.
+   */
+  update(camera: Camera, px: number, pz: number, fogFar: number, dt: number, still: boolean, t?: number): boolean;
   /** Baja mallas y mapas y hornea los impostores (una vez). Si algo falla, la naturaleza queda sin dibujar. */
   load(renderer: WebGLRenderer): Promise<void>;
   dispose(): void;
@@ -303,8 +306,11 @@ export function buildNature(input: NatureInput): Nature {
     treeBases,
     obstacles,
     gate,
-    update(camera, px, pz, fogFar, dt, still) {
+    update(camera, px, pz, fogFar, dt, still, t = 0) {
       u.uPl.value.set(px, pz);
+      const shrink = treeLodShrink(t);
+      const full = lod.full * shrink;
+      const mid = lod.mid * shrink;
       u.uSwayA.value = still ? 0 : 1;
       if (!still) u.uSwayT.value += dt;
       if (!loaded) return false;
@@ -314,7 +320,9 @@ export function buildNature(input: NatureInput): Nature {
       const distance = camPos.distanceTo(target.set(px, heightAt(px, pz), pz));
       if (!gate.shouldUpdate({ x: px, z: pz, yawDeg, pitchDeg, distance })) return false;
       frustum.setFromProjectionMatrix(pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-      const view = { cx: px, cz: pz, camera: camPos, frustum, fogFar, full: lod.full, mid: lod.mid };
+      // Los radios del sombreador cambian junto con el recorrido: lo subido y lo tramado usan los mismos.
+      u.uLod.value.set(full, mid);
+      const view = { cx: px, cz: pz, camera: camPos, frustum, fogFar, full, mid };
       for (const g of groups) cullGroup(g, view);
       return true;
     },

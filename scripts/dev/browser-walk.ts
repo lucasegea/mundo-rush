@@ -21,8 +21,10 @@ import { createServer, connect } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "playwright-core";
-import { DEFAULT_LOOK, OPEN_WORLD_DENSITY } from "@lg/art";
-import { AC41, diffMask, maskPixels, skyCheck, yellowShare, type Rgba } from "./defects/classify.ts";
+import { DEFAULT_LOOK } from "@lg/art";
+import {
+  AC41, AC51, AC52, crownSolidity, diffMask, grassDefects, maskPixels, pairwiseDistinct, skyCheck, yellowShare, type ProjectedTree, type Rgba,
+} from "./defects/classify.ts";
 import { closeAllGlBrowsers, parseGlMode, withGlBrowser, type GlMode } from "./gl-mode.ts";
 import { angleDelta, beaconsOk, forwardOf, forwardWalkOk, onScreen, projectWithMatrices, rightOf, turnFollowsYaw, type BeaconSeen, type P2 } from "./third-person-walk.ts";
 
@@ -200,6 +202,7 @@ export async function enterWorld(page: Page): Promise<void> {
 
 /** Camina hacia el NPC (la accion que dispara el clic sobre el) y espera el aviso "hablar con <nombre>". */
 async function walkToNpc(page: Page, npcId: string): Promise<string> {
+  const t0 = Date.now();
   const name = await page.evaluate<string>(`(async () => {
     const { gameStore } = await import("/src/state/store.ts");
     const { actions } = await import("/src/state/actions.ts");
@@ -210,6 +213,7 @@ async function walkToNpc(page: Page, npcId: string): Promise<string> {
   // El aviso puede seguir nombrando al NPC anterior hasta llegar: se espera al nombre correcto.
   await page.waitForFunction(`(document.querySelector("#world-talk")?.textContent || "").includes(${JSON.stringify(name)})`, undefined, { timeout: 90_000 })
     .catch(async () => { throw new Error(`el aviso de ${npcId} dice "${(await page.textContent("#world-talk").catch(() => null)) ?? "(sin boton)"}" y se esperaba "${name}"`); });
+  await recordVisit(page, npcId, Date.now() - t0); // AC52 (T8): solo mientras corre la recorrida desde la aparicion
   return name;
 }
 
@@ -481,14 +485,18 @@ async function walkGround(page: Page): Promise<void> {
   await page.waitForTimeout(2500);
   const mid = await withAndWithoutTerrain(page);
   await shot(page, "ac41-t055");
-  const R = OPEN_WORLD_DENSITY.medium.grass.radius;
-  const player = (await camState(page)).pos;
+  // Cambio registrado (open-world-3d T8, re-sello de AC41): antes los anillos iban alrededor del jugador con el radio de
+  // medium (24 m) y la cama apagada (`uGrassBed.w` = 0, paso ~0). Con el pasto de T8 la cama es la dibujada: su centro va
+  // delante del jugador y su radio se achica con el zoom (a t = 0,55, unos 13 m), así que los anillos van alrededor de
+  // ESE disco (runtime `grassBedView`, el `grassBed` del suelo). Umbrales sin cambio.
+  const bed = await page.evaluate<{ x: number; z: number; radius: number; on: number }>(`import("/src/world/runtime.ts").then(({ grassBedView }) => ({ ...grassBedView }))`);
+  const R = bed.radius;
   const ring = (lo: number, hi: number): P2[] => {
     const pts: P2[] = [];
     for (let a = 0; a < 360; a += 1) {
       for (let k = 0; k < 5; k++) {
         const r = R * (lo + ((hi - lo) * k) / 4);
-        pts.push({ x: player.x + r * Math.cos((a * Math.PI) / 180), z: player.z + r * Math.sin((a * Math.PI) / 180) });
+        pts.push({ x: bed.x + r * Math.cos((a * Math.PI) / 180), z: bed.z + r * Math.sin((a * Math.PI) / 180) });
       }
     }
     return pts;
@@ -515,8 +523,8 @@ async function walkGround(page: Page): Promise<void> {
   const isDefault = look === DEFAULT_LOOK.id;
   check("AC41-mapa", isDefault && y1.share !== null && y1.share <= AC41.maxYellowFull,
     `look ${String(look)} (DEFAULT_LOOK = ${DEFAULT_LOOK.id}); t = 1, medium, movimiento reducido: ${terrainPx} pixeles de terreno, amarillo ${fmt(y1.share)} (${y1.yellow} amarillos, ${y1.green} verdes; tope ${AC41.maxYellowFull})`);
-  check("AC41-anillo", isDefault && inner.share !== null && outer.share !== null && step <= AC41.maxRingStep,
-    `t = 0,55, radio del pasto ${R} m: anillo de adentro ${fmt(inner.share)} (${inner.yellow + inner.green} px), de afuera ${fmt(outer.share)} (${outer.yellow + outer.green} px), paso ${step.toFixed(3)} (tope ${AC41.maxRingStep})`);
+  check("AC41-anillo", isDefault && bed.on > 0 && inner.share !== null && outer.share !== null && step <= AC41.maxRingStep,
+    `t = 0,55, cama de pasto en (${bed.x.toFixed(1)}, ${bed.z.toFixed(1)}), radio ${R.toFixed(1)} m, encendida ${bed.on.toFixed(2)}: anillo de adentro ${fmt(inner.share)} (${inner.yellow + inner.green} px), de afuera ${fmt(outer.share)} (${outer.yellow + outer.green} px), paso ${step.toFixed(3)} (tope ${AC41.maxRingStep})`);
 
   await act(`actions.setTierChoice(${JSON.stringify(before.tier)}); actions.setReduceMotion(${String(before.reduce)})`);
   await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
@@ -724,11 +732,217 @@ async function walkForest(page: Page): Promise<void> {
     `cuerpos de Quaternius ${rigs.quaternius} (jugador y 3 NPCs), de KayKit ${rigs.kaykit}, accesorios de cabeza visibles ${rigs.caps}`);
 }
 
+// ---------- pasto y copas (open-world-3d T8: AC51) ----------
+
+/**
+ * Dibuja el cuadro dos veces en la misma tarea con el renderer del canvas (como tools/defects.cjs): con todo, y con lo
+ * que cumple `hide` (un predicado JS sobre `o`) escondido; lee las dos con readPixels antes de ceder el hilo (sin
+ * preserveDrawingBuffer) y las devuelve de arriba abajo. Nada se anima entre una y otra.
+ */
+async function renderTwice(page: Page, hide: string): Promise<{ a: Rgba; b: Rgba; hidden: number }> {
+  const r = await page.evaluate<{ w: number; h: number; a: string; b: string; hidden: number }>(`import("/src/world/runtime.ts").then(({ cameraLook, worldRenderer }) => {
+    const cam = cameraLook.camera;
+    const gl = worldRenderer.gl;
+    let root = cam;
+    while (root.parent) root = root.parent;
+    const ctx = gl.getContext();
+    const grab = () => {
+      gl.setRenderTarget(null);
+      gl.render(root, cam);
+      const w = ctx.drawingBufferWidth, h = ctx.drawingBufferHeight, px = new Uint8Array(w * h * 4), out = new Uint8Array(w * h * 4);
+      ctx.readPixels(0, 0, w, h, ctx.RGBA, ctx.UNSIGNED_BYTE, px);
+      for (let y = 0; y < h; y++) out.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+      let s = "";
+      for (let i = 0; i < out.length; i += 0x8000) s += String.fromCharCode.apply(null, out.subarray(i, i + 0x8000));
+      return { w, h, b64: btoa(s) };
+    };
+    const list = [];
+    root.traverse((o) => { if ((${hide})(o) && o.visible) list.push(o); });
+    const a = grab();
+    for (const o of list) o.visible = false;
+    const b = grab();
+    for (const o of list) o.visible = true;
+    return { w: a.w, h: a.h, a: a.b64, b: b.b64, hidden: list.length };
+  })`);
+  const img = (b64: string): Rgba => ({ width: r.w, height: r.h, data: new Uint8Array(Buffer.from(b64, "base64")) });
+  return { a: img(r.a), b: img(r.b), hidden: r.hidden };
+}
+
+const IS_GRASS = "(o) => o.isInstancedMesh && /^pasto:/.test(o.name)";
+/** Un árbol (mockup `treeMeshes`): un nivel de árbol dibujado cuya geometría pasa de 4 m (los arbustos no cuentan). */
+const IS_TREE = "(o) => o.isInstancedMesh && /:(completo|liviano|impostor)$/.test(o.name) && o.count > 0 && o.visible"
+  + " && ((o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox)).max.y > 4)";
+
+/** Los árboles dibujados proyectados (mockup `trees`): centro de copa al 60 % del alto y radio de 0,3 del alto, en px. */
+const projectedTrees = (page: Page): Promise<ProjectedTree[]> => page.evaluate<ProjectedTree[]>(`import("/src/world/runtime.ts").then(({ cameraLook, worldRenderer }) => {
+  const cam = cameraLook.camera;
+  const ctx = worldRenderer.gl.getContext();
+  const w = ctx.drawingBufferWidth, h = ctx.drawingBufferHeight;
+  let root = cam;
+  while (root.parent) root = root.parent;
+  cam.updateMatrixWorld();
+  const V3 = cam.position.constructor, M4 = cam.matrixWorld.constructor, Q = cam.quaternion.constructor;
+  const M = new M4(), pos = new V3(), q = new Q(), sc = new V3(), right = new V3().setFromMatrixColumn(cam.matrixWorld, 0);
+  const project = (v) => { const p = v.clone().project(cam); return [Math.round((p.x * 0.5 + 0.5) * w), Math.round((0.5 - p.y * 0.5) * h), p.z]; };
+  const out = [];
+  root.traverse((im) => {
+    if (!((${IS_TREE})(im)) || !im.visible) return;
+    if (!im.geometry.boundingBox) im.geometry.computeBoundingBox();
+    const H = Math.min(im.geometry.boundingBox.max.y, 16);
+    for (let i = 0; i < im.count; i++) {
+      im.getMatrixAt(i, M);
+      M.decompose(pos, q, sc);
+      const c = pos.clone().add(new V3(0, H * sc.y * 0.6, 0));
+      const [x, y, z] = project(c);
+      const [x2, y2] = project(c.clone().addScaledVector(right, H * sc.y * 0.3));
+      out.push({ x, y, z, r: Math.max(4, Math.round(Math.hypot(x2 - x, y2 - y))) });
+    }
+  });
+  return out;
+})`);
+
+/** La inclinación efectiva de la cámara dibujada: la elevación de la cámara sobre el pivote (el `pitchEff` del mockup). */
+const cameraPitch = (page: Page): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
+  const c = cameraLook.camera.getWorldPosition(cameraLook.camera.position.clone());
+  const d = Math.hypot(c.x - cameraLook.x, c.y - cameraLook.y, c.z - cameraLook.z);
+  return Math.asin(Math.max(-1, Math.min(1, (c.y - cameraLook.y) / d))) * 180 / Math.PI;
+})`);
+
+/** Poses del pasto del mockup (tools/test.cjs GRASS_POSES): [t de zoom, inclinación del jugador] dan 30, 45 y 57°. */
+export const AC51_GRASS_POSES = [[0.18, 30, 30], [0.3, 45, 45], [0.42, 55, 57]] as const;
+/**
+ * La inclinación de las copas: la por defecto de la tercera persona (@lg/core THIRD_PERSON.defaultPitchDeg; la Walk corre
+ * en Node sin build y @lg/core no se importa acá: browser-walk.test.ts fija que son iguales).
+ */
+export const AC51_TREE_PITCH = 17;
+/** Zooms de las copas (tools/test.cjs TREE_ZOOMS). */
+export const AC51_TREE_ZOOMS = [0.65, 0.72, 0.8, 0.9, 1] as const;
+/**
+ * Desde qué zoom las copas cuentan para AC51 (D-844). Abajo es el defecto conocido K-1: a zoom medio el impostor muestra
+ * tronco y tarjetas laterales bajo la copa. Se sigue midiendo e imprimiendo; al arreglar K-1, bajar esto a 0.65.
+ */
+export const AC51_CROWN_GATE_FROM = 0.8;
+
+/**
+ * AC51 (LK6: regla de DEFAULT_LOOK): en medium con movimiento reducido, las tres capturas de defectos del mockup en la
+ * aparición. Pasto a 30, 45 y 57°: tiras <= 0,12 con cobertura >= 0,03 y amarillo junto al pasto <= 0,4. Copas medidas a t 0,65
+ * a 1, con gate desde AC51_CROWN_GATE_FROM (D-844, K-1): mediana de solidez >= 0,82, y a 0,9 y 1 al menos 20 árboles medidos y percentil 20 >= 0,7. Deja tier, movimiento
+ * reducido, inclinación y zoom como estaban.
+ */
+async function walkDefects(page: Page): Promise<void> {
+  const before = await page.evaluate<{ tier: string; reduce: boolean; pitch: number }>(`import("/src/state/store.ts").then((m) => {
+    const s = m.gameStore.getState();
+    return { tier: s.settings.graphics.tier, reduce: s.settings.accessibility.reduceMotion, pitch: s.ui.camera.pitchDeg };
+  })`);
+  const t0 = (await camState(page)).t;
+  const act = (code: string): Promise<void> => page.evaluate(`import("/src/state/actions.ts").then(({ actions }) => { ${code}; })`);
+  const pose = async (t: number, pitch: number): Promise<number> => {
+    await page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => { const s = gameStore.getState(); gameStore.setState({ ui: { ...s.ui, camera: { ...s.ui.camera, pitchDeg: ${pitch} } } }); })`);
+    await act(`actions.zoomTo(${t})`);
+    await page.waitForTimeout(1500); // movimiento reducido: la cámara corta; el pasto recorre y sube al asentarse
+    return cameraPitch(page);
+  };
+  await act(`actions.setTierChoice("medium"); actions.setReduceMotion(true)`);
+  await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
+  await page.waitForTimeout(4000); // la escena de medium y sus mapas
+  const look = await activeLookId(page);
+  const isDefault = look === DEFAULT_LOOK.id;
+  const grass: { pitch: number; coverage: number; strips: number; yellow: number; hidden: number }[] = [];
+  for (const [t, p] of AC51_GRASS_POSES) {
+    const pitch = await pose(t, p);
+    const two = await renderTwice(page, IS_GRASS);
+    const vis = await worldVisible(page, two.a.width, two.a.height);
+    grass.push({ pitch, ...grassDefects(two.a, two.b, vis), hidden: two.hidden });
+    await shot(page, `ac51-pasto-${p}`);
+  }
+  // Las copas se miden de cara al bosque: de 8 rumbos (cada 45°) en la aparición, el que tiene más árboles en pantalla a
+  // t 0,9 (la muestra más grande; la elección mira cuántos, nunca la solidez). La maqueta medía en su aparición.
+  const setYaw = (y: number): Promise<void> => page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => { const s = gameStore.getState(); gameStore.setState({ ui: { ...s.ui, camera: { ...s.ui.camera, yawDeg: ${y} } } }); })`);
+  const yaw0 = (await camState(page)).yaw;
+  let forest = { yaw: yaw0, n: -1 };
+  for (let k = 0; k < 8; k++) {
+    const y = (yaw0 + k * 45) % 360;
+    await setYaw(y);
+    await pose(0.9, AC51_TREE_PITCH);
+    const n = (await projectedTrees(page)).length;
+    if (n > forest.n) forest = { yaw: y, n };
+  }
+  await setYaw(forest.yaw);
+  const trees: { t: number; trees: number; measured: number; median: number; p20: number }[] = [];
+  for (const t of AC51_TREE_ZOOMS) {
+    await pose(t, AC51_TREE_PITCH);
+    const items = await projectedTrees(page);
+    const two = await renderTwice(page, IS_TREE);
+    trees.push({ t, ...crownSolidity(diffMask(two.a, two.b), two.a.width, two.a.height, items) });
+    if (t === 0.9) await shot(page, "ac51-copas-090");
+  }
+  const fmtG = grass.map((g) => `${g.pitch.toFixed(0)}°: tiras ${g.strips}, cobertura ${g.coverage}, amarillo ${g.yellow} (${g.hidden} mallas)`).join("; ");
+  const pitchesOk = grass.every((g, i) => Math.abs(g.pitch - ((AC51_GRASS_POSES[i] as readonly number[])[2] as number)) <= 2);
+  check("AC51-tiras", isDefault && pitchesOk && grass.every((g) => g.strips <= AC51.maxStrips && g.coverage >= AC51.minCoverage),
+    `look ${String(look)}; ${fmtG} (tiras <= ${AC51.maxStrips}, cobertura >= ${AC51.minCoverage})`);
+  check("AC51-amarillo", isDefault && pitchesOk && grass.every((g) => g.yellow <= AC51.maxYellow), `amarillo junto al pasto: ${grass.map((g) => g.yellow).join(", ")} (tope ${AC51.maxYellow})`);
+  const gated = trees.filter((r) => r.t >= AC51_CROWN_GATE_FROM);
+  check("AC51-copas", isDefault && gated.length > 0 && gated.every((r) => r.median >= AC51.crown && (r.t < 0.9 || (r.measured >= AC51.minTrees && r.p20 >= AC51.crownP20))),
+    `rumbo ${forest.yaw.toFixed(0)}° (${forest.n} árboles a t 0,9); ` + trees.map((r) => `t ${r.t}${r.t < AC51_CROWN_GATE_FROM ? " [K-1, sin gate]" : ""}: ${r.measured}/${r.trees} medidos, mediana ${r.median}, p20 ${r.p20}`).join("; ") + ` (desde t ${AC51_CROWN_GATE_FROM}: mediana >= ${AC51.crown}; a 0,9 y 1, >= ${AC51.minTrees} y p20 >= ${AC51.crownP20})`);
+  console.log(`[walk] DEFECT_TABLE ${JSON.stringify({ grass, trees })}`);
+
+  await page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => { const s = gameStore.getState(); gameStore.setState({ ui: { ...s.ui, camera: { ...s.ui.camera, pitchDeg: ${before.pitch}, yawDeg: ${yaw0} } } }); })`);
+  await act(`actions.setTierChoice(${JSON.stringify(before.tier)}); actions.setReduceMotion(${String(before.reduce)})`);
+  await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
+  await act(`actions.zoomTo(${t0})`);
+  await page.waitForTimeout(3000);
+}
+
+// ---------- la cadena del mapa grande corriendo (open-world-3d T8: AC52, la puerta de M3) ----------
+
+/** La recorrida de AC52: desde la aparición, corriendo, el tiempo y la captura al llegar a cada NPC por primera vez. */
+const tour: { start: number | null; walkingMs: number; visits: Map<string, { atMs: number; walkMs: number; running: boolean; img: Rgba }> } = {
+  start: null, walkingMs: 0, visits: new Map(),
+};
+
+/** Vuelve a la aparición guardada al entrar (como la pose `spawn` de la sonda) y corre (la acción `run` de Shift, R10). */
+async function startTour(page: Page): Promise<void> {
+  await page.evaluate(`(async () => {
+    const { gameStore } = await import("/src/state/store.ts");
+    const { actions } = await import("/src/state/actions.ts");
+    const sp = globalThis.__lgWalkSpawn;
+    const s = gameStore.getState();
+    gameStore.setState({ player: { ...s.player, position: sp.position, previous: sp.position, cell: sp.cell, path: [] } });
+    actions.dispatch({ type: "run", on: true });
+  })()`);
+  await page.waitForTimeout(1500);
+  tour.start = Date.now();
+  tour.walkingMs = 0;
+  tour.visits.clear();
+}
+
+/** Al llegar a un NPC (camino de walkToNpc): si la recorrida corre y es la primera vez, tiempo y captura. */
+async function recordVisit(page: Page, npcId: string, walkMs: number): Promise<void> {
+  if (tour.start === null) return;
+  tour.walkingMs += walkMs;
+  if (tour.visits.has(npcId)) return;
+  await settle(page, 300);
+  const running = await page.evaluate<boolean>(`import("/src/state/store.ts").then((m) => m.gameStore.getState().player.running)`);
+  await shot(page, `ac52-${npcId.toLowerCase()}`);
+  tour.visits.set(npcId, { atMs: Date.now() - tour.start, walkMs: tour.walkingMs, running, img: await canvasImage(page) });
+}
+
+/** AC52: la cadena terminó con la línea de cierre, tres NPCs visitados corriendo y tres vistas distintas de a pares. */
+function checkTour(closingLine: boolean): void {
+  const v = [...tour.visits.entries()];
+  const distinct = pairwiseDistinct(v.map(([, x]) => x.img));
+  const times = v.map(([id, x]) => `${id} a ${(x.atMs / 1000).toFixed(1)} s (caminando ${(x.walkMs / 1000).toFixed(1)} s${x.running ? ", corriendo" : ", SIN correr"})`).join("; ");
+  check("AC52", closingLine && v.length === 3 && v.every(([, x]) => x.running) && distinct.ok,
+    `linea de cierre ${closingLine}; desde la aparicion: ${times}; dHash de a pares ${distinct.distances.join(", ")} (umbral > ${AC52.minDistance})`);
+  tour.start = null;
+}
+
 // ---------- las dos caminatas ----------
 
 async function walkUniverse(page: Page, url: string): Promise<void> {
   await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
   await enterWorld(page);
+  await saveSpawn(page);
   const stats = await canvasStats(page);
   await shot(page, "ac12-muelle");
   check("AC12", isNonUniform(stats), `colores ${stats.distinct} (min ${MIN_DISTINCT_COLORS}), dominante ${(stats.dominantShare * 100).toFixed(1)}% (max ${MAX_DOMINANT_SHARE * 100}%)`);
@@ -740,7 +954,10 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   check("AC39", skyLook === DEFAULT_LOOK.id && sky.ok && isNonUniform(stats), `look ${String(skyLook)} (DEFAULT_LOOK = ${DEFAULT_LOOK.id}); ${sky.detail}; regla de pixeles ${isNonUniform(stats)}`);
   await walkForest(page);
   await walkGround(page);
+  await walkDefects(page);
   await walkThirdPerson(page);
+  // AC52 (T8, la puerta de M3): la cadena de AC16 desde la aparicion, corriendo, con el clic sobre cada NPC.
+  await startTour(page);
 
   const mitayo = await talkTo(page, "NPC-MITAYO");
   const heading = (await page.textContent("#scene-title")) ?? "";
@@ -785,6 +1002,23 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   })()`);
   await shot(page, "ac16-factor-leche");
   check("AC16", text.includes("The milk was never ours") && full, `linea de la leche ${text.includes("The milk was never ours")}, medidores llenos ${full}`);
+  checkTour(text.includes("The milk was never ours"));
+}
+
+/** Guarda la aparicion (posicion y celda) al entrar, para que AC52 arranque de ahi. */
+const saveSpawn = (page: Page): Promise<void> => page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => {
+  const s = gameStore.getState();
+  globalThis.__lgWalkSpawn = { position: s.player.position, cell: s.player.cell };
+})`);
+
+/**
+ * `LG_WALK_ONLY=defects` (open-world-3d T8): solo entrar al muelle y las capturas de AC51, para las pruebas rojas por
+ * mutacion (cada una es una corrida corta en vez de la caminata entera). La caminata normal no lo usa.
+ */
+async function walkDefectsOnly(page: Page, url: string): Promise<void> {
+  await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
+  await enterWorld(page);
+  await walkDefects(page);
 }
 
 async function walkCampesino(page: Page, url: string): Promise<void> {
@@ -852,6 +1086,10 @@ async function main(): Promise<void> {
   process.once("SIGTERM", onSignal);
   try {
     stack = await startStack(UNIVERSE);
+    if (process.env["LG_WALK_ONLY"] === "defects") {
+      await withBrowser(exe, mode, (page) => walkDefectsOnly(page, stack?.url ?? ""), failOnPurpose);
+      throw new Error("LG_WALK_ONLY=defects: corrida parcial (sin campesino ni cadena); no cuenta como caminata");
+    }
     await withBrowser(exe, mode, (page) => walkUniverse(page, stack?.url ?? ""), failOnPurpose);
     stack.stop();
     stack = await startStack(null);

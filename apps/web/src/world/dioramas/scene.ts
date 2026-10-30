@@ -13,6 +13,8 @@
 // dentro del grafo, así el estimador y el auditor lo cuentan. Sin relieve, todo sigue como en estetica-c.
 // Open-world-3d T7: con relieve, los árboles, las rocas y el detalle salen de `diorama.vegetation` (el sembrado del mockup
 // V6 que también bloquea la grilla) por world/nature; los pinos del borde por código quedan para los dioramas sin relieve.
+// Open-world-3d T8: con relieve, world/terrain arma la textura de altura y tierra y el pasto V6 la recibe (PD-2); su cama
+// mueve el uniform `grassBed` del suelo.
 // Open-world-3d T7b (D-839): la escena se arma con el look del diorama (`look`, resuelto una vez por lookForDiorama) y lo
 // guarda en `scene.look`: terreno, suelo, cielo, agua y naturaleza lo leen de ahí; el relieve decide solo la forma.
 import {
@@ -38,6 +40,8 @@ import { rng } from "../materials/rng";
 import { buildSky, type Sky } from "../sky/sky";
 import { groundMaterial, type GroundMaterial } from "../terrain/groundMaterial";
 import { buildNature, type Nature } from "../nature/buildNature";
+import { buildGrass, type Grass } from "../nature/grass";
+import { heightDirtTexture, type HeightDirtMap } from "../terrain/heightTexture";
 import { lookForDiorama } from "./look";
 
 /** Altura del plano de agua (el terreno se hunde debajo). */
@@ -71,6 +75,12 @@ export interface DioramaScene {
   picker: Object3D | null;
   /** Open-world-3d T7: árboles, rocas y detalle del mundo abierto (ya dentro de `root`); null sin relieve. */
   nature: Nature | null;
+  /**
+   * Open-world-3d T8: el pasto V6 (ya dentro de `root`) y la textura RG16F de altura y tierra que arma world/terrain y el
+   * pasto solo lee (PD-2: la única de la escena); null sin relieve.
+   */
+  grass: Grass | null;
+  heightDirt: HeightDirtMap | null;
   dispose(): void;
 }
 
@@ -275,6 +285,8 @@ export function buildDioramaScene(
   let ground: GroundMaterial | null = null;
   let sky: Sky | null = null;
   let picker: Object3D | null = null;
+  let heightDirt: HeightDirtMap | null = null;
+  let grass: Grass | null = null;
   if (relief) {
     // AC35: la falda se funde a la niebla en sus últimos metros y el delantal sigue de ese color (TERRAIN_APRON).
     const skirt = terrain.extent.maxX - diorama.bounds.maxX;
@@ -285,6 +297,9 @@ export function buildDioramaScene(
     picker = groundPicker(tiles);
     sky = buildSky(tier, look);
     root.add(sky.group);
+    heightDirt = heightDirtTexture(terrain, diorama.bounds);
+    grass = buildGrass({ tier, look, heightDirt, bed: ground.grassBed });
+    root.add(grass.group);
   } else {
     root.add(terrainMesh(terrain));
   }
@@ -385,12 +400,16 @@ export function buildDioramaScene(
     sky,
     picker,
     nature,
+    grass,
+    heightDirt,
     dispose() {
       root.traverse((o) => { if (o instanceof Mesh) o.geometry.dispose(); });
       for (const g of geometries) g.dispose();
       sky?.dispose();
       ground?.dispose();
       nature?.dispose();
+      grass?.dispose();
+      heightDirt?.texture.dispose();
     },
   };
 }

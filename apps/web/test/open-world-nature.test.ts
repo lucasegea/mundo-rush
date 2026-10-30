@@ -3,7 +3,7 @@
 // horneado en world/camera/bakeCamera.ts), AC45 (culling por instancia contra el frustum con 200 instancias sembradas, y
 // el portón que solo recorre cuando la vista cambió), AC46 (cada tronco bloquea su celda; caminos y accesos a NPCs
 // libres) y AC71 (cada variante tramada con su propio `customProgramCacheKey`).
-import { blockingFootprints, CARD_FADE, cardFade, IMPOSTOR_CROWN_HEIGHT, OPEN_WORLD_DENSITY, treeBand, TRUNK_FOOTPRINT, WORLD_TIERS } from "@lg/art";
+import { blockingFootprints, CARD_FADE, cardFade, IMPOSTOR_CROWN_HEIGHT, OPEN_WORLD_DENSITY, treeBand, treeLodShrink, TRUNK_FOOTPRINT, WORLD_TIERS } from "@lg/art";
 import { cellCenter, distanceToPolyline, isWalkable, prepareDiorama, type DioramaLayout, type DioramaRuntime } from "@lg/core";
 import {
   BoxGeometry, Color, Frustum, InstancedMesh, Matrix4, MeshBasicMaterial, PerspectiveCamera, Raycaster, Vector3, type Material,
@@ -253,5 +253,26 @@ describe("AC71: cada variante tramada de la naturaleza con su propio customProgr
     expect(keys.some((k) => k.startsWith("roca-near"))).toBe(true);
     expect(keys.filter((k) => k.startsWith("impostor-")).length).toBeLessThanOrEqual(5);
     scene.dispose();
+  });
+});
+
+describe("T8 (AC51, mockup V6 applyView): los radios de LOD se achican con el zoom", () => {
+  test("treeLodShrink: 1 hasta t 0,3, baja suave, 0 desde t 0,7 (de lejos todo árbol es impostor)", () => {
+    expect(treeLodShrink(0)).toBe(1);
+    expect(treeLodShrink(0.3)).toBe(1);
+    expect(treeLodShrink(0.5)).toBeGreaterThan(0);
+    expect(treeLodShrink(0.5)).toBeLessThan(1);
+    for (let t = 0.3; t < 0.7; t += 0.02) expect(treeLodShrink(t + 0.02)).toBeLessThanOrEqual(treeLodShrink(t));
+    expect(treeLodShrink(0.71)).toBe(0);
+    expect(treeLodShrink(1)).toBe(0);
+    // A t 0,65 en medium: completos hasta ~1,2 m y livianos hasta ~2,8 m.
+    expect(OPEN_WORLD_DENSITY.medium.treeLod.mid * treeLodShrink(0.65)).toBeLessThan(3);
+  });
+
+  test("buildNature recorre y traza con los mismos radios achicados (uLod se fija en el recorrido)", () => {
+    const sources = import.meta.glob("../src/world/nature/buildNature.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+    const src = Object.values(sources)[0] as string;
+    expect(src).toMatch(/const shrink = treeLodShrink\(t\);\s*const full = lod\.full \* shrink;\s*const mid = lod\.mid \* shrink;/);
+    expect(src).toMatch(/u\.uLod\.value\.set\(full, mid\);\s*const view = \{ cx: px, cz: pz, camera: camPos, frustum, fogFar, full, mid \};/);
   });
 });

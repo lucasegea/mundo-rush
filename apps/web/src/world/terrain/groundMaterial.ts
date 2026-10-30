@@ -67,7 +67,7 @@ const COLOR_GLSL = /* glsl */ `#include <color_fragment>
     // La cama de pasto bajo el disco (T8): plena hasta el 35 % del radio, nada en el borde; fuera del camino.
     float cover = uGrassBed.w * (1.0 - smoothstep(0.35 * uGrassBed.z, uGrassBed.z, length(gq - uGrassBed.xy))) * (1.0 - smoothstep(0.3, 0.6, edge));
     float streak = vn(vec2(gq.x * 7.0 + gq.y * 2.0, gq.y * 31.0)) * 0.5 + vn(vec2(gq.x * 29.0, gq.y * 8.0 - gq.x * 3.0)) * 0.5;
-    vec3 bed = vec3(dot(gc, vec3(0.3, 0.59, 0.11))) * vec3(0.56, 1.08, 0.3) * (0.8 + 0.4 * streak) * (0.85 + 0.3 * mid);
+    vec3 bed = vec3(dot(gc, vec3(0.3, 0.59, 0.11))) * uBedTint * (0.8 + 0.4 * streak) * (0.85 + 0.3 * mid);
     gc = mix(gc, bed, cover * 0.85);
     vec3 dg = mix(gc, dc, 0.55);
     vec3 col = mix(gc, dg, wear);
@@ -121,7 +121,7 @@ const placeholder = (): Texture => {
 
 export interface GroundMaterial {
   material: MeshStandardMaterial;
-  /** Centro (x, z), radio y encendido (0 a 1) de la cama de pasto; la mueve el pasto de T8. */
+  /** Centro (x, z), radio y encendido (0 a 1) de la cama de pasto; la mueve el pasto (world/nature/grass.ts, T8). */
   grassBed: Vector4;
   /**
    * Baja los mapas del tier y los pone en el material (una sola vez). Llamado después de `dispose` (el doble efecto de
@@ -165,6 +165,8 @@ export function groundMaterial(tier: WorldTier, look: WorldLook, edge: GroundEdg
     uGrassLow: { value: new Vector3(...look.ground.grassGrade.low) },
     uGrassHigh: { value: new Vector3(...look.ground.grassGrade.high) },
     uSparseGain: { value: look.ground.grassGrade.sparseGain },
+    // T8 (D-839): el tinte de la cama de pasto es del look (`grass.bed`), como uniform.
+    uBedTint: { value: new Vector3(...look.grass.bed) },
   };
   const fallback = placeholder();
   for (const [t, n] of Object.values(SAMPLER)) {
@@ -180,7 +182,7 @@ export function groundMaterial(tier: WorldTier, look: WorldLook, edge: GroundEdg
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", `#include <common>
         varying float vDirt; varying vec3 vWPos; varying vec3 vNW; uniform float uMaps; uniform float uNormOn; uniform vec4 uGrassBed;
-        uniform vec4 uEdge; uniform vec2 uEdgeFade; uniform vec3 uGrassLow; uniform vec3 uGrassHigh; uniform float uSparseGain;
+        uniform vec4 uEdge; uniform vec2 uEdgeFade; uniform vec3 uGrassLow; uniform vec3 uGrassHigh; uniform float uSparseGain; uniform vec3 uBedTint;
         ${samplers}
         ${NOISE_GLSL}
         vec4 tx(sampler2D t, vec2 p) {
