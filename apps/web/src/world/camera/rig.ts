@@ -171,7 +171,7 @@ export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obsta
   const L = Math.hypot(player.x - npc.x, player.z - npc.z) || 1;
   const nx = (player.x - npc.x) / L;
   const nz = (player.z - npc.z) / L;
-  const target = twoShotTarget(player, npc);
+  const target = twoShotTarget(player, npc, heightAt);
   const out: TwoShotCandidate[] = [];
   for (const side of [1, -1] as const) {
     for (const leanDeg of TWO_SHOT.leansDeg) {
@@ -187,13 +187,16 @@ export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obsta
       let hits = 0;
       for (const who of [player, npc]) {
         const N = 28;
+        const chest = (heightAt ? heightAt(who.x, who.z) : 0) + TWO_SHOT.chestHeight;
         for (let k = 1; k <= N; k++) {
           const t = k / N;
           const x = who.x + (cam[0] - who.x) * t;
-          const y = TWO_SHOT.chestHeight + (cam[1] - TWO_SHOT.chestHeight) * t;
+          const y = chest + (cam[1] - chest) * t;
           const z = who.z + (cam[2] - who.z) * t;
           if (Math.hypot(x - who.x, z - who.z) < 0.7) continue; // el propio personaje
-          for (const o of obstacles) if (y < o.height && inside(o, x, z, 0.3)) hits++;
+          // La altura de los obstáculos es sobre su suelo; la muestra se compara contra el mismo suelo.
+          const base = heightAt ? heightAt(x, z) : 0;
+          for (const o of obstacles) if (y - base < o.height && inside(o, x, z, 0.3)) hits++;
           if (heightAt && heightAt(x, z) > y - 0.2) hits++;
         }
       }
@@ -203,16 +206,20 @@ export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obsta
   return out;
 }
 
-/** El punto que mira el plano de a dos: entre los dos, a la altura del pecho menos la bajada. */
-export function twoShotTarget(player: P2, npc: P2): Vec3 {
-  return [(player.x + npc.x) / 2, TWO_SHOT.chestHeight - TWO_SHOT.lookDrop, (player.z + npc.z) / 2];
+/**
+ * El punto que mira el plano de a dos: entre los dos, a la altura del pecho menos la bajada, sobre el suelo de los dos
+ * (con relieve, una altura fija dejaba la cámara bajo la loma).
+ */
+export function twoShotTarget(player: P2, npc: P2, heightAt?: (x: number, z: number) => number): Vec3 {
+  const ground = heightAt ? (heightAt(player.x, player.z) + heightAt(npc.x, npc.z)) / 2 : 0;
+  return [(player.x + npc.x) / 2, ground + TWO_SHOT.chestHeight - TWO_SHOT.lookDrop, (player.z + npc.z) / 2];
 }
 
 /** El encuadre de la charla: el candidato de menos oclusión (empate: el primero en orden de preferencia). Nunca falla. */
 export function twoShotFrame(player: P2, npc: P2, obstacles: readonly Obstacle[], heightAt?: (x: number, z: number) => number): TwoShot {
   const cands = twoShotCandidates(player, npc, obstacles, heightAt);
   const chosen = cands.reduce((best, c) => (c.score < best.score ? c : best));
-  return { target: twoShotTarget(player, npc), pitchDeg: TWO_SHOT.pitchDeg, yawDeg: chosen.yawDeg, distance: TWO_SHOT.distance, chosen };
+  return { target: twoShotTarget(player, npc, heightAt), pitchDeg: TWO_SHOT.pitchDeg, yawDeg: chosen.yawDeg, distance: TWO_SHOT.distance, chosen };
 }
 
 /** Diferencia de ángulo más corta (grados), en (-180, 180]. */

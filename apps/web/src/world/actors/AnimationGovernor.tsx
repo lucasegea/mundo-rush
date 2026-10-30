@@ -25,7 +25,9 @@ export function AnimationGovernor({ max, only = null }: { max: number; only?: Re
     frustum.setFromProjectionMatrix(m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     const entries: AnimCandidate[] = [];
     for (const [id, spot] of actorSpots) {
-      sphere.center.set(spot.x, 1.1, spot.z);
+      // Sobre los pies (spot.y): con el relieve del mundo abierto una altura fija deja la esfera bajo tierra y, de cerca,
+      // fuera del encuadre, y el personaje se deslizaba congelado.
+      sphere.center.set(spot.x, spot.y + 1.1, spot.z);
       entries.push({ id, distance: camera.position.distanceTo(sphere.center), onScreen: frustum.intersectsSphere(sphere) });
     }
     animatedActors.ids = pickAnimated(entries, max, only);

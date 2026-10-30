@@ -106,6 +106,7 @@ export function CameraRig({ preset, motion, conversation, obstacles, heightAt, b
     if (twoShot) {
       const o = cameraOffset(twoShot.pitchDeg, twoShot.yawDeg, twoShot.distance);
       wantPos = [twoShot.target[0] + o[0], twoShot.target[1] + o[1], twoShot.target[2] + o[2]];
+      if (heightAt) wantPos[1] = Math.max(wantPos[1], heightAt(wantPos[0], wantPos[2]) + 0.6);
       wantLook = [...twoShot.target] as V3;
       wantFov = perspectiveFov(aspect);
     }

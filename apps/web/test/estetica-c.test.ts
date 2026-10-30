@@ -384,6 +384,16 @@ describe("A8 plano de a dos en 3/4", () => {
     const f = twoShotFrame(player, npc, ring);
     expect(f.chosen.score).toBe(Math.min(...cands.map((c) => c.score)));
   });
+
+  test("con relieve la mira sube con el suelo de los dos y una loma plana no cuenta como oclusión", () => {
+    const loma = (): number => 7;
+    const f = twoShotFrame(player, npc, [], loma);
+    expect(f.target[1]).toBeCloseTo(7 + TWO_SHOT.chestHeight - 0.9, 9);
+    expect(f.chosen.score).toBe(0);
+    // El suelo de cada uno: entre 2 m y 6 m la mira queda a 4 m más la altura del pecho menos la bajada.
+    const rampa = (_x: number, z: number): number => (z > 1 ? 6 : 2);
+    expect(twoShotFrame(player, npc, [], rampa).target[1]).toBeCloseTo(4 + TWO_SHOT.chestHeight - 0.9, 9);
+  });
 });
 
 describe("A12 etiquetas de nombre", () => {
