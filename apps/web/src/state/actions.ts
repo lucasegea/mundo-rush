@@ -9,7 +9,7 @@ import {
 } from "@lg/core";
 import type { ServerMessage } from "@lg/protocol";
 import { gameStore, type GameState, type GameStore } from "./store";
-import { freshScene, initialCamera, type CameraState, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo, type VoiceUi } from "./slices";
+import { freshScene, initialCamera, type CameraState, type DialogueLine, type DialogueState, type Lexicon, type NpcInfo, type PlaceInfo, type SceneOutcome, type VoiceUi } from "./slices";
 import { selectMapActive } from "./selectors/world";
 
 export interface DialogOnlyCatalog {
@@ -93,6 +93,16 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
     case "error":
       return d;
   }
+}
+
+/**
+ * Open-world-3d T9: un `scene.end` con éxito suma al NPC de la escena abierta (`dialogue.npcId`, de `scene.opened`) a
+ * `completedNpcs`. Cualquier otro final (parcial, tope, contención, cortada) o una escena sin NPC no cambia nada; un NPC
+ * ya completado tampoco (devuelve el mismo objeto: nadie se entera).
+ */
+export function withCompletedNpc(p: GameState["progression"], outcome: SceneOutcome, npcId: string | null): GameState["progression"] {
+  if (outcome !== "success" || npcId === null || p.completedNpcs.includes(npcId)) return p;
+  return { ...p, completedNpcs: [...p.completedNpcs, npcId] };
 }
 
 export function createActions(store: GameStore) {
@@ -543,7 +553,11 @@ export function createActions(store: GameStore) {
         const dialogue = reduceSceneMessage(s.dialogue, msg);
         const patch: Partial<GameState> = dialogue === s.dialogue ? {} : { dialogue };
         if (msg.type === "scene.effects") Object.assign(patch, withEffects(s, msg.effects));
-        if (msg.type === "scene.end") patch.ui = { ...s.ui, announcement: announcement(s, `announce.sceneEnd.${msg.outcome}`) };
+        if (msg.type === "scene.end") {
+          patch.ui = { ...s.ui, announcement: announcement(s, `announce.sceneEnd.${msg.outcome}`) };
+          const progression = withCompletedNpc(s.progression, msg.outcome, s.dialogue.npcId);
+          if (progression !== s.progression) patch.progression = progression;
+        }
         if (msg.type === "scene.containment") patch.ui = { ...s.ui, announcement: announcement(s, "announce.containment") };
         return patch;
       });

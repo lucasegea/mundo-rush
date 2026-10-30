@@ -18,7 +18,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "playwright-core";
-import { enterWorld, findChromium, REPO_ROOT, startStack, UNIVERSE, type Stack } from "./browser-walk.ts";
+import { enterWorld, findChromium, REPO_ROOT, startStack, UNIVERSE, WORLD_CANVAS, type Stack } from "./browser-walk.ts";
 import { closeAllGlBrowsers, parseGlMode, VIEWPORT, withGlBrowser, type GlLaunch, type GlMode } from "./gl-mode.ts";
 
 export const EVALS_DIR = join(REPO_ROOT, "(documento interno)");
@@ -325,7 +325,8 @@ async function loadSample(exe: string, a: ProbeArgs, url: string, log: (s: strin
     await page.waitForSelector("#menu-world:not([aria-disabled='true'])", { timeout: 60_000 });
     const t0 = await page.evaluate("performance.now()") as number;
     await page.click("#menu-world");
-    await page.waitForFunction("document.querySelector('canvas') !== null", undefined, { timeout: 60_000 });
+    // Open-world-3d T9: el canvas del mundo, no el del minimapa (que también es un canvas y va antes en el DOM).
+    await page.waitForFunction(`document.querySelector(${JSON.stringify(WORLD_CANVAS)}) !== null`, undefined, { timeout: 60_000 });
     const r = await page.evaluate(`new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(() => {
       const enter = performance.getEntriesByName("lg:world-enter")[0], first = performance.getEntriesByName("lg:world-first-frame")[0];
       ok(enter && first ? { ms: first.startTime - enter.startTime, source: "marks" } : { ms: performance.now() - ${t0}, source: "dom" });

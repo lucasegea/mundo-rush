@@ -133,6 +133,12 @@ export async function startStack(universe: string | null, extraEnv: NodeJS.Proce
 
 // ---------- navegador ----------
 
+/**
+ * El canvas del mundo 3D (la superficie `data-lg-world` de GameCanvas). Cambio registrado (open-world-3d T9): desde el
+ * minimapa hay un segundo canvas (2D, en el shell, que va antes en el DOM), así que "el primer canvas" ya no es el mundo.
+ */
+export const WORLD_CANVAS = "[data-lg-world] canvas";
+
 const checks: { ac: string; ok: boolean; detail: string }[] = [];
 const check = (ac: string, ok: boolean, detail: string): void => {
   checks.push({ ac, ok, detail });
@@ -148,7 +154,7 @@ const shot = async (page: Page, name: string): Promise<string> => {
 
 /** Cuantiza el canvas del mapa (3 bits por canal) y mide colores distintos y el color dominante. */
 async function canvasStats(page: Page): Promise<PixelStats> {
-  const png = await page.locator("canvas").first().screenshot();
+  const png = await page.locator(WORLD_CANVAS).screenshot();
   const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
   return page.evaluate<PixelStats>(`(async () => {
     const img = new Image();
@@ -168,9 +174,9 @@ async function canvasStats(page: Page): Promise<PixelStats> {
   })()`);
 }
 
-/** La captura del canvas como RGBA (filas de arriba abajo), en pixeles CSS del rectangulo del canvas. */
-async function canvasImage(page: Page): Promise<Rgba> {
-  const png = await page.locator("canvas").first().screenshot();
+/** La captura de un elemento como RGBA (filas de arriba abajo), en pixeles CSS de su rectangulo. */
+async function elementImage(page: Page, selector: string): Promise<Rgba> {
+  const png = await page.locator(selector).screenshot();
   const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
   const r = await page.evaluate<{ w: number; h: number; b64: string }>(`(async () => {
     const img = new Image();
@@ -188,7 +194,10 @@ async function canvasImage(page: Page): Promise<Rgba> {
   return { width: r.w, height: r.h, data: new Uint8Array(Buffer.from(r.b64, "base64")) };
 }
 
-const WORLD_READY = "document.querySelector('canvas') !== null";
+/** La captura del canvas del mundo como RGBA. */
+const canvasImage = (page: Page): Promise<Rgba> => elementImage(page, WORLD_CANVAS);
+
+const WORLD_READY = `document.querySelector(${JSON.stringify(WORLD_CANVAS)}) !== null`;
 
 /** Menu: espera `#menu-world` habilitado y entra al mapa. */
 export async function enterWorld(page: Page): Promise<void> {
@@ -272,7 +281,7 @@ const camState = (page: Page): Promise<CamState> => page.evaluate<CamState>(`(as
 const cameraMatrices = (page: Page): Promise<{ view: number[]; proj: number[]; rect: { x: number; y: number; w: number; h: number } }> => page.evaluate(`(async () => {
   const { cameraLook } = await import("/src/world/runtime.ts");
   const c = cameraLook.camera;
-  const r = document.querySelector("canvas").getBoundingClientRect();
+  const r = document.querySelector(${JSON.stringify(WORLD_CANVAS)}).getBoundingClientRect();
   return { view: Array.from(c.matrixWorldInverse.elements), proj: Array.from(c.projectionMatrix.elements), rect: { x: r.left, y: r.top, w: r.width, h: r.height } };
 })()`);
 
@@ -378,13 +387,13 @@ const horizonRow = (page: Page): Promise<number> => page.evaluate<number>(`impor
   dir.y = 0;
   dir.normalize();
   const p = pos.clone().addScaledVector(dir, 5000).project(c);
-  const r = document.querySelector("canvas").getBoundingClientRect();
+  const r = document.querySelector(${JSON.stringify(WORLD_CANVAS)}).getBoundingClientRect();
   return ((1 - p.y) / 2) * r.height;
 })`);
 
 /** La primera fila del canvas que no tapa el HUD en la columna del centro (la barra del título va encima). */
 const worldTop = (page: Page): Promise<number> => page.evaluate<number>(`(() => {
-  const c = document.querySelector("canvas");
+  const c = document.querySelector(${JSON.stringify(WORLD_CANVAS)});
   const r = c.getBoundingClientRect();
   const x = r.left + r.width / 2;
   for (let y = 0; y < r.height; y++) if (document.elementFromPoint(x, r.top + y + 0.5) === c) return y;
@@ -394,7 +403,7 @@ const worldTop = (page: Page): Promise<number> => page.evaluate<number>(`(() => 
 /** Los pixeles del canvas que ningun elemento del HUD tapa (elementFromPoint es el canvas), cada 2 px. */
 async function worldVisible(page: Page, w: number, h: number): Promise<Uint8Array> {
   const b64 = await page.evaluate<string>(`(() => {
-    const c = document.querySelector("canvas");
+    const c = document.querySelector(${JSON.stringify(WORLD_CANVAS)});
     const r = c.getBoundingClientRect();
     const w = ${w}, h = ${h}, m = new Uint8Array(w * h);
     for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) {
@@ -986,14 +995,7 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   await page.click("#world-talk");
   await page.waitForSelector("[data-testid='conversation-panel']", { timeout: 15_000 });
 
-  await playTurns(page, [
-    "Hello! What do you keep in those ledgers?",
-    "I'm Nico. Does the silver really stay in Spain?",
-    "I work far from here. Who owns the mine, really?",
-    "I want to understand why Spain stayed poor.",
-    "Where did all the silver really go?",
-    "Thanks.",
-  ]);
+  await playTurns(page, FACTOR_TURNS);
   await page.waitForSelector("#scene-back", { timeout: 30_000 });
   const text = await hudText(page);
   const full = await page.evaluate<boolean>(`(() => {
@@ -1019,6 +1021,113 @@ async function walkDefectsOnly(page: Page, url: string): Promise<void> {
   await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
   await enterWorld(page);
   await walkDefects(page);
+}
+
+/** Los turnos que llenan la conversación de FACTOR con los modelos guionados (AC16; los reusa AC57). */
+const FACTOR_TURNS = [
+  "Hello! What do you keep in those ledgers?",
+  "I'm Nico. Does the silver really stay in Spain?",
+  "I work far from here. Who owns the mine, really?",
+  "I want to understand why Spain stayed poor.",
+  "Where did all the silver really go?",
+  "Thanks.",
+] as const;
+
+// ---------- minimapa (open-world-3d T9, AC55 en píxeles reales y AC57) ----------
+
+/** Un píxel del punto de NPC pendiente: el rojo de @lg/art `MINIMAP_NPC_RED` (#FF5448) con margen de suavizado. */
+export const isMinimapRed = (r: number, g: number, b: number): boolean => r >= 200 && g <= 130 && b <= 130 && r - g >= 100;
+/** Un grupo de menos píxeles rojos que esto es borde suavizado, no un punto. */
+export const MIN_RED_CLUSTER_PX = 6;
+/** AC55: a lo sumo 24 px del borde derecho e inferior; lado de 160 px (escritorio) y 112 px (teléfono). */
+export const MINIMAP_MAX_INSET_PX = 24;
+export const MINIMAP_SIDE_PX = { desktop: 160, phone: 112 } as const;
+
+/** Grupos de píxeles rojos conectados (vecinos de 4) de al menos `minPx`: los puntos y flechas rojas del minimapa. */
+export function redClusters(img: Rgba, minPx: number = MIN_RED_CLUSTER_PX): number {
+  const { width: w, height: h, data } = img;
+  const red = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) red[i] = isMinimapRed(data[i * 4] ?? 0, data[i * 4 + 1] ?? 0, data[i * 4 + 2] ?? 0) ? 1 : 0;
+  let clusters = 0;
+  const stack: number[] = [];
+  for (let i = 0; i < w * h; i++) {
+    if (red[i] !== 1) continue;
+    let size = 0;
+    red[i] = 2;
+    stack.push(i);
+    while (stack.length > 0) {
+      const j = stack.pop() as number;
+      size++;
+      const x = j % w;
+      for (const k of [x > 0 ? j - 1 : -1, x < w - 1 ? j + 1 : -1, j - w, j + w]) {
+        if (k >= 0 && k < w * h && red[k] === 1) { red[k] = 2; stack.push(k); }
+      }
+    }
+    if (size >= minPx) clusters++;
+  }
+  return clusters;
+}
+
+interface MinimapSeen { present: boolean; dots: number; red: number; box: { x: number; y: number; width: number; height: number } | null }
+
+/** El minimapa como lo ve el jugador: si está, cuántos anillos `data-npc-id` tiene, cuántos grupos rojos y su caja. */
+async function minimapSeen(page: Page): Promise<MinimapSeen> {
+  const map = page.locator("[data-testid='minimap-map']");
+  if ((await map.count()) === 0) return { present: false, dots: 0, red: 0, box: null };
+  const dots = await page.locator("[data-testid='minimap'] [data-npc-id]").count();
+  return { present: true, dots, red: redClusters(await elementImage(page, "[data-testid='minimap-map']")), box: await map.boundingBox() };
+}
+
+/** AC55 en píxeles: el lado y la distancia a los bordes derecho e inferior en este viewport. */
+async function minimapPlacement(page: Page, label: string, side: number): Promise<void> {
+  await page.waitForSelector("[data-testid='minimap-map']", { timeout: 10_000 });
+  await page.waitForTimeout(300);
+  const vp = page.viewportSize() ?? { width: 0, height: 0 };
+  const box = (await minimapSeen(page)).box;
+  const right = box ? vp.width - (box.x + box.width) : -1;
+  const bottom = box ? vp.height - (box.y + box.height) : -1;
+  const ok = box !== null && Math.abs(box.width - side) <= 1 && Math.abs(box.height - side) <= 1
+    && right >= 0 && right <= MINIMAP_MAX_INSET_PX && bottom >= 0 && bottom <= MINIMAP_MAX_INSET_PX;
+  check(`AC55-${label}`, ok, `${vp.width}x${vp.height}: lado ${box?.width.toFixed(1)}x${box?.height.toFixed(1)} (pedido ${side}), derecha ${right.toFixed(1)} px, abajo ${bottom.toFixed(1)} px (tope ${MINIMAP_MAX_INSET_PX})`);
+}
+
+/**
+ * `LG_WALK_ONLY=minimap` (open-world-3d T9): el lugar del minimapa a 1280x720 y 375x667 (AC55) y AC57: al aparecer 3
+ * puntos rojos; tras terminar MITAYO, CERRO y FACTOR, 2, 1 y 0 (anillos del DOM y grupos rojos de píxeles); oculto con el
+ * panel de diálogo abierto y de vuelta con el mismo ancho y alto. Cuatro capturas. Corrida parcial (sin campesino ni el
+ * resto de la caminata): sale con 1 por diseño, como `defects`.
+ */
+async function walkMinimapOnly(page: Page, url: string): Promise<void> {
+  await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
+  await enterWorld(page);
+  await minimapPlacement(page, "escritorio", MINIMAP_SIDE_PX.desktop);
+  await page.setViewportSize({ width: 375, height: 667 });
+  await minimapPlacement(page, "telefono", MINIMAP_SIDE_PX.phone);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.waitForTimeout(500);
+  const start = await minimapSeen(page);
+  await shot(page, "ac57-minimapa-3");
+  check("AC57-3", start.dots === 3 && start.red === 3, `al aparecer: anillos ${start.dots}, grupos rojos ${start.red}`);
+  const steps: [string, readonly string[], number][] = [
+    ["NPC-MITAYO", ["Tell me about the mine."], 2],
+    ["NPC-CERRO", ["What did you give the town?"], 1],
+    ["NPC-FACTOR", FACTOR_TURNS, 0],
+  ];
+  for (const [npcId, turns, left] of steps) {
+    await talkTo(page, npcId);
+    const during = await minimapSeen(page);
+    await playTurns(page, turns);
+    await page.waitForSelector("#scene-back", { timeout: 45_000 });
+    const outcome = await page.evaluate<string | null>(`import("/src/state/store.ts").then((m) => m.gameStore.getState().dialogue.outcome)`);
+    await leaveScene(page);
+    await page.waitForSelector("[data-testid='minimap-map']", { timeout: 10_000 });
+    await page.waitForTimeout(400); // unos redibujos de 100 ms
+    const after = await minimapSeen(page);
+    await shot(page, `ac57-minimapa-${left}`);
+    const sameSize = after.box !== null && start.box !== null && after.box.width === start.box.width && after.box.height === start.box.height;
+    check(`AC57-${left}`, !during.present && after.dots === left && after.red === left && sameSize,
+      `${npcId} (final ${outcome}): en la charla ${during.present ? "VISIBLE" : "oculto"}; después anillos ${after.dots}, grupos rojos ${after.red}, mismo tamaño ${sameSize}`);
+  }
 }
 
 async function walkCampesino(page: Page, url: string): Promise<void> {
@@ -1086,6 +1195,10 @@ async function main(): Promise<void> {
   process.once("SIGTERM", onSignal);
   try {
     stack = await startStack(UNIVERSE);
+    if (process.env["LG_WALK_ONLY"] === "minimap") {
+      await withBrowser(exe, mode, (page) => walkMinimapOnly(page, stack?.url ?? ""), failOnPurpose);
+      throw new Error("LG_WALK_ONLY=minimap: corrida parcial (sin campesino ni cadena); no cuenta como caminata");
+    }
     if (process.env["LG_WALK_ONLY"] === "defects") {
       await withBrowser(exe, mode, (page) => walkDefectsOnly(page, stack?.url ?? ""), failOnPurpose);
       throw new Error("LG_WALK_ONLY=defects: corrida parcial (sin campesino ni cadena); no cuenta como caminata");

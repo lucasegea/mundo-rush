@@ -24,3 +24,5 @@ export * from "./sky.ts";
 export * from "./vegetation.ts";
 // Open-world-3d T7b (D-838..D-842): el look del mundo (DEFAULT_LOOK y el catálogo WORLD_LOOKS), que world/ recibe como parámetro.
 export * from "./worldLook.ts";
+// Open-world-3d T9 (D-839): los colores del minimapa (fondo, camino y agua del look; punto y contorno de interfaz).
+export * from "./minimap.ts";

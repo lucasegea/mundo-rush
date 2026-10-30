@@ -166,6 +166,9 @@
   "world.overview": "Mapa (V)",
   "world.quality": "Calidad: {tier}",
   "world.toDialogOnly": "Ir al modo solo diálogo",
+  "minimap.label": "Minimapa, arriba es adelante. Por visitar: {list}.",
+  "minimap.labelDone": "Minimapa, arriba es adelante. Ya visitaste a todos.",
+  "minimap.item": { "one": "{name}, a {count} metro", "other": "{name}, a {count} metros" },
 
   "announce.ready": "Listo. Estás en el menú principal.",
   "announce.noWebgl": "Este navegador no tiene WebGL: vas a jugar en modo solo diálogo.",

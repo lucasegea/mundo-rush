@@ -2,6 +2,8 @@
 export * from "./session";
 export * from "./settings";
 export * from "./world";
+// Open-world-3d T9: el minimapa (NPCs pendientes, modelo heading-up y colores del look).
+export * from "./minimap";
 export * from "./player";
 export * from "./dialogue";
 export * from "./companion";

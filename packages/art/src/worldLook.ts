@@ -214,6 +214,13 @@ export const PAINTED_LOOK: WorldLook = {
 
 export const WORLD_LOOKS: Readonly<Record<LookId, WorldLook>> = { pradera: DEFAULT_LOOK, pintado: PAINTED_LOOK };
 
+/**
+ * La regla única de qué look toma un diorama hasta que el manifiesto nombre el suyo (LK3, enmienda del manager): con
+ * relieve el mundo abierto (DEFAULT_LOOK), plano el pintado. Open-world-3d T9: vive acá (no en world/dioramas/look.ts,
+ * que la llama) porque el minimapa de ui/ también pinta con el look del diorama y ui/ no importa world/ (R3).
+ */
+export const lookForRelief = (relief: boolean): WorldLook => (relief ? DEFAULT_LOOK : PAINTED_LOOK);
+
 /** El hex de un token en la paleta del look. */
 export const lookHex = (look: Pick<WorldLook, "palette">, token: PaletteToken): string => look.palette[token];
 

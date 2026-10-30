@@ -157,14 +157,16 @@ describe("D-839: world/ lee el look por parámetro, no como constante global", (
   test("solo dioramas/look.ts nombra el catálogo; ningún módulo importa los valores que pasaron al look", () => {
     const banned = new Set([
       "DEFAULT_LOOK", "PAINTED_LOOK", "WORLD_LOOKS", "NATURE_COLORS", "NATURE_TEXTURES", "TREE_SPECIES", "ROCK_SCANS", "CAP_COLOR",
-      "TREE_LEAF_GAIN", "TREE_BARK_COLOR", "GROUND_MAPS", "natureModelFiles",
+      "TREE_LEAF_GAIN", "TREE_BARK_COLOR", "GROUND_MAPS", "natureModelFiles", "lookForRelief",
     ]);
     /** Los nombres que un archivo importa de @lg/art (los comentarios pueden nombrar el look; importarlo no). */
     const artImports = (s: string): string[] =>
       [...s.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*"@lg\/art"/g)].flatMap((m) => (m[1] ?? "").split(",").map((x) => x.replace(/^\s*type\s+/, "").trim().split(/\s+as\s+/)[0] ?? "").filter(Boolean));
     const files = Object.entries(WORLD_SOURCES).map(([p, s]) => [rel(p), artImports(s)] as const);
     expect(files.length).toBeGreaterThan(60);
-    expect(artImports(source("dioramas/look.ts"))).toEqual(expect.arrayContaining(["DEFAULT_LOOK", "PAINTED_LOOK"]));
+    // Cambio registrado (open-world-3d T9): la regla relieve -> look pasó a @lg/art `lookForRelief` (el minimapa de ui/
+    // la comparte); look.ts sigue siendo el único archivo de world/ que la nombra. Antes: DEFAULT_LOOK y PAINTED_LOOK.
+    expect(artImports(source("dioramas/look.ts"))).toEqual(expect.arrayContaining(["lookForRelief"]));
     expect(files.filter(([f, names]) => f !== "dioramas/look.ts" && names.some((n) => banned.has(n))).map(([f, names]) => `${f}: ${names.filter((n) => banned.has(n)).join(", ")}`)).toEqual([]);
     // PALETTE (los hex) solo en las etiquetas y balizas, que son interfaz (A14, núcleo): el resto lee look.palette.
     expect(files.filter(([f, names]) => !f.startsWith("labels/") && names.includes("PALETTE")).map(([f]) => f)).toEqual([]);

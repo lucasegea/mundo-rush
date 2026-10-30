@@ -4,12 +4,14 @@
 // Plan estetica-c M4 (propuesta C §8, "papel y tinta"): arriba a la izquierda el objetivo en una línea con punto ámbar;
 // abajo a la izquierda la ayuda de controles; abajo al centro el aviso; abajo a la derecha el zoom y, solo en
 // desarrollo, el chip de calidad. En pantallas angostas se ocultan la ayuda y el chip. En la charla este HUD no se
-// muestra (el shell pone el de diálogo), así que la ayuda desaparece sola.
+// muestra (el shell pone el de diálogo), así que la ayuda desaparece sola. Open-world-3d T9: abajo a la derecha, debajo
+// del zoom, el minimapa (ui/hud/Minimap.tsx), que por eso tampoco se ve en la charla.
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";
 import { selectWorldHudView, useGameView } from "../../state/selectors";
 import { useFocusOnMount } from "../a11y/hooks";
 import { Button } from "../primitives";
+import { Minimap } from "./Minimap";
 
 const CARD = "rounded-card border-2 border-card-line bg-paper shadow-card";
 
@@ -51,7 +53,9 @@ export function WorldHud() {
             </p>
           ) : null}
         </div>
-        <div className="col-start-3 flex flex-col items-end gap-2 justify-self-end">
+        {/* Open-world-3d T9: el minimapa va fijo abajo a la derecha; esta columna deja su alto libre debajo (7rem o
+            10rem más 1rem de aire) para que el zoom quede encima y no lo tape. */}
+        <div className="col-start-3 flex flex-col items-end gap-2 justify-self-end pb-[8rem] md:pb-[11rem]">
           {/* Abajo a la derecha, solo en desarrollo: la calidad efectiva. M4 SEAM: los FPS y los contadores de
               renderer.info llegan en M6 (instantánea del modo director); hasta entonces se leen en el navegador. */}
           {import.meta.env.DEV ? (
@@ -70,6 +74,7 @@ export function WorldHud() {
           </div>
         </div>
       </div>
+      <Minimap />
     </section>
   );
 }

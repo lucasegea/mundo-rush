@@ -11,6 +11,13 @@ export interface ProgressionState {
   canDoDemonstrated: string[];
   missions: Record<string, MissionStatus>;
   chapter: number;
+  /**
+   * Open-world-3d T9: NPCs cuya escena terminó con éxito (`scene.end` con `success` de la escena abierta con ese NPC),
+   * en orden de llegada y sin repetidos. El minimapa marca en rojo a los del diorama que no están acá.
+   * T9 SEAM: hoy se arma en el cliente con los `scene.end`; cuando el servidor mande una instantánea de progreso al
+   * conectar, esa instantánea la reemplaza entera (el servidor es la fuente, como el resto de este slice).
+   */
+  completedNpcs: string[];
 }
 
 export const PROGRESSION_PERSIST = "server" as const;
@@ -23,4 +30,5 @@ export const initialProgression = (): ProgressionState => ({
   canDoDemonstrated: [],
   missions: {},
   chapter: 0,
+  completedNpcs: [],
 });

@@ -6,7 +6,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { THIRD_PERSON } from "@lg/core";
-import { AC51_CROWN_GATE_FROM, AC51_GRASS_POSES, AC51_TREE_PITCH, AC51_TREE_ZOOMS, findChromium, isNonUniform, MAX_DOMINANT_SHARE, MIN_DISTINCT_COLORS } from "./browser-walk.ts";
+import { MINIMAP_NPC_RED, minimapColors, WORLD_LOOKS } from "@lg/art";
+import {
+  AC51_CROWN_GATE_FROM, AC51_GRASS_POSES, AC51_TREE_PITCH, AC51_TREE_ZOOMS, findChromium, isMinimapRed, isNonUniform, MAX_DOMINANT_SHARE, MIN_DISTINCT_COLORS,
+  redClusters, WORLD_CANVAS,
+} from "./browser-walk.ts";
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -86,5 +90,39 @@ describe("AC51 (open-world-3d T8): las poses de las capturas de defectos son las
   test("D-844: las copas cuentan desde t 0,8; 0,65 y 0,72 se miden sin gate (K-1)", () => {
     expect(AC51_CROWN_GATE_FROM).toBe(0.8);
     expect(AC51_TREE_ZOOMS.filter((t) => t < AC51_CROWN_GATE_FROM)).toEqual([0.65, 0.72]);
+  });
+});
+
+describe("AC57 (open-world-3d T9): puntos rojos del minimapa en una captura", () => {
+  const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  /** Una captura de 40x20 con el suelo del look y cuadrados de 4x4 del rojo en las x dadas. */
+  const img = (xs: readonly number[]): { width: number; height: number; data: Uint8Array } => {
+    const [w, h] = [40, 20];
+    const data = new Uint8Array(w * h * 4);
+    const ground = hex(minimapColors(WORLD_LOOKS.pradera).ground);
+    const red = hex(MINIMAP_NPC_RED);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const on = xs.some((x0) => x >= x0 && x < x0 + 4 && y >= 8 && y < 12);
+      data.set([...(on ? red : ground), 255], (y * w + x) * 4);
+    }
+    return { width: w, height: h, data };
+  };
+
+  test("cuenta cada punto una vez; el suelo, el camino, el agua y la tinta no son rojos", () => {
+    expect([0, 1, 2, 3].map((n) => redClusters(img([2, 12, 22, 32].slice(0, n))))).toEqual([0, 1, 2, 3]);
+    expect(isMinimapRed(...hex(MINIMAP_NPC_RED))).toBe(true);
+    for (const look of Object.values(WORLD_LOOKS)) {
+      const c = minimapColors(look);
+      for (const other of [c.ground, c.road, c.water, c.ring, c.player]) expect(isMinimapRed(...hex(other)), other).toBe(false);
+    }
+  });
+
+  test("dos puntos pegados son uno (el conteo no inventa); motas de borde no cuentan", () => {
+    expect(redClusters(img([10, 14]))).toBe(1);
+    expect(redClusters(img([10]), 17)).toBe(0);
+  });
+
+  test("el canvas del mundo es el de la superficie del juego, no el primero del DOM (el minimapa también es un canvas)", () => {
+    expect(WORLD_CANVAS).toBe("[data-lg-world] canvas");
   });
 });
