@@ -20,6 +20,12 @@ speaker of any of them learns either of the others); the pair playable today is 
 > June 2026 with an earlier voice-tutor prototype (real-time voice conversation and correction); this repository
 > starts in October 2026, when that work became the game.
 
+> **About this repository.** This is the public version of the project's private development repository. The
+> commit history is the real one, with its original dates, authorship and order. Internal planning documents
+> (decision log, roadmap, task plans, reports and research notes) were removed from it, and internal tool and
+> reviewer names in comments were replaced by their role, so commit hashes differ from the private repository.
+> Nothing else was changed. Access to the private repository can be given on request.
+
 ## What makes it different
 
 - **Conversation is the game mechanic.** Most language apps teach recognition and isolated phrases with habit
