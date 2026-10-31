@@ -1,9 +1,9 @@
-// Mensajes cliente ↔ servidor de una escena por texto (F4.1; 03 §5.3, §5.6-§5.8) y contratos que viajan con ellos:
-// salida del observador (03 §5.7), evento de evidencia (03 §3.5.3) y efectos de misión (03 §6.4.8).
-// Todos los objetos son estrictos: un campo de más (un prompt, un nombre de modelo, una clave) no valida (A4).
-// F5.1a: voz en el servidor. El cliente pide una escena de voz (`scene.start` con `modality: "voice"`), marca inicio y
-// fin de su turno (`voice.turnStart`/`voice.turnEnd`, D-091) y manda el audio en frames binarios aparte (ADR-017).
-// F5.2: el cliente captura y reproduce ese audio (apps/web/src/services/audio) y recibe lo que el servidor oyó de su
+// Client ↔ server messages of a text scene (F4.1; 03 §5.3, §5.6-§5.8) and the contracts that travel with them:
+// observer output (03 §5.7), evidence event (03 §3.5.3) and mission effects (03 §6.4.8).
+// All objects are strict: an extra field (a prompt, a model name, a key) does not validate (A4).
+// F5.1a: voice on the server. The client asks for a voice scene (`scene.start` with `modality: "voice"`), marks the start and
+// end of its turn (`voice.turnStart`/`voice.turnEnd`, D-091) and sends the audio in separate binary frames (ADR-017).
+// F5.2: the client captures and plays that audio (apps/web/src/services/audio) and receives what the server heard from its
 // turno (`turn.transcript`).
 import { z } from "zod";
 
@@ -13,18 +13,18 @@ const SceneId = z.string().regex(/^M\d+\.\d+-E\d+$/);
 const Iso = z.iso.datetime();
 
 /**
- * Framing del audio en el WebSocket de escena (ADR-017): frames BINARIOS sin cabecera, PCM16 little-endian mono.
- * Cliente → servidor: la voz del jugador a 16 kHz, solo entre `voice.turnStart` y `voice.turnEnd`.
- * Servidor → cliente: la voz del NPC a 24 kHz, solo durante `npcTurn` (invariante a de 03 §3.5.1).
+ * Audio framing on the scene WebSocket (ADR-017): BINARY frames with no header, PCM16 little-endian mono.
+ * Client → server: the player's voice at 16 kHz, only between `voice.turnStart` and `voice.turnEnd`.
+ * Server → client: the NPC's voice at 24 kHz, only during `npcTurn` (invariant a of 03 §3.5.1).
  */
 export const PLAYER_AUDIO_SAMPLE_RATE = 16000;
 export const NPC_AUDIO_SAMPLE_RATE = 24000;
 
-/** Ruta del WebSocket de escena y del token de un solo uso (03 §5.3, D-158). */
+/** Scene WebSocket path and the single-use token path (03 §5.3, D-158). */
 export const SCENE_WS_PATH = "/scene";
 export const SCENE_TOKEN_PATH = "/scene-token";
 
-// ---------- efectos de misión (03 §6.4.8) ----------
+// ---------- mission effects (03 §6.4.8) ----------
 
 export const FoundationStageSchema = z.enum(["idea", "en_marcha", "fundado", "crece"]);
 export const WorldEffectSchema = z.union([
@@ -63,7 +63,7 @@ export const ObserverResultSchema = z.strictObject({
 });
 export type ObserverResult = z.infer<typeof ObserverResultSchema>;
 
-// ---------- evidencia (03 §3.5.3, D-157): append-only, la escribe el servidor ----------
+// ---------- evidence (03 §3.5.3, D-157): append-only, written by the server ----------
 
 export const EvidenceEventSchema = z.strictObject({
   id: z.string().min(1),
@@ -75,7 +75,7 @@ export const EvidenceEventSchema = z.strictObject({
   branch: z.string().optional(),
   structureId: z.string().optional(),
   quote: z.string().optional(),
-  /** Solo en `mission_outcome`: cómo cerró la escena y qué efectos emitió. */
+  /** Only in `mission_outcome`: how the scene closed and which effects it emitted. */
   outcome: z.enum(["success", "partial", "hardCap"]).optional(),
   effects: z.array(WorldEffectSchema).optional(),
   criteriaMet: z.array(z.string()).optional(),
@@ -87,20 +87,20 @@ export type EvidenceEvent = z.infer<typeof EvidenceEventSchema>;
 export const PassOptionSchema = z.enum(["hint", "repeat", "simpler", "continue"]);
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
-  /** Hablar con un NPC; `null` abre la escena del compañero sin NPC (como M0.2). Modo operador: cuenta `op-local`. */
+  /** Talk to an NPC; `null` opens the companion scene without an NPC (like M0.2). Operator mode: `op-local` account. */
   z.strictObject({
     type: z.literal("scene.start"),
     npcId: NpcId.nullable(),
-    /** Por omisión, texto. Voz sin sesión disponible (sin clave, proveedor caído): la escena sigue por texto con aviso. */
+    /** Text by default. Voice with no session available (no key, provider down): the scene continues by text with a notice. */
     modality: z.enum(["voice", "text"]).optional(),
   }),
-  /** Turno por texto: el jugador escribe y aprieta Terminé. */
+  /** Text turn: the player types and presses Terminé. */
   z.strictObject({ type: z.literal("turn.text"), text: z.string().trim().min(1).max(500) }),
   z.strictObject({ type: z.literal("turn.pass") }),
   z.strictObject({ type: z.literal("turn.choose"), option: PassOptionSchema }),
   z.strictObject({ type: z.literal("scene.abort") }),
-  // Voz (F5.1a): inicio y fin del turno hablado (fin = `Terminé` o el umbral de silencio local). El audio va en frames
-  // binarios aparte (PLAYER_AUDIO_SAMPLE_RATE).
+  // Voice (F5.1a): start and end of the spoken turn (end = `Terminé` or the local silence threshold). The audio goes in frames
+  // separate binary ones (PLAYER_AUDIO_SAMPLE_RATE).
   z.strictObject({ type: z.literal("voice.turnStart") }),
   z.strictObject({ type: z.literal("voice.turnEnd") }),
 ]);
@@ -115,9 +115,9 @@ export const SCENE_STEP_NAMES = [
 
 const LineSchema = z.strictObject({
   lineId: z.string().min(1),
-  /** NPC que habla o LUMI (sus líneas viajan como id de plantilla, nunca texto libre del modelo). */
+  /** NPC speaking or LUMI (their lines travel as a template id, never free text from the model). */
   speaker: z.union([NpcId, z.literal("LUMI")]),
-  /** `safe`: línea segura guionada que reemplaza un turno cortado por la moderación (F4.2, 03 §7.7). */
+  /** `safe`: scripted safe line that replaces a turn cut by moderation (F4.2, 03 §7.7). */
   kind: z.enum(["pretask", "opening", "reply", "closing", "exit", "notIntroduced", "safe"]),
   text: z.string().nullable(),
   template: z.string().nullable(),
@@ -128,8 +128,8 @@ export type SafetyLayer = (typeof SAFETY_LAYERS)[number];
 
 export const NOTICE_CODES = ["observer_invalid", "model_unavailable", "containment"] as const;
 /**
- * Causa estructurada de un `model_unavailable` del NPC en texto (open-world-3d T1). La arma el servidor SOLO desde
- * `ProviderError.code` y `status`, nunca desde el texto del error (que puede traer una clave o un cuerpo crudo).
+ * Structured cause of an NPC `model_unavailable` in text (open-world-3d T1). The server builds it ONLY from
+ * `ProviderError.code` and `status`, never from the error text (which may carry a key or a raw body).
  */
 export const NOTICE_CAUSE_KINDS = ["http", "timeout", "empty", "truncated", "unavailable", "unknown"] as const;
 export type NoticeCauseKind = (typeof NOTICE_CAUSE_KINDS)[number];
@@ -138,14 +138,14 @@ export const NoticeCauseSchema = z.strictObject({
   status: z.number().int().min(100).max(599).nullable(),
 });
 export type NoticeCause = z.infer<typeof NoticeCauseSchema>;
-/** `not_voice`: un mensaje o frame de voz en una escena que no está en modo voz. */
+/** `not_voice`: a voice message or frame in a scene that is not in voice mode. */
 export const ERROR_CODES = ["bad_message", "not_implemented", "scene_busy", "no_scene", "unknown_npc", "not_your_turn", "not_voice"] as const;
 
 /**
- * A2 (ADR-027): estado de la conversación por medidores para el HUD. Sin números: cada barra es un ancho 0..1 y su
- * estado; los hechos son las etiquetas en español de "Lo que sabés de…"; la ayuda es el escalón que decidió el servidor
- * (el cliente puede subirlo con su reloj de silencio) y su contenido. `completed`: el objetivo se cumplió y la escena
- * cierra en el próximo turno del jugador.
+ * A2 (ADR-027): conversation state through meters for the HUD. No numbers: each bar is a 0..1 width and its
+ * state; the facts are the Spanish labels of "Lo que sabés de…"; the help is the step the server decided on
+ * (the client may raise it with its silence clock) and its content. `completed`: the goal was met and the scene
+ * closes on the player's next turn.
  */
 export const CONVERSATION_NOTICES = ["early_errand", "real_data", "l1"] as const;
 export const ConversationStateSchema = z.strictObject({
@@ -187,7 +187,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     softCapReached: z.boolean(),
   }),
   z.strictObject({ type: z.literal("npc.line"), line: LineSchema }),
-  /** El NPC no abre escena: pide presentación (y saluda con su línea guionada) o no tiene nada ahora. */
+  /** The NPC does not open a scene: asks for an introduction (and greets with its scripted line) or has nothing right now. */
   z.strictObject({ type: z.literal("scene.blocked"), npcId: NpcId.nullable(), reason: z.enum(["notIntroduced", "noScene"]) }),
   z.strictObject({ type: z.literal("scene.effects"), missionId: MissionId, sceneId: SceneId, effects: z.array(WorldEffectSchema) }),
   z.strictObject({
@@ -197,11 +197,11 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     evidence: z.array(EvidenceEventSchema),
   }),
   /**
-   * Corte de moderación (F4.2, 03 §7.7): en qué capa se detectó (entrada del jugador, salida del NPC u observador) y
-   * qué pasó (corte + línea segura, o contención). Nunca lleva el texto cortado ni el término que disparó.
+   * Moderation cut (F4.2, 03 §7.7): at which layer it was detected (player input, NPC output or observer) and
+   * what happened (cut + safe line, or containment). It never carries the cut text or the term that triggered it.
    */
   z.strictObject({ type: z.literal("scene.safety"), layer: z.enum(SAFETY_LAYERS), action: z.enum(["cut", "containment"]) }),
-  /** Contención (D-112): línea fuera de la ficción y recurso de ayuda local. `provisional`: textos sin revisar (F13). */
+  /** Containment (D-112): out-of-fiction line and local help resource. `provisional`: unreviewed texts (F13). */
   z.strictObject({
     type: z.literal("scene.containment"),
     line: z.string().min(1),
@@ -209,9 +209,9 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     provisional: z.boolean(),
   }),
   /**
-   * F5.2: lo que el servidor oyó del jugador en un turno de voz (`final: false` mientras habla; `final: true` cuando la
-   * transcripción quedó completa y pasó la moderación de entrada). `npc` queda reservado para el holdback de F5.1b: hoy
-   * la línea del NPC llega moderada y completa por `npc.line`. Nunca lleva audio (D-108).
+   * F5.2: what the server heard from the player in a voice turn (`final: false` while they speak; `final: true` when the
+   * transcript is complete and passed input moderation). `npc` is reserved for the F5.1b holdback: today
+   * the NPC line arrives moderated and complete via `npc.line`. It never carries audio (D-108).
    */
   z.strictObject({
     type: z.literal("turn.transcript"),
@@ -220,12 +220,12 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
     text: z.string().max(2000),
     final: z.boolean(),
   }),
-  /** Evento de error que no corta la escena (p. ej. el observador no validó dos veces). */
+  /** Error event that does not cut the scene (e.g. the observer failed to validate twice). */
   z.strictObject({ type: z.literal("scene.notice"), code: z.enum(NOTICE_CODES), message: z.string(), cause: NoticeCauseSchema.optional() }),
   z.strictObject({ type: z.literal("error"), code: z.enum(ERROR_CODES), message: z.string() }),
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
 
-/** Respuesta de POST /scene-token (sobre `{ ok, data }` del servidor). */
+/** Response of POST /scene-token (over the server's `{ ok, data }`). */
 export const SceneTokenSchema = z.strictObject({ token: z.string().min(16), wsPath: z.string() });
 export type SceneToken = z.infer<typeof SceneTokenSchema>;

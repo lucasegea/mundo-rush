@@ -1,6 +1,6 @@
-// Adaptador de texto de Gemini (03 §5.10) por fetch a la API REST, sin SDK. Solo se construye con clave presente y lo
-// usan el servidor del operador y la eval en vivo opt-in (scripts/eval/live-text.ts, D-027); ningún test lo llama.
-// La clave va en un header y jamás aparece en errores, logs ni mensajes al cliente.
+// Gemini text adapter (03 §5.10) via fetch to the REST API, no SDK. Only built with a key present and used by
+// the operator server and the opt-in live eval (scripts/eval/live-text.ts, D-027); no test calls it.
+// The key goes in a header and never appears in errors, logs or messages to the client.
 import { ProviderError, type TextModelProvider, type TextRequest, type TextResponse } from "./text.ts";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -9,7 +9,7 @@ interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
 }
 
-/** PCM16 mono → WAV (cabecera RIFF de 44 bytes): formato de audio que acepta generateContent como inlineData. */
+/** PCM16 mono → WAV (44-byte RIFF header): audio format that generateContent accepts as inlineData. */
 export function pcm16ToWav(pcm16: Int16Array, sampleRate: number): Buffer {
   const data = Buffer.from(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength);
   const h = Buffer.alloc(44);
@@ -40,7 +40,7 @@ export function createGeminiTextProvider(apiKey: string, model: string, fetchImp
           role: t.role,
           parts: [
             { text: t.text },
-            // El clip del turno va con el primer turno (el del jugador); se codifica acá y no se guarda.
+            // The turn clip goes with the first turn (the player's); it is encoded here and not kept.
             ...(i === 0 && req.audio ? [{ inlineData: { mimeType: "audio/wav", data: pcm16ToWav(req.audio.pcm16, req.audio.sampleRate).toString("base64") } }] : []),
           ],
         })),
@@ -61,7 +61,7 @@ export function createGeminiTextProvider(apiKey: string, model: string, fetchImp
       if (!res.ok) throw new ProviderError(`el proveedor respondió ${res.status}`, "http", res.status);
       const data = (await res.json()) as GeminiResponse;
       const candidate = data.candidates?.[0];
-      // finishReason antes de usar el texto: una salida cortada no se interpreta como respuesta.
+      // finishReason before using the text: a truncated output is not taken as a reply.
       if (candidate?.finishReason === "MAX_TOKENS") throw new ProviderError("respuesta truncada (MAX_TOKENS)", "truncated");
       const text = (candidate?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
       if (text === "") throw new ProviderError("respuesta vacía del proveedor", "empty");

@@ -1,6 +1,6 @@
-# Nombres reales prohibidos en lo que el juego dice (02 §1.5 regla 4, §0.2 regla 10).
-# 02 §6.6 #16 pide no versionar nombres COMERCIALES: esta lista lleva solo nombres comunes de principios activos
-# (no son marcas). El revisor completa marcas y empresas fuera del repo (ver el reporte de F1.2, desacuerdos).
+# Real names forbidden in what the game says (02 §1.5 rule 4, §0.2 rule 10).
+# 02 §6.6 #16 asks not to version COMMERCIAL names: this list carries only common names of active ingredients
+# (not brands). The reviewer completes brands and companies outside the repo (see the F1.2 report, disagreements).
 id: nombres_reales
 regla: nombres_reales
 fuente: "02 §1.5 regla 4; §6.6 #16"

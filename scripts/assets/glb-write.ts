@@ -1,15 +1,15 @@
-// scripts/assets/glb-write.ts: escritor mínimo y determinístico de .glb (open-world-3d T7, D-830, PD-3). Lo usa
-// scripts/assets/bake-trees.ts para los árboles horneados en lugar de `GLTFExporter` de three, que en Node 22 no corre
-// (usa `FileReader`, que Node no tiene) y además escribe un `generator` con versión. Acá no hay polyfill ni dependencia:
-//   · un chunk JSON y un chunk BIN, cada uno rellenado a 4 bytes (JSON con espacios, BIN con ceros)
-//   · las claves del JSON en un orden fijo (las escribe este archivo, no `JSON.stringify` de un objeto armado a mano en
-//     otro lado), sin fecha, sin `generator` con versión: los mismos datos dan los mismos bytes
-//   · una malla por nodo, primitivas de triángulos indexadas, sin material, sin textura, sin imagen (las piezas del
-//     pipeline: inspect-budgets falla una pieza con material o textura, D-829)
-//   · atributos en el orden POSITION, NORMAL, TEXCOORD_0, COLOR_0 (los que haya), cada uno en su bufferView
-// El lector de inspect-budgets (gltf-transform) lo lee de vuelta; glb-write.test.ts lo prueba.
+// scripts/assets/glb-write.ts: minimal, deterministic .glb writer (open-world-3d T7, D-830, PD-3). Used by
+// scripts/assets/bake-trees.ts for the baked trees instead of three's `GLTFExporter`, which does not run on Node 22
+// (it uses `FileReader`, which Node lacks) and also writes a versioned `generator`. Here there is no polyfill or dependency:
+//   · one JSON chunk and one BIN chunk, each padded to 4 bytes (JSON with spaces, BIN with zeros)
+//   · the JSON keys in a fixed order (written by this file, not by `JSON.stringify` of an object assembled by hand
+//     elsewhere), no date, no versioned `generator`: the same data gives the same bytes
+//   · one mesh per node, indexed triangle primitives, no material, no texture, no image (the pipeline's
+//     pieces: inspect-budgets fails a piece with a material or texture, D-829)
+//   · attributes in the order POSITION, NORMAL, TEXCOORD_0, COLOR_0 (those present), each in its own bufferView
+// inspect-budgets's reader (gltf-transform) reads it back; glb-write.test.ts proves it.
 
-/** Los atributos que puede llevar una primitiva y su tipo glTF (componentes float, sin normalizar). */
+/** The attributes a primitive can carry and their glTF type (float components, not normalized). */
 export const GLB_ATTRIBUTES = { POSITION: "VEC3", NORMAL: "VEC3", TEXCOORD_0: "VEC2", COLOR_0: "VEC3" } as const;
 export type GlbAttribute = keyof typeof GLB_ATTRIBUTES;
 const ORDER = Object.keys(GLB_ATTRIBUTES) as GlbAttribute[];
@@ -36,7 +36,7 @@ const ELEMENT_ARRAY_BUFFER = 34963;
 
 const pad4 = (n: number): number => (n + 3) & ~3;
 
-/** Un número en el JSON: los enteros tal cual, los float con la representación más corta de JS (estable). */
+/** A number in the JSON: integers as they are, floats with JS's shortest representation (stable). */
 const num = (v: number): string => {
   if (!Number.isFinite(v)) throw new Error(`glb-write: valor no finito ${v}`);
   return Object.is(v, -0) ? "0" : String(v);
@@ -44,7 +44,7 @@ const num = (v: number): string => {
 const arr = (a: readonly number[]): string => `[${a.map(num).join(",")}]`;
 const str = (s: string): string => JSON.stringify(s);
 
-/** Mínimo y máximo por componente (glTF los exige en POSITION). */
+/** Minimum and maximum per component (glTF requires them on POSITION). */
 function bounds(data: Float32Array, size: number): { min: number[]; max: number[] } {
   const min = new Array<number>(size).fill(Infinity);
   const max = new Array<number>(size).fill(-Infinity);
@@ -57,7 +57,7 @@ function bounds(data: Float32Array, size: number): { min: number[]; max: number[
   return { min: min.map((v) => Math.fround(v)), max: max.map((v) => Math.fround(v)) };
 }
 
-/** Escribe las mallas como un .glb (un nodo por malla, en el orden dado). */
+/** Writes the meshes as a .glb (one node per mesh, in the given order). */
 export function writeGlb(meshes: readonly GlbMesh[]): Uint8Array {
   const views: { offset: number; length: number; target: number }[] = [];
   const accessors: string[] = [];
@@ -132,7 +132,7 @@ export function writeGlb(meshes: readonly GlbMesh[]): Uint8Array {
   return out;
 }
 
-/** Lee la cabecera y los dos chunks (para los tests y para comprobar lo escrito). */
+/** Reads the header and the two chunks (for the tests and to check what was written). */
 export function readGlbChunks(glb: Uint8Array): { version: number; length: number; json: Record<string, unknown>; jsonLength: number; binLength: number } {
   const dv = new DataView(glb.buffer, glb.byteOffset, glb.byteLength);
   if (dv.getUint32(0, true) !== GLB_MAGIC) throw new Error("glb-write: no es un .glb (magic)");

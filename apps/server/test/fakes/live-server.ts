@@ -1,23 +1,23 @@
-// Servidor Live falso (03 §8.1, P0 §4.2): un WebSocket local en 127.0.0.1 que habla el formato de cable de la Live API
-// (setup → setupComplete, activityStart/audio/activityEnd, clientContent, serverContent con transcripciones, audio y
-// turnComplete, usageMetadata, goAway, sessionResumptionUpdate) con respuestas guionadas. Sin red externa, sin clave
-// real, sin API paga (D-027).
+// Fake Live server (03 §8.1, P0 §4.2): a local WebSocket on 127.0.0.1 that speaks the Live API wire format
+// (setup → setupComplete, activityStart/audio/activityEnd, clientContent, serverContent with transcriptions, audio and
+// turnComplete, usageMetadata, goAway, sessionResumptionUpdate) with scripted replies. No external network, no real
+// key, no paid API (D-027).
 import type { AddressInfo } from "node:net";
 import { WebSocketServer, type WebSocket } from "ws";
 
 export interface ScriptedReply {
-  /** Pedazos de la transcripción de entrada (inputTranscription), uno por mensaje. Vacío en respuestas a una nota. */
+  /** Pieces of the input transcript (inputTranscription), one per message. Empty in replies to a note. */
   player: readonly string[];
-  /** Transcripción de salida del NPC (outputTranscription). */
+  /** NPC output transcript (outputTranscription). */
   npc: string;
-  /** Muestras PCM16 del audio del NPC (24 kHz). */
+  /** PCM16 samples of the NPC audio (24 kHz). */
   audio: readonly number[];
   usage?: { audioIn: number; audioOut: number; textIn: number; textOut: number };
 }
 
 export interface FakeLiveConnection {
   socket: WebSocket;
-  /** Mensajes recibidos, ya parseados. */
+  /** Messages received, already parsed. */
   received: Record<string, unknown>[];
   url: string;
   closed: boolean;
@@ -27,20 +27,20 @@ export interface FakeLiveConnection {
 export interface FakeLiveServer {
   url: string;
   connections: FakeLiveConnection[];
-  /** Manda goAway por la última conexión. */
+  /** Sends goAway through the last connection. */
   goAway(timeLeft?: string): void;
-  /** Corta la última conexión del lado del servidor (código 1011). */
+  /** Cuts the last connection from the server side (code 1011). */
   drop(): void;
-  /** Espera hasta que haya `n` conexiones con setup completo. */
+  /** Waits until there are `n` connections with setup complete. */
   untilConnections(n: number): Promise<void>;
   close(): Promise<void>;
 }
 
 export interface FakeLiveOptions {
   replies?: readonly ScriptedReply[];
-  /** No contesta setupComplete: cierra la conexión (sesión que no abre). */
+  /** Doesn't answer setupComplete: closes the connection (a session that doesn't open). */
   refuseSetup?: boolean;
-  /** Handle de reanudación que anuncia; null: no anuncia ninguno. */
+  /** Resumption handle it announces; null: it announces none. */
   resumeHandle?: string | null;
 }
 
@@ -129,6 +129,6 @@ export async function startFakeLiveServer(opts: FakeLiveOptions = {}): Promise<F
   };
 }
 
-/** Mensajes de un tipo (la clave de primer nivel: setup, realtimeInput, clientContent). */
+/** Messages of a type (the top-level key: setup, realtimeInput, clientContent). */
 export const receivedOf = (c: FakeLiveConnection, key: string): Record<string, unknown>[] =>
   c.received.filter((m) => key in m).map((m) => m[key] as Record<string, unknown>);

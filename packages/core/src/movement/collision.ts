@@ -1,9 +1,9 @@
-// Colisión círculo vs. celdas bloqueadas (03 §2.4 #4). Sin física: el personaje es un círculo en XZ y se
-// desliza sobre los bordes. Movimiento por sub-pasos y por eje, con búsqueda binaria hasta el contacto, así
-// nunca atraviesa una esquina ni pasa entre dos celdas bloqueadas que se tocan en diagonal.
+// Circle vs. blocked cells collision (03 §2.4 #4). No physics: the character is a circle in XZ and
+// slides along the edges. Movement in sub-steps and per axis, with binary search up to the contact, so
+// it never goes through a corner nor between two blocked cells that touch diagonally.
 import { isWalkable, type Point, type WalkGrid } from "./grid";
 
-/** ¿El círculo (x, z, r) se superpone con alguna celda bloqueada (o con el afuera de la grilla)? */
+/** Does the circle (x, z, r) overlap any blocked cell (or the outside of the grid)? */
 export function circleBlocked(g: WalkGrid, x: number, z: number, r: number): boolean {
   const s = g.cellSize;
   const c0 = Math.floor((x - r - g.originX) / s);
@@ -18,7 +18,7 @@ export function circleBlocked(g: WalkGrid, x: number, z: number, r: number): boo
       const minZ = g.originZ + row * s;
       const dx = x - Math.max(minX, Math.min(x, minX + s));
       const dz = z - Math.max(minZ, Math.min(z, minZ + s));
-      // Estricto: tocar el borde no es chocar (así se puede deslizar pegado a una pared).
+      // Strict: touching the edge is not colliding (so you can slide hugging a wall).
       if (dx * dx + dz * dz < r2 - 1e-9) return true;
     }
   }
@@ -27,7 +27,7 @@ export function circleBlocked(g: WalkGrid, x: number, z: number, r: number): boo
 
 const CONTACT_ITERATIONS = 8;
 
-/** Avanza `delta` sobre un eje; si choca, se queda en el último punto libre (búsqueda binaria). */
+/** Advances `delta` along one axis; if it collides, it stays at the last free point (binary search). */
 function moveAxis(g: WalkGrid, p: Point, delta: number, axis: "x" | "z", r: number): Point {
   if (delta === 0) return p;
   const at = (t: number): Point => (axis === "x" ? { x: p.x + delta * t, z: p.z } : { x: p.x, z: p.z + delta * t });
@@ -45,8 +45,8 @@ function moveAxis(g: WalkGrid, p: Point, delta: number, axis: "x" | "z", r: numb
 }
 
 /**
- * Mueve el círculo `(dx, dz)` con deslizamiento. Sub-pasos de a lo sumo r/2 para no saltear celdas.
- * Si el punto de partida ya está bloqueado (dato malo), no se mueve.
+ * Moves the circle `(dx, dz)` with sliding. Sub-steps of at most r/2 so as not to skip cells.
+ * If the starting point is already blocked (bad data), it does not move.
  */
 export function moveCircle(g: WalkGrid, from: Point, dx: number, dz: number, r: number): Point {
   if (circleBlocked(g, from.x, from.z, r)) return from;
@@ -59,7 +59,7 @@ export function moveCircle(g: WalkGrid, from: Point, dx: number, dz: number, r: 
   return p;
 }
 
-/** ¿El segmento a→b se puede recorrer con un círculo de radio r sin chocar? (muestreo cada r/2) */
+/** Can the segment a→b be traversed with a circle of radius r without colliding? (sampled every r/2) */
 export function segmentClear(g: WalkGrid, a: Point, b: Point, r: number): boolean {
   const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / Math.max(r / 2, 0.05)));
   for (let i = 0; i <= n; i++) {

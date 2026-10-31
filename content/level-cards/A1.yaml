@@ -1,4 +1,4 @@
-# Tarjeta de nivel A1 (02 §3.3), con el ejemplo textual de {{level_card}} (A1, andamiaje 2). Solo servidor.
+# Level card A1 (02 §3.3), with the literal example of {{level_card}} (A1, scaffolding 2). Server only.
 banda: A1
 palabras_por_oracion: { min: 4, max: 10 }
 oraciones_por_turno: { min: 1, max: 2, nota: null }

@@ -1,12 +1,12 @@
-// @lg/art tolerance.ts: el rango de color que puede dar `paintColors` para un token (plan estetica-c M2): sirve para
-// comprobar que un glTF repintado por scripts/assets/optimize.ts quedó dentro de los tokens que se le asignaron, con
-// el error de la cuantización a 8 bits incluido.
+// @lg/art tolerance.ts: the color range that `paintColors` can give for a token (plan estetica-c M2): used to
+// check that a glTF repainted by scripts/assets/optimize.ts stayed within the tokens assigned to it, with
+// the 8-bit quantization error included.
 import { PAINT_DEFAULTS, type PaintOptions, type Rgb } from "./paint.ts";
 
-/** Error de cuantizar un color normalizado a 8 bits (más un margen numérico). */
+/** Error of quantizing a normalized color to 8 bits (plus a numeric margin). */
 export const COLOR_QUANT_EPS = 1 / 255 + 1e-4;
 
-/** Mínimo y máximo por canal que `paintColors(…, rgb, …, opts)` puede escribir. */
+/** Minimum and maximum per channel that `paintColors(…, rgb, …, opts)` can write. */
 export function paintRange(rgb: Rgb, opts: PaintOptions = {}, eps = COLOR_QUANT_EPS): { min: Rgb; max: Rgb } {
   const top = opts.top ?? PAINT_DEFAULTS.top;
   const bottomDark = opts.bottomDark ?? PAINT_DEFAULTS.bottomDark;
@@ -21,7 +21,7 @@ export function paintRange(rgb: Rgb, opts: PaintOptions = {}, eps = COLOR_QUANT_
   return { min: [lo(0), lo(1), lo(2)], max: [hi(0), hi(1), hi(2)] };
 }
 
-/** ¿El color cae dentro de lo que la pintura puede dar para ese token? */
+/** Does the color fall within what the paint can give for that token? */
 export function withinPaint(color: ArrayLike<number>, rgb: Rgb, opts: PaintOptions = {}, eps = COLOR_QUANT_EPS): boolean {
   const { min, max } = paintRange(rgb, opts, eps);
   for (let k = 0; k < 3; k++) {

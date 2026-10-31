@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// A3 (sin WebGL simulado el arranque cae en solo-diálogo) + A9 (el shell carga el contenido REAL compilado de
-// F1.2 sin errores de consola) + recorrido por teclado de lugares → NPC → "entrar a la escena".
+// A3 (without simulated WebGL startup falls into dialog-only) + A9 (the shell loads F1.2's REAL compiled content
+// with no console errors) + keyboard walkthrough of places → NPC → "enter the scene".
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -59,7 +59,7 @@ describe("A9: el shell solo-diálogo carga el contenido compilado de F1.2", () =
     const lugares = (content["lugares.json"] as { lugares: unknown[] }).lugares;
     expect(within(places).getAllByRole("button")).toHaveLength(lugares.length);
 
-    // Inés está en la parada del colectivo (content/npcs/NPC-INES.yaml).
+    // Inés is at the bus stop (content/npcs/NPC-INES.yaml).
     const parada = within(places).getByRole("button", { name: /Parada del colectivo/ });
     expect(parada.getAttribute("aria-pressed")).toBe("false");
     parada.focus();
@@ -69,7 +69,7 @@ describe("A9: el shell solo-diálogo carga el contenido compilado de F1.2", () =
     expect(screen.getByText("Cartel: Welcome to Kestrel Valley")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Retrato de Inés Calder" }).tagName.toLowerCase()).toBe("svg");
 
-    // "Entrar a la escena" (placeholder) y vuelta con Escape: el foco vuelve al botón.
+    // "Enter the scene" (placeholder) and back with Escape: focus returns to the button.
     const talk = screen.getByRole("button", { name: "Hablar con Inés Calder" });
     talk.focus();
     await user.keyboard("{Enter}");

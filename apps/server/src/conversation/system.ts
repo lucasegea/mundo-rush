@@ -1,10 +1,10 @@
-// Sistema de conversación por medidores (ADR-027): se enchufa a scene-runtime por los ganchos de conversación
-// (scene-runtime/hooks.ts) y no toca la máquina de escena. Por cada escena con `conversacion`:
-//   arranque → carga (o revive) el estado del encuentro, arma la nota del NPC y manda el estado al HUD;
-//   cada intercambio (turno del jugador + respuesta del NPC, ya moderados) → juez (etiquetas) → motor puro (suma) →
-//   guarda → si la nota cambió (fase nueva, nivel abierto, secreto), la actualiza → manda el estado → si se llenó el
-//   último medidor, pide el cierre (una acción del juego decidida por código, nunca por el modelo del NPC).
-// Los juicios de una escena corren en fila (uno por vez, en orden). Nunca registra texto de la conversación.
+// Meters conversation system (ADR-027): plugs into scene-runtime through the conversation hooks
+// (scene-runtime/hooks.ts) and does not touch the scene machine. For each scene with `conversacion`:
+//   start → loads (or revives) the encounter state, builds the NPC note and sends the state to the HUD;
+//   each exchange (player turn + NPC reply, already moderated) → judge (labels) → pure engine (sum) →
+//   saves → if the note changed (new phase, open level, secret), updates it → sends the state → if the
+//   last meter filled, asks for closing (a game action decided by code, never by the NPC's model).
+// A scene's judgments run in a queue (one at a time, in order). It never logs conversation text.
 import {
   applyExchange, encounterComplete, encounterView, initialEncounterState, reviveEncounterState,
   type EncounterDef, type EncounterState,
@@ -23,12 +23,12 @@ export interface ConversationSystemDeps {
   judge: TextModelProvider;
   role: ModelRole;
   store: EncounterStore;
-  /** Diagnóstico para el operador. Nunca recibe texto de la conversación. */
+  /** Diagnostics for the operator. It never receives conversation text. */
   log?: (message: string) => void;
 }
 
 export interface ConversationSystem extends ConversationHooks {
-  /** Espera a que terminen los juicios en curso (tests). */
+  /** Waits for the judgments in progress to finish (tests). */
   settled(): Promise<void>;
 }
 
@@ -39,7 +39,7 @@ interface Session {
   def: EncounterDef;
   state: EncounterState;
   npcName: string;
-  /** Turnos del jugador que esperan la respuesta del NPC (una nota [DIRECTOR] no tiene turno del jugador). */
+  /** Player turns waiting for the NPC reply (a [DIRECTOR] note has no player turn). */
   pendingPlayer: string[];
   history: { speaker: "player" | "npc"; text: string }[];
   chain: Promise<void>;
@@ -112,7 +112,7 @@ export function createConversationSystem(deps: ConversationSystemDeps): Conversa
       };
       sessions.set(info.sceneRunId, s);
       refresh(s);
-      // Un encuentro ya cumplido (p. ej. el tope duro llegó antes de la despedida): la escena cierra en el primer turno.
+      // An already fulfilled encounter (e.g. the hard cap arrived before the farewell): the scene closes on the first turn.
       if (encounterComplete(def, state)) {
         s.completed = true;
         control.complete();
@@ -127,7 +127,7 @@ export function createConversationSystem(deps: ConversationSystemDeps): Conversa
         return;
       }
       if (turn.kind === "safe") {
-        // La moderación cortó el intercambio: no se juzga (ni suma ni resta).
+        // Moderation cut the exchange: it is not judged (neither adds nor subtracts).
         s.pendingPlayer = [];
         return;
       }
@@ -137,14 +137,14 @@ export function createConversationSystem(deps: ConversationSystemDeps): Conversa
       if (playerText) s.history.push({ speaker: "player", text: playerText });
       s.history.push({ speaker: "npc", text: turn.text });
       if (s.history.length > MAX_HISTORY) s.history.splice(0, s.history.length - MAX_HISTORY);
-      if (!playerText) return; // respuesta a una nota [DIRECTOR]: no hay turno del jugador que juzgar
+      if (!playerText) return; // reply to a [DIRECTOR] note: there is no player turn to judge
       enqueue(s, () => judgeExchange(s, playerText, turn.text, recent));
     },
     onSceneEnd(end) {
       const s = sessions.get(end.sceneRunId);
       if (!s) return;
       s.ended = true;
-      // El último juicio todavía guarda el estado; después la sesión se suelta.
+      // The last judgment still saves the state; after that the session is released.
       enqueue(s, async () => { sessions.delete(end.sceneRunId); });
     },
     onHookError(message) {

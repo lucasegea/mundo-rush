@@ -1,10 +1,10 @@
-// Plugin de Vite del modo director (03 §6.5.1-§6.5.2, FD0). Se registra SOLO en tooling/director/vite.config.ts y
-// solo en `serve` (nunca en build). Se niega a activarse si el servidor escucha fuera de 127.0.0.1/localhost.
-//   - lg:director:snapshot → .director/state.json (atómico), con `build` y `contentErrors` que sabe Node.
-//   - lg:director:journal  → .director/journal/<sessionId>.jsonl (solo agregar, numerado y validado).
-//   - GET /__director/state y GET /__director/journal?session=<id>&tail=<n> (JSON).
-//   - content/** cambia → compilación incremental de F1.2 → lg:content:updated { ids } o, si no valida, nada se
-//     escribe y el error (archivo + clave) va al overlay de Vite y a contentErrors.
+// Director mode Vite plugin (03 §6.5.1-§6.5.2, FD0). Registered ONLY in tooling/director/vite.config.ts and
+// only in `serve` (never in build). It refuses to activate if the server listens outside 127.0.0.1/localhost.
+//   - lg:director:snapshot → .director/state.json (atomic), with `build` and `contentErrors` that Node knows.
+//   - lg:director:journal  → .director/journal/<sessionId>.jsonl (append-only, numbered and validated).
+//   - GET /__director/state and GET /__director/journal?session=<id>&tail=<n> (JSON).
+//   - content/** changes → F1.2 incremental compilation → lg:content:updated { ids } or, if it does not validate, nothing is
+//     written and the error (file + key) goes to the Vite overlay and to contentErrors.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -27,7 +27,7 @@ export const ROUTE_PREFIX = "/__director/";
 type ContentError = DirectorSnapshot["contentErrors"][number];
 type Build = DirectorSnapshot["build"];
 
-/** Regla de D-158 aplicada al servidor de desarrollo: solo loopback por nombre. `undefined` es el default de Vite (localhost). */
+/** D-158 rule applied to the development server: loopback by name only. `undefined` is Vite's default (localhost). */
 export const isLocalHost = (host: string | boolean | undefined): boolean =>
   host === undefined || host === "localhost" || host === "127.0.0.1";
 
@@ -47,7 +47,7 @@ export const gitSha = (root: string): string | null => {
 
 const toContentError = (h: Hallazgo): ContentError => ({ file: h.archivo, key: h.clave, message: h.mensaje });
 
-/** Lo que el plugin le manda al cliente: eventos propios por HMR y errores al overlay. */
+/** What the plugin sends the client: its own events over HMR and errors to the overlay. */
 export interface DirectorOutput {
   send(event: string, data: unknown): void;
   overlay(err: { message: string; stack: string; id?: string; plugin: string }): void;
@@ -61,12 +61,12 @@ export interface Compiler {
 export interface RuntimeOptions {
   root: string;
   out: DirectorOutput;
-  /** Compilador incremental (por defecto el de scripts/content/build.ts sobre `root`). */
+  /** Incremental compiler (by default scripts/content/build.ts over `root`). */
   compiler?: Compiler;
   build?: Build;
 }
 
-/** El corazón del plugin, sin Vite: los tests lo usan con salidas falsas y un directorio temporal. */
+/** The heart of the plugin, without Vite: the tests use it with fake outputs and a temp directory. */
 export function createDirectorRuntime(options: RuntimeOptions) {
   const { root, out } = options;
   const build: Build = { ...(options.build ?? { gitSha: gitSha(root), contentHash: contentHash(root) }) };
@@ -104,7 +104,7 @@ export function createDirectorRuntime(options: RuntimeOptions) {
       return written.length;
     },
 
-    /** Cambió algo en content/ (rutas relativas a root, con /). Compila incremental y avisa. */
+    /** Something changed in content/ (paths relative to root, with /). Compiles incrementally and notifies. */
     onContentChange(rutas: readonly string[]): { ok: boolean; ids: string[] } {
       compiler ??= crearCompiladorIncremental(root);
       const r = compiler.actualizar(rutas);
@@ -137,8 +137,8 @@ const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
 };
 
 /**
- * Manejador de GET /__director/state y GET /__director/journal (middleware de connect). Respuestas JSON con el
- * sobre de apps/server: { ok: true, data } o { ok: false, error: { code, message } }.
+ * Handler of GET /__director/state and GET /__director/journal (connect middleware). JSON responses with the
+ * apps/server envelope: { ok: true, data } or { ok: false, error: { code, message } }.
  */
 export function createDirectorHandler(root: string) {
   return (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
@@ -170,21 +170,21 @@ export function createDirectorHandler(root: string) {
 
 export interface DirectorPluginOptions {
   root?: string;
-  /** Espera para juntar cambios de content/ (un guardado suele disparar varios eventos). */
+  /** Wait to batch content/ changes (one save usually fires several events). */
   debounceMs?: number;
   /**
-   * Levantar apps/server con LG_DEV_CONTENT_WATCH=1 (F4.1, A8). `true` usa el arranque real; una función lo reemplaza
-   * (tests). Apagado por defecto: solo tooling/director/vite.config.ts lo prende.
+   * Start apps/server with LG_DEV_CONTENT_WATCH=1 (F4.1, A8). `true` uses the real startup; a function replaces it
+   * (tests). Off by default: only tooling/director/vite.config.ts turns it on.
    */
   scenesServer?: boolean | ((log: (m: string) => void) => ScenesServer);
 }
 
-/** Lo que el plugin expone a quien lo inspecciona (la config del director, sus tests). */
+/** What the plugin exposes to whoever inspects it (the director config, its tests). */
 export interface DirectorPluginApi {
   readonly startsScenesServer: boolean;
 }
 
-/** El plugin. Solo `serve`; con un host que no es loopback no hace nada y lo dice. */
+/** The plugin. `serve` only; with a non-loopback host it does nothing and says so. */
 export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
   const root = options.root ?? REPO_ROOT;
   const debounceMs = options.debounceMs ?? 120;
@@ -200,7 +200,7 @@ export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
         server.config.logger.warn(`[director] el servidor escucha en ${String(host)}: el modo director solo se activa en 127.0.0.1/localhost (D-158).`);
         return;
       }
-      // Salida compilada al día al arrancar (está fuera de git y puede no existir).
+      // Compiled output up to date on startup (it is outside git and may not exist).
       if (construir({ root, modo: "dev", log: () => undefined }) !== 0) server.config.logger.warn("[director] el contenido no compila; se ve el error al guardar un archivo.");
       const runtime = createDirectorRuntime({
         root,
@@ -219,11 +219,11 @@ export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
       let timer: ReturnType<typeof setTimeout> | null = null;
       server.watcher.add(contentDir);
       server.watcher.on("all", (event: string, file: string) => {
-        // Solo archivos (una carpeta nueva no es contenido); add/unlink cubren crear y borrar un YAML.
+        // Files only (a new folder is not content); add/unlink cover creating and deleting a YAML.
         if (event !== "add" && event !== "change" && event !== "unlink") return;
         const rel = relative(root, file).split(sep).join("/");
         if (!rel.startsWith("content/")) return;
-        // D-816: los universos de libro (content/universes/) los escribe EMIT y no son contenido campesino; encolarlos rompería la recarga.
+        // D-816: book universes (content/universes/) are written by EMIT and are not farmer-universe content; queuing them would break the reload.
         if (rel.startsWith("content/universes/")) return;
         queued.add(rel);
         if (timer) clearTimeout(timer);
@@ -234,13 +234,13 @@ export function directorPlugin(options: DirectorPluginOptions = {}): Plugin {
           try {
             runtime.onContentChange(rutas);
           } catch (err) {
-            // Un error de IO (p. ej. un archivo a medio guardar) no tumba el servidor de desarrollo.
+            // An IO error (e.g. a half-saved file) does not take down the development server.
             server.config.logger.error(`[director] recarga fallida: ${err instanceof Error ? err.message : String(err)}`);
           }
         }, debounceMs);
       });
       if (launchServer) {
-        // Después de compilar: el servidor lee apps/server/generated/content/ con la primera escena.
+        // After compiling: the server reads apps/server/generated/content/ with the first scene.
         const scenes = launchServer((m) => server.config.logger.info(m));
         server.httpServer?.once("close", () => scenes.stop());
         process.once("exit", () => scenes.stop());

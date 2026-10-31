@@ -1,13 +1,13 @@
-// Tipos de IDs de dominio con marca (branded): un MissionId no se confunde con un NpcId
-// aunque los dos sean strings. La forma de cada id (prefijos como "NPC-", "SITIO-") la
-// valida content-schema (F1.2); el núcleo solo exige un string no vacío y sin espacios.
+// Branded domain ID types: a MissionId is not confused with an NpcId
+// even though both are strings. The shape of each id (prefixes like "NPC-", "SITIO-") is
+// validated by content-schema (F1.2); the core only requires a non-empty string without spaces.
 
 declare const brand: unique symbol;
 
-/** Marca nominal sobre un tipo base. */
+/** Nominal brand on a base type. */
 export type Brand<T, B extends string> = T & { readonly [brand]: B };
 
-/** Un id de dominio de la clase `K`. */
+/** A domain id of class `K`. */
 export type Id<K extends string> = Brand<string, K>;
 
 export type AccountId = Id<"account">;
@@ -21,7 +21,7 @@ export type SaberId = Id<"saber">;
 
 const ID_SHAPE = /^\S+$/;
 
-/** Error de id inválido: nombra la clase y nunca repite el valor completo si es largo. */
+/** Invalid id error: names the class and never repeats the full value if it is long. */
 export class InvalidIdError extends Error {
   readonly kind: string;
   constructor(kind: string, raw: string) {
@@ -32,13 +32,13 @@ export class InvalidIdError extends Error {
   }
 }
 
-/** Convierte un string en un id de la clase `kind`, o lanza InvalidIdError. */
+/** Converts a string into an id of class `kind`, or throws InvalidIdError. */
 export function toId<K extends string>(kind: K, raw: string): Id<K> {
   if (!ID_SHAPE.test(raw)) throw new InvalidIdError(kind, raw);
   return raw as Id<K>;
 }
 
-/** Como toId, pero devuelve null en vez de lanzar. */
+/** Like toId, but returns null instead of throwing. */
 export function parseId<K extends string>(kind: K, raw: string): Id<K> | null {
   return ID_SHAPE.test(raw) ? (raw as Id<K>) : null;
 }

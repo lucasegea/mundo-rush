@@ -1,4 +1,4 @@
-# Sin dinero, precios, compras ni ventas en el modo 1 (02 §3.2 S8, §6.6 #6; D-018). `*` = cualquier sufijo.
+# No money, prices, purchases or sales in mode 1 (02 §3.2 S8, §6.6 #6; D-018). `*` = any suffix.
 id: dinero
 regla: dinero
 fuente: "02 §3.2 S8; §6.6 #6"

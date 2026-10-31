@@ -1,4 +1,4 @@
-// Pedido del tablero (02 §6.2.4; 01 §3.7). El contenido de P-R1.x entra en F8; F1.2 fija la forma.
+// Board order (02 §6.2.4; 01 §3.7). The content of P-R1.x enters in F8; F1.2 fixes the shape.
 import { z } from "zod";
 import { HabilidadId, idOf, NpcId, SaberId, SitioId } from "../ids.ts";
 import { EstadoRevision } from "./common.ts";
@@ -6,7 +6,7 @@ import { Escena, EstadoFundacion } from "./mision.ts";
 
 export const PedidoTablero = z.strictObject({
   id: idOf("pedido"),
-  /** Las 7 plantillas de 01 §3.7, en snake_case. */
+  /** The 7 templates of 01 §3.7, in snake_case. */
   plantilla: z.enum(["objeto_perdido", "recado", "charla_de_vereda", "como_se_dice", "lista", "cartel", "mensaje_por_radio"]),
   npcs: z.array(NpcId).min(1),
   requiere: z.array(HabilidadId),

@@ -1,5 +1,5 @@
-// book-mode slice-1 M4 (D-807) — fact-grounding gate: AC8 (pasa en contenido correcto) + AC9 (teeth: una tesis
-// presentada como hecho hace fallar el build; revertir lo vuelve verde). El gate es la mitigación del riesgo rector.
+// book-mode slice-1 M4 (D-807) — fact-grounding gate: AC8 (passes on correct content) + AC9 (teeth: a thesis
+// presented as fact makes the build fail; reverting it turns it green). The gate is the mitigation of the guiding risk.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,9 +20,9 @@ const def = <T>(v: T | undefined | null): T => { if (v == null) throw new Error(
 const temporales: string[] = [];
 afterAll(() => { for (const d of temporales) rmSync(d, { recursive: true, force: true }); });
 
-// La línea de la tesis vaca/leche, VOCEADA con atribución en el dataset correcto ("You say it plainly when asked…").
+// The cow/milk thesis line, VOICED with attribution in the correct dataset ("You say it plainly when asked…").
 const LINEA_ATRIBUIDA = "You say it plainly when asked well: Spain had the cow, but others drank the milk.";
-// Misma tesis, presentada como HECHO pelado (sin atribución): esto es el laundering que el gate debe cazar.
+// Same thesis, presented as bare FACT (without attribution): this is the laundering the gate must catch.
 const LINEA_COMO_HECHO = "Spain had the cow, but others drank the milk.";
 
 describe("M4 grounding gate — pura (AC8) y sus dientes por chequeo", () => {
@@ -65,23 +65,23 @@ describe("M4 grounding gate — pura (AC8) y sus dientes por chequeo", () => {
     const campesino = compilarContenido(leerContenido(REPO), "dev").conjunto;
     expect(campesino.saberes.length).toBeGreaterThan(0);
     expect(campesino.saberes.every((e) => e.data.clasificacion === undefined)).toBe(true);
-    // Si el gate corriera sobre la campesino la fallaría — por eso build.ts solo lo invoca con --universe.
+    // If the gate ran on the farmer universe it would fail it — that is why build.ts only invokes it with --universe.
     expect(chequearGrounding(campesino).length).toBeGreaterThan(0);
   });
 });
 
 describe("M4 grounding gate — teeth end-to-end por el build (AC9)", () => {
-  /** Copia el universo real a un root temporal (nunca se toca content/ real; lección 2026-10-12). */
+  /** Copies the real universe to a temporary root (the real content/ is never touched; lesson 2026-10-12). */
   const copiaUniverso = (): { root: string; conv: string } => {
     const root = mkdtempSync(join(tmpdir(), "lg-grounding-"));
     temporales.push(root);
     cpSync(join(REPO, "content", "universes", "U-GALEANO"),
       join(root, "content", "universes", "U-GALEANO"), { recursive: true });
-    // open-world-3d T3: el universo compila junto con el registro global (sus NPCs usan los cuerpos registrados), y el
-    // registro exige que cada archivo nombrado exista: van también los modelos servidos.
+    // open-world-3d T3: the universe compiles together with the global registry (its NPCs use the registered bodies), and the
+    // registry requires that every named file exist: the served models go too.
     for (const f of ["assets-registry.yaml", "creditos.yaml"]) cpSync(join(REPO, "content", f), join(root, "content", f));
     cpSync(join(REPO, "apps", "web", "public", "models"), join(root, "apps", "web", "public", "models"), { recursive: true });
-    // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+    // Open-world-3d T6: the ground's .ktx2 files are also served with a row in the registry.
     cpSync(join(REPO, "apps", "web", "public", "textures"), join(root, "apps", "web", "public", "textures"), { recursive: true });
     return { root, conv: join(root, "content", "universes", "U-GALEANO", "conversaciones", "CONV-POTOSI.yaml") };
   };
@@ -93,7 +93,7 @@ describe("M4 grounding gate — teeth end-to-end por el build (AC9)", () => {
 
     const original = readFileSync(conv, "utf8");
     expect(original.includes("You say it plainly when asked")).toBe(true);
-    // Despoja la atribución de la línea que vocea la tesis vaca/leche: queda como hecho pelado.
+    // Strips the attribution from the line that voices the cow/milk thesis: it stays as bare fact.
     const roto = original.replace(
       "You say it plainly when asked well: Spain had the cow, but others\n      drank the milk.",
       "Spain had the cow, but others drank the milk.");

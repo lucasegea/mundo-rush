@@ -1,15 +1,15 @@
-// Matemática pura de CameraRig (R11, D-053, D-197, D-207, D-208): offset por pitch/yaw, el lente largo `perspective3D`
-// de la propuesta C §4 (FOV, huella del frustum sobre el suelo y su alcance, planos de recorte y escala de lo que
-// depende de la distancia; la escalera de zoom vive en el núcleo y llega como distancia), el plano de a dos en 3/4 de la
-// charla con test de oclusión, suavizado y "corte" para "reducir movimiento". Plan estetica-c M7: la matemática
-// ortográfica de HD-2D (frustum, escala entera de píxel, snap a la grilla de píxel) se retiró con sus presets.
+// Pure math of CameraRig (R11, D-053, D-197, D-207, D-208): offset by pitch/yaw, the long lens `perspective3D`
+// from proposal C §4 (FOV, the frustum's footprint on the ground and its reach, clipping planes and scale of what
+// depends on distance; the zoom ladder lives in the core and arrives as a distance), the 3/4 two-person shot of the
+// chat with occlusion test, smoothing and "cut" for "reduce motion". Plan estetica-c M7: the HD-2D ortho
+// math (frustum, integer pixel scale, pixel-grid snap) was removed along with its presets.
 
-/** Distancia por defecto de `cameraOffset` (m), cuando no se pasa una. */
+/** Default distance of `cameraOffset` (m), when none is passed. */
 export const CAMERA_DISTANCE = 40;
 
 type Vec3 = [number, number, number];
 
-/** Offset del objetivo a la cámara: elevada por pitch, rotada en Y por yaw (yaw 0 = cámara del lado +z). */
+/** Offset from the target to the camera: raised by pitch, rotated in Y by yaw (yaw 0 = camera on the +z side). */
 export function cameraOffset(pitchDeg: number, yawDeg: number, distance = CAMERA_DISTANCE): Vec3 {
   const p = (pitchDeg * Math.PI) / 180;
   const y = (yawDeg * Math.PI) / 180;
@@ -17,14 +17,14 @@ export function cameraOffset(pitchDeg: number, yawDeg: number, distance = CAMERA
   return [Math.sin(y) * flat, Math.sin(p) * distance, Math.cos(y) * flat];
 }
 
-/** Factor de suavizado exponencial independiente del framerate. */
+/** Framerate-independent exponential smoothing factor. */
 export function followAlpha(dtSec: number, rate = 6): number {
   return 1 - Math.exp(-rate * Math.max(0, dtSec));
 }
 
 /**
- * "Reducir movimiento" (D-053, F2 A7): la cámara no sigue al jugador de forma continua. Se queda quieta y, cuando
- * el jugador sale del centro de la vista (más de `margin` de la media vista en algún eje), corta de golpe a él.
+ * "Reduce motion" (D-053, F2 A7): the camera does not follow the player continuously. It stays still and, when
+ * the player leaves the view center (more than `margin` of the half view on some axis), cuts straight to them.
  */
 export function cutFollow(
   current: { x: number; z: number },
@@ -37,32 +37,32 @@ export function cutFollow(
   return out ? { x: target.x, z: target.z } : current;
 }
 
-// ---------- perspective3D: lente largo (propuesta C §4, plan estetica-c M1 ítem 1) ----------
+// ---------- perspective3D: long lens (proposal C §4, plan estetica-c M1 item 1) ----------
 
 export const PERSPECTIVE = {
   fovDeg: 30,
-  /** FOV vertical en pantallas verticales (aspecto < 1). */
+  /** Vertical FOV on portrait screens (aspect < 1). */
   portraitFovDeg: 40.5,
   near: 0.5,
   far: 200,
-  /** La cámara mira al jugador a esta altura. */
+  /** The camera looks at the player at this height. */
   targetHeight: 0.8,
-  /** Suavizado exponencial del seguimiento (1/s). */
+  /** Exponential smoothing of the follow (1/s). */
   followRate: 5,
 } as const;
 
 /**
- * Distancia de referencia (m): la del paso de inicio, donde valen los números de la propuesta C §5 (niebla 34 a 78 m,
- * caja de sombra de 44 m). Más lejos, lo que depende de la distancia escala con `viewScale` (D-208); más cerca, no.
+ * Reference distance (m): that of the start step, where proposal C §5's numbers hold (fog 34 to 78 m,
+ * 44 m shadow box). Farther, what depends on distance scales with `viewScale` (D-208); closer, it does not.
  */
 export const VIEW_REFERENCE_DISTANCE = 30;
 
-/** Factor de escala de niebla, sombra y recorte para una distancia de cámara: 1 hasta la de referencia, lineal después. */
+/** Fog, shadow and clipping scale factor for a camera distance: 1 up to the reference one, linear after. */
 export function viewScale(distance: number): number {
   return Math.max(1, distance / VIEW_REFERENCE_DISTANCE);
 }
 
-/** FOV vertical según el aspecto del canvas (más abierto en vertical, así entra lo mismo de ancho). */
+/** Vertical FOV by canvas aspect (wider in portrait, so the same width fits). */
 export function perspectiveFov(aspect: number): number {
   return aspect < 1 ? PERSPECTIVE.portraitFovDeg : PERSPECTIVE.fovDeg;
 }
@@ -75,8 +75,8 @@ const normalize3 = (v: Vec3): Vec3 => {
 const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 
 /**
- * Huella del frustum sobre el suelo y = 0: las 4 esquinas de la pantalla proyectadas desde la cámara (que mira a
- * `target` desde `cameraOffset(pitch, yaw, distance)`). null si alguna esquina no toca el suelo (se vería horizonte).
+ * Frustum footprint on the ground y = 0: the 4 screen corners projected from the camera (which looks at
+ * `target` from `cameraOffset(pitch, yaw, distance)`). null if some corner does not touch the ground (the horizon would show).
  */
 export function frustumGroundFootprint(target: Vec3, pitchDeg: number, yawDeg: number, distance: number, fovDeg: number, aspect: number): [number, number][] | null {
   const off = cameraOffset(pitchDeg, yawDeg, distance);
@@ -97,8 +97,8 @@ export function frustumGroundFootprint(target: Vec3, pitchDeg: number, yawDeg: n
 }
 
 /**
- * Alcance de la huella sobre el suelo: cuánto se aleja del objetivo (en x y en z, el mayor) lo que entra en pantalla.
- * Infinity si se ve el horizonte. El terreno tiene que extenderse al menos esto más allá de los límites caminables.
+ * Reach of the footprint on the ground: how far from the target (in x and z, the larger) what fits on screen goes.
+ * Infinity if the horizon shows. The terrain must extend at least this far beyond the walkable bounds.
  */
 export function groundReach(distance: number, pitchDeg: number, yawDeg: number, fovDeg: number, aspect: number): number {
   const fp = frustumGroundFootprint([0, PERSPECTIVE.targetHeight, 0], pitchDeg, yawDeg, distance, fovDeg, aspect);
@@ -106,13 +106,13 @@ export function groundReach(distance: number, pitchDeg: number, yawDeg: number, 
   return Math.max(...fp.map(([x, z]) => Math.max(Math.abs(x), Math.abs(z))));
 }
 
-/** Margen del plano lejano sobre el rayo de pantalla más largo hasta el suelo. */
+/** Far plane margin over the longest screen ray to the ground. */
 export const FAR_MARGIN = 1.2;
 
 /**
- * Planos de recorte para una distancia de cámara (D-208). `far` cubre con margen el rayo más largo de las esquinas de
- * la pantalla hasta el suelo (nunca menos que PERSPECTIVE.far; si se ve el horizonte, PERSPECTIVE.far). `near` crece
- * con la distancia para no gastar precisión de profundidad: 0,5 m hasta la referencia, con tope de 4 m.
+ * Clipping planes for a camera distance (D-208). `far` covers with margin the longest ray from the screen corners to
+ * the ground (never less than PERSPECTIVE.far; if the horizon shows, PERSPECTIVE.far). `near` grows
+ * with distance so as not to waste depth precision: 0.5 m up to the reference, capped at 4 m.
  */
 export function cameraClip(distance: number, pitchDeg: number, fovDeg: number, aspect: number): { near: number; far: number } {
   const near = Math.min(4, PERSPECTIVE.near * viewScale(distance));
@@ -124,21 +124,21 @@ export function cameraClip(distance: number, pitchDeg: number, fovDeg: number, a
   return { near, far: Math.max(PERSPECTIVE.far, Math.ceil(longest * FAR_MARGIN)) };
 }
 
-// ---------- dialogueFrame: plano de a dos en 3/4 (propuesta C §4, plan estetica-c M1 ítem 3) ----------
+// ---------- dialogueFrame: 3/4 two-person shot (proposal C §4, plan estetica-c M1 item 3) ----------
 
 export const TWO_SHOT = {
   pitchDeg: 20,
   distance: 12.5,
-  /** La mira baja 0,9 m desde la altura del pecho para que los dos queden en el tercio de arriba, sobre el panel. */
+  /** The look-at drops 0.9 m from chest height so both fall in the upper third, above the panel. */
   chestHeight: 1.2,
   lookDrop: 0.9,
-  /** Corrimiento hacia la cara del NPC: el preferido primero, después los otros dos (6 candidatos con los 2 lados). */
+  /** Offset toward the NPC's face: the preferred one first, then the other two (6 candidates with both sides). */
   leansDeg: [27, 17.5, 37] as const,
-  /** Transición (1/s). */
+  /** Transition (1/s). */
   rate: 3,
 } as const;
 
-/** Huella de algo que puede tapar la charla (props por su caja, árboles por su copa), con su alto. */
+/** Footprint of something that can block the chat (props by their box, trees by their canopy), with its height. */
 export type Obstacle =
   | { kind: "rect"; minX: number; maxX: number; minZ: number; maxZ: number; height: number }
   | { kind: "circle"; x: number; z: number; r: number; height: number };
@@ -147,7 +147,7 @@ export interface TwoShotCandidate {
   side: 1 | -1;
   leanDeg: number;
   yawDeg: number;
-  /** Muestras tapadas de los segmentos cámara-personajes, más 0,5 si no es el corrimiento preferido. */
+  /** Blocked samples of the camera-characters segments, plus 0.5 if it is not the preferred offset. */
   score: number;
 }
 
@@ -166,7 +166,7 @@ const inside = (o: Obstacle, x: number, z: number, margin: number): boolean =>
     ? x > o.minX - margin && x < o.maxX + margin && z > o.minZ - margin && z < o.maxZ + margin
     : Math.hypot(x - o.x, z - o.z) < o.r + margin;
 
-/** Los 6 candidatos (2 lados × 3 corrimientos) con su puntaje de oclusión, en orden de preferencia. */
+/** The 6 candidates (2 sides × 3 offsets) with their occlusion score, in order of preference. */
 export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obstacle[], heightAt?: (x: number, z: number) => number): TwoShotCandidate[] {
   const L = Math.hypot(player.x - npc.x, player.z - npc.z) || 1;
   const nx = (player.x - npc.x) / L;
@@ -175,7 +175,7 @@ export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obsta
   const out: TwoShotCandidate[] = [];
   for (const side of [1, -1] as const) {
     for (const leanDeg of TWO_SHOT.leansDeg) {
-      // Perpendicular a la línea jugador-NPC, corrida hacia el jugador: el NPC (que mira al jugador) queda de frente en 3/4.
+      // Perpendicular to the player-NPC line, shifted toward the player: the NPC (who faces the player) ends up front-on in 3/4.
       const lean = Math.sin(leanDeg * RAD);
       const ux = -nz * side;
       const uz = nx * side;
@@ -193,8 +193,8 @@ export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obsta
           const x = who.x + (cam[0] - who.x) * t;
           const y = chest + (cam[1] - chest) * t;
           const z = who.z + (cam[2] - who.z) * t;
-          if (Math.hypot(x - who.x, z - who.z) < 0.7) continue; // el propio personaje
-          // La altura de los obstáculos es sobre su suelo; la muestra se compara contra el mismo suelo.
+          if (Math.hypot(x - who.x, z - who.z) < 0.7) continue; // the character itself
+          // The obstacles' height is above their ground; the sample is compared against the same ground.
           const base = heightAt ? heightAt(x, z) : 0;
           for (const o of obstacles) if (y - base < o.height && inside(o, x, z, 0.3)) hits++;
           if (heightAt && heightAt(x, z) > y - 0.2) hits++;
@@ -207,39 +207,39 @@ export function twoShotCandidates(player: P2, npc: P2, obstacles: readonly Obsta
 }
 
 /**
- * El punto que mira el plano de a dos: entre los dos, a la altura del pecho menos la bajada, sobre el suelo de los dos
- * (con relieve, una altura fija dejaba la cámara bajo la loma).
+ * The point the two-person shot looks at: between the two, at chest height minus the drop, over the ground of both
+ * (with relief, a fixed height left the camera under the hill).
  */
 export function twoShotTarget(player: P2, npc: P2, heightAt?: (x: number, z: number) => number): Vec3 {
   const ground = heightAt ? (heightAt(player.x, player.z) + heightAt(npc.x, npc.z)) / 2 : 0;
   return [(player.x + npc.x) / 2, ground + TWO_SHOT.chestHeight - TWO_SHOT.lookDrop, (player.z + npc.z) / 2];
 }
 
-/** El encuadre de la charla: el candidato de menos oclusión (empate: el primero en orden de preferencia). Nunca falla. */
+/** The chat framing: the candidate with the least occlusion (tie: the first in order of preference). Never fails. */
 export function twoShotFrame(player: P2, npc: P2, obstacles: readonly Obstacle[], heightAt?: (x: number, z: number) => number): TwoShot {
   const cands = twoShotCandidates(player, npc, obstacles, heightAt);
   const chosen = cands.reduce((best, c) => (c.score < best.score ? c : best));
   return { target: twoShotTarget(player, npc, heightAt), pitchDeg: TWO_SHOT.pitchDeg, yawDeg: chosen.yawDeg, distance: TWO_SHOT.distance, chosen };
 }
 
-/** Diferencia de ángulo más corta (grados), en (-180, 180]. */
+/** Shortest angle difference (degrees), in (-180, 180]. */
 export function shortestYawDelta(from: number, to: number): number {
   const d = (((to - from) % 360) + 540) % 360 - 180;
   return d === -180 ? 180 : d;
 }
 
-// ---------- thirdPerson: detrás del personaje (open-world-3d T5, D-820, PD-5) ----------
+// ---------- thirdPerson: behind the character (open-world-3d T5, D-820, PD-5) ----------
 
 export interface ThirdPersonInput {
-  /** El pivote: el jugador (o el centro del mapa) a la altura del pecho. */
+  /** The pivot: the player (or the map center) at chest height. */
   target: Vec3;
   yawDeg: number;
-  /** Inclinación efectiva (la del zoom, `zoomPose`). */
+  /** Effective tilt (the zoom's, `zoomPose`). */
   pitchDeg: number;
-  /** Cuánto baja la mirada (grados); por defecto, la inclinación (mira al pivote). */
+  /** How far down the gaze drops (degrees); by default, the tilt (looks at the pivot). */
   lookPitchDeg?: number;
   distance: number;
-  /** Lo que puede tapar al personaje: la cámara se acerca hasta que el segmento cámara-pivote queda libre. */
+  /** What can block the character: the camera moves closer until the camera-pivot segment is clear. */
   obstacles?: readonly Obstacle[];
   heightAt?: ((x: number, z: number) => number) | null;
 }
@@ -247,29 +247,29 @@ export interface ThirdPersonInput {
 export interface ThirdPersonShot {
   position: Vec3;
   lookAt: Vec3;
-  /** Distancia final al pivote, después del acercamiento por obstáculos o terreno (nunca menos de 1,5 m). */
+  /** Final distance to the pivot, after approaching for obstacles or terrain (never less than 1.5 m). */
   distanceUsed: number;
 }
 
 export const THIRD_PERSON_RIG = {
-  /** Distancia mínima tras acercarse por un obstáculo. */
+  /** Minimum distance after approaching for an obstacle. */
   minPullIn: 1.5,
-  /** Paso de muestreo del segmento cámara-pivote (m) y margen alrededor de cada obstáculo. */
+  /** Sampling step of the camera-pivot segment (m) and margin around each obstacle. */
   sampleStep: 0.1,
   obstacleMargin: 0.2,
-  /** Lo que queda entre la cámara y el primer obstáculo. */
+  /** What remains between the camera and the first obstacle. */
   pullInGap: 0.3,
-  /** La cámara nunca baja de esto sobre el terreno, ni el segmento de esto en su mitad. */
+  /** The camera never goes below this over the terrain, nor the segment's midpoint below this. */
   terrainClearance: 0.6,
   segmentClearance: 0.35,
-  /** Hasta dónde mira hacia adelante cuando no mira al pivote. */
+  /** How far ahead it looks when it is not looking at the pivot. */
   lookAhead: 30,
 } as const;
 
 /**
- * La cámara en tercera persona (D-820, AC22-24): detrás del yaw (yaw 0 = cámara del lado +z), elevada por la
- * inclinación, a `distance` del pivote; se acerca si el segmento cámara-pivote cruza un obstáculo (nunca a menos de 1,5 m)
- * o el terreno, y nunca queda a menos de 0,6 m sobre el suelo. Mira hacia adelante bajando `lookPitchDeg`.
+ * The third-person camera (D-820, AC22-24): behind the yaw (yaw 0 = camera on the +z side), raised by the
+ * tilt, at `distance` from the pivot; it moves closer if the camera-pivot segment crosses an obstacle (never closer than 1.5 m)
+ * or the terrain, and never ends up less than 0.6 m above the ground. It looks ahead, dropping `lookPitchDeg`.
  */
 export function solveThirdPerson(input: ThirdPersonInput): ThirdPersonShot {
   const { target, yawDeg, pitchDeg, distance } = input;
@@ -279,7 +279,7 @@ export function solveThirdPerson(input: ThirdPersonInput): ThirdPersonShot {
   const at = (d: number): Vec3 => [target[0] + dir[0] * d, target[1] + dir[1] * d, target[2] + dir[2] * d];
   const blocked = (p: Vec3, s: number): boolean => {
     for (const o of obstacles) if (p[1] < o.height && inside(o, p[0], p[2], THIRD_PERSON_RIG.obstacleMargin)) return true;
-    // El terreno tapa si la mitad lejana del segmento pasa por debajo del suelo más el margen.
+    // The terrain blocks if the far half of the segment passes below the ground plus the margin.
     return heightAt !== null && s > 0.3 && p[1] < heightAt(p[0], p[2]) + THIRD_PERSON_RIG.segmentClearance;
   };
   let used = distance;

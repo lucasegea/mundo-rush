@@ -1,22 +1,22 @@
-# content/dioramas/test.yaml: mapa de prueba (03 §6.4.3, §4.2.1) en el formato de la maqueta (plan estetica-c M5,
-# D-207): terreno por alturas con lomas en el borde, caminos por curvas catmull-rom con ancho, el estanque como polígono
-# de agua (hunde el terreno y no es caminable), detalle sembrado por zonas, props con instancias y dos vecinos de la
-# Región 1 más Harlan. Migrado desde el formato de tiles de M1 sin cambiar qué celdas se pueden caminar: la grilla vieja
-# quedó guardada como fixture (apps/web/test/fixtures/test-grid-tiles-43c2b48.json) y un test la compara celda por celda.
+# content/dioramas/test.yaml: test map (03 §6.4.3, §4.2.1) in the mockup format (plan estetica-c M5,
+# D-207): height-based terrain with hills at the edge, roads as catmull-rom curves with width, the pond as a water
+# polygon (sinks the terrain and is not walkable), detail scattered by zones, props with instances and two neighbors of
+# Region 1 plus Harlan. Migrated from the M1 tile format without changing which cells can be walked: the old grid
+# was saved as a fixture (apps/web/test/fixtures/test-grid-tiles-43c2b48.json) and a test compares it cell by cell.
 id: test
 bounds: { minX: -16, maxX: 16, minZ: -12, maxZ: 12 }
 spawn: [0.5, 0, 3]
-# Falda de 160 m (D-208: el zoom más lejano no ve el borde), lomas de hasta 5,5 m y la semilla del pincel.
+# 160 m skirt (D-208: the farthest zoom does not see the edge), hills up to 5.5 m and the brush seed.
 terreno: { extension: 160, lomas: 5.5, semilla: 11 }
 caminos:
-  # El camino del valle de norte a sur y el que lo cruza de oeste a este (2 m de ancho); salen apenas de los límites
-  # para meterse entre las lomas.
+  # The valley road from north to south and the one crossing it from west to east (2 m wide); they stick out slightly past the limits
+  # to tuck in between the hills.
   - { puntos: [[0, -14], [0, -6], [0, 4], [0, 14]], ancho: 2 }
   - { puntos: [[-18, 1], [-8, 1], [8, 1], [18, 1]], ancho: 2 }
-  # La placita empedrada junto al spawn.
+  # The cobbled little square next to the spawn.
   - { puntos: [[-2.5, 2], [-2.5, 6]], ancho: 3, superficie: empedrado }
 agua:
-  # El estanque: antes tiles 4 más un polígono no_caminable; ahora el agua misma bloquea la grilla.
+  # The pond: used to be 4 tiles plus a no_caminable polygon; now the water itself blocks the grid.
   - { poligono: [[6, -8], [10, -8], [10, -4], [6, -4]] }
 detalle:
   - { tipo: flores, centro: [-12, -10], radio: 3, cantidad: 5 }
@@ -42,8 +42,8 @@ detalle:
 props:
   - { asset: codigo/casa, pos: [-9, 0, -7], tam: [4, 3, 3] }
   - { asset: codigo/galpon, pos: [11, 0, 7], tam: [5, 2.5, 3] }
-  # Cuatro fardos iguales: una sola malla instanciada. Los dos últimos se tocan solo por la esquina: el personaje no
-  # se aprieta entre ellos (F2 A1).
+  # Four identical bales: a single instanced mesh. The last two touch only at the corner: the character does not
+  # get squeezed between them (F2 A1).
   - asset: codigo/caja
     tam: [1, 1, 1]
     instancias:
@@ -52,8 +52,8 @@ props:
       - { pos: [-8.5, 0, 5.5] }
       - { pos: [-7.5, 0, 6.5] }
   - { asset: codigo/cerco, pos: [-12, 0, 0.5], tam: [0.2, 1, 9] }
-  # Árboles y pinos por instancias (plan estetica-c M1 ítem 11): `tam` es la huella del tronco (bloquea la grilla) y el
-  # alto; ninguno corta un camino ni el acceso a un NPC.
+  # Trees and pines as instances (plan estetica-c M1 item 11): `tam` is the trunk footprint (blocks the grid) and the
+  # height; none cuts a road or the access to an NPC.
   - asset: codigo/arbol
     tam: [0.6, 4.5, 0.6]
     instancias:
@@ -72,12 +72,12 @@ props:
       - { pos: [-9.5, 0, 3.5], tam: [0.6, 4.6, 0.6] }
       - { pos: [-14.5, 0, 9.5] }
       - { pos: [14.5, 0, 10.5] }
-  # Plan estetica-c M2 (D-207): dos props CC0 repintados por scripts/assets/optimize.ts (content/assets-registry.yaml).
-  # `tam` es la huella que bloquea la grilla y la caja donde el modelo entra con escala uniforme, apoyado en el suelo.
+  # Plan estetica-c M2 (D-207): two CC0 props repainted by scripts/assets/optimize.ts (content/assets-registry.yaml).
+  # `tam` is the footprint that blocks the grid and the box the model fits into with uniform scale, resting on the ground.
   - { asset: modelo/quaternius-farm-buildings/gallinero, pos: [-12.5, 0, 8], tam: [3, 2.3, 2.7] }
   - { asset: modelo/quaternius-farm-buildings/cerco, pos: [-12.5, 0, 10.6], tam: [5.9, 1.1, 0.2] }
 npcs:
   - { id: NPC-NELL, spawn: [-3, 0, 7], radio_interaccion: 3.0 }
   - { id: NPC-INES, spawn: [6, 0, -1.5], radio_interaccion: 3.0 }
-  # A2 (ADR-027): Harlan en su porche junto al galpón, para la conversación por medidores de M9.1.
+  # A2 (ADR-027): Harlan on his porch next to the shed, for the M9.1 meter-based conversation.
   - { id: NPC-HARLAN, spawn: [7.5, 0, 6], radio_interaccion: 3.0 }

@@ -1,10 +1,10 @@
-// Cola de reproducción de la voz del NPC (F5.2; procedencia: drainAudioQueue/playPcm16 de un prototipo de voz anterior, rehecha
-// sin huecos): cada bloque PCM16 se agenda pegado al anterior en el reloj del AudioContext, con un margen inicial corto
-// que absorbe el jitter de la red. Avisa cuando terminó de sonar todo lo encolado. Recibe un contexto mínimo para que
-// vitest la pruebe sin Web Audio.
+// NPC voice playback queue (F5.2; provenance: drainAudioQueue/playPcm16 from an earlier voice prototype, redone
+// without gaps): each PCM16 block is scheduled right after the previous one on the AudioContext clock, with a short initial margin
+// that absorbs network jitter. Signals when everything queued has finished playing. Takes a minimal context so that
+// vitest can test it without Web Audio.
 import { pcm16ToFloat } from "./dsp";
 
-/** Lo que la cola usa de un AudioBufferSourceNode. */
+/** What the queue uses from an AudioBufferSourceNode. */
 export interface PlaybackSource {
   buffer: PlaybackBuffer | null;
   onended: (() => void) | null;
@@ -17,7 +17,7 @@ export interface PlaybackBuffer {
   getChannelData(channel: number): Float32Array;
 }
 
-/** Lo que la cola usa de un AudioContext. */
+/** What the queue uses from an AudioContext. */
 export interface PlaybackContext {
   readonly currentTime: number;
   readonly destination: unknown;
@@ -27,26 +27,26 @@ export interface PlaybackContext {
 
 export interface PlaybackQueue {
   push(pcm16: Int16Array, sampleRate: number): void;
-  /** Corta lo que suena y descarta lo encolado (sin avisar `drained`). */
+  /** Cuts what is playing and discards what is queued (without signaling `drained`). */
   stop(): void;
   readonly playing: boolean;
 }
 
-/** Lo que hace falta de un AudioContext para reanudarlo. */
+/** What is needed from an AudioContext to resume it. */
 export interface ResumableContext {
   readonly state: string;
   resume(): Promise<void>;
 }
 
 /**
- * A2: un AudioContext suspendido no avanza su reloj: lo encolado nunca suena ni avisa que terminó. Se reanuda al
- * reproducir (además de en el gesto de "Hablar"); si el navegador lo rechaza, el vigía del servicio libera el turno.
+ * A2: a suspended AudioContext does not advance its clock: what is queued never plays nor signals it finished. It resumes on
+ * playback (as well as on the "Talk" gesture); if the browser rejects it, the service watchdog releases the turn.
  */
 export function resumeIfSuspended(ctx: ResumableContext): void {
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
 }
 
-/** Margen antes del primer bloque de una tirada (s). */
+/** Margin before the first block of a run (s). */
 export const PLAYBACK_LEAD_S = 0.08;
 
 export function createPlaybackQueue(ctx: PlaybackContext, onDrained: () => void, leadS = PLAYBACK_LEAD_S): PlaybackQueue {
@@ -78,7 +78,7 @@ export function createPlaybackQueue(ctx: PlaybackContext, onDrained: () => void,
         try {
           s.stop();
         } catch {
-          // ya terminó
+          // already finished
         }
       }
     },

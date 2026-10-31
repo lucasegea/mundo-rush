@@ -1,4 +1,4 @@
-// FD0 A7: el cargador del servidor no observa nada sin LG_DEV_CONTENT_WATCH; con la variable relee para la próxima escena.
+// FD0 A7: the server's loader watches nothing without LG_DEV_CONTENT_WATCH; with the variable it rereads for the next scene.
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,7 +9,7 @@ import { createContentLoader, resolverDirUniverso, UNIVERSO_DEFECTO, type WatchD
 let dir: string;
 const write = (name: string, data: unknown): void => writeFileSync(join(dir, name), JSON.stringify(data));
 
-/** fs.watch falso: registra quién observa y deja disparar el cambio a mano. */
+/** Fake fs.watch: records who watches and lets the change be fired by hand. */
 const fakeWatch = () => {
   const calls: string[] = [];
   let fire: (() => void) | null = null;
@@ -59,7 +59,7 @@ describe("apps/server/src/content/loader.ts", () => {
     loader.close();
   });
 
-  // M1 AC3 (D-806): el loader selecciona el universo por session.universeId; unset ⇒ U-CAMPESINO.
+  // M1 AC3 (D-806): the loader selects the universe by session.universeId; unset ⇒ U-CAMPESINO.
   test("resolverDirUniverso: unset y U-CAMPESINO caen en la raíz legacy; otro id en su subcarpeta", () => {
     expect(resolverDirUniverso("/base")).toBe("/base");
     expect(resolverDirUniverso("/base", UNIVERSO_DEFECTO)).toBe("/base");
@@ -67,7 +67,7 @@ describe("apps/server/src/content/loader.ts", () => {
   });
 
   test("carga el id correcto según universeId (unset = campesino raíz, U-GALEANO = su namespace)", () => {
-    // Raíz = U-CAMPESINO (verbatim). Subcarpeta U-GALEANO/ = el build con --universe=U-GALEANO.
+    // Root = U-CAMPESINO (verbatim). Subfolder U-GALEANO/ = the build with --universe=U-GALEANO.
     write("npcs.json", [{ id: "NPC-HARLAN", universo: "campesino" }]);
     write("indice.json", { modo: "dev" });
     mkdirSync(join(dir, "U-GALEANO"));

@@ -1,5 +1,5 @@
-// F1.2 A2-A9 y A11 sobre el contenido real (content/) y copias rotas en memoria o en un directorio temporal.
-// Cada lint tiene un fixture que falla: el contenido real con una sola línea cambiada.
+// F1.2 A2-A9 and A11 over the real content (content/) and broken copies in memory or in a temporary directory.
+// Each lint has a fixture that fails: the real content with a single line changed.
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,7 +17,7 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const REAL = leerContenido(ROOT);
 const base = compilarContenido(REAL);
 
-/** El contenido real con un reemplazo en un archivo (el texto viejo tiene que estar, si no el fixture no mide nada). */
+/** The real content with a replacement in a file (the old text has to be there, otherwise the fixture measures nothing). */
 const mut = (ruta: string, viejo: string, nuevo: string, archivos: readonly ArchivoFuente[] = REAL): ArchivoFuente[] => {
   const f = archivos.find((a) => a.ruta === ruta);
   if (!f) throw new Error(`no existe ${ruta}`);
@@ -35,9 +35,9 @@ const copiaTemporal = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "lg-f12-"));
   temporales.push(dir);
   cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
-  // Plan estetica-c M2: el registro de licencias se cruza con los modelos servidos; la copia los lleva.
+  // Plan estetica-c M2: the license registry is cross-checked with the served models; the copy carries them.
   cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
-  // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+  // Open-world-3d T6: the ground's .ktx2 files are also served with a row in the registry.
   cpSync(join(ROOT, "apps/web/public/textures"), join(dir, "apps/web/public/textures"), { recursive: true });
   return dir;
 };
@@ -48,7 +48,7 @@ describe("contenido real", () => {
     expect(base.errores.map(formatearHallazgo)).toEqual([]);
     expect(base.salida).not.toBeNull();
     expect(base.conjunto.misiones.length).toBeGreaterThan(0);
-    expect(base.conjunto.bloqueos.length).toBe(8); // F4.2: + riesgo e inapropiado (03 §7.7)
+    expect(base.conjunto.bloqueos.length).toBe(8); // F4.2: + risk and inappropriate (03 §7.7)
     expect(base.conjunto.niveles.length).toBeGreaterThan(0);
   });
 });
@@ -76,7 +76,7 @@ describe("A2: una referencia rota falla nombrando archivo y clave", () => {
   });
 });
 
-/** Las filas de la tabla de 02 §0.5.1, leídas del documento (fuente única). */
+/** The rows of the 02 §0.5.1 table, read from the document (single source). */
 const filasDe02 = () => {
   const doc = readFileSync(join(ROOT, "docs/02-narrative-script.md"), "utf8");
   const ini = doc.indexOf("#### 0.5.1");
@@ -112,9 +112,9 @@ describe("A3: conjuntos exactos y lo retirado", () => {
     conError(hs, "content/missions/M0.1.yaml", "escenas[0].cierre_guionado[2].en");
     const nombre = buscarRetirados(filas, mut("content/npcs/NPC-KOFI.yaml", 'nombre: "Kofi Mensah"', 'nombre: "Biscuit"'));
     conError(nombre, "content/npcs/NPC-KOFI.yaml", "nombre");
-    // "biscuit" en minúscula no es el nombre retirado (límite de palabra respetando mayúsculas)
+    // lowercase "biscuit" is not the retired name (word boundary respecting case)
     expect(buscarRetirados(filas, mut("content/npcs/NPC-KOFI.yaml", 'nombre: "Kofi Mensah"', 'nombre: "a biscuit"'))).toEqual([]);
-    // testea: no (Rosa, Hill) no entra al test automático
+    // tests: no (Rosa, Hill) does not enter the automatic test
     expect(buscarRetirados(filas, mut("content/npcs/NPC-KOFI.yaml", 'nombre: "Kofi Mensah"', 'nombre: "Rosa Hill"'))).toEqual([]);
   });
 });
@@ -228,7 +228,7 @@ describe("A7: filtros por modo", () => {
   });
 });
 
-/** Todos los .json de un directorio, concatenados. */
+/** All the .json files of a directory, concatenated. */
 const leerSalida = (dir: string): string => readdirSync(dir).map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
 
 describe("A8 + A11: build real sobre una copia temporal", () => {

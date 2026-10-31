@@ -1,4 +1,4 @@
-// Compilador de contenido: puro (texto → datos + hallazgos). scripts/content/build.ts hace el IO.
+// Content compiler: pure (text → data + findings). scripts/content/build.ts does the IO.
 import { chequearAssets } from "./assets.ts";
 import { chequearDioramas } from "./dioramas.ts";
 import { buscarRetirados } from "./retirados.ts";
@@ -15,11 +15,11 @@ export interface Resultado {
   hallazgos: Hallazgo[];
   errores: Hallazgo[];
   conjunto: Conjunto;
-  /** null si hubo errores: nada se escribe (04 F1.2 A9). */
+  /** null if there were errors: nothing is written (04 F1.2 A9). */
   salida: { cliente: Salida; servidor: Salida } | null;
 }
 
-/** Archivos que tienen que existir para que el resto de los chequeos midan algo (falla en 0 medido). */
+/** Files that must exist so the rest of the checks measure something (fails on 0 measured). */
 const OBLIGATORIOS = [
   "content/world/places.yaml",
   "content/skills/skill-tree.yaml",
@@ -32,8 +32,8 @@ const OBLIGATORIOS = [
 ];
 
 /**
- * `publicos`: archivos servidos en apps/web/public (rutas desde la raíz del repo), para cruzarlos con el registro de
- * licencias (plan estetica-c M2). Sin la lista se saltean solo los cruces contra disco.
+ * `publicos`: files served in apps/web/public (paths from the repo root), to cross-check them against the license
+ * registry (plan estetica-c M2). Without the list only the cross-checks against disk are skipped.
  */
 export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo = "dev", publicos?: readonly string[]): Resultado => {
   const h: Hallazgo[] = [];
@@ -71,10 +71,10 @@ export const compilarContenido = (archivos: readonly ArchivoFuente[], modo: Modo
 };
 
 /**
- * Valida SOLO la cabeza de un universo (content/universes/<id>/manifiesto.yaml), sin los chequeos del contenido
- * completo (OBLIGATORIOS, cruzados, lints). book-mode slice-1 (D-804): un universo recién namespaceado tiene
- * cabeza pero todavía no dataset; el build sale 0 con esto mientras `contenido` esté vacío.
- * M3 SEAM: una vez que el analizador EMITe el dataset, el build corre `compilarContenido` completo, no esto.
+ * Validates ONLY the head of a universe (content/universes/<id>/manifiesto.yaml), without the checks of the full
+ * content (OBLIGATORIOS, cross-checks, lints). book-mode slice-1 (D-804): a newly namespaced universe has
+ * a head but no dataset yet; the build exits 0 with this while `contenido` is empty.
+ * M3 SEAM: once the analyzer EMITs the dataset, the build runs the full `compilarContenido`, not this.
  */
 export const compilarManifiesto = (archivo: ArchivoFuente): { universo: Conjunto["universo"]; errores: Hallazgo[] } => {
   const c = conjuntoVacio();
@@ -84,14 +84,14 @@ export const compilarManifiesto = (archivo: ArchivoFuente): { universo: Conjunto
 };
 
 export interface ResultadoIncremental extends Resultado {
-  /** Ids definidos por los archivos cambiados, antes y después del cambio (para la recarga de FD0). */
+  /** Ids defined by the changed files, before and after the change (for the FD0 reload). */
   tocados: string[];
   archivos: ArchivoFuente[];
 }
 
 /**
- * Compilación incremental (04 F1.2, FD0): aplica los cambios (texto null = archivo borrado) sobre la base,
- * revalida todo (los chequeos cruzados no son locales) y devuelve los ids tocados. Con errores, salida = null.
+ * Incremental compilation (04 F1.2, FD0): applies the changes (text null = deleted file) on top of the base,
+ * revalidates everything (the cross-checks are not local) and returns the touched ids. With errors, output = null.
  */
 export const compilarIncremental = (
   base: readonly ArchivoFuente[],
@@ -111,13 +111,13 @@ export const compilarIncremental = (
   return { ...r, tocados: [...new Set([...antes, ...despues])].sort(), archivos };
 };
 
-/** Ids que definen esos archivos, más las escenas de sus misiones (la recarga de FD0 recarga por escena). */
+/** Ids that those files define, plus the scenes of their missions (the FD0 reload reloads per scene). */
 const idsDe = (c: Conjunto, rutas: readonly string[]): string[] => [
   ...rutas.flatMap((r) => c.idsPorArchivo.get(r) ?? []),
   ...c.misiones.filter((m) => rutas.includes(m.archivo)).flatMap((m) => m.data.escenas.map((e) => e.escena_id)),
 ];
 
-/** Ids que define un grupo de archivos, sin chequeos cruzados. */
+/** Ids that a group of files defines, without cross-checks. */
 const compilarSoloIds = (archivos: readonly ArchivoFuente[]): string[] => {
   const c = conjuntoVacio();
   for (const f of archivos) agregarArchivo(c, f, []);

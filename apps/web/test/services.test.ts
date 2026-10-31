@@ -1,4 +1,4 @@
-// Servicios de F1.3: catálogo de solo-diálogo (contenido compilado), copia local de ajustes, arranque.
+// F1.3 services: dialog-only catalog (compiled content), local settings copy, startup.
 import { describe, expect, test, vi } from "vitest";
 import { DEFAULT_SETTINGS } from "@lg/core";
 import {

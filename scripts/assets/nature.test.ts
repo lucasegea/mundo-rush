@@ -1,8 +1,8 @@
-// Open-world-3d T7 (AC42, D-829): las rocas, la hoja y la corteza de scripts/assets/nature.ts. Cada archivo tiene su fila
-// (CC0, derived, el sha256 servido, los originales con su sha256 y url) y lo servido es lo que la fila dice; las rocas
-// son .glb del pipeline (sin material ni textura, COLOR_0, meshopt, UV dentro de su cuarto del atlas) con los
-// triángulos de la fila. Con los originales en assets-src/, rehacer las rocas da los mismos bytes (la codificación de
-// los .ktx2 la prueba `node scripts/assets/nature.ts --check` y refetch.ts, que tardan más que el test).
+// Open-world-3d T7 (AC42, D-829): the rocks, the leaf and the bark of scripts/assets/nature.ts. Each file has its row
+// (CC0, derived, the served sha256, the originals with their sha256 and url) and what is served is what the row says; the rocks
+// are pipeline .glb files (no material or texture, COLOR_0, meshopt, UV inside its atlas quarter) with the
+// row's triangles. With the originals in assets-src/, rebuilding the rocks gives the same bytes (the .ktx2
+// encoding is tested by `node scripts/assets/nature.ts --check` and refetch.ts, which take longer than the test).
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

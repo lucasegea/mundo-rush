@@ -1,13 +1,13 @@
-// world/budget/loadWarmup.ts — carga del mundo (open-world-3d T10 (d), D-835, AC63): los sombreadores se compilan con
-// `renderer.compileAsync(scene, camera)` antes del primer cuadro del mundo (GameCanvas retiene el frameloop hasta que
-// termina), y el primer cuadro deja la marca `lg:world-first-frame` con `renderer.info.programs.length` (por el puente:
-// world/ usa el núcleo solo como tipos), que además se registra una vez en la consola. Puro sobre un compilador y una
-// marca inyectados; los componentes de R3F que lo usan están en WorldLoad.tsx. T10-integrate: lo que llega después
-// (naturaleza, personajes, postprocesado) se precompila al llegar con `precompile`, sin retener el frameloop.
+// world/budget/loadWarmup.ts — world loading (open-world-3d T10 (d), D-835, AC63): shaders are compiled with
+// `renderer.compileAsync(scene, camera)` before the world's first frame (GameCanvas holds the frameloop until it
+// finishes), and the first frame leaves the `lg:world-first-frame` mark with `renderer.info.programs.length` (through the bridge:
+// world/ uses the core only as types), which is also logged once to the console. Pure over an injected compiler and
+// mark; the R3F components that use it are in WorldLoad.tsx. T10-integrate: what arrives later
+// (nature, characters, postprocessing) is precompiled on arrival with `precompile`, without holding the frameloop.
 
 /**
- * Si compileAsync no termina en este tiempo, el mundo se dibuja igual (compila en el primer cuadro, como antes de T10).
- * Holgado: en SwiftShader la compilación entera tarda segundos y cortarla antes solo la movería al primer cuadro.
+ * If compileAsync does not finish in this time, the world is drawn anyway (it compiles on the first frame, as before T10).
+ * Generous: on SwiftShader the whole compilation takes seconds and cutting it earlier would only move it to the first frame.
  */
 export const SHADER_WARMUP_TIMEOUT_MS = 10_000;
 
@@ -27,7 +27,7 @@ const browserTimers: WarmupTimers = {
   clearTimeout: (id) => globalThis.clearTimeout(id as ReturnType<typeof setTimeout>),
 };
 
-/** Compila los programas de la escena; nunca rechaza (un fallo o el tope de tiempo dejan dibujar igual). */
+/** Compiles the scene's programs; never rejects (a failure or the time cap lets it draw anyway). */
 export function warmShaders<S, C>(
   renderer: ShaderCompiler<S, C>, scene: S, camera: C, timeoutMs = SHADER_WARMUP_TIMEOUT_MS, timers: WarmupTimers = browserTimers,
 ): Promise<WarmupResult> {
@@ -48,7 +48,7 @@ export function warmShaders<S, C>(
   });
 }
 
-/** Lo que `precompile` usa del renderer (WebGLRenderer): compilar contra la escena del mundo y cambiar el destino. */
+/** What `precompile` uses of the renderer (WebGLRenderer): compile against the world's scene and change the target. */
 export interface LateCompiler<O, C, S, T> {
   compileAsync(object: O, camera: C, targetScene?: S | null): Promise<unknown>;
   getRenderTarget(): T | null;
@@ -56,11 +56,11 @@ export interface LateCompiler<O, C, S, T> {
 }
 
 /**
- * T10-integrate: precompila algo que llega después de la primera escena (mallas de la naturaleza, cuerpos de personajes,
- * pasadas del postprocesado) sin retener el frameloop. `scene` es la escena donde se va a dibujar (sus luces y su niebla
- * entran en el programa) y `target` el destino del cuadro: null es la pantalla; con postprocesado la escena se dibuja en
- * un render target y three arma otro programa (sin tono y en espacio lineal), así que se compila con uno puesto. El
- * destino anterior vuelve enseguida: la parte síncrona de compileAsync (armar los programas) corre adentro. Nunca rechaza.
+ * T10-integrate: precompiles something that arrives after the first scene (nature meshes, character bodies,
+ * postprocessing passes) without holding the frameloop. `scene` is the scene where it will be drawn (its lights and fog
+ * enter the program) and `target` the frame's destination: null is the screen; with postprocessing the scene is drawn into
+ * a render target and three builds another program (no tone mapping and in linear space), so it is compiled with one set. The
+ * previous target returns right away: the synchronous part of compileAsync (building the programs) runs inside. Never rejects.
  */
 export function precompile<O, C, S, T>(
   renderer: LateCompiler<O, C, S, T>, object: O, camera: C, scene: S, target: T | null,
@@ -78,7 +78,7 @@ export function precompile<O, C, S, T>(
   }
 }
 
-/** Lo que se lee de una pasada del composer de postprocessing (por forma: world/ no importa postprocessing). */
+/** What is read from a pass of the postprocessing composer (by shape: world/ does not import postprocessing). */
 export interface PassLike {
   scene?: unknown;
   camera?: unknown;
@@ -89,7 +89,7 @@ export interface PassLike {
 export interface FullscreenPass {
   scene: unknown;
   camera: unknown;
-  /** Dibuja en la pantalla (la última pasada); si no, en un render target. */
+  /** Draws to the screen (the last pass); otherwise, to a render target. */
   screen: boolean;
 }
 
@@ -98,8 +98,8 @@ const isPass = (v: unknown): v is PassLike =>
   (v as PassLike).scene != null && (v as PassLike).camera != null;
 
 /**
- * Las escenas de pantalla completa de un composer para precompilarlas: cada pasada con material (la RenderPass no tiene;
- * su escena es la del mundo) y las pasadas internas de sus efectos (el umbral y el desenfoque del bloom), sin repetir.
+ * The full-screen scenes of a composer to precompile them: each pass with a material (the RenderPass has none;
+ * its scene is the world's) and the internal passes of its effects (the bloom's threshold and blur), without repeats.
  */
 export function fullscreenPasses(composer: { passes: readonly unknown[] }): FullscreenPass[] {
   const out: FullscreenPass[] = [];
@@ -121,12 +121,12 @@ export function fullscreenPasses(composer: { passes: readonly unknown[] }): Full
   return out;
 }
 
-/** ¿Ya se registró `programs.length`? (una vez por página, aunque el canvas se vuelva a montar). */
+/** Was `programs.length` already logged? (once per page, even if the canvas remounts). */
 let programsLogged = false;
 
 /**
- * El primer cuadro del mundo: marca `lg:world-first-frame` con `mark` (bridge.worldFirstFrame en la app) y registra los
- * programas una sola vez. Devuelve lo que devuelve `mark` (si marcó).
+ * The world's first frame: marks `lg:world-first-frame` with `mark` (bridge.worldFirstFrame in the app) and logs the
+ * programs only once. Returns what `mark` returns (whether it marked).
  */
 export function reportFirstFrame(mark: (programs: number) => boolean, programs: number, log: (msg: string) => void = (m) => console.info(m)): boolean {
   if (!programsLogged) {
@@ -136,7 +136,7 @@ export function reportFirstFrame(mark: (programs: number) => boolean, programs: 
   return mark(programs);
 }
 
-/** Solo para tests: vuelve a permitir el registro de la consola. */
+/** Tests only: allows the console log again. */
 export function resetFirstFrameLog(): void {
   programsLogged = false;
 }

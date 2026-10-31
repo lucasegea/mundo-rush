@@ -1,10 +1,10 @@
-// world/camera/bakeCamera.ts — las cámaras del horneado de impostores (open-world-3d T7, AC44; R11: las cámaras viven en
-// world/camera/). Port del mockup V6 (`world.js` impostor): cada árbol se dibuja una vez de costado y una desde arriba
-// en una textura de 512 × 256 (el costado en la mitad izquierda, la copa en la derecha). El encuadre es puro (testeable
-// sin GPU); world/nature/impostor.ts pide las cámaras acá y no construye ninguna.
+// world/camera/bakeCamera.ts — the impostor baking cameras (open-world-3d T7, AC44; R11: cameras live in
+// world/camera/). Port of the V6 mockup (`world.js` impostor): each tree is drawn once from the side and once from above
+// into a 512 × 256 texture (the side view in the left half, the canopy in the right). The framing is pure (testable
+// without GPU); world/nature/impostor.ts asks for the cameras here and builds none.
 import { OrthographicCamera } from "three";
 
-/** La caja del árbol horneado (geometría con la base en y = 0 y el tronco en el origen). */
+/** The baked tree's box (geometry with the base at y = 0 and the trunk at the origin). */
 export interface BakeBox {
   minX: number;
   maxX: number;
@@ -14,8 +14,8 @@ export interface BakeBox {
 }
 
 /**
- * El encuadre del impostor: `E` medio lado de la vista de costado (cuadrada, centrada a media altura `ymid`), `Et` medio
- * lado de la copa vista desde arriba (centrada en el tronco). Un 4 % de margen, como el mockup.
+ * The impostor framing: `E` half-side of the side view (square, centered at mid-height `ymid`), `Et` half
+ * side of the canopy seen from above (centered on the trunk). A 4 % margin, like the mockup.
  */
 export function impostorFraming(b: BakeBox): { E: number; ymid: number; Et: number } {
   const E = Math.max(b.maxY / 2, (b.maxX - b.minX) / 2, (b.maxZ - b.minZ) / 2) * 1.04;
@@ -23,7 +23,7 @@ export function impostorFraming(b: BakeBox): { E: number; ymid: number; Et: numb
   return { E, ymid: b.maxY / 2, Et };
 }
 
-/** Las dos cámaras ortográficas del horneado: de costado (desde +z) y desde arriba (con +z hacia abajo en la imagen). */
+/** The two orthographic baking cameras: from the side (from +z) and from above (with +z pointing down in the image). */
 export function impostorBakeCameras(b: BakeBox): { side: OrthographicCamera; top: OrthographicCamera } {
   const { E, ymid, Et } = impostorFraming(b);
   const side = new OrthographicCamera(-E, E, ymid + E, ymid - E, 0.1, 100);

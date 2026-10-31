@@ -1,11 +1,11 @@
-// Moderación de texto (F4.2, 03 §7.7): capas para lo que escribe el jugador (antes de que llegue al modelo, punto 2) y
-// para lo que dice el NPC (síncrona y completa antes de mostrar, punto 4). Ninguna capa sola alcanza:
-//   1. Listas (filtro rápido, content/safety/blocklists/): `riesgo` → contención (D-112); `inapropiado` → corte. La salida
-//      del NPC además pasa por toda lista `npc`/`todo` del contenido (dinero, salud, apelativos, corrección explícita,
-//      nombres reales), respetando `excepto` (salud: NPC-GRACE, D-176).
-//   2. Reglas (código): datos personales (email, teléfono, enlaces; 02 §3.2 S2, 03 §7.7 punto 6).
-//   3. Clasificador del proveedor (ModerationProvider): corre si las listas y las reglas no cortaron.
-// Corte = la línea no se manda ni se muestra; el NPC dice la línea segura guionada y queda un safety_event.
+// Text moderation (F4.2, 03 §7.7): layers for what the player writes (before it reaches the model, point 2) and
+// for what the NPC says (synchronous and complete before display, point 4). No single layer is enough:
+//   1. Lists (quick filter, content/safety/blocklists/): `riesgo` → containment (D-112); `inapropiado` → cut. The NPC
+//      output also goes through every `npc`/`todo` list in the content (money, health, terms of address, explicit correction,
+//      real names), honoring `excepto` (health: NPC-GRACE, D-176).
+//   2. Rules (code): personal data (email, phone, links; 02 §3.2 S2, 03 §7.7 point 6).
+//   3. Provider classifier (ModerationProvider): runs if the lists and rules did not cut.
+// Cut = the line is neither sent nor shown; the NPC says the scripted safe line and a safety_event is left.
 import { regexTermino, type ListaBloqueo } from "@lg/content-schema";
 import type { SafetyLayer } from "@lg/protocol";
 import type { ModerationProvider } from "../providers/moderation.ts";
@@ -15,13 +15,13 @@ export type ModerationResult =
   | { action: "allow" }
   | { action: "cut" | "containment"; layer: SafetyLayer; category: SafetyCategory };
 
-/** Síncrono si decidieron las listas o las reglas, o si no hay clasificador; promesa si hay que esperar al clasificador. */
+/** Synchronous if the lists or rules decided, or if there is no classifier; a promise if the classifier must be awaited. */
 export type MaybeAsync<T> = T | Promise<T>;
 
 export interface Moderator {
-  /** Lo que escribió el jugador. Se llama antes de mandar nada al modelo o al observador. */
+  /** What the player wrote. Called before anything is sent to the model or the observer. */
   checkInput(text: string): MaybeAsync<ModerationResult>;
-  /** Lo que generó el modelo para `speaker` (id de NPC). Se llama antes de mandarlo al cliente. */
+  /** What the model generated for `speaker` (NPC id). Called before it is sent to the client. */
   checkOutput(text: string, speaker: string): MaybeAsync<ModerationResult>;
 }
 
@@ -30,7 +30,7 @@ interface CompiledList {
   terms: RegExp[];
 }
 
-/** Reglas de datos personales (02 §3.2 S2): un email, un teléfono (7+ dígitos con separadores) o un enlace. */
+/** Personal-data rules (02 §3.2 S2): an email, a phone number (7+ digits with separators) or a link. */
 export const PERSONAL_DATA_PATTERNS: readonly RegExp[] = [
   /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/u,
   /(?:\+?\d[\s().-]*){7,}/u,
@@ -42,9 +42,9 @@ const hits = (l: CompiledList, text: string): boolean => l.terms.some((re) => re
 const personalData = (text: string): boolean => PERSONAL_DATA_PATTERNS.some((re) => re.test(text));
 
 export interface ModeratorDeps {
-  /** Listas de content/safety/blocklists/ (seguridad.json del contenido compilado). */
+  /** Lists from content/safety/blocklists/ (seguridad.json of the compiled content). */
   lists: readonly ListaBloqueo[];
-  /** null = sin clasificador configurado: la capa no corre (models.yaml `moderation.classifier: none`). */
+  /** null = no classifier configured: the layer does not run (models.yaml `moderation.classifier: none`). */
   classifier: ModerationProvider | null;
 }
 
@@ -52,10 +52,10 @@ export function createModerator(deps: ModeratorDeps): Moderator {
   const all = deps.lists.map(compile);
   const risk = all.filter((l) => l.lista.regla === "riesgo");
   const inappropriate = all.filter((l) => l.lista.regla === "inapropiado");
-  // La salida pasa primero por `inapropiado` y después por el resto de las listas de contenido.
+  // The output goes first through `inapropiado` and then through the rest of the content lists.
   const output = [...inappropriate, ...all.filter((l) => l.lista.regla !== "inapropiado" && (l.lista.aplica_a === "npc" || l.lista.aplica_a === "todo"))];
   if (risk.length === 0 || inappropriate.length === 0) {
-    // Sin listas no hay filtro rápido: falla claro antes que moderar en falso.
+    // No lists means no quick filter: fail clearly rather than moderate falsely.
     throw new Error("moderación sin listas de riesgo o inapropiado en content/safety/blocklists/");
   }
 
@@ -67,7 +67,7 @@ export function createModerator(deps: ModeratorDeps): Moderator {
     try {
       verdict = await classifier.classify(text, direction);
     } catch {
-      // El clasificador configurado falló: se corta (cerrar es más seguro que dejar pasar sin la capa).
+      // The configured classifier failed: cut (closing is safer than letting through without the layer).
       return { action: "cut", layer: direction, category: "clasificador_error" };
     }
     if (verdict === "risk" && direction === "input") return { action: "containment", layer: "input", category: "clasificador" };

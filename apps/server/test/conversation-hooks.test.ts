@@ -1,6 +1,6 @@
-// F5.2: lo que el servidor oyó del jugador llega al cliente (`turn.transcript`) y los ganchos de conversación de
-// scene-runtime ven cada turno de jugador y NPC (texto y voz), el arranque y el fin de la escena. Un gancho que tira
-// no corta la escena. Sin red: adaptador de voz de referencia y modelos falsos.
+// F5.2: what the server heard from the player reaches the client (`turn.transcript`) and scene-runtime's conversation hooks
+// see every player and NPC turn (text and voice), the start and the end of the scene. A hook that throws
+// does not cut the scene. No network: reference voice adapter and fake models.
 import { describe, expect, test } from "vitest";
 import { callHook, type ConversationHooks, type ConversationSceneEnd, type ConversationSceneInfo, type ConversationTurn } from "../src/scene-runtime/hooks.ts";
 import { createReferenceVoice } from "./fakes/reference-voice.ts";
@@ -32,7 +32,7 @@ describe("turn.transcript (voz)", () => {
       { type: "turn.transcript", turnId: `${runId}:1`, speaker: "player", text: "Hello, I'm Nico.", final: false },
       { type: "turn.transcript", turnId: `${runId}:1`, speaker: "player", text: "Hello, I'm Nico.", final: true },
     ]);
-    // La final sale antes que la respuesta del NPC (el HUD muestra "Vos: …" y después la línea del NPC).
+    // The final one goes out before the NPC's reply (the HUD shows "Vos: …" and then the NPC line).
     const finalAt = h.sent.findIndex((m) => m.type === "turn.transcript" && m.final);
     const replyAt = h.sent.findIndex((m) => m.type === "npc.line" && m.line.kind === "reply");
     expect(finalAt).toBeGreaterThanOrEqual(0);

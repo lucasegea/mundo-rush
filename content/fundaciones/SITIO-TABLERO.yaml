@@ -1,4 +1,4 @@
-# Fundación de M1.1 (02 §4.1.3, §4.4 M1.1; 03 §6.4.8; D-169). Nada se compra: costo null.
+# Foundation of M1.1 (02 §4.1.3, §4.4 M1.1; 03 §6.4.8; D-169). Nothing is bought: costo null.
 id: SITIO-TABLERO
 nombre: { es-AR: "Tablero del Cruce", en: "Notice Board" }
 nombre_corto: "El tablero del Cruce"

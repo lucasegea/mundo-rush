@@ -1,8 +1,8 @@
-// Open-world-3d T7: la naturaleza del mundo abierto, sin GPU. AC37 (la base de cada árbol sobre el terreno dibujado,
-// por raycast), AC44 (bandas de LOD por tier, fundido de tarjeta, impostor de 3 quads con la copa a 58 %, cámaras del
-// horneado en world/camera/bakeCamera.ts), AC45 (culling por instancia contra el frustum con 200 instancias sembradas, y
-// el portón que solo recorre cuando la vista cambió), AC46 (cada tronco bloquea su celda; caminos y accesos a NPCs
-// libres) y AC71 (cada variante tramada con su propio `customProgramCacheKey`).
+// Open-world-3d T7: the open world's nature, without GPU. AC37 (each tree's base on the drawn terrain,
+// by raycast), AC44 (LOD bands per tier, card fade, 3-quad impostor with the crown at 58 %, bake cameras in
+// world/camera/bakeCamera.ts), AC45 (per-instance culling against the frustum with 200 seeded instances, and
+// the gate that only sweeps when the view changed), AC46 (each trunk blocks its cell; paths and NPC access
+// free) and AC71 (each woven variant with its own `customProgramCacheKey`).
 import { blockingFootprints, CARD_FADE, cardFade, IMPOSTOR_CROWN_HEIGHT, OPEN_WORLD_DENSITY, treeBand, treeLodShrink, TRUNK_FOOTPRINT, WORLD_TIERS } from "@lg/art";
 import { cellCenter, distanceToPolyline, isWalkable, prepareDiorama, type DioramaLayout, type DioramaRuntime } from "@lg/core";
 import {
@@ -37,8 +37,8 @@ describe("AC37 (árboles): la base de cada árbol es el terreno dibujado menos s
       expect(hit, `${b.x},${b.z}`).toBeDefined();
       expect(Math.abs(b.y - ((hit?.point.y ?? NaN) - NATURE_SINK[b.kind] * b.s)), `${b.kind} en ${b.x},${b.z}`).toBeLessThanOrEqual(0.05);
     }
-    // AC37 ("tree bases equal heightAt plus their documented lift"), fix 1 de QA: lo dibujado es la matriz de cada
-    // instancia que culling.ts sube a la GPU, no `treeBases`; su altura (elemento 13) es la base comprobada arriba.
+    // AC37 ("tree bases equal heightAt plus their documented lift"), QA's fix 1: what is drawn is the matrix of each
+    // instance that culling.ts uploads to the GPU, not `treeBases`; its height (element 13) is the base checked above.
     const baseAt = new Map(bases.map((b) => [`${b.x},${b.z}`, b.y]));
     const treeGroups = (nature?.groups ?? []).filter((g) => g.levels.some((l) => l.mesh.name.endsWith(":completo")));
     expect(treeGroups.length).toBeGreaterThan(3);
@@ -81,7 +81,7 @@ describe("AC44: bandas, fundido de tarjeta, impostor y cámaras del horneado", (
   });
 
   test("el shader trama la tarjeta con los mismos umbrales que cardFade (0,4 y 0,6, de @lg/art CARD_FADE)", () => {
-    // AC44 (cardFade 0 at or below 0.4, 1 at or above 0.6), fix 1 de QA: el GLSL ya no repite los números a mano.
+    // AC44 (cardFade 0 at or below 0.4, 1 at or above 0.6), QA's fix 1: the GLSL no longer repeats the numbers by hand.
     expect(CARD_FADE).toEqual({ edge: 0.4, face: 0.6 });
     expect(FACE_FADE_GLSL).toContain("smoothstep(0.400, 0.600, vFace)");
   });
@@ -95,7 +95,7 @@ describe("AC44: bandas, fundido de tarjeta, impostor y cámaras del horneado", (
     const ys = [8, 9, 10, 11].map((i) => pos.getY(i));
     expect(IMPOSTOR_CROWN_HEIGHT).toBe(0.58);
     for (const y of ys) expect(y).toBeCloseTo(0.58 * 9, 6);
-    // Las dos verticales: una en z = 0 y otra en x = 0, a lo alto del encuadre.
+    // The two verticals: one at z = 0 and another at x = 0, the height of the framing.
     expect([0, 1, 2, 3].every((i) => pos.getZ(i) === 0)).toBe(true);
     expect([4, 5, 6, 7].every((i) => pos.getX(i) === 0)).toBe(true);
     const { E, ymid } = impostorFraming(box);
@@ -104,8 +104,8 @@ describe("AC44: bandas, fundido de tarjeta, impostor y cámaras del horneado", (
 
   test("las cámaras del horneado salen de world/camera/bakeCamera.ts: de costado y desde arriba, ortográficas", () => {
     const { side, top } = impostorBakeCameras({ minX: -1, maxX: 1, minZ: -1, maxZ: 1, maxY: 6 });
-    // Proyección paralela (el elemento [15] de la matriz es 1; en una de perspectiva es 0). R11: el nombre de la clase
-    // solo aparece en bakeCamera.ts (scripts/lint/retiro-hd2d.test.ts).
+    // Parallel projection (matrix element [15] is 1; in a perspective one it is 0). R11: the class name
+    // appears only in bakeCamera.ts (scripts/lint/retiro-hd2d.test.ts).
     expect(side.projectionMatrix.elements[15]).toBe(1);
     expect(top.projectionMatrix.elements[15]).toBe(1);
     expect(side.getWorldDirection(new Vector3()).z).toBeCloseTo(-1, 6);
@@ -113,7 +113,7 @@ describe("AC44: bandas, fundido de tarjeta, impostor y cámaras del horneado", (
   });
 });
 
-/** 200 instancias sembradas en un cuadrado de 120 m alrededor del origen, esfera de radio 1,5 m. */
+/** 200 instances seeded in a 120 m square around the origin, sphere of radius 1.5 m. */
 function seededGroup(): NatureGroup {
   let seed = 11;
   const rand = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -122,7 +122,7 @@ function seededGroup(): NatureGroup {
     return { x, z, base: 0, k: 1, cy: 1.5, rad: 1.5, maxD: Infinity, matrix: new Matrix4().makeTranslation(x, 0, z).toArray(), tint: [i / 200, 0, 0] };
   });
   const mesh = new InstancedMesh(new BoxGeometry(), new MeshBasicMaterial(), 200);
-  mesh.setColorAt(0, new Color(1, 1, 1)); // como world/nature/buildNature.ts: el tinte va en instanceColor
+  mesh.setColorAt(0, new Color(1, 1, 1)); // like world/nature/buildNature.ts: the tint goes in instanceColor
   return { entries, levels: [{ band: "nearMid", mesh }] };
 }
 
@@ -141,7 +141,7 @@ describe("AC45: culling por instancia y portón del recorrido", () => {
     expect(inside.length).toBeLessThan(200);
     expect(n[0]).toBe(inside.length);
     expect(mesh.count).toBe(inside.length);
-    // Las subidas son justo las de adentro (por su tinte único).
+    // The uploads are exactly the inner ones (by their unique tint).
     const tints = new Set<number>();
     for (let k = 0; k < mesh.count; k++) tints.add(Math.round((mesh.instanceColor?.array[k * 3] as number) * 200));
     expect([...tints].sort((a, b) => a - b)).toEqual(inside.map((e) => Math.round(e.tint[0] * 200)).sort((a, b) => a - b));
@@ -165,29 +165,29 @@ describe("AC45: culling por instancia y portón del recorrido", () => {
   });
 
   test("un giro de 4° sostenido recorre una vez, en el segundo cuadro quieto (desviación registrada de AC45, T7b)", () => {
-    // QA T7 (pendiente 1): desde el recorrido al asentarse, "4° de giro 0" vale para un cuadro suelto; sostenido, el
-    // segundo cuadro quieto en el lugar nuevo recorre una vez (está quieto y no es donde se recorrió) y después nunca.
+    // QA T7 (pending 1): since the sweep on settling, "4° of turn 0" holds for a single frame; sustained, the
+    // second still frame at the new place sweeps once (it is still and not where it was swept) and never again after that.
     const gate = new CullGate();
     const s = { x: 0, z: 0, yawDeg: 10, pitchDeg: -30, distance: 12 };
     gate.shouldUpdate(s);
     const r0 = gate.runs;
-    expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(false); // primer cuadro a 4°: sin recorrer (bajo CULL_TURN_DEG)
-    expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(true); // segundo cuadro quieto: el recorrido al asentarse
+    expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(false); // first frame at 4°: no sweep (under CULL_TURN_DEG)
+    expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(true); // second still frame: the sweep on settling
     for (let i = 0; i < 60; i++) expect(gate.shouldUpdate({ ...s, yawDeg: 14 })).toBe(false);
     expect(gate.runs - r0).toBe(1);
   });
 
   test("al asentarse la cámara por menos del umbral, recorre una sola vez más (pose fija, recorrido fijo)", () => {
-    // Fix 1 de QA (hallazgo 5): la cámara que se asienta 3° y 0,5 m sin cruzar umbrales queda con un recorrido viejo.
+    // QA's fix 1 (finding 5): a camera that settles 3° and 0.5 m without crossing thresholds is left with a stale sweep.
     expect([CULL_REST_M, CULL_REST_DEG]).toEqual([1e-3, 0.02]);
     const gate = new CullGate();
     const s = { x: 0, z: 0, yawDeg: 10, pitchDeg: -30, distance: 12 };
     gate.shouldUpdate(s);
     const r0 = gate.runs;
-    // Se mueve (cada cuadro distinto del anterior, sin cruzar umbrales): no recorre.
+    // It moves (each frame different from the previous one, without crossing thresholds): no sweep.
     for (let i = 1; i <= 30; i++) expect(gate.shouldUpdate({ ...s, yawDeg: 10 + i * 0.1, x: i * 0.016 })).toBe(false);
     const rest = { ...s, yawDeg: 13, x: 0.48 };
-    // Quieto en otro lugar: el primer cuadro quieto recorre, los 60 siguientes no.
+    // Still at another place: the first still frame sweeps, the next 60 do not.
     expect(gate.shouldUpdate({ ...rest })).toBe(true);
     for (let i = 0; i < 60; i++) gate.shouldUpdate({ ...rest });
     expect(gate.runs - r0).toBe(1);
@@ -212,8 +212,8 @@ describe("AC46: los troncos bloquean su celda; caminos y accesos a NPCs libres (
   };
 
   test("cada huella de tronco (y de roca grande) es una celda bloqueada", () => {
-    // AC46 ("every tree trunk footprint is a blocked cell"), fix 1 de QA: el radio de la huella queda fijado en el
-    // valor del build T7 (pino 0,35 y latifoliada 0,4 m por unidad de escala); achicarlo dejaría pasar el tronco.
+    // AC46 ("every tree trunk footprint is a blocked cell"), QA's fix 1: the footprint radius is pinned to the
+    // T7 build value (pine 0.35 and broadleaf 0.4 m per unit of scale); shrinking it would let the trunk through.
     expect(TRUNK_FOOTPRINT).toEqual({ pine: 0.35, broad: 0.4 });
     expect(d.vegetation).not.toBeNull();
     expect(prints.length).toBeGreaterThan(30);
@@ -265,7 +265,7 @@ describe("T8 (AC51, mockup V6 applyView): los radios de LOD se achican con el zo
     for (let t = 0.3; t < 0.7; t += 0.02) expect(treeLodShrink(t + 0.02)).toBeLessThanOrEqual(treeLodShrink(t));
     expect(treeLodShrink(0.71)).toBe(0);
     expect(treeLodShrink(1)).toBe(0);
-    // A t 0,65 en medium: completos hasta ~1,2 m y livianos hasta ~2,8 m.
+    // At t 0.65 on medium: full up to ~1.2 m and light up to ~2.8 m.
     expect(OPEN_WORLD_DENSITY.medium.treeLod.mid * treeLodShrink(0.65)).toBeLessThan(3);
   });
 

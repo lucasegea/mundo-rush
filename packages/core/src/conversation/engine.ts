@@ -1,8 +1,8 @@
-// Motor de medidores de conversación (ADR-027; informe de investigación 2.3-2.5). Puro y determinístico: entra la definición
-// del encuentro (dato), su estado y las etiquetas de UN intercambio; sale el estado nuevo y los eventos. El juez nunca
-// da un número: el código suma por reglas editables. La máquina del encuentro es la lista de medidores en orden
-// (conocerse → objetivo → …); el último lleno es el ÉXITO, que el servidor convierte en una acción del juego.
-// Un tipo de medidor nuevo se enchufa con un puntuador en SCORERS (ver ADR-027 "Cómo se agrega un medidor").
+// Conversation meters engine (ADR-027; the research report 2.3-2.5). Pure and deterministic: it takes the encounter
+// definition (data), its state and the labels of ONE exchange; it returns the new state and the events. The judge never
+// gives a number: the code adds up by editable rules. The encounter's machine is the list of meters in order
+// (getting to know each other → goal → …); the last one filled is SUCCESS, which the server turns into a game action.
+// A new meter type plugs in with a scorer in SCORERS (see ADR-027 "Cómo se agrega un medidor").
 import type {
   DialogueAct, EncounterDef, EncounterEvent, EncounterNotice, EncounterState, ExchangeLabels, GoalMeterDef, ConversationHelpLevel,
   MeterDef, MeterKind, MeterState, ObjectionQuality, RapportMeterDef, RapportRules, Tier,
@@ -15,10 +15,10 @@ export class EncounterDefError extends Error {
   }
 }
 
-/** Lo que un intercambio aporta, calculado una vez por el motor y compartido con el puntuador del medidor activo. */
+/** What an exchange contributes, computed once by the engine and shared with the active meter's scorer. */
 export interface ExchangeDelta {
   readonly labels: ExchangeLabels;
-  /** Hechos del NPC nuevos, de niveles ya abiertos (los de niveles cerrados no cuentan). */
+  /** New NPC facts, from tiers already open (those from closed tiers do not count). */
   readonly newFacts: readonly string[];
   readonly newShares: readonly string[];
   readonly disclosure: boolean;
@@ -31,10 +31,10 @@ export interface ScoreResult {
   readonly events: readonly EncounterEvent[];
 }
 
-/** Puntuador de un tipo de medidor: suma por código y dice cuánto se ve lleno. */
+/** Scorer for a meter type: adds up by code and says how full it looks. */
 export interface Scorer<M extends MeterDef = MeterDef> {
   score(def: EncounterDef, meter: M, state: EncounterState, current: MeterState, delta: ExchangeDelta): ScoreResult;
-  /** Llenado visible 0..1 (sin números en el HUD: solo el ancho de la barra). */
+  /** Visible fill 0..1 (no numbers in the HUD: only the bar width). */
   fill(def: EncounterDef, meter: M, state: EncounterState, current: MeterState): number;
   isFull(def: EncounterDef, meter: M, state: EncounterState, current: MeterState): boolean;
 }
@@ -60,11 +60,11 @@ export const rapportScorer: Scorer<RapportMeterDef> = {
     const r = meter.rules;
     const l = d.labels;
     let pts = 0;
-    // Regla de reciprocidad: pasado el límite de preguntas seguidas sin contar nada, nada suma hasta que comparta.
+    // Reciprocity rule: past the limit of consecutive questions without sharing anything, nothing adds up until they share.
     const stalled = state.stalled && !d.disclosure;
     if (!stalled) {
       for (const id of d.newFacts) pts += r.factPoints[(factTier(def, id) ?? 1) - 1] ?? 0;
-      // Una repetida (o una lista de preguntas) anula los puntos de pregunta del mismo intercambio.
+      // A repeated one (or a list of questions) cancels the question points of the same exchange.
       const repeated = has(l, "repeated_question");
       if (!repeated && has(l, "follow_up_question")) pts += r.followUp;
       else if (!repeated && has(l, "personal_question")) pts += r.newQuestion;
@@ -76,7 +76,7 @@ export const rapportScorer: Scorer<RapportMeterDef> = {
   },
   fill(def, meter, state, current) {
     const raw = Math.min(1, current.points / meter.rules.target);
-    // Sin las condiciones de estructura la barra no llega al tope: se ve "casi", nunca "llena y cerrada".
+    // Without the structure conditions the bar does not reach the cap: it looks "almost", never "full and closed".
     return rapportStructuralMet(def, meter.rules, state) ? raw : Math.min(raw, 0.9);
   },
   isFull(def, meter, state, current) {
@@ -84,7 +84,7 @@ export const rapportScorer: Scorer<RapportMeterDef> = {
   },
 };
 
-// ---------- objetivo por pasos (pedir, convencer) ----------
+// ---------- step-based goal (ask, persuade) ----------
 
 const stepQualityFrom = (step: GoalMeterDef["steps"][number], l: ExchangeLabels): ObjectionQuality => {
   if ("act" in step.signal) return has(l, step.signal.act) ? "yes" : "no";
@@ -120,7 +120,7 @@ export const stepsScorer: Scorer<GoalMeterDef> = {
   },
 };
 
-/** Tipo de medidor → puntuador. `negotiation` todavía no tiene: el esquema lo acepta, createEncounter lo rechaza. */
+/** Meter type → scorer. `negotiation` does not have one yet: the schema accepts it, createEncounter rejects it. */
 export const SCORERS: Partial<Record<MeterKind, Scorer>> = {
   rapport: rapportScorer as Scorer,
   request: stepsScorer as Scorer,
@@ -133,7 +133,7 @@ const scorerFor = (m: MeterDef): Scorer => {
   return s;
 };
 
-// ---------- definición y estado ----------
+// ---------- definition and state ----------
 
 const uniq = (ids: readonly string[], what: string): void => {
   const seen = new Set<string>();
@@ -143,7 +143,7 @@ const uniq = (ids: readonly string[], what: string): void => {
   }
 };
 
-/** Valida la definición (ids únicos, puntuadores, objeciones y reglas coherentes). Devuelve la misma definición. */
+/** Validates the definition (unique ids, scorers, objections and consistent rules). Returns the same definition. */
 export function createEncounter(def: EncounterDef): EncounterDef {
   if (def.meters.length === 0) throw new EncounterDefError("un encuentro necesita al menos un medidor");
   uniq(def.facts.map((f) => f.id), "hecho");
@@ -172,8 +172,8 @@ export const initialEncounterState = (def: EncounterDef): EncounterState => ({
 });
 
 /**
- * Un estado guardado sirve si calza con la definición actual (mismos medidores; los ids que ya no existen se descartan).
- * Si la ficha cambió de forma (otros medidores), null: el encuentro arranca de cero.
+ * A saved state is usable if it matches the current definition (same meters; ids that no longer exist are dropped).
+ * If the sheet changed shape (other meters), null: the encounter starts from scratch.
  */
 export function reviveEncounterState(def: EncounterDef, raw: unknown): EncounterState | null {
   if (raw === null || typeof raw !== "object") return null;
@@ -195,7 +195,7 @@ export function reviveEncounterState(def: EncounterDef, raw: unknown): Encounter
 
 const rapportOf = (def: EncounterDef): RapportMeterDef | undefined => def.meters.find((m): m is RapportMeterDef => m.kind === "rapport");
 
-/** Niveles de hechos abiertos según lo aprendido y compartido (reciprocidad escalonada, informe 2.5.B). */
+/** Fact tiers open according to what was learned and shared (stepped reciprocity, report 2.5.B). */
 function unlockedTierFor(def: EncounterDef, learned: readonly string[], shares: number, current: Tier): Tier {
   const r = rapportOf(def)?.rules;
   if (!r) return 3;
@@ -213,18 +213,18 @@ export interface ExchangeResult {
   readonly events: readonly EncounterEvent[];
 }
 
-/** Aplica las etiquetas de un intercambio. El encuentro terminado no cambia. */
+/** Applies the labels of an exchange. A finished encounter does not change. */
 export function applyExchange(def: EncounterDef, state: EncounterState, labels: ExchangeLabels): ExchangeResult {
   if (state.active >= def.meters.length) return { state, events: [] };
   const stats = { ...state.stats, exchanges: state.stats.exchanges + 1 };
   const meterDef = def.meters[state.active] as MeterDef;
 
-  // Seguridad: nunca suma ni resta; el aviso pide contar cosas del PERSONAJE (nunca datos reales).
+  // Safety: never adds or subtracts; the notice asks to tell things about the CHARACTER (never real data).
   if (labels.safety !== "none") {
     const notice: EncounterNotice = labels.safety === "real_personal_data" ? "real_data" : state.notice;
     return quiet(def, { ...state, stats, notice }, [{ type: "safety", flag: labels.safety }]);
   }
-  // L1 o turno no comprendido: no suma ni resta; la ayuda salta al escalón de frases sugeridas.
+  // L1 or not-understood turn: neither adds nor subtracts; help jumps to the suggested-phrases step.
   if (labels.language === "L1" || labels.comprehensible === 0) {
     const next: EncounterState = { ...state, stats: { ...stats, l1Turns: stats.l1Turns + (labels.language === "L1" ? 1 : 0) }, notice: labels.language === "L1" ? "l1" : state.notice, quietTurns: state.quietTurns + 1, help: 2 };
     return { state: countHelp(state, next), events: [] };
@@ -247,7 +247,7 @@ export function applyExchange(def: EncounterDef, state: EncounterState, labels: 
   const unlockedTier = unlockedTierFor(def, factsLearned, playerShared.length, state.unlockedTier);
   if (unlockedTier !== state.unlockedTier) events.push({ type: "tierUnlocked", tier: unlockedTier });
 
-  // Reciprocidad: contar algo propio corta la racha; una pregunta sin contar nada la alarga.
+  // Reciprocity: sharing something of their own cuts the streak; a question without sharing anything lengthens it.
   const questionStreak = disclosure ? 0 : question ? state.questionStreak + 1 : state.questionStreak;
   const limit = meterDef.kind === "rapport" ? meterDef.rules.maxQuestionsWithoutSharing : Infinity;
   const stalled = questionStreak >= limit;
@@ -272,31 +272,31 @@ export function applyExchange(def: EncounterDef, state: EncounterState, labels: 
   };
   next = countHelp(state, next);
 
-  // ¿Se llenó el medidor activo? Pasa al siguiente (o termina el encuentro).
+  // Did the active meter fill? Move on to the next one (or end the encounter).
   const current = next.meters[next.active] as MeterState;
   if (scorer.isFull(def, meterDef, next, current)) {
     const meters = next.meters.map((m, i) => (i === next.active ? { ...m, full: true } : m));
     const active = next.active + 1;
     const to = def.meters[active]?.id ?? null;
     events.push({ type: "phaseChanged", from: meterDef.id, to });
-    // La racha de preguntas es de la fase de conocerse: no frena el objetivo.
+    // The question streak belongs to the getting-to-know phase: it does not slow the goal.
     next = { ...next, meters, active, questionStreak: 0, stalled: false, quietTurns: 0, help: 0 };
     if (to === null) events.push({ type: "complete" });
   }
   return { state: next, events };
 }
 
-/** Un turno sin progreso (seguridad): cuenta para la escalera de ayuda. */
+/** A turn without progress (safety): counts toward the help ladder. */
 function quiet(def: EncounterDef, state: EncounterState, events: EncounterEvent[]): ExchangeResult {
   const quietTurns = state.quietTurns + 1;
   return { state: countHelp(state, { ...state, quietTurns, help: helpLevelFor(def, quietTurns) }), events };
 }
 
-/** Cuenta cada vez que la ayuda sube de escalón (estadística "andamiajes usados"). */
+/** Counts every time help goes up a step ("scaffolds used" statistic). */
 const countHelp = (prev: EncounterState, next: EncounterState): EncounterState =>
   next.help > prev.help ? { ...next, stats: { ...next.stats, helpShown: next.stats.helpShown + 1 } } : next;
 
-// ---------- vista para el HUD ----------
+// ---------- view for the HUD ----------
 
 export interface EncounterHelp {
   readonly level: ConversationHelpLevel;
@@ -315,7 +315,7 @@ export interface EncounterView {
 
 const MAX_PHRASES = 3;
 
-/** Contenido de la ayuda para el contexto actual (el escalón lo decide `state.help` o el reloj del cliente). */
+/** Help content for the current context (the step is decided by `state.help` or the client's clock). */
 export function encounterHelp(def: EncounterDef, state: EncounterState): EncounterHelp {
   const meter = def.meters[state.active];
   const level = state.help;
@@ -352,5 +352,5 @@ export function encounterView(def: EncounterDef, state: EncounterState): Encount
   };
 }
 
-/** ¿El encuentro terminó (todos los medidores llenos)? */
+/** Did the encounter finish (all meters full)? */
 export const encounterComplete = (def: EncounterDef, state: EncounterState): boolean => state.active >= def.meters.length;

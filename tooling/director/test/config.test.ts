@@ -1,4 +1,4 @@
-// FD0 A2: el plugin está SOLO en la config fusionada del director; la de apps/web no lo tiene (sin levantar servidor).
+// FD0 A2: the plugin is ONLY in the director's merged config; apps/web's does not have it (without starting a server).
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,7 @@ describe("cableado del plugin (03 §6.5.1 punto 2)", () => {
     const director = await load("tooling/director/vite.config.ts");
     expect(pluginNames(web.plugins)).not.toContain("lg-director");
     expect(pluginNames(director.plugins)).toContain("lg-director");
-    // La fusión conserva todo lo de apps/web (mismos plugins y alias) y le suma solo el del director.
+    // The merge keeps everything from apps/web (same plugins and aliases) and adds only the director's.
     expect(pluginNames(director.plugins).filter((n) => n !== "lg-director")).toEqual(pluginNames(web.plugins));
     expect(director.resolve?.alias).toEqual(web.resolve?.alias);
   });

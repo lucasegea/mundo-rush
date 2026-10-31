@@ -1,10 +1,10 @@
-// Diorama listo para jugar (03 §6.4.3): del layout de contenido (YAML compilado a JSON) al suelo de la maqueta,
-// volúmenes, NPCs, interactuables y grilla de caminabilidad. Puro: lo llama la acción que carga el diorama.
-// Plan estetica-c M5 (D-207): el formato de la maqueta (caminos y ríos por curvas, agua por polígonos, detalle por
-// zonas, props con giro, tinte e instancias). El núcleo muestrea las curvas una vez y deja los datos listos; no sabe
-// nada del look (alturas y colores los decide world/terrain/). La grilla sale de los props, el agua, los ríos, los
-// polígonos `no_caminable` y los NPCs. Plan estetica-c M7 (D-207): las capas `tiles` y `atlas_tiles` de HD-2D se
-// retiraron; el schema las rechaza y el núcleo ya no las lee.
+// Playable diorama (03 §6.4.3): from the content layout (YAML compiled to JSON) to the painted diorama's ground,
+// volumes, NPCs, interactables and walkability grid. Pure: called by the action that loads the diorama.
+// Plan estetica-c M5 (D-207): the painted diorama format (paths and rivers by curves, water by polygons, detail by
+// zones, props with rotation, tint and instances). The core samples the curves once and leaves the data ready; it knows
+// nothing about the look (heights and colors are decided by world/terrain/). The grid comes from the props, the water, the rivers, the
+// `no_caminable` polygons and the NPCs. Plan estetica-c M7 (D-207): the HD-2D `tiles` and `atlas_tiles` layers were
+// removed; the schema rejects them and the core no longer reads them.
 import {
   buildWalkGrid, DEFAULT_INTERACT_RADIUS, type Bounds, type Interactable, type Point, type Rect, type WalkGrid,
 } from "../movement";
@@ -14,21 +14,21 @@ import { blockingFootprints, TERRAIN_SEED, vegetationScatter, type VegetationSca
 type Vec3 = readonly [number, number, number];
 type Vec2 = readonly [number, number];
 
-/** Forma del layout que consume el juego (la valida el schema de content-schema al compilar). */
+/** Layout shape consumed by the game (validated by the content-schema schema at compile time). */
 export interface DioramaLayout {
   id: string;
   bounds: Bounds;
-  /** Punto de aparición del jugador; sin él, el centro de los límites. */
+  /** Player spawn point; without it, the center of the bounds. */
   spawn?: Vec3;
   /**
-   * Volúmenes. Con `tam` (ancho, alto, profundidad) su huella bloquea la grilla. `rotY` en grados; `tinte`, token que
-   * reemplaza el color principal; `instancias`, los lugares de un prop repetido (en lugar de `pos`).
+   * Volumes. With `tam` (width, height, depth) its footprint blocks the grid. `rotY` in degrees; `tinte`, token that
+   * replaces the main color; `instancias`, the places of a repeated prop (instead of `pos`).
    */
   props?: readonly LayoutProp[];
   npcs?: readonly { id: string; spawn: Vec3; radio_interaccion?: number }[];
   interactuables?: readonly { id: string; pos: Vec3; radio?: number }[];
   no_caminable?: readonly { poligono: readonly Vec2[] }[];
-  // Formato de la maqueta (plan estetica-c M5).
+  // Painted diorama format (plan estetica-c M5).
   terreno?: { extension?: number; lomas?: number; semilla?: number; relieve?: boolean };
   paleta?: Readonly<Record<string, string>>;
   caminos?: readonly { puntos: readonly Vec2[]; ancho: number; superficie?: "camino" | "empedrado" }[];
@@ -54,30 +54,30 @@ export interface PropBox {
   w: number;
   h: number;
   d: number;
-  /** Giro alrededor del eje vertical, en radianes (el layout lo escribe en grados); null si el layout no lo dio. */
+  /** Rotation around the vertical axis, in radians (the layout writes it in degrees); null if the layout did not give it. */
   rotY: number | null;
-  /** Token de la paleta que reemplaza el color principal; null = el del constructor. */
+  /** Palette token that replaces the main color; null = the builder's. */
   tint: string | null;
 }
 
-/** Un camino o un río muestreado: la polilínea de la curva y su ancho. */
+/** A sampled path or river: the curve's polyline and its width. */
 export interface PathLine {
   width: number;
   line: Point[];
 }
 
-/** Lo que world/terrain/ necesita del formato de la maqueta (plan estetica-c M5). */
+/** What world/terrain/ needs from the painted diorama format (plan estetica-c M5). */
 export interface DioramaGround {
-  /** null = los defaults del look (world/ los toma de @lg/art). */
+  /** null = the look's defaults (world/ takes them from @lg/art). */
   terrain: { extension: number | null; hills: number | null; seed: number | null; relief: boolean };
   /**
-   * Open-world-3d T6: los llanos del relieve (la aparición y cada NPC), en el orden del layout. Vacío sin relieve: el
-   * suelo de adentro es plano.
+   * Open-world-3d T6: the relief's flats (the spawn and each NPC), in layout order. Empty without relief: the
+   * interior ground is flat.
    */
   pads: Vec2[];
-  /** Papel del terreno → token de la paleta. */
+  /** Terrain role → palette token. */
   palette: Readonly<Record<string, string>>;
-  /** Caminos: la polilínea muestreada y sus puntos de control (las piedras del empedrado se cuentan sobre estos). */
+  /** Paths: the sampled polyline and its control points (the cobblestones are counted over these). */
   paths: (PathLine & { surface: "camino" | "empedrado"; points: Vec2[] })[];
   rivers: PathLine[];
   ponds: Vec2[][];
@@ -88,22 +88,22 @@ export interface DioramaRuntime {
   id: string;
   bounds: Bounds;
   spawn: Point;
-  /** Formato de la maqueta (plan estetica-c M5). */
+  /** Painted diorama format (plan estetica-c M5). */
   ground: DioramaGround;
   boxes: PropBox[];
   npcs: { id: string; x: number; z: number }[];
   interactables: Interactable[];
   grid: WalkGrid;
   /**
-   * Open-world-3d T7 (AC46): el sembrado del mundo abierto (árboles, rocas y detalle de @lg/art, el mismo que dibuja
-   * world/), con sus troncos y rocas grandes ya bloqueados en `grid`. null sin relieve (campesino no cambia).
+   * Open-world-3d T7 (AC46): the open world's planting (trees, rocks and detail from @lg/art, the same one drawn by
+   * world/), with its trunks and large rocks already blocked in `grid`. null without relief (farmer does not change).
    */
   vegetation: VegetationScatter | null;
 }
 
 const DEG = Math.PI / 180;
 
-/** Huella de una caja: rectángulo si el giro es múltiplo de 90°, polígono de sus cuatro esquinas si no. */
+/** Footprint of a box: rectangle if the rotation is a multiple of 90°, polygon of its four corners otherwise. */
 function footprint(b: PropBox): { rect: Rect } | { polygon: Vec2[] } {
   const deg = b.rotY === null ? 0 : (((Math.round((b.rotY / DEG) * 1e6) / 1e6) % 180) + 180) % 180;
   if (deg === 0 || deg === 90) {
@@ -112,12 +112,12 @@ function footprint(b: PropBox): { rect: Rect } | { polygon: Vec2[] } {
   }
   const c = Math.cos(b.rotY as number);
   const s = Math.sin(b.rotY as number);
-  // Giro de three alrededor de +y: x' = x cos + z sin, z' = -x sin + z cos.
+  // Three rotation around +y: x' = x cos + z sin, z' = -x sin + z cos.
   const corner = (dx: number, dz: number): Vec2 => [b.x + dx * c + dz * s, b.z - dx * s + dz * c];
   return { polygon: [corner(-b.w / 2, -b.d / 2), corner(b.w / 2, -b.d / 2), corner(b.w / 2, b.d / 2), corner(-b.w / 2, b.d / 2)] };
 }
 
-/** Despliega `instancias` (cada una hereda `tam` y `rotY` del prop si no trae los suyos). Sin `tam` no hay caja. */
+/** Expands `instancias` (each inherits `tam` and `rotY` from the prop if it does not bring its own). Without `tam` there is no box. */
 function propBoxes(props: readonly LayoutProp[]): PropBox[] {
   return props.flatMap((p) => {
     const items: readonly { pos: Vec3; rotY?: number; tam?: Vec3 }[] = p.instancias ?? (p.pos ? [{ pos: p.pos }] : []);
@@ -133,7 +133,7 @@ function propBoxes(props: readonly LayoutProp[]): PropBox[] {
   });
 }
 
-/** La aparición (o el centro de los límites) y cada NPC: los llanos del relieve (open-world-3d T6, D-819). */
+/** The spawn (or the center of the bounds) and each NPC: the relief's flats (open-world-3d T6, D-819). */
 function reliefPads(layout: DioramaLayout): Vec2[] {
   const b = layout.bounds;
   const spawn: Vec2 = layout.spawn ? [layout.spawn[0], layout.spawn[2]] : [(b.minX + b.maxX) / 2, (b.minZ + b.maxZ) / 2];
@@ -165,12 +165,12 @@ export function prepareDiorama(layout: DioramaLayout): DioramaRuntime {
     ...(layout.npcs ?? []).map((n): Interactable => ({ id: n.id, kind: "npc", x: n.spawn[0], z: n.spawn[2], radius: n.radio_interaccion ?? DEFAULT_INTERACT_RADIUS })),
     ...(layout.interactuables ?? []).map((o): Interactable => ({ id: o.id, kind: "object", x: o.pos[0], z: o.pos[2], radius: o.radio ?? DEFAULT_INTERACT_RADIUS })),
   ];
-  // Los NPCs también ocupan su lugar: un cuadrado de medio metro donde están parados (no se los atraviesa).
+  // NPCs also take up their space: a half-meter square where they stand (they cannot be walked through).
   const npcRects: Rect[] = npcs.map((n) => ({ minX: n.x - 0.25, maxX: n.x + 0.25, minZ: n.z - 0.25, maxZ: n.z + 0.25 }));
   const ground = groundOf(layout);
   const prints = boxes.map(footprint);
   const spawnPoint: Point = layout.spawn ? { x: layout.spawn[0], z: layout.spawn[2] } : { x: (bounds.minX + bounds.maxX) / 2, z: (bounds.minZ + bounds.maxZ) / 2 };
-  // Open-world-3d T7 (AC46): con relieve, el bosque del mundo abierto; cada tronco (y cada roca grande) bloquea su celda.
+  // Open-world-3d T7 (AC46): with relief, the open world's forest; each trunk (and each large rock) blocks its cell.
   const vegetation = ground.terrain.relief
     ? vegetationScatter({
       bounds, spawn: spawnPoint, npcs, seed: ground.terrain.seed ?? TERRAIN_SEED,

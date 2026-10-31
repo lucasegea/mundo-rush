@@ -1,6 +1,6 @@
-// Open-world-3d T4 (D-820, AC19): el arrastre de mirada usa Pointer Events, y los listeners de puntero siguen siendo de
-// services/input/ (R10). Prueba con dientes (lección FD0): la sonda importa por alias (`@state/bridge`, archivo que existe,
-// comprobado antes) y un listener de puntero escrito en world/ tiene que fallar con R10; el input.ts real pasa en su lugar.
+// Open-world-3d T4 (D-820, AC19): the look drag uses Pointer Events, and pointer listeners remain services/input/'s
+// (R10). Test with teeth (FD0 lesson): the probe imports by alias (`@state/bridge`, a file that exists,
+// checked beforehand) and a pointer listener written in world/ has to fail with R10; the real input.ts passes in its place.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

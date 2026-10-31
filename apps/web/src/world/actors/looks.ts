@@ -1,20 +1,20 @@
-// world/actors/looks.ts: la apariencia de cada personaje (plan estetica-c M1 ítem 13, M3 y M5). Desde M5 la de cada
-// vecino viene del contenido (bloque `apariencia` de content/npcs/NPC-*.yaml) y llega por el selector del mapa
-// (`MapActor.look`); el vocabulario (cuerpos, peinados, sombreros, cuello) y la del jugador viven en @lg/art. Acá
-// quedan el id del jugador y la apariencia de reserva para un id sin apariencia (el catálogo no cargó todavía).
+// world/actors/looks.ts: each character's appearance (plan estetica-c M1 item 13, M3 and M5). Since M5 each
+// neighbor's comes from the content (`apariencia` block of content/npcs/NPC-*.yaml) and arrives through the map selector
+// (`MapActor.look`); the vocabulary (bodies, hairstyles, hats, neckwear) and the player's live in @lg/art. Here
+// remain the player's id and the fallback appearance for an id without appearance (the catalog has not loaded yet).
 import { BODY_IDS, PLAYER_LOOK, SHIRT_TOKENS, type BodyId, type CharacterLook, type ShirtToken } from "@lg/art";
 
 export { BODY_IDS, HAIR_STYLES, HATS, PLAYER_LOOK, SCARVES, silhouetteKey } from "@lg/art";
 export type { BodyId, CharacterLook, HairStyle, Hat, Scarf } from "@lg/art";
 
-/** Compatibilidad con M1: el cuerpo de cápsulas usa el mismo tipo. */
+/** M1 compatibility: the capsule body uses the same type. */
 export type ChibiLook = CharacterLook;
 
 export const PLAYER_LOOK_ID = "player";
 
 /**
- * Apariencia de reserva, estable por id y sin accesorios: la usa un NPC cuya apariencia no llegó (catálogo sin cargar o
- * ficha sin `apariencia`; validate:content falla si un NPC puesto en un diorama no la tiene).
+ * Fallback appearance, stable per id and without accessories: used by an NPC whose appearance did not arrive (catalog not loaded or
+ * sheet without `apariencia`; validate:content fails if an NPC placed in a diorama does not have it).
  */
 export function fallbackLook(id: string): CharacterLook {
   if (id === PLAYER_LOOK_ID) return PLAYER_LOOK;

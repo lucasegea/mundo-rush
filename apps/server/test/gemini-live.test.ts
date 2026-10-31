@@ -1,5 +1,5 @@
-// F5.1a A2 (adaptador): setup armado por el servidor, turnos manuales, reconexión ante goAway y corte, cierre, y el
-// audio copiado en el momento del envío (el adaptador no guarda el clip). Todo contra el servidor Live falso.
+// F5.1a A2 (adapter): setup built by the server, manual turns, reconnection on goAway and drop, closing, and the
+// audio copied at send time (the adapter doesn't keep the clip). All against the fake Live server.
 import { afterEach, describe, expect, test } from "vitest";
 import { createGeminiLiveProvider } from "../src/providers/gemini-live/adapter.ts";
 import { decodePcm16, liveSetupMessage, parseDurationSeconds, usageFromMetadata } from "../src/providers/gemini-live/wire.ts";
@@ -59,7 +59,7 @@ describe("A2: setup armado por el servidor", () => {
     await p.open(SETUP);
     p.injectContext([{ role: "user", text: "[DIRECTOR] start" }, { role: "model", text: "Hello!" }]);
     await tick();
-    expect(events).toEqual([]); // turnComplete: false → el modelo no habla
+    expect(events).toEqual([]); // turnComplete: false → the model doesn't speak
     expect(receivedOf(must(s.connections[0]), "clientContent")[0]).toMatchObject({ turnComplete: false });
     p.startTurn("t1");
     p.sendAudio("t1", Int16Array.from([1, -2, 3]));
@@ -144,8 +144,8 @@ describe("A2/A3: cierre y audio", () => {
     const opening = p.open(SETUP);
     p.startTurn("t1");
     const chunk = Int16Array.from([5, 6, 7]);
-    p.sendAudio("t1", chunk); // va a la cola previa a la apertura
-    chunk.fill(0); // quien era dueño del audio lo borra (TurnClip.release)
+    p.sendAudio("t1", chunk); // goes to the queue before opening
+    chunk.fill(0); // whoever owned the audio erases it (TurnClip.release)
     await opening;
     await until(() => receivedOf(must(must(server).connections[0]), "realtimeInput").length >= 2);
     const audio = receivedOf(must(server.connections[0]), "realtimeInput")[1]?.["audio"] as { data: string };

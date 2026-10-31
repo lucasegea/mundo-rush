@@ -1,20 +1,20 @@
-// world/materials/registry.ts — lista cerrada de materiales del mundo (plan estetica-c M1 A4, revisión de arquitectura 2026-10-12): todo
-// material que world/ crea pasa por acá y queda marcado con su clase. Hay 4 clases: `toon` (el material único de todo
-// lo sólido, una sola instancia), `agua` (el shader del estanque, una instancia), `etiqueta` (los chips de nombre, una
-// por textura) y `sombra-blob` (el quad de las sombras, una instancia). Un material sin marca o de otra clase es un
-// error que el auditor (sin GPU) reporta. Se cuentan instancias, no programas (instanciar cambia el programa de three).
+// world/materials/registry.ts — closed list of the world materials (plan estetica-c M1 A4, architecture review 2026-10-12): every
+// material that world/ creates goes through here and is marked with its class. There are 4 classes: `toon` (the single material for all
+// solid things, a single instance), `agua` (the pond shader, one instance), `etiqueta` (the name chips, one
+// per texture) and `sombra-blob` (the shadow quad, one instance). A material without a mark or of another class is an
+// error that the auditor (no GPU) reports. Instances are counted, not programs (instancing changes three's program).
 import { MeshBasicMaterial, MeshToonMaterial, SpriteMaterial, type Material, type Object3D, type Texture } from "three";
 import { blobTexture } from "./blob";
 import { brushTexture, toonRamp } from "./toon";
 
 //
-// Open-world-3d T6 (D-828, PD-1, AC71): cambio registrado de la lista. Se suman `terreno` (el splat del suelo, una
-// instancia), `pasto` (las tarjetas y las hojas de pasto, dos), `follaje` (hojas de los árboles), `impostor` (uno por
-// especie horneada), `cielo` (la cúpula) y `nube` (la malla de nubes). Las superficies dejan de ser solo toon y agua: el
-// tope de A4 (2 instancias) sigue para el diorama campesino y el mundo abierto tiene el suyo (`surfaceInstances` <= 17).
+// Open-world-3d T6 (D-828, PD-1, AC71): registered change to the list. Added: `terreno` (the ground splat, one
+// instance), `pasto` (the grass cards and blades, two), `follaje` (tree leaves), `impostor` (one per
+// baked species), `cielo` (the dome) and `nube` (the cloud mesh). Surfaces stop being only toon and water: the
+// A4 cap (2 instances) still holds for the farmer diorama and the open world has its own (`surfaceInstances` <= 17).
 export const WORLD_MATERIAL_KINDS = ["toon", "agua", "etiqueta", "sombra-blob", "terreno", "pasto", "follaje", "impostor", "cielo", "nube"] as const;
 export type WorldMaterialKind = (typeof WORLD_MATERIAL_KINDS)[number];
-/** Las superficies del mundo (lo que se dibuja como sólido o follaje): las cuenta `surfaceInstances`. */
+/** The world surfaces (what is drawn as solid or foliage): `surfaceInstances` counts them. */
 export const SURFACE_MATERIAL_KINDS: readonly WorldMaterialKind[] = ["toon", "agua", "terreno", "pasto", "follaje", "impostor"];
 
 const TAG = "lgMaterial";
@@ -24,7 +24,7 @@ export function tagMaterial<M extends Material>(m: M, kind: WorldMaterialKind): 
   return m;
 }
 
-/** La clase de un material, o null si no está marcado o su marca no es de la lista. */
+/** The class of a material, or null if it is not marked or its mark is not in the list. */
 export function materialKind(m: Material): WorldMaterialKind | null {
   const k = m.userData[TAG] as unknown;
   return (WORLD_MATERIAL_KINDS as readonly unknown[]).includes(k) ? (k as WorldMaterialKind) : null;
@@ -33,44 +33,44 @@ export function materialKind(m: Material): WorldMaterialKind | null {
 let toon: MeshToonMaterial | null = null;
 let blob: MeshBasicMaterial | null = null;
 
-/** El material toon compartido por todo lo sólido del mundo (terreno, props, árboles, personajes). */
+/** The toon material shared by all the solid things in the world (terrain, props, trees, characters). */
 export function toonMaterial(): MeshToonMaterial {
   toon ??= tagMaterial(new MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp(), map: brushTexture() }), "toon");
   return toon;
 }
 
-/** El quad de sombra blob (debajo de personajes y troncos): transparente, sin escribir profundidad. */
+/** The blob shadow quad (under characters and trunks): transparent, not writing depth. */
 export function blobShadowMaterial(): MeshBasicMaterial {
   blob ??= tagMaterial(new MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false, fog: true }), "sombra-blob");
   return blob;
 }
 
 /**
- * Material de una etiqueta de nombre (A12): tamaño constante en pantalla sin cálculo propio (`sizeAttenuation: false`)
- * y sin test de profundidad, así nunca la tapa un árbol.
+ * Material of a name label (A12): constant screen size without its own calculation (`sizeAttenuation: false`)
+ * and without depth test, so a tree never covers it.
  */
 export function labelMaterial(map: Texture): SpriteMaterial {
   return tagMaterial(new SpriteMaterial({ map, sizeAttenuation: false, depthTest: false, depthWrite: false, transparent: true, fog: false }), "etiqueta");
 }
 
 /**
- * Open-world-3d T5 (PD-5): la baliza del mapa entero (jugador y NPCs). Es de la clase `etiqueta` (un marcador de pantalla
- * como el chip): sin test de profundidad, sin niebla, con la opacidad que fija el zoom cada cuadro.
+ * Open-world-3d T5 (PD-5): the whole-map beacon (player and NPCs). It is of class `etiqueta` (a screen marker
+ * like the chip): no depth test, no fog, with the opacity the zoom sets each frame.
  */
 export function beaconMaterial(map: Texture): SpriteMaterial {
   return tagMaterial(new SpriteMaterial({ map, depthTest: false, depthWrite: false, transparent: true, fog: false, opacity: 0 }), "etiqueta");
 }
 
 export interface MaterialAudit {
-  /** Instancias distintas por clase. */
+  /** Distinct instances per class. */
   byKind: Record<WorldMaterialKind, number>;
-  /** Instancias de superficie (las clases de SURFACE_MATERIAL_KINDS). */
+  /** Surface instances (the classes of SURFACE_MATERIAL_KINDS). */
   surfaceInstances: number;
-  /** Materiales sin marca o con una marca fuera de la lista. */
+  /** Materials without a mark or with a mark outside the list. */
   unknown: Material[];
 }
 
-/** Recorre el grafo y cuenta las instancias de material por clase. */
+/** Walks the graph and counts the material instances per class. */
 export function auditMaterials(root: Object3D): MaterialAudit {
   const seen = new Set<Material>();
   root.traverse((o) => {

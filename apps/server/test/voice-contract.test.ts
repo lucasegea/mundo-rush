@@ -1,6 +1,6 @@
-// F5.1a A1: test de contrato compartido de `RealtimeVoiceProvider` (P0 §4.3 regla 4). La misma secuencia guionada contra
-// el adaptador Live (con el servidor Live falso) y contra el adaptador de referencia en memoria produce la misma
-// SECUENCIA DE TIPOS DE EVENTO (con su turnId), no los mismos tiempos. F5.1b agrega la cascada a `ADAPTERS`.
+// F5.1a A1: shared contract test of `RealtimeVoiceProvider` (P0 §4.3 rule 4). The same scripted sequence against
+// the Live adapter (with the fake Live server) and against the in-memory reference adapter produces the same
+// SEQUENCE OF EVENT TYPES (with their turnId), not the same timings. F5.1b adds the cascade to `ADAPTERS`.
 import { afterEach, describe, expect, test } from "vitest";
 import { createGeminiLiveProvider } from "../src/providers/gemini-live/adapter.ts";
 import type { RealtimeVoiceProvider, VoiceEvent, VoiceEventType } from "../src/providers/types.ts";
@@ -17,7 +17,7 @@ afterEach(async () => {
 
 interface Recorder {
   events: VoiceEvent[];
-  /** Espera a que llegue el n-ésimo evento de ese tipo (contando desde el principio). */
+  /** Waits for the n-th event of that type to arrive (counting from the start). */
   until(type: VoiceEventType, n?: number): Promise<void>;
 }
 
@@ -37,7 +37,7 @@ function record(p: RealtimeVoiceProvider): Recorder {
   };
 }
 
-/** La secuencia del contrato: apertura inyectada, turno hablado, nota [DIRECTOR], otro turno, interrupción, cierre. */
+/** The contract sequence: injected opening, spoken turn, [DIRECTOR] note, another turn, interruption, closing. */
 async function script(p: RealtimeVoiceProvider): Promise<VoiceEvent[]> {
   const rec = record(p);
   await p.open(SETUP);
@@ -53,7 +53,7 @@ async function script(p: RealtimeVoiceProvider): Promise<VoiceEvent[]> {
   p.endTurn("run:3");
   await rec.until("usage", 3);
   p.interrupt();
-  p.interrupt(); // el segundo no emite nada: un turno se interrumpe una vez
+  p.interrupt(); // the second one emits nothing: a turn is interrupted once
   await p.close("done");
   return rec.events;
 }
@@ -84,7 +84,7 @@ describe("A1: contrato compartido de RealtimeVoiceProvider", () => {
     if (!make) throw new Error(name);
     const events = await script(await make());
     expect(signature(events)).toEqual(EXPECTED);
-    // Los datos también coinciden donde el contrato los fija: transcripción final, texto y tasa del audio del NPC.
+    // The data also match where the contract fixes them: final transcript, text and sample rate of the NPC audio.
     expect(events.find((e) => e.type === "playerTranscriptFinal")).toMatchObject({ text: "Hello, I'm Nico." });
     expect(events.find((e) => e.type === "npcTranscript")).toMatchObject({ text: "Nice to meet you, Nico!" });
     const audio = events.find((e) => e.type === "npcAudioChunk");

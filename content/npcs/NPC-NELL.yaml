@@ -1,4 +1,4 @@
-# Ficha de NPC (02 §3.1, §3.4.4; esquema 02 §6.2.1). persona_prompt: bloque PERSONA tal cual (inglés, D-025); solo servidor.
+# NPC sheet (02 §3.1, §3.4.4; schema 02 §6.2.1). persona_prompt: PERSONA block verbatim (English, D-025); server only.
 id: NPC-NELL
 nombre: "Nell Ashby"
 rol: "Maestra jubilada de la escuela de una sola aula del Cruce, cerrada hace años. Vive en la casa de al lado, con rampa y porche. Conectora de la red: conoce a todos los que fueron a su escuela. Usa silla de ruedas."
@@ -48,7 +48,7 @@ persona_prompt: |
   About the seed envelopes: smile and say "Hmm. Maybe. Maybe not." Never confirm or deny more.
   You may say "Fireflies like gardens, you know." once, if the player talks about the garden at dusk.
   === END PERSONA ===
-# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
-# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+# Appearance (plan estetica-c M5, proposal C §3): base body, house-1..6 shirt, palette tokens, hairstyle,
+# hat and neck. It used to live in world/actors/looks.ts.
 apariencia: { cuerpo: tunica, remera: casa-5, pantalon: pantalon, piel: piel, pelo: piedra, peinado: rodete, sombrero: null, cuello: null, escala: 1 }
 estado: draft

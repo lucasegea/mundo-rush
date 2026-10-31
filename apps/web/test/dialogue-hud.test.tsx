@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// F4.2 A1 + A3 (+ A5 del plan sin canvas): el HUD de diálogo contra un servidor de escenas falso (sin red, sin modelo).
-// A1: Terminé cierra el turno; el chip de pista respeta el ajuste (D-035); el glosario sigue glossaryDisplay (D-131):
-// un test por modo. A3: el MISMO componente en solo-diálogo y sobre el canvas.
+// F4.2 A1 + A3 (+ A5 of the plan without canvas): the dialogue HUD against a fake scene server (no network, no model).
+// A1: Terminé closes the turn; the hint chip respects the setting (D-035); the glossary follows glossaryDisplay (D-131):
+// one test per mode. A3: the SAME component in dialog-only and over the canvas.
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -34,7 +34,7 @@ afterEach(() => {
 
 type Glossary = { id: string; en: string; es: string; estado: "draft" | "reviewed" | "approved" }[];
 
-/** Contenido real compilado; opcionalmente con otro glossaryDisplay y otro glosario (las tres variantes de D-131). */
+/** Real compiled content; optionally with another glossaryDisplay and another glossary (D-131's three variants). */
 function content(display?: "dev" | "release" | "fv", glossary?: Glossary) {
   const files = { ...compiledClientContent() };
   if (display) files["manifiesto.json"] = { glossaryDisplay: display };
@@ -44,7 +44,7 @@ function content(display?: "dev" | "release" | "fv", glossary?: Glossary) {
   return files;
 }
 
-/** Arranca sin WebGL (solo-diálogo), con el servidor falso, y entra a hablar con Inés. */
+/** Starts without WebGL (dialog-only), with the fake server, and goes to talk with Inés. */
 async function startScene(server: FakeSceneServer, files = content()) {
   await act(async () => { stop = await bootApp({ webgl2: false, fetchJson: fetchFromContent(files), scene: { connector: server.connector } }); });
   render(<App />);
@@ -67,11 +67,11 @@ describe("A5 (plan): entrar a la escena abre el HUD real contra el servidor de e
     expect(hud.getAttribute("data-surface")).toBe("dialogOnly");
     expect(screen.getByRole("heading", { level: 1, name: "Con Inés Calder" })).toBeTruthy();
     const log = screen.getByRole("log", { name: "Conversación" });
-    // La línea de Lumi sale del contenido por id (sin el marcado de inglés modelado); la del NPC es la del servidor.
+    // Lumi's line comes from the content by id (without the modeled English markup); the NPC's is the server's.
     expect(within(log).getByText(/Ella es Inés, la capataz de la cuadrilla/).textContent).toContain("Podés decir Hello");
     expect(log.textContent).toContain("Hello! Welcome to Kestrel Valley.");
     expect(screen.getByText("Tu turno. Tomate el tiempo que necesites.")).toBeTruthy();
-    // Teclado primero: en tu turno el foco está en la caja de texto.
+    // Keyboard first: on your turn focus is on the text box.
     expect(document.activeElement).toBe(input());
   });
 
@@ -123,7 +123,7 @@ describe("A1: Terminé cierra el turno", () => {
     expect((input() as HTMLTextAreaElement).value).toBe("");
     expect(screen.getByRole("log").textContent).toContain("Vos:Hello! I'm Nico.");
     expect(screen.getByRole("button", { name: "Terminé" }).getAttribute("aria-disabled")).toBe("true");
-    // Un segundo Terminé antes de que conteste el servidor no manda nada.
+    // A second Terminé before the server answers sends nothing.
     await user.click(screen.getByRole("button", { name: "Terminé" }));
     expect(server.sent.filter((m) => m.type === "turn.text")).toHaveLength(1);
   });
@@ -144,7 +144,7 @@ describe("A1: Terminé cierra el turno", () => {
     done.focus();
     await user.keyboard("{Enter}");
     expect(server.sent.at(-1)).toEqual({ type: "turn.text", text: "Hello!" });
-    // Vuelve el turno: Espacio sobre Terminé también lo cierra.
+    // The turn comes back: Space on Terminé also closes it.
     await act(async () => { server.push(stateMsg("playerTurn", "waiting", 2)); });
     await user.type(input(), "I'm Nico.");
     screen.getByRole("button", { name: "Terminé" }).focus();
@@ -172,7 +172,7 @@ describe("A1: Terminé cierra el turno", () => {
     expect(server.sent.at(-1)).toEqual({ type: "turn.pass" });
     await act(async () => { server.push(stateMsg("playerTurn", "passMenu")); });
     const menu = screen.getByRole("group", { name: "Pasar el turno" });
-    // Plan estetica-c M4: el orden de la barra de andamiaje de la propuesta C §8 (Repetir · Más despacio · Pista).
+    // Plan estetica-c M4: the order of the scaffolding bar from proposal C §8 (Repetir · Más despacio · Pista).
     expect(within(menu).getAllByRole("button").map((b) => b.textContent)).toEqual(["Repetir", "Más simple", "Pista", "Seguí vos"]);
     await user.click(within(menu).getByRole("button", { name: "Repetir" }));
     expect(server.sent.at(-1)).toEqual({ type: "turn.choose", option: "repeat" });
@@ -239,7 +239,7 @@ describe("A1: glosario según glossaryDisplay (D-131), sin traducción inventada
   ];
 
   async function openWord(server: FakeSceneServer, user: ReturnType<typeof userEvent.setup>, word: string) {
-    // La palabra de la ÚLTIMA línea (la apertura también dice "Welcome").
+    // The word of the LAST line (the opening also says "Welcome").
     const log = screen.getByRole("log");
     const last = within(log).getAllByRole("listitem").at(-1) as HTMLElement;
     await user.click(within(last).getByRole("button", { name: word }));
@@ -363,7 +363,7 @@ describe("A3: el mismo HUD en solo-diálogo y sobre el canvas", () => {
   test("mismo componente, mismos controles; sobre el mapa el shell deja pasar el puntero y el HUD lo recibe", async () => {
     const server = fakeSceneServer();
     await act(async () => { stop = await bootApp({ webgl2: true, scene: { connector: server.connector } }); });
-    // Shell sin App: el canvas (three) no se monta en jsdom; el shell es quien decide la superficie.
+    // Shell without App: the canvas (three) is not mounted in jsdom; the shell is what decides the surface.
     const { container } = render(<Shell />);
     const controls = () => {
       const hud = screen.getByTestId("dialogue-hud");
@@ -387,7 +387,7 @@ describe("A3: el mismo HUD en solo-diálogo y sobre el canvas", () => {
     const canvas = controls();
     expect(canvas.surface).toBe("canvas");
     expect({ ...canvas, surface: null }).toEqual({ ...dialogOnly, surface: null });
-    // Encima del mapa: el shell es transparente al puntero y el panel del HUD lo recibe.
+    // On top of the map: the shell is pointer-transparent and the HUD panel receives it.
     expect((container.firstElementChild as HTMLElement).className).toContain("pointer-events-none");
     expect(screen.getByTestId("dialogue-hud").className).toContain("pointer-events-auto");
   });
@@ -404,7 +404,7 @@ describe("M4 (estetica-c): HUD papel y tinta", () => {
     expect(done.className).toContain("bg-ink");
     expect(done.className).toContain("text-paper");
     expect(done.className).toContain("ml-auto");
-    // La palabra nueva: subrayada con puntos y alcanzable por teclado.
+    // The new word: underlined with dots and reachable by keyboard.
     const word = within(screen.getByRole("log")).getAllByRole("button")[0] as HTMLElement;
     expect(word.className).toContain("decoration-dotted");
     expect(word.tabIndex).toBe(0);
@@ -438,7 +438,7 @@ describe("M4 (estetica-c): HUD papel y tinta", () => {
     expect(dot().getAttribute("data-dot")).toBe("speaking");
     expect(dot().getAttribute("data-pulse")).toBe("false");
     act(() => { actions.setReduceMotion(false); });
-    expect(dot().getAttribute("data-pulse")).toBe("false"); // gris: nunca late
+    expect(dot().getAttribute("data-pulse")).toBe("false"); // gray: never pulses
   });
 
   test("sobre el mapa: tarjeta de papel abajo al centro de hasta 47,5rem, alto 45dvh", async () => {

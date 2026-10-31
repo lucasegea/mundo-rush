@@ -1,5 +1,5 @@
-# M0.1 · Hola, Inés (02 §4.4; esquema 02 §6.2.2-§6.2.3). Líneas [GUIONADA] tal cual 02; las [EJEMPLO IA] van como
-# ramas tipo ejemplo_ia (muestra de estilo, no texto fijo; 02 §0.4). Glosas es_glosa: solo diseño, nunca al cliente.
+# M0.1 · Hola, Inés (02 §4.4; schema 02 §6.2.2-§6.2.3). [GUIONADA] lines verbatim from 02; the [EJEMPLO IA] ones go as
+# ejemplo_ia-type branches (style sample, not fixed text; 02 §0.4). es_glosa glosses: design only, never to the client.
 id: M0.1
 titulo: { es-AR: "Hola, Inés" }
 capitulo: 0

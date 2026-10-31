@@ -1,4 +1,4 @@
-// FD0 A10: el diario es solo-agregar, numera y valida cada evento, no guarda audio y prune deja 30 sesiones.
+// FD0 A10: the journal is append-only, numbers and validates each event, stores no audio and prune leaves 30 sessions.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";

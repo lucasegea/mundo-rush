@@ -1,6 +1,6 @@
-// F2 A4, A7 (partes puras de world/): matemática de cámara y registro de presets. Sin WebGL: se prueban las funciones
-// que alimentan a three (D-016). Plan estetica-c M7 (D-207): las pruebas de tiles por chunk, billboards, arte pixel
-// generado y escala entera de píxel se retiraron con su código; el registro de R11 ya no tiene los ortográficos.
+// F2 A4, A7 (pure parts of world/): camera math and preset registry. No WebGL: the functions that feed three are
+// tested (D-016). Plan estetica-c M7 (D-207): the tests for per-chunk tiles, billboards, generated pixel art
+// and integer pixel scale were retired with their code; R11's registry no longer has the ortho ones.
 import { CAMERA_PRESET_IDS, presetAngles } from "@lg/core";
 import { describe, expect, test } from "vitest";
 import { CAMERA_RIG_PRESETS } from "../src/world/camera/presets";
@@ -8,13 +8,13 @@ import { cameraOffset, cutFollow, followAlpha } from "../src/world/camera/rig";
 
 describe("A4 CameraRig: exactamente los presets de R11", () => {
   test("las claves del registro son CAMERA_PRESET_IDS; thirdPerson, perspective3D y dialogueFrame implementados, xrTabletop declarado", () => {
-    // Cambio registrado (open-world-3d T5, PD-5): el registro gana `thirdPerson` (antes 3 claves).
+    // Recorded change (open-world-3d T5, PD-5): the registry gains `thirdPerson` (before, 3 keys).
     expect([...CAMERA_PRESET_IDS]).toEqual(["thirdPerson", "dialogueFrame", "perspective3D", "xrTabletop"]);
     expect(Object.keys(CAMERA_RIG_PRESETS).sort()).toEqual([...CAMERA_PRESET_IDS].sort());
     expect(CAMERA_RIG_PRESETS).toEqual({ thirdPerson: "implemented", dialogueFrame: "implemented", perspective3D: "implemented", xrTabletop: "declared" });
   });
 
-  test("plan estetica-c M7: los ortográficos de HD-2D salieron de R11 (revisión de arquitectura 2026-10-12)", () => {
+  test("plan estetica-c M7: los ortográficos de HD-2D salieron de R11 (architecture review 2026-10-12)", () => {
     for (const id of ["topdownOrtho", "isoOrtho"]) {
       expect(CAMERA_PRESET_IDS as readonly string[]).not.toContain(id);
       expect(Object.keys(CAMERA_RIG_PRESETS)).not.toContain(id);

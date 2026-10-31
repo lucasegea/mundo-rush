@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// Plan estetica-c M3 (D-030): el retrato de solo-diálogo usa el PNG renderizado del modelo solo si el id lo tiene
-// registrado, y si falta o no carga cae al SVG de F1.3. El panel de retratos del modo director (sin three, la función
-// de render inyectada), el encuadre de busto (puro) y el marcador de solo-desarrollo del estudio.
+// Plan estetica-c M3 (D-030): the dialog-only portrait uses the model's rendered PNG only if the id has it
+// registered, and if it is missing or does not load it falls back to F1.3's SVG. The director-mode portrait panel (without three, the
+// render function injected), the bust framing (pure) and the studio's development-only marker.
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import studioSource from "../src/world/portraits/studio.ts?raw";
@@ -37,7 +37,7 @@ describe("retrato de solo-diálogo", () => {
     const { container, rerender } = render(<Portrait id="NPC-NELL" name="Nell" available={available} />);
     act(() => { fireEvent.error(container.querySelector("img") as HTMLImageElement); });
     expect(container.querySelector("img")).toBeNull();
-    // El mismo componente pasa a Inés: su PNG se prueba (antes quedaba en SVG para siempre).
+    // The same component moves to Inés: her PNG is tested (before it stayed on SVG forever).
     rerender(<Portrait id="NPC-INES" name="Inés" available={available} />);
     expect(container.querySelector("img")?.getAttribute("src")).toMatch(/portraits\/NPC-INES\.png$/);
     act(() => { fireEvent.error(container.querySelector("img") as HTMLImageElement); });
@@ -67,7 +67,7 @@ describe("panel de retratos (modo director)", () => {
   });
 
   test("el estudio y el panel llevan un marcador de solo-desarrollo (check:dev-only los caza si llegan a un build)", () => {
-    // "__lg_director" es uno de los DEV_ONLY_MARKERS de scripts/budgets/dev-only.ts.
+    // "__lg_director" is one of the DEV_ONLY_MARKERS of scripts/budgets/dev-only.ts.
     for (const src of [studioSource, panelSource]) expect(src).toContain("__lg_director");
     expect(panelSource).not.toMatch(/^import .*(three|world\/)/m);
   });
@@ -82,7 +82,7 @@ describe("encuadre de busto (puro)", () => {
     expect(f.position[1]).toBeGreaterThan(f.target[1]);
     const dist = Math.hypot(f.position[1] - f.target[1], f.position[2] - f.target[2]);
     const halfHeight = dist * Math.tan((PORTRAIT_FOV_DEG * Math.PI) / 360);
-    expect(halfHeight).toBeGreaterThan(2 * 0.46); // cabeza entera más sombrero
-    expect(halfHeight).toBeLessThan(5 * 0.46); // y no un plano general
+    expect(halfHeight).toBeGreaterThan(2 * 0.46); // whole head plus hat
+    expect(halfHeight).toBeLessThan(5 * 0.46); // and not a wide shot
   });
 });

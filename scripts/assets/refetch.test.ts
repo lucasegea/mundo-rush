@@ -1,4 +1,4 @@
-// open-world-3d T2(e) (AC11): lo puro de scripts/assets/refetch.ts, sin red (la corrida real va por red, fuera de verify).
+// open-world-3d T2(e) (AC11): the pure parts of scripts/assets/refetch.ts, without network (the real run goes over the network, outside verify).
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -68,8 +68,8 @@ describe("refetch: resumen", () => {
   });
 });
 
-// Open-world-3d T6 (PD-4, D-832): los .ktx2 del suelo se re-codifican con el basisu fijado. Los originales y el .wasm
-// viven en assets-src/ (gitignored): sin ellos (otra máquina, sin red en el test) el caso del MATCH se salta.
+// Open-world-3d T6 (PD-4, D-832): the ground's .ktx2 files are re-encoded with the pinned basisu. The originals and the .wasm
+// live in assets-src/ (gitignored): without them (another machine, no network in the test) the MATCH case is skipped.
 describe("refetch: filas .ktx2 (basisu fijado)", () => {
   const filas = leerRegistro(ROOT).assets;
   const fila = filas.find((f) => f.archivo === "apps/web/public/textures/sparse-grass-nor.ktx2");

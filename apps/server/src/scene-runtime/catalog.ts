@@ -1,6 +1,6 @@
-// Vista tipada del contenido compilado del servidor (apps/server/generated/content/, D-159). El compilador de F1.2 ya
-// validó todo contra @lg/content-schema; acá solo se indexa. Los tipos vienen del esquema (import de tipos: en runtime
-// el servidor no carga el compilador).
+// Typed view of the server's compiled content (apps/server/generated/content/, D-159). The F1.2 compiler already
+// validated everything against @lg/content-schema; here it is only indexed. Types come from the schema (type import: at runtime
+// the server does not load the compiler).
 import type { ArchivoContencion, Escena, FichaConversacion, LineaGuionada, ListaBloqueo, Mision, Npc, Pista, Presentacion, Saber, TarjetaNivel } from "@lg/content-schema";
 import type { ServerContent } from "../content/loader.ts";
 
@@ -14,12 +14,12 @@ export interface Catalog {
   saber(id: string): ServerSaber | undefined;
   levelCard(band: string): TarjetaNivel | undefined;
   clue(id: string): Pista | undefined;
-  /** Arista de la red que presenta a `npcId` (la primera; D-168). */
+  /** Edge of the network that presents `npcId` (the first; D-168). */
   introOf(npcId: string): Presentacion | undefined;
-  /** A2 (ADR-027): ficha de conversación por medidores (`escena.conversacion`). */
+  /** A2 (ADR-027): meters conversation sheet (`escena.conversacion`). */
   conversation(id: string): FichaConversacion | undefined;
   npcBase: string;
-  /** Listas de bloqueo (moderación en runtime, F4.2) y contención + línea segura (D-112). */
+  /** Block lists (runtime moderation, F4.2) and containment + safe line (D-112). */
   safety: { lists: ListaBloqueo[]; containment: ArchivoContencion };
 }
 
@@ -36,7 +36,7 @@ export function readCatalog(content: ServerContent): Catalog {
   const niveles = arr<TarjetaNivel>(content, "niveles.json");
   const pistas = arr<Pista>(content, "pistas.json");
   const red = arr<Presentacion>(content, "red.json");
-  // Opcional: un contenido compilado antes de A2 no lo trae (y ninguna escena lo pide).
+  // Optional: content compiled before A2 doesn't have it (and no scene asks for it).
   const conversaciones = Array.isArray(content["conversaciones.json"]) ? content["conversaciones.json"] as FichaConversacion[] : [];
   const prompts = content["prompts.json"] as Record<string, string> | undefined;
   const npcBase = prompts?.["npc-base"];
@@ -58,27 +58,27 @@ export function readCatalog(content: ServerContent): Catalog {
   };
 }
 
-/** `oNoAplica`: el valor o `{ no_aplica: "motivo" }` (02 §6.2). */
+/** `oNoAplica`: the value or `{ no_aplica: "motivo" }` (02 §6.2). */
 export const applies = <T>(v: T | { no_aplica: string }): T | null =>
   v !== null && typeof v === "object" && !Array.isArray(v) && "no_aplica" in v ? null : (v as T);
 
 export type NpcLine = Extract<LineaGuionada, { en: string }>;
 export const isNpcLine = (l: LineaGuionada): l is NpcLine => "en" in l;
 
-/** Líneas de salida si la escena no converge (o vacío si no aplica). */
+/** Exit lines if the scene doesn't converge (or empty if not applicable). */
 export const exitLines = (scene: Escena): LineaGuionada[] => applies(scene.salida_si_no_converge)?.lineas ?? [];
-/** Apertura guionada; una escena sin NPC (M0.2) abre con su primera línea guionada (la presentación de Lumi). */
+/** Scripted opening; a scene with no NPC (M0.2) opens with its first scripted line (Lumi's introduction). */
 export const openingLines = (scene: Escena): LineaGuionada[] =>
   applies(scene.apertura_guionada) ?? (scene.lineas_guionadas ?? []).slice(0, 1);
 
-/** Huecos de una línea guionada: `[nombre]` (convención de las fichas) o `{nombre_jugador}` (plantillas, 02 §2.6). */
+/** Gaps in a scripted line: `[nombre]` (sheet convention) or `{nombre_jugador}` (templates, 02 §2.6). */
 const SLOT = /(,\s*)?\s?(\[[\p{Ll}_]+\]|\{[\p{Ll}_]+\})/gu;
 const PLAYER_SLOTS = new Set(["[nombre]", "{nombre_jugador}"]);
 
 /**
- * Texto de una línea guionada listo para mostrar: el hueco del nombre se llena con el nombre de juego; sin nombre (el
- * avatar y el nombre llegan con el onboarding, más adelante) o con un hueco que el runtime todavía no sabe llenar, la
- * línea se dice sin el hueco ("Nice to meet you, [nombre]!" → "Nice to meet you!"). Nunca sale un `[hueco]` crudo.
+ * Text of a scripted line ready to display: the name gap is filled with the game name; with no name (the
+ * avatar and name arrive with the onboarding, later) or with a gap the runtime doesn't yet know how to fill, the
+ * line is said without the gap ("Nice to meet you, [nombre]!" → "Nice to meet you!"). A raw `[hueco]` never comes out.
  */
 export function renderScriptedText(text: string, playerName: string | null): string {
   const name = playerName?.trim() || null;

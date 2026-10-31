@@ -1,5 +1,5 @@
-// F4.2: reglas puras del HUD de diálogo. Glosario por build (D-131, 03 §8.3), palabras tocables (D-068) y el ajuste
-// del chip de pista (D-035).
+// F4.2: pure rules of the dialogue HUD. Per-build glossary (D-131, 03 §8.3), tappable words (D-068) and the hint
+// chip adjustment (D-035).
 import { describe, expect, test } from "vitest";
 import {
   applySettingsPatch, DEFAULT_SETTINGS, glossaryKey, glossaryVisibility, HINT_CHIP_DELAY_MS, isGlossaryDisplay,

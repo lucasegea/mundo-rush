@@ -4,16 +4,16 @@ import viteConfig from "./vite.config.ts";
 export default mergeConfig(
   viteConfig,
   defineProject({
-    // Plan estetica-c M2: los tests leen los .glb servidos como data URL (`?inline`) sin node:fs. Solo en tests: el
-    // build del cliente no importa modelos (los carga por URL desde public/models).
-    // Open-world-3d T6: también los .ktx2 del suelo (AC42 lee sus cabeceras).
+    // Plan estetica-c M2: tests read the served .glb files as data URLs (`?inline`) without node:fs. Tests only: the
+    // client build does not import models (it loads them by URL from public/models).
+    // Open-world-3d T6: also the ground .ktx2 files (AC42 reads their headers).
     assetsInclude: ["**/*.glb", "**/*.ktx2"],
     test: {
       name: "@lg/web",
       include: ["test/**/*.test.{ts,tsx}"],
       environment: "node",
-      // El primer test de cada archivo paga el arranque en frío de bootApp + App; con la suite entera en paralelo
-      // pasa de los 5 s por defecto (como los otros proyectos pesados, que ya tienen 30-60 s).
+      // The first test of each file pays the cold start of bootApp + App; with the whole suite in parallel it
+      // goes past the default 5 s (like the other heavy projects, which already have 30-60 s).
       testTimeout: 30000,
     },
   }),

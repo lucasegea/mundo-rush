@@ -1,11 +1,11 @@
-// eslint.config.js — límites de módulos (§4.3), costuras R10-R15 (§3.1) y modo director (§6.5)
+// eslint.config.js — module boundaries (§4.3), seams R10-R15 (§3.1) and director mode (§6.5)
 import tseslint from "typescript-eslint";
 import importX from "eslint-plugin-import-x";
 
 const WEB = "apps/web/src";
 const p = (dir) => `./${WEB}/${dir}`;
 
-// ---------- piezas reutilizables ----------
+// ---------- reusable pieces ----------
 const DEVICE_EVENTS = "/^(key|pointer|mouse|touch|wheel|gamepad|click|dblclick|contextmenu)/";
 const r10 = [
   { selector: `CallExpression[callee.property.name='addEventListener'][arguments.0.type='Literal'][arguments.0.value=${DEVICE_EVENTS}]`,
@@ -26,9 +26,9 @@ const r13 = [
   { selector: "NewExpression[callee.property.name=/^(AudioContext|webkitAudioContext|OfflineAudioContext|Audio)$/]",
     message: "R13: un solo AudioContext, en services/audio/." },
 ];
-// D-207 / plan estetica-c M1 A16: world/ importa three por nombre (`import { MeshToonMaterial } from "three"`), nunca el
-// espacio de nombres entero (fuera de world/camera/). Más estricta que R11; va en la MISMA lista que R10, R11 y R13 de
-// world/ porque en flat config un bloque posterior con no-restricted-syntax reemplaza las opciones del anterior.
+// D-207 / plan estetica-c M1 A16: world/ imports three by name (`import { MeshToonMaterial } from "three"`), never the whole
+// namespace (outside world/camera/). Stricter than R11; it goes in the SAME list as world/'s R10, R11 and R13
+// because in flat config a later block with no-restricted-syntax replaces the previous one's options.
 const threeNamespace = [
   { selector: "ImportDeclaration[source.value=/^three($|[^a-z0-9-])/] > ImportNamespaceSpecifier",
     message: "D-207: world/ importa three por nombre (import { X } from \"three\"), no import * as THREE." },
@@ -44,8 +44,8 @@ const cameraImports = [
     message: "R11: cámaras y controles solo en world/camera/." },
 ];
 const platformImports = { group: ["@tauri-apps/*", "@capacitor/*"], message: "R15: solo en services/platform/." };
-// F4.1: escrituras a disco del servidor (fs.write*, createWriteStream, appendFile*). `write`/`writeSync` sueltos quedan
-// fuera del selector de llamadas para no confundirlos con streams y sockets; como import de fs sí se bloquean.
+// F4.1: server disk writes (fs.write*, createWriteStream, appendFile*). Bare `write`/`writeSync` stay
+// out of the call selector so as not to confuse them with streams and sockets; as an fs import they are blocked.
 const FS_MODULES = ["fs", "node:fs", "fs/promises", "node:fs/promises"];
 const FS_RE = "/^(node:)?fs(\\u002Fpromises)?$/";
 const DISK_WRITE_FNS = ["writeFile", "writeFileSync", "appendFile", "appendFileSync", "createWriteStream", "writev", "writevSync"];
@@ -53,39 +53,39 @@ const DISK_WRITE_IMPORTS = [...DISK_WRITE_FNS, "write", "writeSync"];
 const DISK_WRITE_MSG = "D-108: apps/server escribe a disco solo en src/store/ y src/cost/.";
 
 export default tseslint.config(
-  // Cambio registrado (open-world-3d T2(d), D-830): `tooling/vendor/**` es código de terceros copiado byte a byte
-  // (content/code-registry.yaml, con su .patch si está editado), no código del repo; el resto de tooling se sigue
-  // linteando (scripts/lint/vendor-ignore.test.ts lo prueba con una sonda --stdin).
+  // Recorded change (open-world-3d T2(d), D-830): `tooling/vendor/**` is third-party code copied byte for byte
+  // (content/code-registry.yaml, with its .patch if edited), not repo code; the rest of tooling is still
+  // linted (scripts/lint/vendor-ignore.test.ts proves it with a --stdin probe).
   { ignores: ["**/dist/**", "**/node_modules/**", "experiments/**", "tooling/eslint-fixtures/**", "tooling/vendor/**",
               "apps/web/public/**", "apps/server/generated/**", ".director/**"] },
   ...tseslint.configs.strict,
 
-  // ---------- 1. Límites entre carpetas (rutas resueltas) ----------
+  // ---------- 1. Boundaries between folders (resolved paths) ----------
   {
     files: ["apps/**/*.{ts,tsx}", "packages/**/*.ts", "scripts/**/*.ts", "tooling/**/*.ts"],
     plugins: { "import-x": importX },
     settings: { "import-x/resolver": { typescript: { project: ["tsconfig.base.json", "apps/*/tsconfig.json", "packages/*/tsconfig.json", "tooling/*/tsconfig.json"] } } },
     rules: {
       "import-x/no-restricted-paths": ["error", { zones: [
-        // R2/R3: ui y world nunca se importan entre sí
+        // R2/R3: ui and world never import each other
         { target: p("ui"),    from: p("world"),    message: "R3: ui/ no importa world/; pasá por el store." },
         { target: p("world"), from: p("ui"),       message: "R3: world/ no importa ui/; pasá por el store." },
-        // ui y world no importan services (se activan por estado)
+        // ui and world do not import services (they are activated by state)
         { target: p("ui"),    from: p("services"), message: "§4.3: ui/ no importa services/." },
         { target: p("world"), from: p("services"), message: "§4.3: world/ no importa services/." },
-        // R14 + puerta del mundo: ui lee selectores y acciones; world solo selectores y bridge
+        // R14 + the world gate: ui reads selectors and actions; world only selectors and bridge
         { target: p("ui"),    from: p("state"), except: ["./selectors", "./actions.ts"],
           message: "R14: ui/ solo usa state/selectors/ y state/actions.ts." },
         { target: p("world"), from: p("state"), except: ["./selectors", "./bridge.ts"],
           message: "§4.3: world/ solo usa state/selectors/ y state/bridge.ts." },
-        // state es base: no conoce a nadie arriba
+        // state is the base: it knows no one above
         { target: p("state"), from: [p("ui"), p("world"), p("services")], message: "§4.3: state/ no importa capas superiores." },
-        // services no conoce vistas
+        // services does not know views
         { target: p("services"), from: [p("ui"), p("world")], message: "§4.3: services/ no importa ui/ ni world/." },
-        // panel docente
+        // teacher panel
         { target: p("teacher"), from: [p("world"), p("services"), p("state")], message: "§4.3: teacher/ habla solo con la API." },
         { target: p("teacher"), from: p("ui"), except: ["./primitives"], message: "§4.3: teacher/ solo usa ui/primitives." },
-        // modo director (solo desarrollo, ADR-026): nadie del juego lo importa; él lee selectores y despacha acciones
+        // director mode (development only, ADR-026): no one in the game imports it; it reads selectors and dispatches actions
         { target: [p("ui"), p("world"), p("state"), p("services"), p("teacher")], from: p("dev"),
           message: "ADR-026: el juego no importa dev/ (modo director)." },
         { target: p("dev"), from: p("state"), except: ["./selectors", "./actions.ts"],
@@ -93,14 +93,14 @@ export default tseslint.config(
         { target: p("dev"), from: [p("world"), p("services")], message: "ADR-026: dev/ no importa world/ ni services/." },
         { target: p("dev"), from: p("ui"), except: ["./primitives"], message: "ADR-026: dev/ solo usa ui/primitives." },
         { target: ["./apps", "./packages", "./scripts"], from: "./tooling", message: "ADR-026: el producto no importa tooling/." },
-        // apps y paquetes
+        // apps and packages
         { target: "./apps/server", from: "./apps/web", message: "§4.3: server no importa web." },
         { target: "./apps/web",    from: "./apps/server", message: "§4.3: web no importa server." },
         { target: "./packages",    from: "./apps", message: "§4.3: los paquetes no importan apps/." },
         { target: "./packages/protocol", from: ["./packages/core", "./packages/content-schema"], message: "§4.3: protocol solo depende de zod." },
         { target: "./packages/core", from: "./packages/content-schema", message: "§4.3: core no depende de content-schema." },
-        // plan estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art es dato de arte puro y no depende de otro paquete; el
-        // script de assets pinta con @lg/art, nunca con el árbol del cliente (una sola implementación, sin copia).
+        // plan estetica-c M2 (architecture review 2026-10-12 §10.3): @lg/art is pure art data and depends on no other package; the
+        // assets script paints with @lg/art, never with the client tree (a single implementation, no copy).
         { target: "./packages/art", from: ["./packages/core", "./packages/content-schema", "./packages/protocol"],
           message: "M2: @lg/art no depende de otros paquetes." },
         { target: "./scripts/assets", from: "./apps", message: "M2: scripts/assets/ usa @lg/art, no importa apps/." },
@@ -108,7 +108,7 @@ export default tseslint.config(
     },
   },
 
-  // ---------- 2. Núcleo puro (R4) ----------
+  // ---------- 2. Pure core (R4) ----------
   {
     files: ["packages/core/**/*.ts"],
     rules: {
@@ -125,8 +125,8 @@ export default tseslint.config(
         { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: "R4: inyectá el Clock." }],
     },
   },
-  // @lg/art (plan estetica-c M2, revisión de arquitectura 2026-10-12 §10.3): paleta, pintura y regla del bisel en TS puro, como R4: sin
-  // three, react, Node ni globals del DOM, y determinístico (el arte por código sale de una semilla).
+  // @lg/art (plan estetica-c M2, architecture review 2026-10-12 §10.3): palette, paint and bevel rule in pure TS, like R4: no
+  // three, react, Node or DOM globals, and deterministic (code-made art comes from a seed).
   {
     files: ["packages/art/**/*.ts"],
     rules: {
@@ -141,7 +141,7 @@ export default tseslint.config(
         { object: "Math", property: "random", message: "M2: @lg/art es determinístico (usá una semilla)." }],
     },
   },
-  // protocol: solo zod
+  // protocol: zod only
   { files: ["packages/protocol/**/*.ts"],
     rules: { "no-restricted-imports": ["error", { patterns: [{ group: ["react", "react-*", "three", "three/*", "@react-three/*", "zustand", "yaml", "@lg/*"],
       message: "§4.3: protocol solo importa zod." }] }] } },
@@ -149,7 +149,7 @@ export default tseslint.config(
   { files: ["packages/content-schema/**/*.ts"],
     rules: { "no-restricted-imports": ["error", { patterns: [{ group: ["react", "three", "@react-three/*", "zustand"], message: "§4.3" }] }] } },
 
-  // ---------- 3. ui/, world/, teacher/ y dev/: núcleo solo como tipos; sin three donde no corresponde ----------
+  // ---------- 3. ui/, world/, teacher/ and dev/: core as types only; no three where it does not belong ----------
   {
     files: [`${WEB}/ui/**/*.{ts,tsx}`],
     rules: { "@typescript-eslint/no-restricted-imports": ["error", {
@@ -164,13 +164,13 @@ export default tseslint.config(
       patterns: [platformImports],
     }]},
   },
-  { files: [`${WEB}/teacher/**/*.{ts,tsx}`],   // regla de typescript-eslint: el bloque 4 no la pisa
+  { files: [`${WEB}/teacher/**/*.{ts,tsx}`],   // typescript-eslint rule: block 4 does not override it
     rules: { "@typescript-eslint/no-restricted-imports": ["error", { patterns: [{ group: ["three", "three/*", "@react-three/*"], message: "§4.3: teacher/ sin three." }] }] } },
   { files: [`${WEB}/dev/**/*.{ts,tsx}`],
     rules: { "@typescript-eslint/no-restricted-imports": ["error", { patterns: [{ group: ["three", "three/*", "@react-three/*", "@anthropic-ai/*", "@modelcontextprotocol/*"],
       message: "ADR-026: dev/ sin three ni SDKs (el copiloto y el MCP viven en tooling/)." }] }] } },
 
-  // ---------- 4. Costuras R10, R11, R13, R15 en todo apps/web ----------
+  // ---------- 4. Seams R10, R11, R13, R15 across all of apps/web ----------
   {
     files: [`${WEB}/**/*.{ts,tsx}`],
     ignores: [`${WEB}/services/input/**`, `${WEB}/world/camera/**`, `${WEB}/services/audio/**`, `${WEB}/services/platform/**`],
@@ -180,10 +180,10 @@ export default tseslint.config(
       "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }],
     },
   },
-  // world/ (salvo world/camera/): las costuras de siempre más three por nombre (D-207). Misma lista, nada se pierde.
+  // world/ (except world/camera/): the usual seams plus three by name (D-207). Same list, nothing is lost.
   { files: [`${WEB}/world/**/*.{ts,tsx}`], ignores: [`${WEB}/world/camera/**`],
     rules: { "no-restricted-syntax": ["error", ...r10, ...r11, ...r13, ...threeNamespace] } },
-  // Dentro de cada carpeta-costura se relaja SOLO su propia regla (las demás siguen):
+  // Inside each seam folder ONLY its own rule is relaxed (the others stay):
   { files: [`${WEB}/services/input/**`],    rules: { "no-restricted-syntax": ["error", ...r11, ...r13],
       "no-restricted-properties": ["error", r15Props[0]], "no-restricted-imports": ["error", { paths: cameraImports, patterns: [platformImports] }] } },
   { files: [`${WEB}/world/camera/**`],      rules: { "no-restricted-syntax": ["error", ...r10, ...r13],
@@ -193,11 +193,11 @@ export default tseslint.config(
   { files: [`${WEB}/services/platform/**`], rules: { "no-restricted-syntax": ["error", ...r10, ...r11, ...r13],
       "no-restricted-properties": ["error", r15Props[1]], "no-restricted-imports": ["error", { paths: cameraImports }] } },
 
-  // ---------- 5. Efectos solo en services/ (R5) ----------
+  // ---------- 5. Effects only in services/ (R5) ----------
   { files: [`${WEB}/{ui,world,state}/**/*.{ts,tsx}`],
     rules: { "no-restricted-globals": ["error", "fetch", "WebSocket", "indexedDB", "localStorage", "sessionStorage"] } },
 
-  // ---------- 6. apps/server escribe a disco solo en src/store/ y src/cost/ (F4.1, D-108, D-157) ----------
+  // ---------- 6. apps/server writes to disk only in src/store/ and src/cost/ (F4.1, D-108, D-157) ----------
   {
     files: ["apps/server/src/**/*.ts"],
     ignores: ["apps/server/src/store/**", "apps/server/src/cost/**"],

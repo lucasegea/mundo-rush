@@ -1,9 +1,9 @@
-# content/code-registry.yaml: registro de CÓDIGO de terceros (open-world-3d T2(c), D-831). Todo archivo bajo
-# tooling/vendor/ y apps/web/public/decoders/ tiene una fila acá con su paquete@version, licencia (lista cerrada D1 de
-# packages/content-schema/src/schemas/assets.ts), el texto de la licencia versionado (`archivo_licencia`), el origen y el
-# sha256 upstream (`sha256_original`), y el sha256 de los bytes versionados (`sha256`). Un archivo editado lleva su
-# `<archivo>.patch` contra los bytes upstream; scripts/assets/refetch.ts lo baja, aplica el parche y compara byte a byte.
-# scripts/content/provenance.test.ts recalcula cada sha256 y falla con un archivo sin fila o con un hash distinto.
+# content/code-registry.yaml: third-party CODE registry (open-world-3d T2(c), D-831). Every file under
+# tooling/vendor/ and apps/web/public/decoders/ has a row here with its package@version, license (closed D1 list of
+# packages/content-schema/src/schemas/assets.ts), the versioned license text (`archivo_licencia`), the origin and the
+# upstream sha256 (`sha256_original`), and the sha256 of the versioned bytes (`sha256`). An edited file carries its
+# `<file>.patch` against the upstream bytes; scripts/assets/refetch.ts downloads it, applies the patch and compares byte by byte.
+# scripts/content/provenance.test.ts recomputes every sha256 and fails on a file without a row or with a different hash.
 codigo:
   - id: three/examples/jsm/libs/meshopt_decoder.module.js
     archivo: apps/web/public/decoders/meshopt_decoder.module.js
@@ -53,7 +53,7 @@ codigo:
       Transcodificador de Basis Universal sin cambios (open-world-3d T6, PD-4): KTX2Loader de three/examples lo carga
       autoalojado desde /decoders/ para el suelo .ktx2. docs/licenses/basis-universal-LICENSE.txt es el LICENSE (Apache
       2.0) del repo de Binomial en la etiqueta v2_50.
-  # ---------- open-world-3d T7 (PD-3, D-830): ez-tree 1.1.0 vendorizado, código de horneado (nunca en el cliente) ----------
+  # ---------- open-world-3d T7 (PD-3, D-830): vendored ez-tree 1.1.0, baking code (never in the client) ----------
   - id: ez-tree/license
     archivo: tooling/vendor/ez-tree/LICENSE
     paquete: "@dgreenheck/ez-tree@1.1.0"

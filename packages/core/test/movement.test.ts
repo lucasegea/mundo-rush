@@ -1,4 +1,4 @@
-// F2 A1: A*, colisión círculo-celda y controlador cinemático, sin navegador (03 §2.4).
+// F2 A1: A*, circle-cell collision and kinematic controller, without a browser (03 §2.4).
 import { describe, expect, test } from "vitest";
 import {
   buildWalkGrid, cellAt, cellCenter, circleBlocked, DEFAULT_MOVEMENT, facingFrom, findPath, fixedSteps, gridFromRows,
@@ -6,7 +6,7 @@ import {
   sameIds, segmentClear, SIM_DT, smoothPath, stepBody, type Body, type Cell, type MoveIntent, type WalkGrid,
 } from "../src/index";
 
-// Celdas de 1 m en los dibujos para leerlos fácil (la regla no depende del tamaño de celda).
+// 1 m cells in the drawings to read them easily (the rule does not depend on cell size).
 const grid = (rows: string[]): WalkGrid => gridFromRows(rows, 1);
 const isDiagonal = (a: Cell, b: Cell): boolean => a[0] !== b[0] && a[1] !== b[1];
 
@@ -28,9 +28,9 @@ describe("grilla", () => {
       polygons: [[[0, 0], [1, 0], [1, 1], [0, 1]]],
       rects: [{ minX: 2.9, maxX: 3.1, minZ: 2.9, maxZ: 3.1 }],
     });
-    expect(isWalkable(g, 0, 0)).toBe(false); // centro (0,25; 0,25) adentro del polígono
+    expect(isWalkable(g, 0, 0)).toBe(false); // center (0.25; 0.25) inside the polygon
     expect(isWalkable(g, 2, 0)).toBe(true);
-    // La huella chica toca 4 celdas (las que rodean el punto (3, 3)).
+    // The small footprint touches 4 cells (the ones around the point (3, 3)).
     expect([isWalkable(g, 5, 5), isWalkable(g, 6, 5), isWalkable(g, 5, 6), isWalkable(g, 6, 6)]).toEqual([false, false, false, false]);
     expect(isWalkable(g, 4, 4)).toBe(true);
   });
@@ -77,7 +77,7 @@ describe("A1: A*", () => {
       const a = path[i - 1] as Cell;
       const b = path[i] as Cell;
       if (isDiagonal(a, b)) {
-        // Una diagonal solo si las dos ortogonales que roza están libres.
+        // A diagonal only if the two orthogonals it grazes are free.
         expect(isWalkable(g, b[0], a[1]) && isWalkable(g, a[0], b[1]), `${a} → ${b}`).toBe(true);
       }
       expect(isWalkable(g, b[0], b[1])).toBe(true);
@@ -89,9 +89,9 @@ describe("A1: A*", () => {
       ".#",
       "#.",
     ]);
-    // Las únicas celdas libres solo se tocan por la esquina: no hay camino.
+    // The only free cells touch only at the corner: there is no path.
     expect(findPath(g, [0, 0], [1, 1])).toBeNull();
-    // Con un rodeo posible, lo toma en vez de apretarse.
+    // With a detour possible, it takes it instead of squeezing through.
     const g2 = grid([
       "...",
       ".#.",
@@ -141,9 +141,9 @@ describe("A1: colisión círculo vs. celdas", () => {
 
   test("se desliza sobre la pared al moverse en diagonal contra ella", () => {
     const p = moveCircle(g, { x: 1.5, z: 1.5 }, 1, -0.2, 0.3);
-    expect(p.x).toBeLessThanOrEqual(1.7 + 1e-6); // la x choca con la celda (2,1)
+    expect(p.x).toBeLessThanOrEqual(1.7 + 1e-6); // x hits cell (2,1)
     expect(p.x).toBeGreaterThan(1.69);
-    expect(p.z).toBeCloseTo(1.3, 9); // la z sigue libre: se desliza
+    expect(p.z).toBeCloseTo(1.3, 9); // z stays free: it slides
   });
 
   test("no sale de la grilla (el borde es pared)", () => {
@@ -159,11 +159,11 @@ describe("A1: colisión círculo vs. celdas", () => {
       "..#",
       "...",
     ]);
-    // Desde la celda (2,1) hacia la (1,2): el hueco entre (1,1) y (2,2) es un punto.
+    // From cell (2,1) toward (1,2): the gap between (1,1) and (2,2) is a point.
     const start = { x: 2.5, z: 1.5 };
     const p = moveCircle(d, start, -1.5, 1.5, 0.3);
     expect(circleBlocked(d, p.x, p.z, 0.3)).toBe(false);
-    expect(p.x > 2 - 0.3 && p.z < 2 + 0.3).toBe(true); // sigue del mismo lado
+    expect(p.x > 2 - 0.3 && p.z < 2 + 0.3).toBe(true); // stays on the same side
     expect(segmentClear(d, start, { x: 1.5, z: 2.5 }, 0.3)).toBe(false);
   });
 
@@ -187,7 +187,7 @@ describe("A1: controlador cinemático", () => {
     expect(body.vx).toBeCloseTo(DEFAULT_MOVEMENT.speed, 6);
     expect(body.vz).toBe(0);
     const first = stepBody(open, at(2, 10), { kind: "dir", x: 1, z: 0 }).body;
-    expect(first.vx).toBeCloseTo(DEFAULT_MOVEMENT.accel * SIM_DT, 6); // la aceleración es la del config
+    expect(first.vx).toBeCloseTo(DEFAULT_MOVEMENT.accel * SIM_DT, 6); // the acceleration is the config's
   });
 
   test("al soltar frena con la misma aceleración y queda quieto", () => {
@@ -250,7 +250,7 @@ describe("A1: controlador cinemático", () => {
   test("paso fijo: los pasos no dependen del framerate y el acumulador no se dispara", () => {
     let acc = 0;
     let total = 0;
-    for (let k = 0; k < 60; k++) { // 60 cuadros de 1/60 s = 1 s
+    for (let k = 0; k < 60; k++) { // 60 frames of 1/60 s = 1 s
       const r = fixedSteps(acc, 1 / 60);
       acc = r.accumulator;
       total += r.steps;

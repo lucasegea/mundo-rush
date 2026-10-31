@@ -1,9 +1,9 @@
-// Hooks de accesibilidad del shell: ajustes aplicados al documento y manejo del foco.
+// Accessibility hooks for the shell: settings applied to the document and focus handling.
 import { useEffect, useRef } from "react";
 import { actions } from "../../state/actions";
 import { selectDocumentSettings, selectFocusRequest, useGameView } from "../../state/selectors";
 
-/** Escala del texto, alto contraste y reducir movimiento sobre <html> (un solo valor raíz, 03 §2.6). */
+/** Text scale, high contrast and reduced motion on <html> (a single root value, 03 §2.6). */
 export function useDocumentSettings(): void {
   const view = useGameView(selectDocumentSettings);
   useEffect(() => {
@@ -15,7 +15,7 @@ export function useDocumentSettings(): void {
   }, [view]);
 }
 
-/** Atiende los pedidos de foco del store (al cerrar un panel el foco vuelve a quien lo abrió). */
+/** Handles the store's focus requests (when a panel closes, focus returns to whatever opened it). */
 export function useFocusRequests(): void {
   const request = useGameView(selectFocusRequest);
   useEffect(() => {
@@ -25,7 +25,7 @@ export function useFocusRequests(): void {
   }, [request]);
 }
 
-/** Pone el foco en el elemento al montarse (título de un panel o vista, para que el lector lo diga). */
+/** Focuses the element on mount (title of a panel or view, so the screen reader announces it). */
 export function useFocusOnMount<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   useEffect(() => {

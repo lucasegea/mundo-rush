@@ -1,24 +1,24 @@
-// world/actors/animState.ts — la máquina de animación de los personajes (plan estetica-c M3). Pura (sin three), la
-// testean los tests sin GPU: elige el clip de base por velocidad (idle, caminar, trotar; sentarse si lo piden), el gesto
-// encima por el estado de la escena (el NPC habla: hablar; turno del jugador: escuchar) o por un gesto pedido, cuánto
-// rebote se permite ("reducir movimiento" lo baja a cero) y si se ve la boca. Además, a quién se anima cuando hay más
-// personajes que el tope del tier (los lejanos y los fuera de pantalla quedan congelados).
+// world/actors/animState.ts — the characters' animation state machine (plan estetica-c M3). Pure (no three), the
+// GPU-free tests exercise it: it picks the base clip by speed (idle, walk, trot; sit if asked), the gesture
+// on top by the scene state (the NPC talks: talk; player's turn: listen) or by a requested gesture, how much
+// bounce is allowed ("reduce motion" sets it to zero) and whether the mouth shows. Also, who gets animated when there are more
+// characters than the tier's cap (distant and off-screen ones stay frozen).
 import type { ClipId } from "./clips";
 
-/** Por encima de esto (m/s) camina; por encima de TROT_SPEED trota. */
+/** Above this (m/s) it walks; above TROT_SPEED it trots. */
 export const WALK_SPEED_MIN = 0.15;
 /**
- * El núcleo mueve al jugador a 3,5 m/s y todavía no tiene trote: con esta marca caminar es lo que se ve.
- * M3 SEAM: cuando el núcleo tenga correr (o el guion pida apurarse), su velocidad pasa este umbral y da trotar.
+ * The core moves the player at 3.5 m/s and has no trot yet: with this threshold walking is what shows.
+ * M3 SEAM: when the core has running (or the script asks to hurry), its speed passes this threshold and yields trot.
  */
 export const TROT_SPEED = 4.6;
-/** Velocidad (m/s, a escala del mundo) a la que el clip de caminar de KayKit pisa sin patinar; [operador] la ajusta. */
+/** Speed (m/s, at world scale) at which KayKit's walk clip steps without sliding; [operator] tunes it. */
 export const WALK_CLIP_SPEED = 2.6;
 export const TROT_CLIP_SPEED = 5.2;
 
-/** El papel del personaje en la escena en curso. */
+/** The character's role in the current scene. */
 export type SceneRole = "habla" | "escucha" | null;
-/** Gestos que el diálogo puede pedir (los de una vez y los que duran). */
+/** Gestures the dialogue can request (one-shot ones and the sustained ones). */
 export type GestureId = Extract<ClipId, "saludar" | "asentir" | "negar" | "pensar" | "sorprenderse" | "cargar" | "dar">;
 export type BaseClip = Extract<ClipId, "idle" | "caminar" | "trotar" | "sentarse">;
 
@@ -27,19 +27,19 @@ export interface AnimInput {
   speed: number;
   reduceMotion: boolean;
   scene: SceneRole;
-  /** Gesto pedido (y todavía en curso); gana sobre el de la escena. */
+  /** Requested gesture (and still in progress); wins over the scene's. */
   gesture: GestureId | null;
   seated?: boolean;
 }
 
 export interface AnimChoice {
   base: BaseClip;
-  /** Velocidad de reproducción del clip de base (para que el paso acompañe al desplazamiento). */
+  /** Playback speed of the base clip (so the stride matches the movement). */
   rate: number;
   overlay: GestureId | "hablar" | "escuchar" | null;
-  /** 1 = el rebote del paso y de la respiración; 0 con "reducir movimiento" (la cadera queda a su altura). */
+  /** 1 = the stride and breathing bounce; 0 with "reduce motion" (the hip stays at its height). */
   bounce: number;
-  /** La boca aparece solo al hablar (propuesta C §3). */
+  /** The mouth appears only when talking (proposal C §3). */
   mouth: boolean;
 }
 
@@ -55,23 +55,23 @@ export function chooseAnimation(i: AnimInput): AnimChoice {
   const base = baseFor(i.speed, i.seated);
   const rate = base === "caminar" ? clamp(i.speed / WALK_CLIP_SPEED, 0.6, 1.8) : base === "trotar" ? clamp(i.speed / TROT_CLIP_SPEED, 0.7, 1.6) : 1;
   const moving = base === "caminar" || base === "trotar";
-  // Hablar y escuchar son de quien está quieto en la charla; un gesto pedido se hace igual caminando (saludar al pasar).
+  // Talking and listening belong to whoever stands still in the chat; a requested gesture still happens while walking (waving in passing).
   const sceneOverlay = moving ? null : i.scene === "habla" ? "hablar" : i.scene === "escucha" ? "escuchar" : null;
   return { base, rate, overlay: i.gesture ?? sceneOverlay, bounce: i.reduceMotion ? 0 : 1, mouth: i.scene === "habla" };
 }
 
 export interface AnimCandidate {
   id: string;
-  /** Distancia a la cámara (m). */
+  /** Distance to the camera (m). */
   distance: number;
   onScreen: boolean;
 }
 
 /**
- * Los ids que se animan este cuadro: solo los que están en pantalla, los más cercanos primero, hasta `max`
- * (`maxAnimatedCharacters` del tier). El resto queda congelado en su última pose. Empates por id (estable). Con `only`
- * (plan estetica-c M6, 03 §2.7.4: durante la charla) solo pueden animarse esos ids (el jugador y el NPC de la escena);
- * los de fondo quedan quietos.
+ * The ids animated this frame: only those on screen, closest first, up to `max`
+ * (the tier's `maxAnimatedCharacters`). The rest stay frozen in their last pose. Ties broken by id (stable). With `only`
+ * (plan estetica-c M6, 03 §2.7.4: during the chat) only those ids may animate (the player and the scene's NPC);
+ * background ones stay still.
  */
 export function pickAnimated(entries: readonly AnimCandidate[], max: number, only: ReadonlySet<string> | null = null): Set<string> {
   const visible = entries.filter((e) => e.onScreen && (only === null || only.has(e.id))).sort((a, b) => a.distance - b.distance || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -79,8 +79,8 @@ export function pickAnimated(entries: readonly AnimCandidate[], max: number, onl
 }
 
 /**
- * El filtro `only` de pickAnimated para el cuadro (plan estetica-c M6, 03 §2.7.4): fuera de la charla null (todos
- * compiten por el tope del tier); durante la charla, solo los ids presentes (el jugador y el NPC de la escena).
+ * The `only` filter of pickAnimated for the frame (plan estetica-c M6, 03 §2.7.4): outside the chat null (all
+ * compete for the tier's cap); during the chat, only the ids present (the player and the scene's NPC).
  */
 export function sceneAnimated(inScene: boolean, ids: readonly (string | null)[]): ReadonlySet<string> | null {
   if (!inScene) return null;

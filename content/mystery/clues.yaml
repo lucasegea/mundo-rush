@@ -1,6 +1,6 @@
-# Tabla de pistas de la Región 1 (02 §1.6.3, §6.2.5): lo que cada NPC dice si le preguntás por un sobre.
-# La IA usa SOLO esto (02 §1.6.2). verdad_oculta (02 §1.6.2, D-172, D-177) nunca se inyecta antes del cap. 4
-# ni llega al cliente. npc null = "Otros".
+# Region 1 clue table (02 §1.6.3, §6.2.5): what each NPC says if you ask about an envelope.
+# The AI uses ONLY this (02 §1.6.2). verdad_oculta (02 §1.6.2, D-172, D-177) is never injected before cap. 4
+# nor does it reach the client. npc null = "Others".
 pistas:
   - id: CLUE-INES-1
     npc: NPC-INES

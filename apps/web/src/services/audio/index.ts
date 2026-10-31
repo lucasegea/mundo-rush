@@ -1,7 +1,7 @@
-// services/audio/ — único AudioContext, costura R13 (F5.2): captura por AudioWorklet (PCM16 16 kHz, D-094), cola de
-// reproducción de la voz del NPC, DSP puro en dsp/, máquina de estados del audio y el servicio que los une con el store.
-// El motor del navegador (engine.ts) se carga por import() diferido desde la raíz de composición; acá no se importa
-// para que el worklet no entre en el grafo de los tests ni del chunk inicial.
+// services/audio/ — single AudioContext, R13 seam (F5.2): AudioWorklet capture (PCM16 16 kHz, D-094), NPC voice
+// playback queue, pure DSP in dsp/, audio state machine and the service that ties them to the store.
+// The browser engine (engine.ts) is loaded via deferred import() from the composition root; it is not imported here
+// so that the worklet does not enter the test graph or the initial chunk.
 export { audioTransition, canTalk, type AudioEvent, type AudioState } from "./machine";
 export { createPlaybackQueue, PLAYBACK_LEAD_S, resumeIfSuspended, type PlaybackContext, type PlaybackQueue, type ResumableContext } from "./playback";
 export {

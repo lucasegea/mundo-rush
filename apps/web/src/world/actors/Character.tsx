@@ -1,13 +1,13 @@
-// world/actors/Character.tsx — un personaje en el mundo (plan estetica-c M1 ítem 13 y M3). Se ve con el cuerpo con
-// esqueleto del pipeline (skinned.ts) en cuanto bajan su cuerpo base y los clips; mientras tanto, o si fallan, con el
-// cuerpo de cápsulas de reserva (chibiModel.ts), con la misma cabeza. Cada cuadro, en useFrame y mutando refs (03 §2.3,
-// R7): la pose (posición, giro suave hacia donde mira), la elección de animState.ts (velocidad, papel en la escena,
-// gesto pedido, "reducir movimiento") y, si el gobernador lo deja, el avance de la animación. Deja su lugar en
-// `actorSpots` para la sombra blob y el gobernador. Con `onSelect`, el clic sobre el cuerpo llega por el bridge (F2).
-// Plan estetica-c M5: la apariencia llega por props (la de cada vecino sale de su ficha de contenido). Plan estetica-c M6:
-// `lod` elige el cuerpo completo o el simplificado de `low`. Open-world-3d T7 (AC47): `rig` elige el esqueleto (KayKit o
-// el de Quaternius del mundo abierto) y, con `distanceRules`, un NPC fuera del encuadre o a más de 62 m no se dibuja y a
-// más de 28 m pierde los accesorios (rigs.ts). T10-integrate: el cuerpo con esqueleto se precompila antes de cambiarse.
+// world/actors/Character.tsx — a character in the world (plan estetica-c M1 item 13 and M3). It shows with the skeleton
+// body from the pipeline (skinned.ts) as soon as its base body and clips download; meanwhile, or if they fail, with the
+// fallback capsule body (chibiModel.ts), with the same head. Every frame, in useFrame and mutating refs (03 §2.3,
+// R7): the pose (position, smooth turn toward where it looks), the animState.ts choice (speed, role in the scene,
+// requested gesture, "reduce motion") and, if the governor allows it, the animation advance. It leaves its spot in
+// `actorSpots` for the blob shadow and the governor. With `onSelect`, a click on the body arrives through the bridge (F2).
+// Plan estetica-c M5: the appearance arrives via props (each neighbor's comes from its content sheet). Plan estetica-c M6:
+// `lod` picks the full body or the simplified `low` one. Open-world-3d T7 (AC47): `rig` picks the skeleton (KayKit or
+// the open world's Quaternius one) and, with `distanceRules`, an NPC off-frame or farther than 62 m is not drawn and at
+// more than 28 m loses its accessories (rigs.ts). T10-integrate: the skeleton body is precompiled before being swapped in.
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Frustum, Matrix4, Sphere, Vector3, type Camera, type Object3D } from "three";
@@ -25,37 +25,37 @@ import { buildSkinnedCharacter, disposeSkinnedCharacter, driveCharacter, type Sk
 export interface ActorPose {
   x: number;
   z: number;
-  /** m/s (para el ritmo del paso). */
+  /** m/s (for the stride rhythm). */
   speed: number;
-  /** Hacia dónde mirar (radianes, 0 = +z); null = sigue mirando a donde miraba. */
+  /** Where to look (radians, 0 = +z); null = keep looking where it was looking. */
   yaw: number | null;
 }
 
 interface Props {
   id: string;
   look: CharacterLook;
-  /** La pose de este cuadro; se llama dentro de useFrame. */
+  /** This frame's pose; called inside useFrame. */
   pose: (dtSec: number) => ActorPose;
-  /** "Reducir movimiento": el giro corta en vez de suavizarse y el rebote baja a cero. */
+  /** "Reduce motion": the turn snaps instead of smoothing and the bounce drops to zero. */
   cut: boolean;
-  /** Su papel en la escena en curso (habla, escucha o ninguno). */
+  /** Its role in the current scene (talks, listens or none). */
   scene?: SceneRole;
-  /** Gesto pedido: arranca cuando cambia a no nulo y termina solo (los que duran, mientras se lo pida). */
+  /** Requested gesture: starts when it changes to non-null and ends by itself (sustained ones, while it is requested). */
   gesture?: GestureId | null;
   onSelect?: (e: ThreeEvent<MouseEvent>) => void;
   initialYaw?: number;
-  /** Densidad del tier: el cuerpo completo o el simplificado de `low` (plan estetica-c M6). */
+  /** Tier density: the full body or the simplified `low` one (plan estetica-c M6). */
   lod?: SceneDensity;
   /**
-   * Open-world-3d T7b (D-840): los personajes del look del diorama (esqueleto, juego de accesorios, gorra). Sin él,
-   * KayKit con cabeza por código (los tests y el retrato).
+   * Open-world-3d T7b (D-840): the characters of the diorama look (skeleton, accessory set, cap). Without it,
+   * KayKit with the code-built head (the tests and the portrait).
    */
   cast?: WorldLook["characters"] | null;
-  /** NPC del mundo abierto: se oculta fuera del encuadre o lejos, y sin accesorios de lejos (AC47). */
+  /** Open-world NPC: hidden off-frame or far away, and without accessories from afar (AC47). */
   distanceRules?: boolean;
 }
 
-/** Centro y radio de la esfera del personaje para el encuadre (m, sobre sus pies). */
+/** Center and radius of the character's sphere for framing (m, over its feet). */
 const BOUND_Y = 1;
 const BOUND_R = 1.4;
 const frustum = new Frustum();
@@ -63,7 +63,7 @@ const projView = new Matrix4();
 const sphere = new Sphere();
 const center = new Vector3();
 
-/** Aplica la regla de distancia de un NPC del mundo abierto a su raíz y sus accesorios. */
+/** Applies the distance rule of an open-world NPC to its root and its accessories. */
 function applyDistanceRule(root: Object3D, accessories: readonly Object3D[], camera: Camera): void {
   center.set(root.position.x, root.position.y + BOUND_Y, root.position.z);
   projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -73,9 +73,9 @@ function applyDistanceRule(root: Object3D, accessories: readonly Object3D[], cam
   for (const a of accessories) if (a.userData["hidden"] !== true) a.visible = rule.accessories;
 }
 
-/** Velocidad de referencia del cuerpo de cápsulas (la del jugador del núcleo). */
+/** Reference speed of the capsule body (the core player's). */
 const WALK_SPEED = 3.5;
-/** Duración de "dar algo" (clip de archivo de una vez). */
+/** Duration of "give something" (one-shot archive clip). */
 const FILE_GESTURE_SEC = 1.6;
 
 const seedOf = (id: string): number => {
@@ -87,7 +87,7 @@ const seedOf = (id: string): number => {
 const isProcedural = (g: string): g is ProceduralGesture => (PROCEDURAL_GESTURES as readonly string[]).includes(g);
 
 export function Character({ id, look, pose, cut, scene = null, gesture = null, onSelect, initialYaw = Math.PI / 4, lod = "full", cast = null, distanceRules = false }: Props) {
-  // LK3 (enmienda): el esqueleto sale solo de los personajes del look, nunca de distanceRules, del relieve ni del mundo abierto.
+  // LK3 (amendment): the skeleton comes only from the look's characters, never from distanceRules, the relief or the open world.
   const rig: RigId = actorRig(cast);
   const seed = useMemo(() => seedOf(id), [id]);
   const chibi = useMemo(() => buildChibi(look, seed), [look, seed]);
@@ -104,23 +104,23 @@ export function Character({ id, look, pose, cut, scene = null, gesture = null, o
       .then(async (a) => {
         if (!alive) return;
         const built = buildSkinnedCharacter(a.body, a.clips, look, seed, RIGS[rig], cast);
-        // T10-integrate: el cuerpo se cambia cuando sus programas ya compilaron (mientras, sigue el de cápsulas), así
-        // su primer cuadro no compila en medio del juego. precompile nunca rechaza ni retiene el frameloop.
+        // T10-integrate: the body is swapped in when its programs have already compiled (meanwhile, the capsule one stays), so
+        // its first frame does not compile mid-game. precompile never rejects nor holds back the frameloop.
         await precompile(built.root);
         if (alive) setSkinned(built);
         else disposeSkinnedCharacter(built);
       })
       .catch((err: unknown) => {
-        // Se queda con el cuerpo de cápsulas, pero no en silencio: el aviso nombra el cuerpo que no bajó.
+        // It keeps the capsule body, but not silently: the warning names the body that did not download.
         console.warn(`personaje ${id}: no se pudo cargar el cuerpo "${look.body}", queda el de cápsulas`, err);
       });
     return () => {
       alive = false;
     };
   }, [look, seed, id, lod, rig, cast, precompile]);
-  // Open-world-3d M3 (fuga al cambiar de tier): se libera el cuerpo cuando deja de ser el dibujado, no en la limpieza de
-  // la carga. Liberado ahí, el cuerpo viejo seguía en la escena hasta el próximo commit, three rearmaba su textura de
-  // huesos en ese cuadro y quedaba viva (4 texturas de 16 × 16 por cambio de tier, medido con la sonda).
+  // Open-world-3d M3 (leak on tier change): the body is released when it stops being the drawn one, not in the cleanup of
+  // the load. Released there, the old body stayed in the scene until the next commit, three rebuilt its bone texture in
+  // that frame and it was left alive (4 textures of 16 × 16 per tier change, measured with the probe).
   useEffect(() => () => {
     if (skinned) disposeSkinnedCharacter(skinned);
   }, [skinned]);

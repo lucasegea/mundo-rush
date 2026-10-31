@@ -1,13 +1,13 @@
-# Contención y línea segura (03 §7.7 puntos 3-5; GDD DP-38; D-112: mecanismo en F4.2, textos finales en F13).
-# TODOS LOS TEXTOS SON PROVISORIOS: los revisan especialistas antes de cualquier piloto. Una corrida nunca los pasa a
-# "revisado". Los recursos no traen teléfonos ni direcciones inventados: los completa esa revisión (lista curada por país).
+# Containment and safe line (03 §7.7 points 3-5; GDD DP-38; D-112: mechanism in F4.2, final texts in F13).
+# ALL TEXTS ARE PROVISIONAL: specialists review them before any pilot. A run never moves them to
+# "revisado". The resources carry no invented phone numbers or addresses: that review completes them (list curated by country).
 fuente: "03 §7.7; D-112"
 estado: provisorio
-# Lo que dice el NPC cuando se corta una línea (entrada o salida inaceptable): en la ficción, sin regañar (02 §3.2 S4).
+# What the NPC says when a line is cut (unacceptable input or output): in the fiction, without scolding (02 §3.2 S4).
 linea_segura_en: "Hmm. Let's talk about something else."
-# Línea S3 del prompt base (02 §3.2): el NPC la dice tal cual y la escena se detiene.
+# Line S3 of the base prompt (02 §3.2): the NPC says it verbatim and the scene stops.
 contencion_en: "Let's stop here for a moment. Lumi will help you now."
-# Lo que ve el jugador al entrar en contención: fuera de la ficción, en su idioma, sin preguntas.
+# What the player sees on entering containment: outside the fiction, in their language, without questions.
 contencion_es: "Paramos la escena un momento. Si algo te preocupa o estás en peligro, hablá ahora con un adulto de confianza o con alguien cerca tuyo."
 pais_por_defecto: AR
 recursos:

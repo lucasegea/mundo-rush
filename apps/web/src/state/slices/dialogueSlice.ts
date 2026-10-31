@@ -1,10 +1,10 @@
-// Slice `dialogue` (03 §3.3): la escena abierta tal como la cuenta el servidor (F4.1) y lo que el HUD de diálogo
-// (F4.2) necesita para mostrarla. Lo llena el servicio de escena (services/scene) con los mensajes del protocolo; la UI
-// pide cosas con acciones, que dejan comandos en `outbox` para que el servicio los mande (R5: la red vive en services/).
+// Slice `dialogue` (03 §3.3): the open scene as the server tells it (F4.1) and what the dialogue HUD
+// (F4.2) needs to display it. Filled by the scene service (services/scene) with the protocol messages; the UI
+// asks for things with actions, which leave commands in `outbox` for the service to send (R5: the network lives in services/).
 import type { NpcSpeed } from "@lg/core";
 import type { ClientMessage, ConversationStateMessage, NoticeCause } from "@lg/protocol";
 
-/** Una línea del historial. `template`: id de plantilla de Lumi (su texto sale del contenido, nunca del modelo). */
+/** A history line. `template`: Lumi template id (its text comes from the content, never from the model). */
 export interface DialogueLine {
   id: string;
   speaker: "player" | "LUMI" | "system" | (string & {});
@@ -15,22 +15,22 @@ export interface DialogueLine {
 
 export type SceneConnection = "idle" | "connecting" | "open" | "closed" | "error";
 
-/** Estado del audio del cliente (F5.2): lo calcula la máquina de services/audio/machine.ts. */
+/** Client audio state (F5.2): computed by the services/audio/machine.ts machine. */
 export type AudioState = "off" | "asking" | "noPermission" | "ready" | "listening" | "thinking" | "playing";
-/** Por qué no hay voz del lado del cliente: la escena va por texto con un mensaje claro. */
+/** Why there is no voice on the client side: the scene goes by text with a clear message. */
 export type MicProblem = "denied" | "noDevice" | "unsupported" | "failed";
 
-/** La voz del jugador en el HUD (F5.2). services/audio la escribe por acciones; la UI la lee por selectores. */
+/** The player's voice in the HUD (F5.2). services/audio writes it through actions; the UI reads it through selectors. */
 export interface VoiceUi {
   audio: AudioState;
   micProblem: MicProblem | null;
-  /** Nivel del micrófono 0..1 (medidor de chequeo). */
+  /** Microphone level 0..1 (check meter). */
   level: number;
-  /** Intención del jugador: turno hablado abierto o cerrándose (services/audio manda el fin tras una cola corta). */
+  /** Player intent: spoken turn open or closing (services/audio sends the end after a short tail). */
   talk: "idle" | "talking" | "ending";
-  /** Lo que el servidor va oyendo del turno en curso (transcripción parcial). */
+  /** What the server is hearing of the current turn (partial transcript). */
   heard: string | null;
-  /** Aviso del último turno: el micrófono no captó voz, o el servidor no entendió nada. */
+  /** Notice from the last turn: the microphone picked up no voice, or the server understood nothing. */
   turnHint: "silent" | "unheard" | null;
 }
 
@@ -42,7 +42,7 @@ export interface OutboxItem {
   msg: ClientMessage;
 }
 
-/** Glosario y plantillas de Lumi del contenido compilado del cliente (services/content/lexicon). */
+/** Lumi glossary and templates from the client's compiled content (services/content/lexicon). */
 export interface GlossaryEntryInfo {
   id: string;
   en: string;
@@ -54,25 +54,25 @@ export interface GlossaryEntryInfo {
 
 export interface Lexicon {
   status: "idle" | "loading" | "ready" | "error";
-  /** `glossaryDisplay` del manifiesto compilado (03 §8.3); null hasta cargar. */
+  /** `glossaryDisplay` from the compiled manifest (03 §8.3); null until loaded. */
   glossaryDisplay: "dev" | "release" | "fv" | null;
   glossary: GlossaryEntryInfo[];
-  /** id de plantilla de Lumi → texto es-AR. */
+  /** Lumi template id → es-AR text. */
   lumi: Record<string, string>;
 }
 
-/** A2 (ADR-027): estado de la conversación por medidores tal como lo manda el servidor (sin números: anchos 0..1). */
+/** A2 (ADR-027): meter-based conversation state as the server sends it (no numbers: widths 0..1). */
 export type ConversationUi = Omit<ConversationStateMessage, "type">;
 
 export interface DialogueState {
-  /** Pedido de escena de la UI (`seq` cambia en cada pedido); null = sin escena pedida. */
+  /** Scene request from the UI (`seq` changes on every request); null = no scene requested. */
   request: { seq: number; npcId: string | null } | null;
   connection: SceneConnection;
   sceneRunId: string | null;
   missionId: string | null;
   sceneId: string | null;
   npcId: string | null;
-  /** Estado de la máquina de escena (03 §3.5.1); `idle` sin escena. */
+  /** Scene machine state (03 §3.5.1); `idle` without a scene. */
   state: string;
   turnSubstate: string | null;
   turnIndex: number;
@@ -90,25 +90,25 @@ export interface DialogueState {
   outboxSeq: number;
   blocked: "notIntroduced" | "noScene" | null;
   outcome: SceneOutcome | null;
-  /** Contención (D-112): línea fuera de la ficción + recurso; `provisional` mientras los textos no estén revisados. */
+  /** Containment (D-112): out-of-fiction line + resource; `provisional` while the texts are not reviewed. */
   containment: { line: string; resource: { label: string; detail: string } | null; provisional: boolean } | null;
-  /** Último aviso del servidor que no corta la escena (código del protocolo). */
+  /** Last server notice that does not end the scene (protocol code). */
   notice: string | null;
-  /** Causa estructurada del último `model_unavailable` del NPC (open-world-3d T1); null si el aviso no trajo causa. */
+  /** Structured cause of the NPC's last `model_unavailable` (open-world-3d T1); null if the notice carried no cause. */
   noticeCause: NoticeCause | null;
   lexicon: Lexicon;
-  /** F5.2: voz del jugador (micrófono, turno hablado, medidor). */
+  /** F5.2: player voice (microphone, spoken turn, meter). */
   voice: VoiceUi;
-  /** A2: medidores de la escena de conversación libre (null en las escenas guionadas). */
+  /** A2: free-conversation scene meters (null in scripted scenes). */
   conversation: ConversationUi | null;
 }
 
-/** No se persiste: la escena se reanuda desde su inicio (GDD §2.16). */
+/** Not persisted: the scene resumes from its start (GDD §2.16). */
 export const DIALOGUE_PERSIST = "none" as const;
 
 export const initialLexicon = (): Lexicon => ({ status: "idle", glossaryDisplay: null, glossary: [], lumi: {} });
 
-/** Estado de una escena nueva (conserva el pedido y el léxico ya cargado). */
+/** State of a new scene (keeps the request and the already loaded lexicon). */
 export const freshScene = (d: DialogueState): DialogueState => ({ ...initialDialogue(), request: d.request, lexicon: d.lexicon, outboxSeq: d.outboxSeq });
 
 export const initialDialogue = (): DialogueState => ({

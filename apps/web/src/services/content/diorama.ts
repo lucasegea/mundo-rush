@@ -1,12 +1,12 @@
-// services/content — carga del layout de diorama compilado (content/dioramas/*.yaml → public/content/dioramas.json,
-// F1.2 + F2). El schema ya lo validó al compilar; acá solo se chequea la forma mínima y se entrega al store,
-// donde el núcleo arma la grilla y las capas. Si algo falla, el mapa avisa y el modo solo-diálogo sigue.
+// services/content — loading of the compiled diorama layout (content/dioramas/*.yaml → public/content/dioramas.json,
+// F1.2 + F2). The schema already validated it at compile time; here only the minimal shape is checked and it is handed to the store,
+// where the core builds the grid and the layers. If something fails, the map says so and dialogue-only mode carries on.
 import type { DioramaLayout } from "@lg/core";
 import { browserFetchJson, ContentShapeError, type FetchJson } from "./dialogOnlyCatalog";
 import { universeContentBase } from "./universe";
 
 export const DIORAMAS_FILE = "dioramas.json";
-/** El diorama del mapa en F2 (03 §4.2.1): el de prueba. F3.1 pasa a `muelle`. */
+/** The map's diorama in F2 (03 §4.2.1): the test one. F3.1 switches to `muelle`. */
 export const WORLD_DIORAMA = "test";
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -27,7 +27,7 @@ export interface DioramaSink {
   dioramaFailed(): void;
 }
 
-/** Carga un diorama y lo entrega al store. Devuelve true si cargó. `universeId` namespacea la ruta (S4/D-806). */
+/** Loads a diorama and hands it to the store. Returns true if it loaded. `universeId` namespaces the path (S4/D-806). */
 export async function loadDiorama(sink: DioramaSink, baseUrl: string, id = WORLD_DIORAMA, universeId?: string, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
   sink.dioramaLoading();
   try {

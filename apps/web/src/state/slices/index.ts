@@ -1,4 +1,4 @@
-// state/slices/ — los 9 slices del store (03 §3.3). Los nombres son contrato.
+// state/slices/ — the store's 9 slices (03 §3.3). The names are a contract.
 export * from "./sessionSlice";
 export * from "./settingsSlice";
 export * from "./worldSlice";

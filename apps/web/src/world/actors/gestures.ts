@@ -1,11 +1,11 @@
-// world/actors/gestures.ts — los gestos procedurales del set mínimo de la propuesta C §3 que KayKit Rig_Medium no trae
-// como clip (plan estetica-c M3): hablar, escuchar, saludar, asentir, negar, pensar, sorprenderse y cargar. Puro (sin
-// three): cada gesto da, para un instante, a dónde apuntan algunos huesos del brazo (dirección en el espacio del
-// personaje, que mira a +z, con la izquierda del personaje en +x) y cuánto giran otros en su propio marco (la cabeza
-// de KayKit tiene el marco del personaje en reposo: x asiente, y niega, z inclina). skinned.ts lo aplica encima del
-// clip de base con el peso de la envolvente. Los nombres de hueso son los del glTF (`upperarm.r`).
-// M3 SEAM: si el retargeting de Quaternius UAL 2 a Rig_Medium se valida (manifiesto de clips), un gesto puede pasar a
-// ser un clip de archivo cambiando su fila en clips.ts; la máquina de animación no cambia.
+// world/actors/gestures.ts — the procedural gestures of proposal C §3's minimal set that KayKit Rig_Medium does not ship
+// as a clip (plan estetica-c M3): talk, listen, wave, nod, shake, think, be surprised and carry. Pure (no
+// three): each gesture gives, for an instant, where some arm bones point (direction in the character's
+// space, which faces +z, with the character's left at +x) and how much others rotate in their own frame (KayKit's head
+// has the character's frame at rest: x nods, y shakes, z tilts). skinned.ts applies it on top of the
+// base clip with the envelope weight. Bone names are the glTF ones (`upperarm.r`).
+// M3 SEAM: if the retargeting of Quaternius UAL 2 to Rig_Medium is validated (clip manifest), a gesture can become
+// a file clip by changing its row in clips.ts; the animation machine does not change.
 
 export type Vec3 = readonly [number, number, number];
 
@@ -13,18 +13,18 @@ export const PROCEDURAL_GESTURES = ["hablar", "escuchar", "saludar", "asentir", 
 export type ProceduralGesture = (typeof PROCEDURAL_GESTURES)[number];
 
 export interface GestureSpec {
-  /** Segundos que dura; null = sigue mientras se lo pida (hablar, escuchar, pensar, cargar). */
+  /** Seconds it lasts; null = continues while requested (talk, listen, think, carry). */
   durationSec: number | null;
-  /** Huesos que mueve (los valida el manifiesto contra el esqueleto). */
+  /** Bones it moves (the manifest validates them against the skeleton). */
   bones: readonly string[];
 }
 
 export interface GesturePose {
-  /** Peso de la envolvente, de 0 a 1 (entra en 0,25 s y, si dura, sale en los últimos 0,3 s). */
+  /** Envelope weight, from 0 to 1 (enters in 0.25 s and, if it lasts, exits in the last 0.3 s). */
   weight: number;
-  /** Hueso → dirección a la que apunta (del hueso a su hijo), en el espacio del personaje. */
+  /** Bone → direction it points (from the bone to its child), in the character's space. */
   aim: Readonly<Record<string, Vec3>>;
-  /** Hueso → giro sumado en su propio marco (radianes en x, y, z). */
+  /** Bone → added rotation in its own frame (radians in x, y, z). */
   turn: Readonly<Record<string, Vec3>>;
 }
 
@@ -32,7 +32,7 @@ const FADE_IN = 0.25;
 const FADE_OUT = 0.3;
 const TAU = Math.PI * 2;
 
-/** Espejo izquierda-derecha de una dirección. */
+/** Left-right mirror of a direction. */
 const mirror = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];
 
 export const GESTURES: Readonly<Record<ProceduralGesture, GestureSpec>> = {
@@ -46,7 +46,7 @@ export const GESTURES: Readonly<Record<ProceduralGesture, GestureSpec>> = {
   cargar: { durationSec: null, bones: ["upperarm.l", "lowerarm.l", "upperarm.r", "lowerarm.r"] },
 };
 
-/** Envolvente de un gesto en el segundo `t` desde que empezó. */
+/** Envelope of a gesture at second `t` since it started. */
 export function gestureWeight(spec: GestureSpec, t: number): number {
   if (t < 0) return 0;
   const fadeIn = Math.min(1, t / FADE_IN);
@@ -55,13 +55,13 @@ export function gestureWeight(spec: GestureSpec, t: number): number {
   return Math.min(fadeIn, (spec.durationSec - t) / FADE_OUT, 1);
 }
 
-/** ¿Terminó? (los que duran mientras se los pide nunca terminan solos). */
+/** Finished? (the ones that last while requested never finish by themselves). */
 export const gestureDone = (id: ProceduralGesture, t: number): boolean => {
   const d = GESTURES[id].durationSec;
   return d !== null && t >= d;
 };
 
-/** La pose del gesto `id` a los `t` segundos de empezado. */
+/** The pose of gesture `id` at `t` seconds since it started. */
 export function gesturePose(id: ProceduralGesture, t: number): GesturePose {
   const weight = gestureWeight(GESTURES[id], t);
   const s = (hz: number, phase = 0) => Math.sin(TAU * hz * t + phase);

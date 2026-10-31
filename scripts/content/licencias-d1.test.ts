@@ -1,7 +1,7 @@
-// open-world-3d T2(c) (AC7, D-831): la política D1 de libre uso en el esquema. La lista cerrada exacta; cada licencia
-// libre y su grafía normalizada pasan; no comercial, sin derivadas, compartir igual, GPL/LGPL/AGPL, uso personal,
-// "free" y vacío fallan; las reglas de atribución, de archivo de licencia y de filas generadas; el esquema hermano de
-// código; y todo el registro real (campesino y m7) sigue validando.
+// open-world-3d T2(c) (AC7, D-831): the D1 free-use policy in the schema. The exact closed list; each free
+// license and its normalized spelling pass; non-commercial, no-derivatives, share-alike, GPL/LGPL/AGPL, personal use,
+// "free" and empty fail; the attribution, license-file and generated-row rules; the sibling schema for
+// code; and the whole real registry (farmer universe and m7) still validates.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
@@ -13,14 +13,14 @@ import {
 import type { ArchivoFuente } from "@lg/content-schema";
 import { leerContenido, leerPublicos } from "./build.ts";
 
-/** Copia sin un campo (para probar filas a las que les falta). */
+/** Copy without a field (to test rows that are missing one). */
 const sinCampo = (o: object, campo: string): Record<string, unknown> => Object.fromEntries(Object.entries(o).filter(([k]) => k !== campo));
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const REAL = leerContenido(ROOT);
 const REG = "content/assets-registry.yaml";
 
-/** Una fila de asset válida (la del gallinero, sin campos de pipeline) para variar de a un campo. */
+/** A valid asset row (the henhouse's, without pipeline fields) to vary one field at a time. */
 const base = {
   id: "quaternius-farm-buildings/gallinero",
   archivo: "apps/web/public/models/quaternius-farm-buildings/gallinero.glb",

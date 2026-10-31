@@ -1,2 +1,2 @@
-// camera/ — presets de R11 y escalera de zoom (D-197, D-208), sin render.
+// camera/ — R11 presets and zoom ladder (D-197, D-208), no rendering.
 export * from "./camera";

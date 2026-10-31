@@ -1,22 +1,22 @@
-// scripts/assets/bake-trees.ts: hornea los árboles del mundo abierto (open-world-3d T7, PD-3, D-829, D-830). Corre la
-// copia vendorizada de ez-tree 1.1.0 (tooling/vendor/ez-tree, MIT) en Node, con los presets y semillas fijos del mockup
-// V6 (scripts/assets/tree-presets.ts), para cada especie de TREE_SPECIES de @lg/art en su versión completa y en la
-// liviana (mockup `liteCfg`), y escribe cada árbol con nuestro escritor determinístico (glb-write.ts): una primitiva con
-// POSITION, NORMAL, TEXCOORD_0 y COLOR_0, sin material, sin textura, sin imagen. El cliente nunca corre ez-tree: baja estos
-// .glb (apps/web/public/models/generated/trees/) y los pinta con el material `follaje` (hoja y corteza .ktx2, PD-9).
+// scripts/assets/bake-trees.ts: bakes the open world's trees (open-world-3d T7, PD-3, D-829, D-830). Runs the
+// vendored copy of ez-tree 1.1.0 (tooling/vendor/ez-tree, MIT) in Node, with the mockup V6's fixed presets and seeds
+// (scripts/assets/tree-presets.ts), for each TREE_SPECIES species of @lg/art in its full version and in the
+// light one (mockup `liteCfg`), and writes each tree with our deterministic writer (glb-write.ts): one primitive with
+// POSITION, NORMAL, TEXCOORD_0 and COLOR_0, no material, no texture, no image. The client never runs ez-tree: it downloads these
+// .glb files (apps/web/public/models/generated/trees/) and paints them with the `follaje` material (leaf and bark .ktx2, PD-9).
 //
-// Lo que cambia respecto de la geometría de ez-tree (el puerto de `ezTree()` del mockup, world.js:1272):
-//   · escala al alto de la especie; normales de las hojas hacia afuera de la copa (sombreado suave)
-//   · UV en el atlas del mockup: corteza en (u · 0,5, 0,12) y hojas en (0,75 · u, 0,25 + 0,75 · v); el material de world/
-//     muestrea la corteza abajo de v = 0,25 y la hoja arriba (dos .ktx2, sin componer un lienzo)
-//   · COLOR_0: corteza 0xcdbba4 oscurecida hacia la base, hojas de `low` a `high` por altura con un tinte por hoja; la
-//     ganancia de las hojas (TREE_LEAF_GAIN) la aplica el material, así COLOR_0 queda en [0, 1]
+// What changes with respect to ez-tree's geometry (the port of the mockup's `ezTree()`, world.js:1272):
+//   · scaled to the species height; leaf normals pointing out of the crown (soft shading)
+//   · UV in the mockup's atlas: bark at (u · 0.5, 0.12) and leaves at (0.75 · u, 0.25 + 0.75 · v); world/'s material
+//     samples the bark below v = 0.25 and the leaf above (two .ktx2, without composing a canvas)
+//   · COLOR_0: bark 0xcdbba4 darkened toward the base, leaves from `low` to `high` by height with a tint per leaf; the
+//     leaves' gain (TREE_LEAF_GAIN) is applied by the material, so COLOR_0 stays in [0, 1]
 //
-// ez-tree se carga con import() dinámico por ruta: ningún archivo bajo apps/ o packages/ (ni un import estático de acá)
-// lo nombra, y la regla ADR-026 de eslint (el producto no importa tooling/) sigue sin excepción.
+// ez-tree is loaded with a dynamic import() by path: no file under apps/ or packages/ (nor a static import from here)
+// names it, and eslint's ADR-026 rule (the product does not import tooling/) stays without exception.
 //
-//   node scripts/assets/bake-trees.ts           escribe los .glb que faltan o cambiaron y lista sha256 y triángulos
-//   node scripts/assets/bake-trees.ts --check   hornea en memoria y compara con lo versionado (sale 1 si difiere)
+//   node scripts/assets/bake-trees.ts           writes the missing or changed .glb files and lists sha256 and triangles
+//   node scripts/assets/bake-trees.ts --check   bakes in memory and compares with the versioned files (exits 1 if it differs)
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -44,16 +44,16 @@ async function loadEzTree(root = ROOT): Promise<EzTreeCtor> {
 }
 
 /**
- * Fracción de hojas de la versión liviana. La del mockup es 0,42; con ella el álamo y los dos arbustos quedan en 38 a
- * 42 % de los triángulos de la completa y AC43 pide 35 % como mucho: esos bajan a 0,3 (las hojas restantes crecen en
- * proporción, así la copa cubre lo mismo). Desviación registrada del `liteCfg` del mockup.
+ * Fraction of leaves of the light version. The mockup's is 0.42; with it the poplar and the two shrubs end up at 38 to
+ * 42 % of the full version's triangles and AC43 asks for 35 % at most: those drop to 0.3 (the remaining leaves grow in
+ * proportion, so the crown covers the same). Recorded deviation from the mockup's `liteCfg`.
  */
 export const LIGHT_LEAF_SHARE: Readonly<Record<string, number>> = { aspen: 0.3, bushA: 0.3, bushB: 0.3 };
-/** El álamo tiene 2 hojas por ramita aun así (el mínimo): en su versión liviana el tronco abre 3 ramas en vez de 5 (con 4 queda en 35,5 %). */
+/** The poplar has 2 leaves per twig anyway (the minimum): in its light version the trunk opens 3 branches instead of 5 (with 4 it stays at 35.5 %). */
 export const LIGHT_TRUNK_CHILDREN: Readonly<Record<string, number>> = { aspen: 3 };
 const MOCKUP_LEAF_SHARE = 0.42;
 
-/** La versión liviana del mockup (`liteCfg`): 40 % de las secciones, 3 a 4 lados, 60 % de las ramitas, 42 % de las hojas. */
+/** The mockup's light version (`liteCfg`): 40 % of the sections, 3 to 4 sides, 60 % of the twigs, 42 % of the leaves. */
 export function lightPreset(p: TreePreset, name = ""): TreePreset {
   const share = LIGHT_LEAF_SHARE[name] ?? MOCKUP_LEAF_SHARE;
   const c = structuredClone(p);
@@ -84,7 +84,7 @@ export interface BakedTree {
   vertices: number;
 }
 
-/** Un árbol: la geometría de ez-tree con el preset, pasada a los atributos del pipeline (puerto de `ezTree()`). */
+/** A tree: ez-tree's geometry with the preset, converted to the pipeline's attributes (port of `ezTree()`). */
 export async function bakeTree(species: TreeSpecies, light: boolean, root = ROOT): Promise<BakedTree> {
   const Tree = await loadEzTree(root);
   const base = TREE_PRESETS[species.name];
@@ -114,7 +114,7 @@ export async function bakeTree(species: TreeSpecies, light: boolean, root = ROOT
   const nor = new Float32Array(n * 3);
   const uv = new Float32Array(n * 2);
   const col = new Float32Array(n * 3);
-  // Centro de la copa (promedio de los vértices de hoja, en unidades de ez-tree).
+  // Center of the crown (average of the leaf vertices, in ez-tree units).
   let ccx = 0;
   let ccy = 0;
   let ccz = 0;
@@ -182,7 +182,7 @@ export async function bakeTree(species: TreeSpecies, light: boolean, root = ROOT
   return { species, light, file: treeFile(species, light), preset: species.name + (light ? " (liviano)" : ""), seed: (preset as { seed?: number }).seed ?? 0, glb, triangles: ni / 3, vertices: n };
 }
 
-/** Todos los árboles: cada especie completa y liviana, en el orden de TREE_SPECIES. */
+/** All the trees: each species full and light, in TREE_SPECIES order. */
 export async function bakeAll(root = ROOT): Promise<BakedTree[]> {
   const out: BakedTree[] = [];
   for (const sp of TREE_SPECIES) for (const light of [false, true]) out.push(await bakeTree(sp, light, root));

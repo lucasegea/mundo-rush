@@ -1,9 +1,9 @@
-// scripts/assets/tree-presets.ts: los presets de ez-tree que hornea bake-trees.ts (open-world-3d T7, PD-3). Son los del
-// mockup V6 (`vendor/ez-tree/mockup-presets.js`, afinados a partir de los presets MIT de ez-tree 1.1.0) copiados como dato.
-// Viven acá y no en tooling/vendor/ porque son nuestros (no hay un archivo upstream con su sha256 para una fila del
-// registro de código): desviación registrada del plan, que los nombraba junto a la copia vendorizada.
+// scripts/assets/tree-presets.ts: the ez-tree presets that bake-trees.ts bakes (open-world-3d T7, PD-3). They are the
+// mockup V6's (`vendor/ez-tree/mockup-presets.js`, tuned from ez-tree 1.1.0's MIT presets) copied as data.
+// They live here and not in tooling/vendor/ because they are ours (there is no upstream file with its sha256 for a
+// code registry row): a recorded deviation from the plan, which named them together with the vendored copy.
 
-/** Un preset de ez-tree tal como lo lee `Tree.loadFromJson` (sin tipos propios: ez-tree es JS). */
+/** An ez-tree preset as `Tree.loadFromJson` reads it (no types of our own: ez-tree is JS). */
 export type TreePreset = Record<string, unknown> & {
   branch: Record<string, unknown> & { levels: number; sections: Record<string, number>; segments: Record<string, number>; children: Record<string, number> };
   leaves: Record<string, unknown> & { count: number; size: number };

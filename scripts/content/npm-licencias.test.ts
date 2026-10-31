@@ -1,5 +1,5 @@
-// open-world-3d T2(c) (AC9, D-831): licencias de npm del cierre de producción de apps/web, sobre el lockfile real, más
-// dos lockfiles de mentira (un paquete GPL y un override con hash que no coincide) que fallan nombrando el paquete.
+// open-world-3d T2(c) (AC9, D-831): npm licenses of apps/web's production closure, over the real lockfile, plus
+// two fake lockfiles (a GPL package and an override with a non-matching hash) that fail naming the package.
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,7 +13,7 @@ const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const LOCK = JSON.parse(readFileSync(join(ROOT, "package-lock.json"), "utf8")) as Lock;
 const OVERRIDES = (parse(readFileSync(join(ROOT, "content/npm-licence-overrides.yaml"), "utf8")) as { overrides: Record<string, Override> }).overrides;
 
-/** sha256 del primer LICENSE* del paquete en node_modules. */
+/** sha256 of the package's first LICENSE* in node_modules. */
 const hashLicencia = (clave: string): string | null => {
   for (const nombre of ["LICENSE", "LICENSE.md", "LICENSE.txt", "license", "LICENCE"]) {
     const abs = join(ROOT, clave, nombre);

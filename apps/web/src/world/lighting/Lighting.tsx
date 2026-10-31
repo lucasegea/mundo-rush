@@ -1,11 +1,11 @@
-// Luz del diorama en el look C (propuesta C §5, plan estetica-c M1 ítem 12): hemisférica cielo/suelo + sol cálido a
-// 48° de elevación y -30° de azimut que sigue al objetivo de la cámara. Sombras según el tier (03 §2.7.1): solo `high`
-// proyecta (mapa de 1024 en una caja de 44 × 44 m, solo los personajes la proyectan; terreno y props la reciben); en
-// todos los tiers hay sombras blob (actors/BlobShadows). El fondo y el tono los fija GameCanvas. Desde D-208 la caja de
-// sombra sigue cada cuadro a la distancia ya suavizada de la cámara; desde open-world-3d T5 la niebla (la de la escena y
-// la propia del agua) sigue al t de zoom (PD-5).
-// Plan estetica-c M6: `fogScale` acorta la niebla por tier (la "distancia de dibujo" corta de `low`).
-// Open-world-3d T7b (D-839): la luz (sol, hemisférica) y el rango de la niebla salen del look del diorama (`look`).
+// Diorama light in look C (proposal C §5, plan estetica-c M1 item 12): sky/ground hemispheric + warm sun at
+// 48° elevation and -30° azimuth that follows the camera target. Shadows by tier (03 §2.7.1): only `high`
+// casts (1024 map in a 44 × 44 m box, only the characters cast it; terrain and props receive it); on
+// all tiers there are blob shadows (actors/BlobShadows). The background and tone are set by GameCanvas. Since D-208 the shadow
+// box follows the camera already-smoothed distance each frame; since open-world-3d T5 the fog (the scene and
+// the water own) follows the zoom t (PD-5).
+// Plan estetica-c M6: `fogScale` shortens the fog per tier (the short "draw distance" of `low`).
+// Open-world-3d T7b (D-839): the light (sun, hemispheric) and the fog range come from the diorama look (`look`).
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { Fog, type DirectionalLight } from "three";
@@ -26,8 +26,8 @@ export function Lighting({ shadows, look, fogScale = 1 }: { shadows: ShadowMode;
   const lastFog = useRef({ near: 0, far: 0 });
   const scene = useThree((s) => s.scene);
   const cast = shadows === "directional";
-  // Open-world-3d M3 (fuga al cambiar de tier): three no libera el mapa de sombra cuando `castShadow` se apaga; al bajar
-  // de `high` el mapa de 1024 (y su profundidad) quedaba vivo. Se libera acá y three lo vuelve a crear si se prende.
+  // Open-world-3d M3 (leak on tier change): three does not free the shadow map when `castShadow` is turned off; when dropping
+  // from `high` the 1024 map (and its depth) stayed alive. It is freed here and three recreates it if turned on again.
   useEffect(() => {
     const l = sun.current;
     if (cast || !l?.shadow.map) return;
@@ -53,8 +53,8 @@ export function Lighting({ shadows, look, fogScale = 1 }: { shadows: ShadowMode;
       sc.far = box.far;
       sc.updateProjectionMatrix();
     }
-    // Open-world-3d T5 (PD-5): la niebla sigue al t de zoom ya suavizado (con DEFAULT_LOOK, de 45-250 m de cerca a
-    // 520-1.500 m con el mapa entero), con la escala del tier: `fogFor` de world/sky (AC40) con el rango del look.
+    // Open-world-3d T5 (PD-5): the fog follows the already-smoothed zoom t (with DEFAULT_LOOK, from 45-250 m up close to
+    // 520-1,500 m with the whole map), with the tier scale: `fogFor` of world/sky (AC40) with the look range.
     const fog = fogFor(look.fog.range, fogScale, cameraLook.t);
     const near = Math.round(fog.near);
     const far = Math.round(fog.far);

@@ -1,4 +1,4 @@
-// Ajustes del jugador (slice settings; GDD §2.19): saneo, pasos de texto, sin mutar la entrada.
+// Player settings (settings slice; GDD §2.19): sanitizing, text steps, without mutating the input.
 import { describe, expect, test } from "vitest";
 import {
   applySettingsPatch, DEFAULT_SETTINGS, nearestTextScale, persistableSettings, stepTextScale, TEXT_SCALES,
@@ -53,7 +53,7 @@ describe("applySettingsPatch", () => {
     expect(s.graphics).toEqual(DEFAULT_SETTINGS.graphics);
     expect(s.npcSpeed).toBe(DEFAULT_SETTINGS.npcSpeed);
     expect(s.helpLevel).toBe("auto");
-    // Cambio registrado (open-world-3d T5, PD-5): el default de la cámara pasó de "perspective3D" a "thirdPerson".
+    // Recorded change (open-world-3d T5, PD-5): the camera default went from "perspective3D" to "thirdPerson".
     expect(s.camera).toBe("thirdPerson");
     expect(s.input.endOfTurnMs).toBe(300);
   });

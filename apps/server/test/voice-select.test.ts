@@ -1,6 +1,6 @@
-// F5.1a A4: cambiar `voice.npc.adapter` en models.yaml cambia el adaptador sin tocar código fuera de
-// apps/server/src/providers/. La selección vive en providers/voice.ts; scene-runtime, el gateway y la app solo ven la
-// fábrica del contrato. Sin clave no hay voz (y el motivo no lleva la clave).
+// F5.1a A4: changing `voice.npc.adapter` in models.yaml changes the adapter without touching code outside
+// apps/server/src/providers/. The selection lives in providers/voice.ts; scene-runtime, the gateway and the app only see the
+// contract factory. Without a key there is no voice (and the reason doesn't carry the key).
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
@@ -80,7 +80,7 @@ describe("A4: el adaptador sale de la configuración", () => {
     await viaCascade.session.receive({ type: "scene.start", npcId: "NPC-INES", modality: "voice" });
     expect(viaCascade.session.snapshot.ctx.modality).toBe("text");
     expect(viaCascade.of("scene.notice").map((n) => n.code)).toEqual(["model_unavailable"]);
-    expect(fake.connections).toHaveLength(1); // cascade no tocó Live
+    expect(fake.connections).toHaveLength(1); // cascade didn't touch Live
   });
 
   test("ningún archivo fuera de src/providers/ importa un adaptador concreto", () => {

@@ -1,6 +1,6 @@
-// selectDirectorSnapshot (03 §6.5.2, FD0 A3): arma el DirectorSnapshot leyendo SOLO state/selectors/.
-// Lo que el store no guarda (el recorrido, con quién se habló, las líneas de escenas anteriores) lo acumula
-// un historial puro que avanza con cada estado; el snapshot es estado + historial, sin inventar nada.
+// selectDirectorSnapshot (03 §6.5.2, FD0 A3): builds the DirectorSnapshot reading ONLY state/selectors/.
+// What the store does not keep (the path, who was talked to, the lines of earlier scenes) is accumulated by
+// a pure history that advances with each state; the snapshot is state + history, inventing nothing.
 import { DIALOGUE_CAP, PATH_CAP, type DirectorSnapshot, type RenderStats } from "@lg/protocol/director";
 import {
   selectCurrentDiorama, selectFinalLines, selectFoundations, selectLastPick, selectNearbyIds, selectNetworkIntros,
@@ -15,14 +15,14 @@ export interface DirectorHistory {
   path: { tile: Tile; at: string }[];
   npcsTalked: string[];
   dialogue: Line[];
-  /** Clave de la escena cuyas líneas se están siguiendo y cuántas ya se tomaron. */
+  /** Key of the scene whose lines are being followed and how many were already taken. */
   sceneKey: string | null;
   linesSeen: number;
 }
 
 export const emptyHistory = (): DirectorHistory => ({ path: [], npcsTalked: [], dialogue: [], sceneKey: null, linesSeen: 0 });
 
-/** Una línea final de la escena. Hasta F4 el store no dice quién dijo cada línea: se atribuye a la escena (NPC). */
+/** A final line of the scene. Until F4 the store does not say who said each line: it is attributed to the scene (NPC). */
 export const finalLine = (scene: OpenScene, index: number, text: string): { turnId: string; speaker: string; text: string } => ({
   turnId: `${scene.sceneId ?? scene.npcId ?? "escena"}#${index}`,
   speaker: scene.npcId ?? "desconocido",
@@ -34,8 +34,8 @@ const sameTile = (a: Tile | undefined, b: Tile): boolean => a !== undefined && a
 const keepLast = <T>(list: T[], cap: number): T[] => (list.length > cap ? list.slice(list.length - cap) : list);
 
 /**
- * Avanza el historial con un estado nuevo. Devuelve el MISMO objeto si nada cambió (así el emisor no ve cambios
- * falsos). `path` guarda solo cambios de tile (≤ 500, sale el más viejo); `dialogue`, las últimas 20 líneas finales.
+ * Advances the history with a new state. Returns the SAME object if nothing changed (so the emitter sees no false
+ * changes). `path` keeps only tile changes (≤ 500, the oldest drops out); `dialogue`, the last 20 final lines.
  */
 export function advanceHistory(h: DirectorHistory, s: GameState, at: string): DirectorHistory {
   let next = h;
@@ -65,13 +65,13 @@ export interface SnapshotMeta {
   sessionId: string;
   at: string;
   /**
-   * Plan estetica-c M6: los contadores de renderer.info (world/budget/renderStats, inyectados por boot/dev.ts). Sin la
-   * clave, el snapshot no la lleva; con null, el canvas todavía no dibujó.
+   * Plan estetica-c M6: the renderer.info counters (world/budget/renderStats, injected by boot/dev.ts). Without the
+   * key, the snapshot does not carry it; with null, the canvas has not drawn yet.
    */
   render?: RenderStats | null;
 }
 
-/** El snapshot v1. `build` y `contentErrors` los completa el plugin de desarrollo (los sabe Node, no el cliente). */
+/** The v1 snapshot. `build` and `contentErrors` are filled in by the development plugin (Node knows them, the client does not). */
 export function selectDirectorSnapshot(s: GameState, h: DirectorHistory, meta: SnapshotMeta): DirectorSnapshot {
   const scene = selectOpenScene(s);
   return {

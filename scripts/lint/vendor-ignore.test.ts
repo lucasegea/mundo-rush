@@ -1,6 +1,6 @@
-// open-world-3d T2(d) (AC72, D-830): tooling/vendor/** es código de terceros, fuera del lint y fuera de los workspaces;
-// el resto de tooling sigue linteado (sonda --stdin con un error conocido, lección FD0: la carpeta destino existe).
-// Los atributos de git dejan el código vendorizado y los decodificadores byte a byte, y marcan binarios .ktx2/.wasm/.bin.
+// open-world-3d T2(d) (AC72, D-830): tooling/vendor/** is third-party code, outside lint and outside the workspaces;
+// the rest of tooling is still linted (--stdin probe with a known error, FD0 lesson: the target folder exists).
+// The git attributes leave vendored code and decoders byte for byte, and mark .ktx2/.wasm/.bin as binaries.
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";

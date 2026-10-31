@@ -1,15 +1,15 @@
-// Máquina de estados del audio del cliente (F5.2, 04 F5.2), pura. Turnos lentos: el jugador abre y cierra su turno
-// (mantener "Hablar" o Hablar + "Terminé"); nadie lo interrumpe y él tampoco pisa al NPC (no se puede hablar mientras
-// suena la voz del NPC).
+// Client audio state machine (F5.2, 04 F5.2), pure. Slow turns: the player opens and closes their turn
+// (hold "Talk" or Talk + "Done"); nobody interrupts them and they do not talk over the NPC either (you cannot talk while
+// the NPC voice is playing).
 //
 //   off ──prepare──► asking ──micGranted──► ready ──talkStart──► listening ──talkEnd──► thinking
 //                      └──micDenied──► noPermission         ▲                              │
-//   ready / thinking ──npcAudio──► playing ──drained──► ready ┘    thinking ──turnReturned──┘ (respuesta sin audio)
-//   cualquiera ──micLost──► noPermission · cualquiera ──stop──► off
+//   ready / thinking ──npcAudio──► playing ──drained──► ready ┘    thinking ──turnReturned──┘ (response without audio)
+//   any ──micLost──► noPermission · any ──stop──► off
 //
-// `noPermission` = sin micrófono, permiso denegado o navegador sin captura: la escena va por texto con un mensaje claro.
+// `noPermission` = no microphone, permission denied or browser without capture: the scene goes by text with a clear message.
 
-// El tipo vive en el slice `dialogue` (el store lo guarda y la UI lo lee); la máquina es de services/audio.
+// The type lives in the `dialogue` slice (the store keeps it and the UI reads it); the machine belongs to services/audio.
 import type { AudioState } from "../../state/slices";
 
 export type { AudioState };
@@ -30,12 +30,12 @@ const TABLE: Table = {
   playing: { drained: "ready" },
 };
 
-/** Siguiente estado; un evento que no aplica deja el mismo estado. */
+/** Next state; an event that does not apply leaves the state unchanged. */
 export function audioTransition(state: AudioState, event: AudioEvent): AudioState {
   if (event === "stop") return "off";
   if (event === "micLost") return state === "off" ? "off" : "noPermission";
   return TABLE[state]?.[event] ?? state;
 }
 
-/** Se puede abrir un turno hablado (además, la escena tiene que estar en `playerTurn.waiting`). */
+/** A spoken turn can be opened (in addition, the scene must be in `playerTurn.waiting`). */
 export const canTalk = (state: AudioState): boolean => state === "ready";

@@ -1,8 +1,8 @@
-# Ficha de NPC (02 §3.1, §3.4.11; esquema 02 §6.2.1). persona_prompt: bloque PERSONA (inglés, D-025); solo servidor.
-# A2 (ADR-027): entra para el encuentro de conversación por medidores (M9.1, CONV-HARLAN). Diferencias con 02 §3.4.11,
-# decididas para el encuentro de prueba: sin presentación (el operador llega directo; en el canon lo presenta Nell en
-# P-R1.1) y la persona NO menciona los postes: lo del recado vive en el medidor de objetivo de la ficha de conversación,
-# que entra al prompt recién cuando se llena el medidor de conocerse (el NPC no puede filtrar lo que no tiene).
+# NPC sheet (02 §3.1, §3.4.11; schema 02 §6.2.1). persona_prompt: PERSONA block (English, D-025); server only.
+# A2 (ADR-027): enters for the meter-based conversation encounter (M9.1, CONV-HARLAN). Differences from 02 §3.4.11,
+# decided for the test encounter: no introduction (the operator arrives directly; in the canon Nell introduces him in
+# P-R1.1) and the persona does NOT mention the posts: the errand lives in the goal meter of the conversation sheet,
+# which goes into the prompt only once the getting-to-know meter fills (the NPC cannot leak what it does not have).
 id: NPC-HARLAN
 nombre: "Harlan Moss"
 rol: "Dueño del campo de maíz más grande del valle, junto al albergue de la cuadrilla. Porche con mecedora y un granero rojo enfrente del albergue."
@@ -44,7 +44,7 @@ persona_prompt: |
   Level: A1, short sentences. Follow the LEVEL CARD exactly.
   About the seed envelopes: "Seeds are seeds. Hm." Then look away and talk about the corn. Never confirm anything.
   === END PERSONA ===
-# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
-# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+# Appearance (plan estetica-c M5, proposal C §3): base body, house-1..6 shirt, palette tokens, hairstyle,
+# hat and neck. It used to live in world/actors/looks.ts.
 apariencia: { cuerpo: ancho, remera: casa-2, pantalon: pantalon-2, piel: piel-2, pelo: piedra, peinado: casquete, sombrero: paja, cuello: null, escala: 1 }
 estado: draft

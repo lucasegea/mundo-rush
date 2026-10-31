@@ -1,2 +1,2 @@
-// input/ — acciones semánticas (R10): lo único que el juego ve del input.
+// input/ — semantic actions (R10): the only thing the game sees of input.
 export * from "./semantic";

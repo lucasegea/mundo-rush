@@ -1,5 +1,5 @@
-// Selectores de vista memorizados (R14). Un view-model se recalcula solo si cambió alguna de sus entradas
-// (por identidad), así el hook de React recibe el mismo objeto mientras nada relevante cambie.
+// Memoized view selectors (R14). A view-model is recomputed only if one of its inputs changed
+// (by identity), so the React hook receives the same object while nothing relevant changes.
 import type { GameState } from "../store";
 
 export function createViewSelector<I extends readonly unknown[], R>(

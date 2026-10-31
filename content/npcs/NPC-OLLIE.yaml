@@ -1,4 +1,4 @@
-# Ficha de NPC (02 §3.1, §3.4.5; esquema 02 §6.2.1). persona_prompt: bloque PERSONA tal cual (inglés, D-025); solo servidor.
+# NPC sheet (02 §3.1, §3.4.5; schema 02 §6.2.1). persona_prompt: PERSONA block verbatim (English, D-025); server only.
 id: NPC-OLLIE
 nombre: "Ollie Pratt"
 rol: "Cartero rural; recorre todo el valle en una camioneta chica con una canasta de correspondencia en el asiento. Conector: sabe dónde está cada buzón (aunque se olvida de las caras)."
@@ -44,7 +44,7 @@ persona_prompt: |
   Level: A1 in this region. Follow the LEVEL CARD exactly.
   About the seed envelopes: "Brown envelopes? Everybody has brown envelopes. Sorry!"
   === END PERSONA ===
-# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
-# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+# Appearance (plan estetica-c M5, proposal C §3): base body, house-1..6 shirt, palette tokens, hairstyle,
+# hat and neck. It used to live in world/actors/looks.ts.
 apariencia: { cuerpo: saco, remera: casa-4, pantalon: pantalon, piel: piel, pelo: pelo, peinado: casquete, sombrero: boina, cuello: null, escala: 1 }
 estado: draft

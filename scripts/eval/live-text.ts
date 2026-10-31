@@ -1,9 +1,9 @@
-// Eval EN VIVO de escenas por texto (F4.1; D-027): 5 escenas del prólogo y la Región 1 contra el modelo de texto real
-// de apps/server/config/models.yaml. NO está en `verify` ni en ningún test: llama a una API paga y solo corre con la
-// clave en el entorno (LG_GEMINI_API_KEY, se chequea presencia) Y la autorización explícita `--authorize`.
-// Uso: node scripts/eval/live-text.ts --authorize   (compilar antes: npm run build:content)
-// Imprime los transcriptos por stdout (sin guardarlos: la evidencia va a un store en memoria). Nunca imprime la clave,
-// los prompts ni el nombre del modelo en los transcriptos; el resumen final sí nombra el rol y el modelo usados.
+// LIVE eval of text scenes (F4.1; D-027): 5 scenes of the prologue and Region 1 against the real text model
+// of apps/server/config/models.yaml. It is NOT in `verify` nor in any test: it calls a paid API and only runs with the
+// key in the environment (LG_GEMINI_API_KEY, presence is checked) AND the explicit authorization `--authorize`.
+// Usage: node scripts/eval/live-text.ts --authorize   (compile first: npm run build:content)
+// Prints the transcripts to stdout (without saving them: the evidence goes to an in-memory store). Never prints the key,
+// the prompts or the model name in the transcripts; the final summary does name the role and the model used.
 import { pathToFileURL } from "node:url";
 import {
   createMemoryEvidenceStore, createSceneSession, GENERATED_CONTENT_DIR, loadModelsConfig, readGeneratedContent,
@@ -14,7 +14,7 @@ import type { ServerMessage } from "@lg/protocol";
 export const AUTHORIZE_FLAG = "--authorize";
 export const KEY_VAR = "LG_GEMINI_API_KEY";
 
-/** Las 5 escenas, en orden (cada una habilita la siguiente por sus `requiere`). Turnos del jugador guionados. */
+/** The 5 scenes, in order (each enables the next through its `requiere`). Scripted player turns. */
 export const EVAL_SCENES: readonly { npcId: string | null; turns: readonly string[] }[] = [
   { npcId: "NPC-INES", turns: ["Hello!", "I'm Nico."] },
   { npcId: null, turns: ["What's this?", "Lamp."] },
@@ -25,7 +25,7 @@ export const EVAL_SCENES: readonly { npcId: string | null; turns: readonly strin
 
 export type Gate = { ok: true } | { ok: false; reason: string };
 
-/** Las dos llaves de D-027: la bandera explícita y la clave presente. Sin las dos no se llama a nada. */
+/** D-027's two keys: the explicit flag and the key present. Without both nothing is called. */
 export function liveEvalGate(argv: readonly string[], env: Record<string, string | undefined>): Gate {
   if (!argv.includes(AUTHORIZE_FLAG)) {
     return { ok: false, reason: `eval en vivo: llama a una API paga; corré con ${AUTHORIZE_FLAG} para autorizarla (D-027).` };

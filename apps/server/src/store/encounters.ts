@@ -1,9 +1,9 @@
-// EncounterStore (A2, ADR-027): estado de cada encuentro de conversación por medidores (lo que el jugador ya sabe del
-// NPC, cuánto se llenó cada medidor) y los reinicios de desarrollo de misiones. Interfaz + memoria (tests y
-// LG_FAKE_MODELS) + archivo JSON (apps/server/data/encounters.json, gitignored). Es uno de los lugares de apps/server que
-// escriben a disco (lint, D-108): solo texto, nunca audio.
-// El archivo se lee en cada consulta (sin caché): el script de reinicio (scripts/dev/reset-encounter.ts) lo edita con el
-// servidor andando y la próxima escena ya lo ve. La escritura es atómica (archivo temporal + rename).
+// EncounterStore (A2, ADR-027): state of each meters conversation encounter (what the player already knows about the
+// NPC, how full each meter is) and the missions' development resets. Interface + memory (tests and
+// LG_FAKE_MODELS) + JSON file (apps/server/data/encounters.json, gitignored). It is one of the places in apps/server that
+// write to disk (lint, D-108): text only, never audio.
+// The file is read on every query (no cache): the reset script (scripts/dev/reset-encounter.ts) edits it while the
+// server is running and the next scene already sees it. The write is atomic (temp file + rename).
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,13 +14,13 @@ export const DEFAULT_ENCOUNTERS_PATH = fileURLToPath(new URL("../../data/encount
 export interface MissionResetRecord {
   readonly accountId: string;
   readonly missionId: string;
-  /** ISO 8601: la evidencia de la misión fechada hasta acá (incluido) deja de contar. */
+  /** ISO 8601: the mission's evidence dated up to here (inclusive) stops counting. */
   readonly at: string;
 }
 
 export interface EncounterFile {
   readonly version: 1;
-  /** accountId → id de la ficha (CONV-*) → estado guardado del encuentro (forma de @lg/core EncounterState). */
+  /** accountId → sheet id (CONV-*) → saved encounter state (shape of @lg/core EncounterState). */
   readonly encounters: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly resets: readonly MissionResetRecord[];
 }
@@ -28,7 +28,7 @@ export interface EncounterFile {
 export interface EncounterStore {
   get(accountId: string, encounterId: string): unknown;
   put(accountId: string, encounterId: string, state: unknown): void;
-  /** Borra el estado del encuentro. true si había algo. */
+  /** Deletes the encounter state. true if there was anything. */
   remove(accountId: string, encounterId: string): boolean;
   resets(accountId: string): MissionResetRecord[];
   addReset(reset: MissionResetRecord): void;
@@ -36,7 +36,7 @@ export interface EncounterStore {
 
 const empty = (): EncounterFile => ({ version: 1, encounters: {}, resets: [] });
 
-/** Lee el archivo; si no existe o está roto, vacío (un archivo corrupto nunca tira la escena). */
+/** Reads the file; if it doesn't exist or is broken, empty (a corrupt file never brings the scene down). */
 export function readEncounterFile(path: string): EncounterFile {
   if (!existsSync(path)) return empty();
   try {

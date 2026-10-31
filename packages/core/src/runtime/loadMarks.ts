@@ -1,37 +1,37 @@
-// runtime/loadMarks.ts — marcas de carga del mundo (open-world-3d T10 (d), D-835, AC63). La sonda (`perf:probe --build`)
-// mide `lg:world-first-frame` menos `lg:world-enter`. Reglas puras sobre una Performance inyectada (sin DOM acá):
-// cada marca va una sola vez por página, y la del primer cuadro solo después de la de entrada (el orden es el contrato
-// de la medida: un primer cuadro sin clic no es una carga medible).
+// runtime/loadMarks.ts — world load marks (open-world-3d T10 (d), D-835, AC63). The probe (`perf:probe --build`)
+// measures `lg:world-first-frame` minus `lg:world-enter`. Pure rules over an injected Performance (no DOM here):
+// each mark goes once per page, and the first-frame one only after the entry one (the order is the contract
+// of the measurement: a first frame without a click is not a measurable load).
 
 export const LOAD_MARKS = {
-  /** El clic en "Explorar el mapa" del menú. */
+  /** The click on "Explorar el mapa" in the menu. */
   worldEnter: "lg:world-enter",
-  /** El primer cuadro del mundo, con los sombreadores ya compilados (compileAsync antes). */
+  /** The world's first frame, with the shaders already compiled (compileAsync beforehand). */
   worldFirstFrame: "lg:world-first-frame",
 } as const;
 
-/** Lo mínimo de `performance` que usan las marcas. */
+/** The minimum of `performance` that the marks use. */
 export interface MarkSink {
   mark(name: string, options?: { detail?: unknown }): unknown;
   getEntriesByName(name: string): ArrayLike<unknown>;
 }
 
-/** Lo que lleva la marca del primer cuadro (la sonda lo lee de `detail`). */
+/** What the first-frame mark carries (the probe reads it from `detail`). */
 export interface FirstFrameDetail {
-  /** `renderer.info.programs.length` después del primer cuadro. */
+  /** `renderer.info.programs.length` after the first frame. */
   programs: number;
 }
 
 const marked = (perf: MarkSink, name: string): boolean => perf.getEntriesByName(name).length > 0;
 
-/** Marca la entrada al mundo (una vez por página). Devuelve si marcó. Sin `performance`, nada. */
+/** Marks entry into the world (once per page). Returns whether it marked. Without `performance`, nothing. */
 export function markWorldEnter(perf: MarkSink | undefined): boolean {
   if (!perf || marked(perf, LOAD_MARKS.worldEnter)) return false;
   perf.mark(LOAD_MARKS.worldEnter);
   return true;
 }
 
-/** Marca el primer cuadro del mundo: una vez, y solo si ya hubo entrada. Devuelve si marcó. */
+/** Marks the world's first frame: once, and only if there was already an entry. Returns whether it marked. */
 export function markWorldFirstFrame(perf: MarkSink | undefined, detail: FirstFrameDetail): boolean {
   if (!perf || !marked(perf, LOAD_MARKS.worldEnter) || marked(perf, LOAD_MARKS.worldFirstFrame)) return false;
   perf.mark(LOAD_MARKS.worldFirstFrame, { detail });

@@ -7,7 +7,7 @@ import {
   type LoggedEvent,
 } from "../src/index";
 
-// Eventos de prueba con ids inventados (sin datos personales).
+// Test events with made-up ids (no personal data).
 type Ev =
   | { readonly type: "pocion"; readonly tercios: number }
   | { readonly type: "nota"; readonly texto: string; readonly tags: readonly string[] };

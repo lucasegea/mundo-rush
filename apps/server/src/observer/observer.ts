@@ -1,8 +1,8 @@
-// Observador v0 (03 §5.6-§5.7, ADR-008): llamada de texto separada del NPC que devuelve JSON validado contra
-// ObserverResult (@lg/protocol). Salida inválida → 1 reintento → resultado de error; nunca un criterio inventado: los
-// ids que no existen en la escena se descartan después (core/scene/criteria) y acá solo pasa lo que valida.
-// F5.1a: en una escena de voz recibe además el clip de audio del turno (D-095), de solo lectura; lo arma y lo libera
-// scene-runtime. El audio viaja en el pedido al modelo y el observador no se queda con él.
+// Observer v0 (03 §5.6-§5.7, ADR-008): a text call separate from the NPC that returns JSON validated against
+// ObserverResult (@lg/protocol). Invalid output → 1 retry → error result; never an invented criterion: ids
+// that don't exist in the scene are discarded afterwards (core/scene/criteria) and only what validates gets through here.
+// F5.1a: in a voice scene it also receives the turn's audio clip (D-095), read-only; scene-runtime builds and releases it.
+// The audio travels in the request to the model and the observer does not keep it.
 import { ObserverResultSchema, type ObserverResult } from "@lg/protocol";
 import type { TextModelProvider } from "../providers/text.ts";
 import type { TurnClipView } from "../scene-runtime/turn-clip.ts";
@@ -12,10 +12,10 @@ export interface ObserverInput {
   playerText: string;
   lastNpcLine: string | null;
   criteria: readonly { id: string; texto: string }[];
-  /** Estructuras objetivo de la misión (ids que la evidencia puede citar). */
+  /** Target structures of the mission (ids the evidence may cite). */
   structures: readonly string[];
   cefrBand: string;
-  /** Clip del turno (voz). null o ausente en texto. */
+  /** Turn clip (voice). null or absent in text. */
   audio?: TurnClipView | null;
 }
 
@@ -25,7 +25,7 @@ export type ObserverOutcome =
 
 export const OBSERVER_MAX_ATTEMPTS = 2;
 
-/** Prompt del observador: fuera de la ficción, JSON forzado. Solo servidor. */
+/** Observer prompt: outside the fiction, forced JSON. Server only. */
 export function observerPrompt(input: ObserverInput): string {
   return [
     "You are the OBSERVER of a language-learning scene. You are not in the story and never talk to the player.",
@@ -44,7 +44,7 @@ export function observerPrompt(input: ObserverInput): string {
 const observerTurn = (input: ObserverInput): string =>
   [input.lastNpcLine ? `NPC said: ${input.lastNpcLine}` : "NPC said: (nothing yet)", `Player said: ${input.playerText}`].join("\n");
 
-/** Valida el texto del modelo: JSON completo, esquema estricto y el turnId pedido. */
+/** Validates the model's text: complete JSON, strict schema and the requested turnId. */
 export function parseObserverOutput(text: string, turnId: string): { ok: true; result: ObserverResult } | { ok: false; reason: string } {
   let json: unknown;
   try {
@@ -63,7 +63,7 @@ export async function runObserver(model: TextModelProvider, input: ObserverInput
   let reason = "sin intentos";
   for (let attempt = 1; attempt <= OBSERVER_MAX_ATTEMPTS; attempt++) {
     try {
-      // El clip se lee en el momento del pedido (una copia); si ya se liberó, el turno se evalúa solo con el texto.
+      // The clip is read at request time (a copy); if it was already released, the turn is evaluated with the text only.
       const audio = input.audio && !input.audio.released ? { pcm16: input.audio.pcm16(), sampleRate: input.audio.sampleRate } : null;
       const res = await model.generate({
         system: observerPrompt(input), turns: [{ role: "user", text: observerTurn(input) }],

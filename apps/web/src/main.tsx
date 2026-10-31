@@ -1,4 +1,4 @@
-// Raíz de composición (03 §4.2.1, P0 T1): estilos, store, servicios (boot/) y shell.
+// Composition root (03 §4.2.1, P0 T1): styles, store, services (boot/) and shell.
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/tokens.css";
@@ -12,18 +12,18 @@ import { browserSceneConnector } from "./services/scene/connector";
 import { actions } from "./state/actions";
 import { gameStore } from "./state/store";
 
-// F5.2: voz por defecto; `?voz=0` en la URL fuerza el modo texto (diagnóstico). El motor de audio (único AudioContext,
-// R13) se carga diferido con la primera escena: no entra al chunk inicial.
+// F5.2: voice by default; `?voz=0` in the URL forces text mode (diagnostics). The audio engine (single AudioContext,
+// R13) is loaded deferred with the first scene: it does not enter the initial chunk.
 const voiceOn = new URLSearchParams(window.location.search).get("voz") !== "0";
 const audio = voiceOn
   ? { createEngine: () => import("./services/audio/engine").then((m) => m.createBrowserAudioEngine()) }
   : undefined;
 
-// S4/D-806: `?universe=<id>` elige el universo a jugar (dev:play lo arma con el mismo id que LG_UNIVERSE del servidor).
-// Sin el param, el cliente juega la campesino (el árbol de contenido legacy), verbatim.
+// S4/D-806: `?universe=<id>` picks the universe to play (dev:play builds it with the same id as the server's LG_UNIVERSE).
+// Without the param, the client plays the farmer universe (the legacy content tree), verbatim.
 const universeId = universeFromSearch(window.location.search);
 
-// Modo captura: H oculta la interfaz (services/input/photoMode.ts).
+// Capture mode: H hides the interface (services/input/photoMode.ts).
 installPhotoModeToggle(window, document.documentElement);
 
 const container = document.getElementById("root");
@@ -42,7 +42,7 @@ if (container) {
     baseUrl: import.meta.env.BASE_URL,
     ...(universeId ? { universeId } : {}),
     world: { inputTarget: window },
-    // F4.2: el servidor de escenas por el mismo origen (Vite hace de proxy a apps/server en dev y en preview).
+    // F4.2: the scene server through the same origin (Vite proxies to apps/server in dev and in preview).
     scene: {
       connector: browserSceneConnector({
         httpBase: window.location.origin,

@@ -1,7 +1,7 @@
-// Gateway de escena (03 §4.2 gateway/, §5.3, D-158): POST /scene-token emite un token de un solo uso (modo operador:
-// sin login, cuenta `op-local`) y el WebSocket /scene?token=… abre una sesión de escena con él. F5.1a: los frames
-// binarios son audio PCM16 (ADR-017, framing en @lg/protocol): los del cliente van a la sesión (`not_voice` si la escena
-// no está en voz) y la voz del NPC sale como frames binarios. Los errores HTTP usan el sobre { ok: false, error }.
+// Scene gateway (03 §4.2 gateway/, §5.3, D-158): POST /scene-token issues a single-use token (operator mode:
+// no login, `op-local` account) and the WebSocket /scene?token=… opens a scene session with it. F5.1a: binary
+// frames are PCM16 audio (ADR-017, framing in @lg/protocol): the client's go to the session (`not_voice` if the scene
+// is not in voice) and the NPC's voice goes out as binary frames. HTTP errors use the { ok: false, error } envelope.
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
@@ -15,7 +15,7 @@ export const TOKEN_TTL_MS = 60_000;
 
 export interface TokenRegistry {
   issue(): string;
-  /** true una sola vez por token, y solo antes de vencer. */
+  /** true only once per token, and only before it expires. */
   consume(token: string): boolean;
 }
 
@@ -37,7 +37,7 @@ export function createTokenRegistry(clock: Clock, ttlMs = TOKEN_TTL_MS, newToken
   };
 }
 
-/** Rutas HTTP de escena. Sin modo operador responden 403 con el sobre de error. */
+/** HTTP scene routes. Without operator mode they answer 403 with the error envelope. */
 export function sceneRoutes(tokens: TokenRegistry, operatorMode: boolean): Routes {
   return {
     [SCENE_TOKEN_PATH]: {
@@ -50,14 +50,14 @@ export function sceneRoutes(tokens: TokenRegistry, operatorMode: boolean): Route
   };
 }
 
-/** Rechazo del upgrade con el mismo sobre JSON que el resto del servidor. */
+/** Upgrade rejection with the same JSON envelope as the rest of the server. */
 function refuse(socket: Duplex, status: number, code: "unauthorized" | "forbidden" | "not_found", message: string): void {
   const body = JSON.stringify({ ok: false, error: { code, message } });
   const reason = status === 401 ? "Unauthorized" : status === 403 ? "Forbidden" : "Not Found";
   socket.end(`HTTP/1.1 ${status} ${reason}\r\ncontent-type: application/json; charset=utf-8\r\ncontent-length: ${Buffer.byteLength(body)}\r\ncache-control: no-store\r\nconnection: close\r\n\r\n${body}`);
 }
 
-/** Frame binario → PCM16 little-endian (un byte suelto al final se descarta). */
+/** Binary frame → PCM16 little-endian (a stray trailing byte is dropped). */
 export function pcm16FromFrame(data: RawData): Int16Array {
   const buf = Array.isArray(data) ? Buffer.concat(data) : Buffer.isBuffer(data) ? data : Buffer.from(data);
   const out = new Int16Array(Math.floor(buf.byteLength / 2));
@@ -68,11 +68,11 @@ export function pcm16FromFrame(data: RawData): Int16Array {
 export interface GatewayOptions {
   tokens: TokenRegistry;
   operatorMode: boolean;
-  /** Crea la sesión de escena de una conexión; `send` manda un mensaje del protocolo y `sendAudio`, la voz del NPC. */
+  /** Creates the scene session for a connection; `send` sends a protocol message and `sendAudio`, the NPC's voice. */
   openSession(send: (msg: ServerMessage) => void, sendAudio: (pcm16: Int16Array) => void): SceneSession;
 }
 
-/** Engancha el WebSocket de escena al servidor HTTP. Devuelve el cierre. */
+/** Hooks the scene WebSocket into the HTTP server. Returns the close function. */
 export function attachSceneGateway(server: Server, opts: GatewayOptions): { close(): void } {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   const onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
@@ -91,7 +91,7 @@ export function attachSceneGateway(server: Server, opts: GatewayOptions): { clos
       if (ws.readyState === ws.OPEN) ws.send(Buffer.from(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength), { binary: true });
     };
     const session = opts.openSession(out, audioOut);
-    // Los mensajes de una conexión se procesan en orden.
+    // A connection's messages are processed in order.
     let chain = Promise.resolve();
     ws.on("message", (data: RawData, isBinary: boolean) => {
       chain = chain.then(async () => {

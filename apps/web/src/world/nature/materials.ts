@@ -1,16 +1,16 @@
-// world/nature/materials.ts — los materiales de árboles, rocas y detalle del mundo abierto (open-world-3d T7, D-828,
-// AC71), port de los de mockup V6 (`world.js` toon, leafMat, instFx). Toda la naturaleza comparte cuatro uniforms (la
-// posición del jugador `uPl`, los radios de LOD `uLod`, el reloj y la amplitud del viento) y cada material es una banda
-// de distancia con el relevo tramado de @lg/art (`bandLimits`, ±BAND_DITHER m): una instancia está en dos bandas a la vez
-// solo en ese relevo, y el tramado decide qué píxel pinta cada una. Cada variante tiene su `customProgramCacheKey`.
-//   · `follaje` (hojas y corteza de los árboles horneados, helechos y flores): la hoja de la .ktx2 donde uv.y >= 0,25
-//     (el lugar de la hoja en el atlas del mockup) y la corteza debajo, en un solo material y una sola llamada por
-//     especie y banda (desviación registrada: el plan pedía la corteza en variantes toon; así entran los topes de AC71)
-//   · `toon` (rocas cerca y lejos con el atlas 2 × 2 de los escaneos, piedritas con moteado)
-//   · `impostor` (uno por especie horneada, su textura es el horneado de impostor.ts)
-//   · `sombra-blob` (el contacto oscuro bajo troncos y rocas)
-// Open-world-3d T7b (D-842): la ganancia de la hoja es del look y entra como uniform (`uLeafGain`), no como texto del
-// sombreador: dos looks dan los mismos programas.
+// world/nature/materials.ts — the materials of trees, rocks and detail of the open world (open-world-3d T7, D-828,
+// AC71), port of the V6 mockup ones (`world.js` toon, leafMat, instFx). All nature shares four uniforms (the
+// player position `uPl`, the LOD radii `uLod`, the clock and the wind amplitude) and each material is a distance
+// band with the dithered handoff from @lg/art (`bandLimits`, ±BAND_DITHER m): an instance is in two bands at once
+// only in that handoff, and the dither decides which pixel each paints. Each variant has its `customProgramCacheKey`.
+//   · `follaje` (leaves and bark of the baked trees, ferns and flowers): the .ktx2 leaf where uv.y >= 0.25
+//     (the leaf place in the mockup atlas) and the bark below, in a single material and a single call per
+//     species and band (registered deviation: the plan asked for the bark in toon variants; this way the AC71 caps fit)
+//   · `toon` (rocks near and far with the 2 × 2 atlas of the scans, pebbles with speckle)
+//   · `impostor` (one per baked species, its texture is the impostor.ts bake)
+//   · `sombra-blob` (the dark contact under trunks and rocks)
+// Open-world-3d T7b (D-842): the leaf gain belongs to the look and enters as a uniform (`uLeafGain`), not as shader
+// text: two looks give the same programs.
 import {
   DataTexture, DoubleSide, FrontSide, LinearFilter, MeshBasicMaterial, MeshToonMaterial, RedFormat, RGBAFormat, SRGBColorSpace,
   Vector2, type Material, type Texture,
@@ -19,13 +19,13 @@ import { BAND_DITHER, CARD_FADE, type ShaderBand } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
 import { NOISE_GLSL } from "../terrain/groundMaterial";
 
-/** Los uniforms compartidos por toda la naturaleza de una escena. */
+/** The uniforms shared by all the nature of a scene. */
 export interface NatureUniforms {
   uPl: { value: Vector2 };
   uLod: { value: Vector2 };
   uSwayT: { value: number };
   uSwayA: { value: number };
-  /** La ganancia de la hoja del look (`WorldLook.vegetation.leafGain`). */
+  /** The look leaf gain (`WorldLook.vegetation.leafGain`). */
   uLeafGain: { value: number };
 }
 
@@ -37,7 +37,7 @@ export const natureUniforms = (full: number, mid: number, leafGain: number): Nat
   uLeafGain: { value: leafGain },
 });
 
-/** Bordes de cada banda contra uLod = (completo, liviano), como en el mockup (`BAND`). */
+/** Edges of each band against uLod = (full, light), as in the mockup (`BAND`). */
 const BAND_GLSL: Readonly<Record<ShaderBand, readonly [string, string]>> = {
   near: ["-1e4", "uLod.x"],
   mid: ["uLod.x", "uLod.y"],
@@ -47,7 +47,7 @@ const BAND_GLSL: Readonly<Record<ShaderBand, readonly [string, string]>> = {
 };
 const D = BAND_DITHER.toFixed(1);
 
-/** Descarte tramado de la banda (ruido de gradiente intercalado, sin textura): el relevo de ±BAND_DITHER m. */
+/** Dithered discard of the band (interleaved gradient noise, no texture): the ±BAND_DITHER m handoff. */
 export const bandDiscard = (band: ShaderBand): string => {
   const [a, b] = BAND_GLSL[band];
   return `
@@ -55,11 +55,11 @@ export const bandDiscard = (band: ShaderBand): string => {
   if (ign >= smoothstep(${a} - ${D}, ${a} + ${D}, vDistP) || ign < smoothstep(${b} - ${D}, ${b} + ${D}, vDistP)) discard;`;
 };
 
-/** Fundido de tarjeta (AC44, @lg/art `cardFade` y `CARD_FADE`): |cos| de `face` a `edge` se trama hasta desaparecer. */
+/** Card fade (AC44, @lg/art `cardFade` and `CARD_FADE`): |cos| from `face` to `edge` is dithered until it disappears. */
 export const FACE_FADE_GLSL = `
   if (fract(52.9829189 * fract(dot(gl_FragCoord.xy + 7.0, vec2(0.06711056, 0.00583715)))) >= smoothstep(${CARD_FADE.edge.toFixed(3)}, ${CARD_FADE.face.toFixed(3)}, vFace)) discard;`;
 
-/** Distancia de la instancia al jugador (y vaivén por altura si `sway`). Sin instancias, 0 (el horneado). */
+/** Distance from the instance to the player (and sway by height if `sway`). Without instances, 0 (the bake). */
 const vertexBand = (sway: boolean): string => `#include <begin_vertex>
   #ifdef USE_INSTANCING
     vDistP = distance(instanceMatrix[3].xz, uPl);
@@ -73,8 +73,8 @@ const vertexBand = (sway: boolean): string => `#include <begin_vertex>
   transformed.z += cos(uSwayT * 0.95 + swPh * 1.3) * 0.04 * swK;` : ""}`;
 
 /**
- * La rampa suave del follaje y las rocas (mockup `softRampTexture`): de 0,5 a 1 con un smoothstep, sin las bandas duras
- * del toon de los personajes (en el bosque las bandas se leían como manchas). Una por módulo: 64 px, nunca se libera.
+ * The soft ramp of foliage and rocks (mockup `softRampTexture`): from 0.5 to 1 with a smoothstep, without the hard bands
+ * of the characters toon (in the forest the bands read as blotches). One per module: 64 px, never freed.
  */
 let ramp: DataTexture | null = null;
 export const softRamp = (): DataTexture => {
@@ -92,7 +92,7 @@ export const softRamp = (): DataTexture => {
   return ramp;
 };
 
-/** Un 1 × 1 de espera (blanco opaco) mientras la .ktx2 no llegó. */
+/** A 1 × 1 placeholder (opaque white) while the .ktx2 has not arrived. */
 export const placeholderTexture = (): DataTexture => {
   const t = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, RGBAFormat);
   t.colorSpace = SRGBColorSpace;
@@ -105,11 +105,11 @@ interface Patch {
   sway?: boolean;
   mottle?: boolean;
   faceFade?: boolean;
-  /** Hoja (uv.y >= 0,25, con ganancia) y corteza (`uBark`) del atlas de los árboles. */
+  /** Leaf (uv.y >= 0.25, with gain) and bark (`uBark`) of the tree atlas. */
   foliage?: { bark: { value: Texture } };
 }
 
-/** El parche de sombreador de la naturaleza sobre un material de three (toon o básico). */
+/** The nature shader patch over a three material (toon or basic). */
 function patch<M extends Material>(m: M, u: NatureUniforms, o: Patch, key: string): M {
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, { uPl: u.uPl, uLod: u.uLod, uSwayT: u.uSwayT, uSwayA: u.uSwayA });
@@ -136,7 +136,7 @@ function patch<M extends Material>(m: M, u: NatureUniforms, o: Patch, key: strin
       ${o.mottle ? `varying vec3 vPosO;\n${NOISE_GLSL}` : ""}${o.faceFade ? "varying float vFace;" : ""}
       ${o.foliage ? "uniform sampler2D uBark; uniform float uLeafGain;" : ""}`);
     if (o.foliage) {
-      // La hoja va en uv.y de 0,25 a 1 (arriba de la imagen en 1) y el .ktx2 no se da vuelta: v de la hoja = 1 - ...
+      // The leaf lives at uv.y from 0.25 to 1 (top of the image at 1) and the .ktx2 is not flipped: leaf v = 1 - ...
       fs = fs.replace("#include <map_fragment>", `
         #ifdef USE_MAP
           leafW = step(0.25, vMapUv.y);
@@ -158,7 +158,7 @@ function patch<M extends Material>(m: M, u: NatureUniforms, o: Patch, key: strin
   return m;
 }
 
-/** Los mapas de la naturaleza (difusos sRGB; la normal de roca, lineal). Llegan después: hasta entonces, espera. */
+/** The nature maps (sRGB diffuse; the rock normal, linear). They arrive later: until then, placeholder. */
 export interface NatureMaps {
   leaf: { value: Texture };
   bark: { value: Texture };
@@ -167,40 +167,40 @@ export interface NatureMaps {
 }
 
 /**
- * El follaje de los árboles horneados y los helechos: una variante por banda (`near`, `mid`, `nearMid`), o `null` para
- * el horneado de impostores (sin banda, fuera de la escena). Doble cara, recorte alfa 0,5, vaivén y moteado.
+ * The foliage of the baked trees and the ferns: one variant per band (`near`, `mid`, `nearMid`), or `null` for
+ * the impostor bake (no band, out of the scene). Double-sided, alpha cutoff 0.5, sway and speckle.
  */
 export function foliageMaterial(u: NatureUniforms, maps: NatureMaps, band: ShaderBand | null): MeshToonMaterial {
   const m = new MeshToonMaterial({ vertexColors: true, gradientMap: softRamp(), side: DoubleSide, map: maps.leaf.value, alphaTest: 0.5 });
   return tagMaterial(patch(m, u, { band, sway: band !== null, mottle: true, foliage: { bark: maps.bark } }, `follaje-${band ?? "horneado"}`), "follaje");
 }
 
-/** Las flores (su propia textura de lienzo, AC: arte propio): follaje de banda `nearMid` con vaivén. */
+/** The flowers (their own canvas texture, AC: own art): `nearMid` band foliage with sway. */
 export function flowerMaterial(u: NatureUniforms, map: Texture): MeshToonMaterial {
   const m = new MeshToonMaterial({ gradientMap: softRamp(), side: DoubleSide, map, alphaTest: 0.5 });
   return tagMaterial(patch(m, u, { band: "nearMid", sway: true }, "follaje-flores"), "follaje");
 }
 
-/** Las rocas: el atlas de los escaneos con la normal (solo `near` y si el tier la usa). Clase `toon`. */
+/** The rocks: the scan atlas with the normal (`near` only and if the tier uses it). Class `toon`. */
 export function rockMaterial(u: NatureUniforms, maps: NatureMaps, band: "near" | "midFar", normals: boolean): MeshToonMaterial {
   const m = new MeshToonMaterial({ vertexColors: true, gradientMap: softRamp(), side: FrontSide, map: maps.rockDiff.value });
   if (normals) m.normalMap = maps.rockNor.value;
   return tagMaterial(patch(m, u, { band }, `roca-${band}${normals ? "-n" : ""}`), "toon");
 }
 
-/** Las piedritas: color por vértice moteado, banda `nearMid`. Clase `toon`. */
+/** The pebbles: speckled vertex color, `nearMid` band. Class `toon`. */
 export function pebbleMaterial(u: NatureUniforms): MeshToonMaterial {
   const m = new MeshToonMaterial({ vertexColors: true, gradientMap: softRamp() });
   return tagMaterial(patch(m, u, { band: "nearMid", mottle: true }, "piedritas"), "toon");
 }
 
-/** El impostor de una especie: tarjetas con su horneado, banda `far` y fundido de canto (AC44). */
+/** A species impostor: cards with its bake, `far` band and edge fade (AC44). */
 export function impostorMaterial(u: NatureUniforms, species: string): MeshBasicMaterial {
   const m = new MeshBasicMaterial({ alphaTest: 0.5, side: DoubleSide });
   return tagMaterial(patch(m, u, { band: "far", faceFade: true }, `impostor-${species}`), "impostor");
 }
 
-/** El contacto oscuro bajo troncos y rocas (mockup `aoMesh`): un quad por instancia, sin escribir profundidad. */
+/** The dark contact under trunks and rocks (mockup `aoMesh`): one quad per instance, not writing depth. */
 export function contactShadowMaterial(map: Texture): MeshBasicMaterial {
   return tagMaterial(new MeshBasicMaterial({
     map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,

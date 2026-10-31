@@ -1,5 +1,5 @@
-// open-world-3d T2(g) (D-833, AC58): lo puro de scripts/dev/perf-probe.ts. La corrida real abre Chromium en la GPU y va
-// a pedido, fuera de verify (como la caminata).
+// open-world-3d T2(g) (D-833, AC58): the pure parts of scripts/dev/perf-probe.ts. The real run opens Chromium on the GPU and goes
+// on demand, outside verify (like the walk).
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { glArgs } from "./gl-mode.ts";
@@ -22,7 +22,7 @@ describe("perf-probe: argumentos", () => {
     expect(parseProbeArgs(["--gl=igpu", "--tier=low", "--pose=spawn", "--label=T3", "--build"], {}))
       .toEqual({ gl: "igpu", tiers: ["low"], poses: ["spawn"], label: "T3", build: true, failOnPurpose: false, factors: [] });
   });
-  // Open-world-3d T10 (b): factores de medición de desarrollo (el registro es el de la página; acá solo la forma).
+  // Open-world-3d T10 (b): development measurement factors (the registry is the page's; here only the shape).
   test("--factor: coma o repetido, sin repetir; etiqueta por defecto con los factores; no con --build", () => {
     const a = parseProbeArgs(["--tier=medium", "--factor=grass-off,dpr-1.0", "--factor=grass-off", "--factor=post-off"], {});
     expect(a.factors).toEqual(["grass-off", "dpr-1.0", "post-off"]);
@@ -70,15 +70,15 @@ describe("perf-probe: medida", () => {
   test("sin tope: las banderas de Chromium quitan vsync y el tope de cuadros", () => {
     expect(glArgs("gpu", { uncapped: true })).toEqual(expect.arrayContaining(["--disable-gpu-vsync", "--disable-frame-rate-limit", "--force_high_performance_gpu"]));
   });
-  // Cambio registrado (open-world-3d T5, PD-5): antes «al cierre de M1 solo spawn está disponible» y close/mid/full
-  // daban false; con el zoom continuo de thirdPerson las tres poses existen (t = 0, 0,5 y 1). Cambio registrado (T6):
-  // hilltop daba false hasta el mapa grande; ahora existe (la pose con nombre HILLTOP).
+  // Recorded change (open-world-3d T5, PD-5): before «at M1's close only spawn is available» and close/mid/full
+  // gave false; with thirdPerson's continuous zoom the three poses exist (t = 0, 0.5 and 1). Recorded change (T6):
+  // hilltop gave false until the big map; now it exists (the named pose HILLTOP).
   test("con T6 todas las poses están disponibles, hilltop incluida", () => {
     for (const p of ["spawn", "close", "mid", "full", "hilltop"] as const) expect(poseAvailable(p)).toBe(true);
     expect(POSE_ZOOM_T).toEqual({ spawn: "default", close: 0, mid: 0.5, full: 1 });
   });
   test("hilltop: los tres NPCs del muelle caen dentro del FOV horizontal de 16:9 mirando con su yaw", () => {
-    // La vista mira hacia (-sin yaw, -cos yaw) (world/camera/zoom.ts: yaw 0 = cámara del lado +z mirando a -z).
+    // The view looks toward (-sin yaw, -cos yaw) (world/camera/zoom.ts: yaw 0 = camera on the +z side looking at -z).
     const yaw = (HILLTOP.yawDeg * Math.PI) / 180;
     const vx = -Math.sin(yaw);
     const vz = -Math.cos(yaw);

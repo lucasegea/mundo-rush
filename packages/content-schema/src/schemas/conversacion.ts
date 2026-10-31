@@ -1,13 +1,13 @@
-// Ficha de conversación de un NPC (ADR-027; informe de investigación 2.5.C). La "cárcel blanda" del NPC en conversación libre:
-// persona extra, hechos por nivel de intimidad, lo que el jugador puede contar de SU PERSONAJE, secretos con condición,
-// medidores en orden (conocerse → objetivo) y la escalera de ayuda. Solo llega al servidor: el inglés (`*_en`) arma el
-// prompt del NPC y del juez; el español (`*_es`) es lo que el HUD muestra (llega al cliente por el protocolo).
-// Lo del objetivo (recado, objeciones) entra al prompt del NPC RECIÉN cuando el medidor de conocerse se llena.
+// Conversation sheet of an NPC (ADR-027; the research report 2.5.C). The NPC's "soft cage" in free conversation:
+// extra persona, facts by intimacy tier, what the player can tell about THEIR CHARACTER, secrets with a condition,
+// meters in order (getting to know each other → goal) and the help ladder. It only reaches the server: the English (`*_en`) builds the
+// NPC and judge prompt; the Spanish (`*_es`) is what the HUD shows (it reaches the client through the protocol).
+// The goal material (errand, objections) enters the NPC prompt ONLY when the getting-to-know meter fills.
 import { z } from "zod";
 import { idOf, NpcId, SaberId } from "../ids.ts";
 import { EstadoRevision } from "./common.ts";
 
-/** Actos del juez que un paso del objetivo puede pedir (= DIALOGUE_ACTS de @lg/core, que content-schema no importa). */
+/** Judge acts that a goal step can ask for (= DIALOGUE_ACTS of @lg/core, which content-schema does not import). */
 export const ACTOS_PASO = ["states_errand", "polite_request", "gives_reason", "empathy_reaction", "self_disclosure"] as const;
 
 const IdLocal = z.string().regex(/^[a-z][a-z0-9_]*$/, { message: "id local en snake_case" });
@@ -17,26 +17,26 @@ const Frases = z.array(Texto).max(6);
 export const HechoNpc = z.strictObject({
   id: IdLocal,
   nivel: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  /** Cómo lo sabe el NPC (inglés, va al prompt). */
+  /** How the NPC knows it (English, goes to the prompt). */
   valor_en: Texto,
-  /** Lo que el HUD muestra en "Lo que sabés de…". */
+  /** What the HUD shows in "Lo que sabés de…". */
   etiqueta_es: Texto,
 });
 
 export const DatoJugador = z.strictObject({
   id: IdLocal,
-  /** Qué cuenta el jugador de su personaje (inglés, para el juez). Nunca datos reales. */
+  /** What the player tells about their character (English, for the judge). Never real data. */
   descripcion_en: Texto,
   etiqueta_es: Texto,
 });
 
 export const Secreto = z.strictObject({
   id: IdLocal,
-  /** Qué hace el NPC si le preguntan antes de tiempo (inglés, siempre en el prompt). */
+  /** What the NPC does if asked ahead of time (English, always in the prompt). */
   desvio_en: Texto,
-  /** null: nunca se revela en esta ficha. Si no, se revela con el medidor llenado al menos `llenado_min`. */
+  /** null: never revealed in this sheet. Otherwise, revealed with the meter filled to at least `llenado_min`. */
   revela_si: z.strictObject({ medidor: IdLocal, llenado_min: z.number().min(0).max(1) }).nullable(),
-  /** Lo que puede decir cuando la condición se cumple (solo entonces entra al prompt). */
+  /** What it can say when the condition is met (only then does it enter the prompt). */
   revela_en: Texto.nullable(),
 }).refine((s) => (s.revela_si === null) === (s.revela_en === null), {
   message: "revela_si y revela_en van juntos (o los dos null)", path: ["revela_en"],
@@ -70,9 +70,9 @@ export const MedidorRapport = z.strictObject({
 
 export const Objecion = z.strictObject({
   id: IdLocal,
-  /** Lo que al NPC le preocupa o quiere saber (inglés, prompt del NPC y del juez). */
+  /** What worries the NPC or what it wants to know (English, NPC and judge prompt). */
   npc_en: Texto,
-  /** Qué la resuelve (inglés, para el juez). */
+  /** What resolves it (English, for the judge). */
   la_resuelve_en: Texto,
 });
 
@@ -86,17 +86,17 @@ export const PasoObjetivo = z.strictObject({
   frases_en: Frases,
 });
 
-/** pedir y convencer tienen puntuador; negociar queda reservado (el servidor lo rechaza claro hasta tenerlo). */
+/** pedir and convencer have a scorer; negociar stays reserved (the server rejects it clearly until it has one). */
 export const MedidorObjetivo = z.strictObject({
   tipo: z.enum(["pedir", "convencer", "negociar"]),
   id: IdLocal,
   etiqueta_es: Texto,
   pista_es: Texto.nullable(),
-  /** Lo que el jugador vino a buscar, contado al NPC (inglés). NO entra al prompt antes de esta fase. */
+  /** What the player came looking for, told to the NPC (English). Does NOT enter the prompt before this phase. */
   tema_en: Texto,
-  /** Lo que el NPC quiere en esta parte (inglés). */
+  /** What the NPC wants in this part (English). */
   lo_que_el_npc_quiere_en: Texto,
-  /** Cómo abre el NPC el tema al empezar esta fase (el PUENTE, en sus palabras; inglés). */
+  /** How the NPC opens the topic at the start of this phase (the BRIDGE, in its own words; English). */
   puente_en: Texto,
   objeciones: z.array(Objecion),
   pasos: z.array(PasoObjetivo).min(1),
@@ -111,14 +111,14 @@ export const MedidorObjetivo = z.strictObject({
 export const FichaConversacion = z.strictObject({
   id: idOf("conversacion"),
   npc: NpcId,
-  /** Cómo se comporta en conversación libre, además de su persona (inglés, solo servidor). */
+  /** How it behaves in free conversation, besides its persona (English, server only). */
   persona_extra_en: Texto,
-  /** Estado del mundo que el NPC conoce (inglés): evita que invente (informe 2.4). */
+  /** World state the NPC knows (English): keeps it from making things up (report 2.4). */
   mundo_en: Texto,
   hechos: z.array(HechoNpc).min(1),
   jugador: z.array(DatoJugador).min(1),
   secretos: z.array(Secreto),
-  /** En orden: el primero arranca activo; al llenarse se abre el siguiente. Primero, el de conocerse. */
+  /** In order: the first starts active; when it fills, the next opens. First, the getting-to-know one. */
   medidores: z.tuple([MedidorRapport, MedidorObjetivo]),
   ayuda: z.strictObject({
     conocer: z.strictObject({ pista_es: Texto, frases_por_nivel: z.strictObject({ "1": Frases, "2": Frases, "3": Frases }) }),
@@ -127,14 +127,14 @@ export const FichaConversacion = z.strictObject({
     l1: z.strictObject({ pista_es: Texto }),
     dato_real: z.strictObject({ pista_es: Texto }),
   }),
-  /** Turnos sin progreso para la pista (escalón 1) y para las frases sugeridas (escalón 2). */
+  /** Turns without progress for the hint (step 1) and for the suggested phrases (step 2). */
   ayuda_tras_turnos: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
-  /** Ejemplos calibrados para el juez (turnos de aprendices con su etiqueta correcta, informe 2.3). */
+  /** Calibrated examples for the judge (learner turns with their correct label, report 2.3). */
   ejemplos_juez: z.array(z.strictObject({ jugador: Texto, npc: Texto, etiquetas: Texto })).max(15),
-  // book-mode slice-1 (D-803): nombra el `saber` que el medidor de objetivo (pedir/convencer) representa, para que
-  //   un fixture pueda afirmar qué deducción cierra esta conversación (AC11). `.optional()` INSIDE el strictObject
-  //   (D-801): la campesino la omite. NO es un tipo de conversación nuevo (ADR-027 sigue); el estado terminal es el
-  //   medidor de objetivo llenándose, y este campo solo lo *nombra*. M4 SEAM: el gate exige que resuelva a un saber.
+  // book-mode slice-1 (D-803): names the `saber` that the goal meter (pedir/convencer) represents, so that
+  //   a fixture can assert which deduction closes this conversation (AC11). `.optional()` INSIDE the strictObject
+  //   (D-801): the farmer universe omits it. It is NOT a new conversation type (ADR-027 still holds); the terminal state is
+  //   the goal meter filling, and this field only *names* it. M4 SEAM: the gate requires that it resolve to a saber.
   deduccion_objetivo: SaberId.optional(),
   estado: EstadoRevision,
 }).superRefine((f, ctx) => {

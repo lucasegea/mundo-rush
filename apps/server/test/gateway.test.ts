@@ -1,5 +1,5 @@
-// F4.1 A4 + gateway: el servidor real (HTTP + WebSocket) con modelos falsos. Inspección del protocolo: ningún byte
-// que llega al cliente lleva texto de prompt, nombre de modelo o clave; todo frame valida contra el esquema estricto.
+// F4.1 A4 + gateway: the real server (HTTP + WebSocket) with fake models. Protocol inspection: no byte
+// that reaches the client carries prompt text, a model name or a key; every frame validates against the strict schema.
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, test } from "vitest";
 import { WebSocket } from "ws";
@@ -15,7 +15,7 @@ import { voiceProviderFromConfig } from "../src/providers/voice.ts";
 import type { VoiceProviderFactory } from "../src/providers/types.ts";
 import { startFakeLiveServer, type FakeLiveServer } from "./fakes/live-server.ts";
 
-/** Valor de clave falso: si aparece en cualquier frame, se filtró. */
+/** Fake key value: if it appears in any frame, it leaked. */
 const FAKE_KEY = "lg-test-key-0123456789abcdef";
 
 let game: GameServer | null = null;
@@ -48,7 +48,7 @@ async function start(operator: boolean, voice?: VoiceProviderFactory | null) {
 
 interface Client {
   frames: string[];
-  /** Frames binarios (voz del NPC). */
+  /** Binary frames (NPC voice). */
   binary: Buffer[];
   messages: ServerMessage[];
   socket: WebSocket;
@@ -101,7 +101,7 @@ async function token(http: string): Promise<TokenReply> {
   return { status: res.status, raw, body: JSON.parse(raw) as TokenReply["body"] };
 }
 
-/** Rechazo del upgrade: status y cuerpo crudo de la respuesta HTTP. */
+/** Upgrade rejection: status and raw body of the HTTP response. */
 function upgradeRefusal(url: string): Promise<{ status: number; body: string }> {
   return new Promise((done, reject) => {
     const socket = new WebSocket(url);
@@ -179,7 +179,7 @@ describe("A4: inspección del protocolo", () => {
     const { http, ws, npc, observer } = await start(true);
     const t = await token(http);
     const client = await connect(wsUrl(ws, t));
-    // Recorrido por todos los caminos de salida: pasar el turno (nota [DIRECTOR]), turno con respuesta, cierre, bloqueo.
+    // Walk through all the exit paths: pass the turn ([DIRECTOR] note), turn with reply, closing, block.
     client.send({ type: "scene.start", npcId: "NPC-INES" });
     await client.until((m) => m.type === "scene.state" && m.state === "playerTurn");
     client.send({ type: "turn.pass" });
@@ -188,7 +188,7 @@ describe("A4: inspección del protocolo", () => {
     await client.until((m) => m.type === "scene.state" && m.sub === "waiting" && m.turnIndex === 1);
     client.send({ type: "turn.text", text: "Hi, I'm Nico." });
     await client.until((m) => m.type === "scene.end");
-    client.send({ type: "scene.start", npcId: "NPC-NELL" }); // no presentada: línea guionada
+    client.send({ type: "scene.start", npcId: "NPC-NELL" }); // not introduced: scripted line
     await client.until((m) => m.type === "scene.blocked");
 
     const wire = [t.raw, ...client.frames].join("\n");
@@ -198,7 +198,7 @@ describe("A4: inspección del protocolo", () => {
     const systems = [...npc.calls, ...observer.calls].map((c) => c.system);
     expect(npc.calls.length).toBeGreaterThanOrEqual(1);
     expect(observer.calls.length).toBeGreaterThanOrEqual(1);
-    // Cada línea larga de cada prompt de sistema que recibió un modelo: ninguna cruza el cable.
+    // Every long line of every system prompt that a model received: none crosses the wire.
     const promptChunks = systems.flatMap((s) => s.split("\n").map((l) => l.trim()).filter((l) => l.length >= 24));
     expect(promptChunks.length).toBeGreaterThan(20);
     expect(promptChunks.filter((chunk) => wire.includes(chunk))).toEqual([]);
@@ -241,13 +241,13 @@ describe("F5.1a A6: inspección del protocolo en una escena de voz (Live contra 
     await client.until((m) => m.type === "scene.end");
 
     expect(client.messages.find((m) => m.type === "scene.opened")).toMatchObject({ modality: "voice" });
-    // La sesión Live existió del lado del servidor: recibió el setup armado por el servidor, con la clave en su URL.
+    // The Live session existed on the server side: it received the setup built by the server, with the key in its URL.
     const conn = fake.connections[0];
     const setup = conn?.received.find((m) => "setup" in m)?.["setup"] as { systemInstruction: { parts: { text: string }[] } } | undefined;
     const instruction = setup?.systemInstruction.parts[0]?.text ?? "";
     expect(instruction.length).toBeGreaterThan(200);
     expect(conn?.url).toContain("key=");
-    expect(client.binary.length).toBeGreaterThan(0); // la voz del NPC llegó como frames binarios
+    expect(client.binary.length).toBeGreaterThan(0); // the NPC's voice arrived as binary frames
 
     const wire = [t.raw, ...client.frames, ...client.binary.map((b) => b.toString("latin1"))].join("\n");
     const lowerWire = wire.toLowerCase();

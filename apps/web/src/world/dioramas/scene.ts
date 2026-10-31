@@ -1,22 +1,22 @@
-// world/dioramas/scene.ts — el grafo estático del diorama en el look C (plan estetica-c M1), armado sin GPU: terreno por
-// alturas, agua, props por constructor (uno por malla; los repetidos como InstancedMesh, una llamada por tipo, tamaño y
-// tinte), árboles y pinos (los del layout y los del borde), detalle instanciado y las anclas de sombra blob de los
-// troncos. Diorama.tsx lo monta tal cual; el estimador de presupuesto (A15) y el auditor de materiales (A4) miden ESTE
-// mismo grafo, así lo medido es lo dibujado. Plan estetica-c M5: lee el formato de la maqueta (caminos y ríos por
-// curvas, agua por polígonos, detalle por zonas, props con giro y tinte); desde M7 es el único formato (D-207).
-// Plan estetica-c M6: se arma con la densidad del tier (DENSITY de @lg/art): en `low`, terreno más grueso, props y
-// árboles de geometría reducida, menos pinos en la falda y una de cada tres instancias de detalle; el estimador de
-// validate:content cuenta con la misma tabla.
-// Open-world-3d T6 (D-819, D-823): un diorama con `terreno.relieve` es el mundo abierto: terreno en baldosas con el
-// sombreador del suelo (clase `terreno`) y el paso del tier, un selector del suelo que hace raycast sobre la malla (el
-// clic camina sobre el relieve), props y árboles apoyados en `heightAt` (bases 0,1 m abajo) y el cielo (cúpula y nubes)
-// dentro del grafo, así el estimador y el auditor lo cuentan. Sin relieve, todo sigue como en estetica-c.
-// Open-world-3d T7: con relieve, los árboles, las rocas y el detalle salen de `diorama.vegetation` (el sembrado del mockup
-// V6 que también bloquea la grilla) por world/nature; los pinos del borde por código quedan para los dioramas sin relieve.
-// Open-world-3d T8: con relieve, world/terrain arma la textura de altura y tierra y el pasto V6 la recibe (PD-2); su cama
-// mueve el uniform `grassBed` del suelo.
-// Open-world-3d T7b (D-839): la escena se arma con el look del diorama (`look`, resuelto una vez por lookForDiorama) y lo
-// guarda en `scene.look`: terreno, suelo, cielo, agua y naturaleza lo leen de ahí; el relieve decide solo la forma.
+// world/dioramas/scene.ts — the diorama's static graph in look C (plan estetica-c M1), built without GPU: terrain by
+// heights, water, props by builder (one per mesh; repeated ones as InstancedMesh, one call per type, size and
+// tint), trees and pines (the layout's and the edge's), instanced detail and the blob shadow anchors of the
+// trunks. Diorama.tsx mounts it as is; the budget estimator (A15) and the material auditor (A4) measure THIS
+// same graph, so what is measured is what is drawn. Plan estetica-c M5: reads the diorama format (paths and rivers by
+// curves, water by polygons, detail by zones, props with rotation and tint); since M7 it is the only format (D-207).
+// Plan estetica-c M6: it is built with the tier's density (DENSITY from @lg/art): on `low`, coarser terrain, props and
+// trees of reduced geometry, fewer pines on the skirt and one in three detail instances; the
+// validate:content estimator counts with the same table.
+// Open-world-3d T6 (D-819, D-823): a diorama with `terreno.relieve` is the open world: tiled terrain with the
+// ground shader (class `terreno`) and the tier's step, a ground picker that raycasts on the mesh (the
+// click walks over the relief), props and trees resting on `heightAt` (bases 0.1 m down) and the sky (dome and clouds)
+// inside the graph, so the estimator and the auditor count it. Without relief, everything stays as in estetica-c.
+// Open-world-3d T7: with relief, trees, rocks and detail come from `diorama.vegetation` (the V6 mockup's seeding
+// that also blocks the grid) via world/nature; the code-built edge pines remain for dioramas without relief.
+// Open-world-3d T8: with relief, world/terrain builds the height and dirt texture and the V6 grass receives it (PD-2); its bed
+// moves the ground's `grassBed` uniform.
+// Open-world-3d T7b (D-839): the scene is built with the diorama's look (`look`, resolved once by lookForDiorama) and
+// stores it in `scene.look`: terrain, ground, sky, water and nature read it from there; the relief decides only the shape.
 import {
   Box3, BufferAttribute, BufferGeometry, Group, InstancedMesh, Matrix4, Mesh, Object3D, PlaneGeometry, Quaternion, Sphere, Vector3,
   type Intersection, type Raycaster,
@@ -44,9 +44,9 @@ import { buildGrass, type Grass } from "../nature/grass";
 import { heightDirtTexture, type HeightDirtMap } from "../terrain/heightTexture";
 import { lookForDiorama } from "./look";
 
-/** Altura del plano de agua (el terreno se hunde debajo). */
+/** Height of the water plane (the terrain sinks below it). */
 export const WATER_LEVEL = -0.15;
-/** Open-world-3d T6 (D-819): los actores van 0,02 m sobre `heightAt`; las bases de props y árboles, 0,1 m abajo. */
+/** Open-world-3d T6 (D-819): actors go 0.02 m above `heightAt`; the bases of props and trees, 0.1 m below. */
 export const ACTOR_LIFT = 0.02;
 export const PROP_SINK = 0.1;
 
@@ -57,27 +57,27 @@ export interface BlobAnchor {
 }
 
 export interface DioramaScene {
-  /** Open-world-3d T7b: el look con el que se armó (los personajes toman de acá su esqueleto, D-840). */
+  /** Open-world-3d T7b: the look it was built with (characters take their skeleton from here, D-840). */
   look: WorldLook;
   root: Group;
   terrain: Terrain;
-  /** Lo que puede tapar el plano de a dos (A8). */
+  /** What can block the two-person shot (A8). */
   obstacles: Obstacle[];
-  /** Sombras blob fijas (troncos), además de las de los personajes. */
+  /** Fixed blob shadows (trunks), besides the characters'. */
   blobAnchors: BlobAnchor[];
-  /** Props `modelo/*` (glTF del pipeline de M2): se cargan aparte y entran en su caja `tam`. */
+  /** `modelo/*` props (glTF from the M2 pipeline): loaded separately and fit into their `tam` box. */
   models: ModelSlot[];
-  /** Open-world-3d T6: el material del suelo (sus mapas .ktx2 los baja Diorama con el renderer); null sin relieve. */
+  /** Open-world-3d T6: the ground material (its .ktx2 maps are downloaded by Diorama with the renderer); null without relief. */
   ground: GroundMaterial | null;
-  /** El cielo del mundo abierto (cúpula y nubes, ya dentro de `root`); null sin relieve. */
+  /** The open world's sky (dome and clouds, already inside `root`); null without relief. */
   sky: Sky | null;
-  /** Lo que recibe el clic del suelo: con relieve, un raycast sobre las baldosas del terreno; null sin relieve. */
+  /** What receives the ground click: with relief, a raycast over the terrain tiles; null without relief. */
   picker: Object3D | null;
-  /** Open-world-3d T7: árboles, rocas y detalle del mundo abierto (ya dentro de `root`); null sin relieve. */
+  /** Open-world-3d T7: trees, rocks and detail of the open world (already inside `root`); null without relief. */
   nature: Nature | null;
   /**
-   * Open-world-3d T8: el pasto V6 (ya dentro de `root`) y la textura RG16F de altura y tierra que arma world/terrain y el
-   * pasto solo lee (PD-2: la única de la escena); null sin relieve.
+   * Open-world-3d T8: the V6 grass (already inside `root`) and the RG16F height and dirt texture that world/terrain builds and the
+   * grass only reads (PD-2: the only one in the scene); null without relief.
    */
   grass: Grass | null;
   heightDirt: HeightDirtMap | null;
@@ -87,19 +87,19 @@ export interface DioramaScene {
 const Y = new Vector3(0, 1, 0);
 
 /**
- * Open-world-3d T10 (b): perillas de la escena del mundo abierto. Sin ellas (o sin un campo), lo del tier en
- * OPEN_WORLD_DENSITY. Hoy las mueven solo los factores de medición de desarrollo (world/budget/devFactors.ts).
+ * Open-world-3d T10 (b): open-world scene knobs. Without them (or without a field), the tier's from
+ * OPEN_WORLD_DENSITY. Today only the development measurement factors move them (world/budget/devFactors.ts).
  */
 export interface SceneKnobs {
-  /** false = sin pasto V6. */
+  /** false = no V6 grass. */
   grass?: boolean;
-  /** Mapas normales del suelo; por defecto los del tier. */
+  /** Ground normal maps; by default the tier's. */
   groundNormals?: boolean;
-  /** "light" = sin árboles completos; "impostor" = solo impostores. */
+  /** "light" = no full trees; "impostor" = impostors only. */
   treeBand?: "light" | "impostor";
 }
 
-/** Los radios de LOD de los árboles del tier con la banda pedida (completos y livianos a 0 según la banda). */
+/** The LOD radii of the tier's trees with the requested band (full and light ones at 0 depending on the band). */
 export function treeLodFor(tier: WorldTier, band: SceneKnobs["treeBand"]): TreeLodRadii {
   const base = OPEN_WORLD_DENSITY[tier].treeLod;
   if (band === "impostor") return { full: 0, mid: 0 };
@@ -138,8 +138,8 @@ function terrainMesh(t: Terrain): Mesh {
 }
 
 /**
- * El terreno del mundo abierto en baldosas (D-819): los mismos buffers de vértices y un índice por baldosa, con su caja
- * (y de -40 a 80 m), así three descarta las que no se ven. `tiles` es columnas por filas, como OPEN_WORLD_DENSITY.
+ * The open world's terrain in tiles (D-819): the same vertex buffers and one index per tile, with its box
+ * (and from -40 to 80 m), so three discards the ones not visible. `tiles` is columns by rows, like OPEN_WORLD_DENSITY.
  */
 export function terrainTiles(t: Terrain, tiles: readonly [number, number], material: GroundMaterial): Group {
   const g = new BufferGeometry();
@@ -186,10 +186,10 @@ export function terrainTiles(t: Terrain, tiles: readonly [number, number], mater
 }
 
 /**
- * El delantal del mundo abierto (open-world-3d M3, AC35, TERRAIN_APRON): un anillo plano de 8 triángulos desde
- * `overlap` m adentro de la extensión hasta `width` m afuera, `sink` m bajo el vértice más bajo de la malla (así queda
- * debajo de la falda donde se pisan). Usa el material del suelo, cuyo fundido de borde lo pinta entero del color de la
- * niebla: con el mapa entero en un aspecto ancho o alto, lo que se ve más allá de la falda es suelo color de niebla.
+ * The open world's apron (open-world-3d M3, AC35, TERRAIN_APRON): a flat ring of 8 triangles from
+ * `overlap` m inside the extent to `width` m outside, `sink` m below the mesh's lowest vertex (so it stays
+ * under the skirt where they overlap). It uses the ground material, whose edge fade paints it entirely the fog color:
+ * with the whole map in a wide or tall aspect, what shows beyond the skirt is fog-colored ground.
  */
 export function terrainApron(t: Terrain, material: GroundMaterial): Mesh {
   const e = t.extent;
@@ -201,7 +201,7 @@ export function terrainApron(t: Terrain, material: GroundMaterial): Mesh {
   const ring = (d: number): [number, number][] => [[e.minX - d, e.minZ - d], [e.maxX + d, e.minZ - d], [e.maxX + d, e.maxZ + d], [e.minX - d, e.maxZ + d]];
   const pts = [...ring(-o), ...ring(w)];
   const idx: number[] = [];
-  // Cada triángulo con la normal hacia +y: (b - a) × (c - a) con componente y positiva.
+  // Each triangle with its normal toward +y: (b - a) × (c - a) with a positive y component.
   const tri = (a: number, b: number, c: number): void => {
     const [ax, az] = pts[a] as [number, number];
     const [bx, bz] = pts[b] as [number, number];
@@ -227,8 +227,8 @@ export function terrainApron(t: Terrain, material: GroundMaterial): Mesh {
 }
 
 /**
- * El selector del suelo (open-world-3d T6): un objeto sin malla cuyo raycast es el de las baldosas del terreno, así el
- * clic del suelo cae en el punto del relieve que se ve (y no en un plano en y = 0). Diorama le pone el `onClick`.
+ * The ground picker (open-world-3d T6): a meshless object whose raycast is the terrain tiles', so the
+ * ground click lands on the visible relief point (and not on a plane at y = 0). Diorama puts the `onClick` on it.
  */
 export function groundPicker(tiles: Object3D): Object3D {
   const picker = new Object3D();
@@ -241,7 +241,7 @@ export function groundPicker(tiles: Object3D): Object3D {
 
 interface Box2 { minX: number; maxX: number; minZ: number; maxZ: number }
 
-/** Caja de todo el agua: los estanques y ríos del diorama. null si no hay agua. */
+/** Box of all the water: the diorama's ponds and rivers. null if there is no water. */
 function waterBox(diorama: DioramaRuntime): Box2 | null {
   const b = { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
   const add = (x0: number, x1: number, z0: number, z1: number): void => {
@@ -252,7 +252,7 @@ function waterBox(diorama: DioramaRuntime): Box2 | null {
   return Number.isFinite(b.minX) ? b : null;
 }
 
-/** Un solo plano de agua bajo todos los estanques y ríos (el terreno, más alto, lo tapa donde no hay agua). */
+/** A single water plane under all the ponds and rivers (the higher terrain covers it where there is no water). */
 function waterMesh(diorama: DioramaRuntime, look: WorldLook): Mesh | null {
   const b = waterBox(diorama);
   if (!b) return null;
@@ -265,7 +265,7 @@ function waterMesh(diorama: DioramaRuntime, look: WorldLook): Mesh | null {
 const tintOf = (b: PropBox): PaletteToken | undefined => (b.tint === null ? undefined : (b.tint as PaletteToken));
 const groupKey = (b: PropBox) => `${b.asset}|${b.w}|${b.h}|${b.d}|${b.tint ?? ""}`;
 
-/** Huella de la caja en el plano (alineada a los ejes; con giro, la caja que la contiene). */
+/** Footprint of the box on the plane (axis-aligned; with rotation, the box that contains it). */
 function footprintBox(b: PropBox): Box2 {
   const r = b.rotY ?? 0;
   const hw = (Math.abs(Math.cos(r)) * b.w + Math.abs(Math.sin(r)) * b.d) / 2;
@@ -273,7 +273,7 @@ function footprintBox(b: PropBox): Box2 {
   return { minX: b.x - hw, maxX: b.x + hw, minZ: b.z - hd, maxZ: b.z + hd };
 }
 
-/** Geometrías del detalle del suelo (cada tipo una sola malla instanciada). */
+/** Ground detail geometries (each type a single instanced mesh). */
 function detailGeometries() {
   return {
     flores: mergeParts([
@@ -290,7 +290,7 @@ function detailGeometries() {
   };
 }
 
-/** El detalle del suelo: las zonas de `detalle` y las piedras de los caminos empedrados. */
+/** The ground detail: the `detalle` zones and the cobblestones of the paved paths. */
 export function dioramaDetail(diorama: DioramaRuntime): DetailScatter {
   return curveDetailScatter(diorama.ground, diorama.grid, diorama.ground.terrain.seed ?? ART_SEED);
 }
@@ -310,7 +310,7 @@ export function buildDioramaScene(
   let heightDirt: HeightDirtMap | null = null;
   let grass: Grass | null = null;
   if (relief) {
-    // AC35: la falda se funde a la niebla en sus últimos metros y el delantal sigue de ese color (TERRAIN_APRON).
+    // AC35: the skirt fades into the fog in its last meters and the apron continues in that color (TERRAIN_APRON).
     const skirt = terrain.extent.maxX - diorama.bounds.maxX;
     ground = groundMaterial(tier, look, { bounds: diorama.bounds, fade: [skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]] }, knobs.groundNormals);
     const tiles = terrainTiles(terrain, OPEN_WORLD_DENSITY[tier].terrainTiles, ground);
@@ -327,7 +327,7 @@ export function buildDioramaScene(
   } else {
     root.add(terrainMesh(terrain));
   }
-  // Con relieve, la base de lo apoyado sigue al terreno (0,1 m abajo); sin relieve, la `y` del layout tal cual.
+  // With relief, the base of what rests follows the terrain (0.1 m below); without relief, the layout's `y` as is.
   const baseY = (x: number, z: number, y: number): number => (relief ? terrain.heightAt(x, z) - PROP_SINK + y : y);
   const water = waterMesh(diorama, look);
   if (water) root.add(water);
@@ -337,7 +337,7 @@ export function buildDioramaScene(
   const models: ModelSlot[] = [];
   const geometries: BufferGeometry[] = [];
 
-  // Props sólidos: agrupados por asset, tamaño y tinte (los iguales comparten geometría y van instanciados).
+  // Solid props: grouped by asset, size and tint (equal ones share geometry and are instanced).
   const groups = new Map<string, PropBox[]>();
   const trees = new Map<string, { asset: keyof typeof TREE_HEIGHT; tint: PaletteToken | undefined; items: (Scatter & { y: number })[] }>();
   const r = rng(29);
@@ -347,7 +347,7 @@ export function buildDioramaScene(
       const k = `${b.asset}|${b.tint ?? ""}`;
       const t = trees.get(k) ?? { asset: b.asset, tint: tintOf(b), items: [] };
       const scale = b.h / TREE_HEIGHT[b.asset];
-      const rot = r() * Math.PI * 2; // el sorteo corre siempre: un giro dado no cambia el de los árboles siguientes
+      const rot = r() * Math.PI * 2; // the draw always runs: a given rotation does not change the next trees'
       t.items.push({ x: b.x, z: b.z, y: relief ? baseY(b.x, b.z, b.y) : b.y - 0.05, rot: b.rotY ?? rot, scale });
       trees.set(k, t);
       obstacles.push({ kind: "circle", x: b.x, z: b.z, r: TREE_CANOPY_RADIUS[b.asset] * scale, height: b.h });
@@ -375,13 +375,13 @@ export function buildDioramaScene(
       m.name = first.asset;
       root.add(m);
     } else {
-      // Sin giro en el layout, el mismo leve vaivén de M1 entre vecinos (que no se vean clonados).
+      // Without rotation in the layout, the same slight sway from M1 between neighbors (so they do not look cloned).
       root.add(instanced(first.asset, geo, list.map((b, i) => ({ x: b.x, y: baseY(b.x, b.z, b.y), z: b.z, rot: b.rotY ?? (i % 2) * 0.08, scale: 1 }))));
     }
   }
 
-  // Árboles del layout y pinos del borde (fuera de los límites): una llamada por tipo y tinte. Con relieve, el borde es
-  // el bosque de world/nature (T7).
+  // Layout trees and edge pines (outside the bounds): one call per type and tint. With relief, the edge is
+  // the world/nature forest (T7).
   let nature: Nature | null = null;
   if (relief && diorama.vegetation) {
     nature = buildNature({ scatter: diorama.vegetation, bounds: diorama.bounds, tier, heightAt: terrain.heightAt, look, treeLod: treeLodFor(tier, knobs.treeBand) });
@@ -401,7 +401,7 @@ export function buildDioramaScene(
     root.add(instanced(t.asset, geo, t.items));
   }
 
-  // Detalle del suelo (el empedrado es el suelo de la placita: queda entero en toda densidad).
+  // Ground detail (the cobblestones are the little plaza's ground: whole at every density).
   const detail = dioramaDetail(diorama);
   const dg = detailGeometries();
   for (const kind of ["flores", "matas", "piedritas", "empedrado"] as const) {
@@ -410,8 +410,8 @@ export function buildDioramaScene(
     geometries.push(dg[kind]);
     root.add(instanced(`detalle:${kind}`, dg[kind], items.map((s) => ({ ...s, y: terrain.heightAt(s.x, s.z) }))));
   }
-  // M5 SEAM: animales (V2 diferida). Acá se agregan los animales del diorama (modelo con esqueleto del pack que cierre
-  // V2, sombra blob y lugar en el gobernador de animación); su costo entra al estimador de validate:content.
+  // M5 SEAM: animals (V2 deferred). Here the diorama's animals are added (skeleton model from the pack that closes
+  // V2, blob shadow and a spot in the animation governor); their cost enters the validate:content estimator.
 
   return {
     look,

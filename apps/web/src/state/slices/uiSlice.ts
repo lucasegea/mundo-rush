@@ -1,11 +1,11 @@
-// Slice `ui` (03 §3.3): paneles abiertos, modal, toasts, foco accesible, modo de puntero; más el anuncio
-// aria-live vigente y el lugar elegido en solo-diálogo.
+// Slice `ui` (03 §3.3): open panels, modal, toasts, accessible focus, pointer mode; plus the current
+// aria-live announcement and the place chosen in dialogue-only.
 import { THIRD_PERSON, type Panel } from "@lg/core";
 
 /**
- * Un anuncio para la región aria-live: clave de i18n + parámetros. `keyParams` son parámetros que a su vez
- * son claves de i18n (p. ej. el nombre de una velocidad) y se traducen antes de interpolar. `seq` cambia en
- * cada anuncio, así el mismo texto dos veces seguidas se vuelve a leer.
+ * An announcement for the aria-live region: i18n key + parameters. `keyParams` are parameters that are themselves
+ * i18n keys (e.g. the name of a speed) and are translated before interpolating. `seq` changes on
+ * every announcement, so the same text twice in a row is read again.
  */
 export interface Announcement {
   seq: number;
@@ -18,41 +18,41 @@ export interface UiState {
   panels: Panel[];
   modal: null;
   toasts: { id: number; key: string }[];
-  /** Id del elemento que tiene que recibir el foco (al cerrar un panel vuelve al que lo abrió). */
+  /** Id of the element that must receive focus (when closing a panel it goes back to the one that opened it). */
   focusRequest: string | null;
-  /** Id del elemento que abrió cada panel de la pila, en paralelo a `panels`. */
+  /** Id of the element that opened each panel of the stack, parallel to `panels`. */
   returnFocus: (string | null)[];
   pointerMode: "play" | "inspect";
   announcement: Announcement | null;
-  /** Lugar elegido en el modo solo-diálogo. */
+  /** Place chosen in dialogue-only mode. */
   dialogOnlyPlaceId: string | null;
-  /** Cámara del mapa en tercera persona (open-world-3d T4/T5, D-820, PD-5). No se persiste. */
+  /** Third-person map camera (open-world-3d T4/T5, D-820, PD-5). Not persisted. */
   camera: CameraState;
 }
 
 /**
- * Estado de la cámara del mapa (D-820): yaw e inclinación del jugador, y el zoom continuo como distancia pedida (m). El t
- * de PD-5 sale de la distancia y del `fitDistance` (el mapa entero), que world/camera calcula con el aspecto y el yaw y
- * avisa por state/bridge.ts. Guardar la distancia y no t hace que girar no acerque ni aleje la cámara.
+ * Map camera state (D-820): the player's yaw and pitch, and continuous zoom as a requested distance (m). The t
+ * of PD-5 comes from the distance and the `fitDistance` (the whole map), which world/camera computes with aspect and yaw and
+ * reports through state/bridge.ts. Storing the distance and not t means turning does not move the camera closer or farther.
  */
 export interface CameraState {
-  /** [0, 360). Con yaw 0 la cámara mira hacia -z (arriba en pantalla es -z). */
+  /** [0, 360). With yaw 0 the camera looks toward -z (up on screen is -z). */
   yawDeg: number;
-  /** Inclinación del jugador, [6, 55]. */
+  /** Player pitch, [6, 55]. */
   pitchDeg: number;
-  /** Distancia pedida (m), de 2,5 al mapa entero. */
+  /** Requested distance (m), from 2.5 to the whole map. */
   zoomDistance: number;
-  /** La distancia a la que vuelve V desde el mapa entero. */
+  /** The distance V returns to from the whole map. */
   prevZoomDistance: number;
-  /** Mapa entero (V): la distancia sigue a `fitDistance` aunque cambien el yaw o el aspecto. */
+  /** Whole map (V): the distance follows `fitDistance` even if yaw or aspect change. */
   overview: boolean;
-  /** Distancia del mapa entero (m) que avisó world/camera; 150 hasta el primer aviso. */
+  /** Whole-map distance (m) reported by world/camera; 150 until the first report. */
   fitDistance: number;
-  /** Segundos de simulación (caminando) desde la última mirada: el recentrado espera 1,5 s. */
+  /** Simulation seconds (walking) since the last look: recentering waits 1.5 s. */
   sinceLookS: number;
 }
 
-/** Cámara al entrar a un mapa: 6 m detrás, inclinación 17°, yaw 0; `overview` abre con el mapa entero (perspective3D). */
+/** Camera on entering a map: 6 m behind, pitch 17°, yaw 0; `overview` opens with the whole map (perspective3D). */
 export const initialCamera = (overview = false): CameraState => ({
   yawDeg: 0,
   pitchDeg: THIRD_PERSON.defaultPitchDeg,

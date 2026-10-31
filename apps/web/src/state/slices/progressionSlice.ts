@@ -1,10 +1,10 @@
-// Slice `progression` (03 §3.3, §3.5.3): solo aplicando eventos confirmados por el servidor. Estado inicial.
+// Slice `progression` (03 §3.3, §3.5.3): only by applying events confirmed by the server. Initial state.
 export type MissionStatus = "locked" | "available" | "done" | "canImprove";
 
 export interface ProgressionState {
-  /** Ids de eventos de evidencia del servidor (log local). */
+  /** Server evidence event ids (local log). */
   evidenceLog: string[];
-  /** Pociones por rama en tercios enteros (03 §3.3: sin flotantes). */
+  /** Potions per branch in whole thirds (03 §3.3: no floats). */
   potionThirdsByBranch: Record<string, number>;
   unlockedSkills: string[];
   pouredPotions: Record<string, number>;
@@ -12,10 +12,10 @@ export interface ProgressionState {
   missions: Record<string, MissionStatus>;
   chapter: number;
   /**
-   * Open-world-3d T9: NPCs cuya escena terminó con éxito (`scene.end` con `success` de la escena abierta con ese NPC),
-   * en orden de llegada y sin repetidos. El minimapa marca en rojo a los del diorama que no están acá.
-   * T9 SEAM: hoy se arma en el cliente con los `scene.end`; cuando el servidor mande una instantánea de progreso al
-   * conectar, esa instantánea la reemplaza entera (el servidor es la fuente, como el resto de este slice).
+   * Open-world-3d T9: NPCs whose scene ended successfully (`scene.end` with `success` of the scene opened with that NPC),
+   * in order of arrival and without duplicates. The minimap marks in red those of the diorama that are not here.
+   * T9 SEAM: today it is built on the client from the `scene.end`s; when the server sends a progress snapshot on
+   * connect, that snapshot replaces it entirely (the server is the source, like the rest of this slice).
    */
   completedNpcs: string[];
 }

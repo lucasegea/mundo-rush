@@ -1,12 +1,12 @@
-# Intermedio de MUESTRA para book-mode slice-1 / M2 (NO es el dataset Galeano).
+# SAMPLE intermediate for book-mode slice-1 / M2 (it is NOT the Galeano dataset).
 #
-# Prueba que EMIT escribe UN archivo válido por campo del contrato (manifiesto, mundo=regiones+lugares,
-# dioramas, npcs, red, missions, conversaciones, saberes, glossary) y que cada uno valida contra su esquema
-# de @lg/content-schema. Es deliberadamente mínimo: un ítem por campo, con los campos obligatorios al mínimo.
+# Proves that EMIT writes ONE valid file per contract field (manifest, world=regions+places,
+# dioramas, npcs, network, missions, conversations, knowledge items, glossary) and that each one validates against its schema
+# in @lg/content-schema. It is deliberately minimal: one item per field, with the required fields at the minimum.
 #
-# M3 SEAM: el intermedio Galeano COMPLETO (R1 Potosí: 1 región, 1-2 dioramas, 4 figuras, 2 misiones, CONV-C1,
-# glosario draft y los saberes de la deducción, cada saber con su clasificacion y fuente) se autora en M3 y
-# reemplaza a esta muestra. EMIT no cambia: ya es el contrato.
+# M3 SEAM: the COMPLETE Galeano intermediate (R1 Potosí: 1 region, 1-2 dioramas, 4 figures, 2 missions, CONV-C1,
+# draft glossary and the knowledge items of the deduction, each with its classification and source) is authored in M3 and
+# replaces this sample. EMIT does not change: it already is the contract.
 
 manifiesto:
   id: U-SAMPLE

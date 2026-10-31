@@ -1,9 +1,9 @@
-// Open-world-3d T7 (AC47): el personaje de Quaternius del mundo abierto. El jugador y los tres NPCs de U-GALEANO se arman
-// con el cuerpo y los clips servidos del pipeline m7 (scripts/assets/characters.ts) sobre el esqueleto `quaternius`
-// (rigs.ts): una malla con piel con pelo y cara, sin cabeza por código; la gorra del jugador es un accesorio por código
-// de color 0xd6342c colgado del hueso Head; cada clip del manifiesto existe en el archivo y cada hueso que mueve, en el
-// esqueleto. Los NPCs más lejos que 62 m o fuera del encuadre no se dibujan y más lejos que 28 m van sin accesorios. Los
-// dioramas planos siguen con KayKit (sus tests, characters.test.ts, no cambian). No hay otro armador de personajes.
+// Open-world-3d T7 (AC47): the open world's Quaternius character. The player and U-GALEANO's three NPCs are built
+// with the body and clips served by the m7 pipeline (scripts/assets/characters.ts) on the `quaternius` skeleton
+// (rigs.ts): a skinned mesh with hair and face, no code-made head; the player's cap is a code accessory
+// of color 0xd6342c hung from the Head bone; each manifest clip exists in the file and each bone it moves, in the
+// skeleton. NPCs farther than 62 m or outside the framing are not drawn and farther than 28 m go without accessories. The
+// flat dioramas stay with KayKit (their tests, characters.test.ts, do not change). There is no other character builder.
 import { CAP_COLOR, DEFAULT_LOOK, parseApariencia, PLAYER_LOOK, tokenRgb, withinPaint, type CharacterLook } from "@lg/art";
 import { prepareDiorama, type DioramaLayout } from "@lg/core";
 import { Bone, Vector3, type AnimationClip, type Mesh, type Object3D } from "three";
@@ -49,7 +49,7 @@ const galeanoLook = (id: string): CharacterLook => {
 
 async function openWorldCharacter(look: CharacterLook, lod: "full" | "reduced" = "full"): Promise<SkinnedCharacter> {
   const [body, clips] = await Promise.all([load(QUATERNIUS_RIG.bodyAsset(look.body, lod)), load(QUATERNIUS_RIG.clipsAsset)]);
-  // Open-world-3d T7b (D-840): los accesorios son los del juego del look (DEFAULT_LOOK, el del mundo abierto).
+  // Open-world-3d T7b (D-840): accessories are the game's of the look (DEFAULT_LOOK, the open world's).
   return buildSkinnedCharacter(body.scene, clips.clips, look, 3, QUATERNIUS_RIG, DEFAULT_LOOK.characters);
 }
 
@@ -57,7 +57,7 @@ describe("AC47: el jugador y los NPCs del mundo abierto con el personaje de Quat
   test("el mundo abierto (con relieve) usa quaternius y los dioramas planos KayKit; el muelle tiene los tres NPCs de Galeano", () => {
     const layouts = galeano["dioramas.json"] as DioramaLayout[];
     const muelle = prepareDiorama(layouts.find((d) => d.id === "muelle") as DioramaLayout);
-    // Cambio registrado (open-world-3d T7b, D-840): el esqueleto sale del look de la escena, no de `picker !== null`.
+    // Recorded change (open-world-3d T7b, D-840): the skeleton comes from the scene's look, not from `picker !== null`.
     const scene = buildDioramaScene(muelle, "reduced", "low");
     expect(scene.picker).not.toBeNull();
     expect(actorRig(scene.look.characters)).toBe("quaternius");
@@ -82,16 +82,16 @@ describe("AC47: el jugador y los NPCs del mundo abierto con el personaje de Quat
     expect(c.head.parent?.name).toBe(boneKey("Head"));
     expect(c.accessories).toContain(c.head);
     expect(c.head.visible).toBe(true);
-    // La gorra (no una cabeza): la mayoría de sus vértices con el rojo de la maqueta, tal cual.
+    // The cap (not a head): most of its vertices with the diorama's red, as is.
     const col = c.head.geometry.getAttribute("color");
     const cap = tokenRgb(`#${CAP_COLOR.toString(16).padStart(6, "0")}`);
     let red = 0;
     for (let i = 0; i < col.count; i++) if (withinPaint([col.getX(i), col.getY(i), col.getZ(i)], cap)) red += 1;
     expect(CAP_COLOR).toBe(0xd6342c);
     expect(red / col.count).toBeGreaterThan(0.6);
-    // Sin cabeza por código: ninguna malla del personaje es la esfera de radio 0,42 de head.ts; la cara está en el cuerpo.
+    // No code-made head: no mesh of the character is head.ts's sphere of radius 0.42; the face is in the body.
     expect(c.meshes.filter((m) => m !== c.body && m !== c.mouth).every((m) => c.accessories.includes(m))).toBe(true);
-    // El pelo está en el cuerpo con piel, sobre la cabeza: la gorra queda arriba del hueso Head, la cara al frente (+z).
+    // Hair is in the skinned body, above the head: the cap sits above the Head bone, the face at the front (+z).
     c.root.updateMatrixWorld(true);
     const head = c.headBone.getWorldPosition(new Vector3());
     c.head.geometry.computeBoundingBox();

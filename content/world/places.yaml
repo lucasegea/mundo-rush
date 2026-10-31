@@ -1,11 +1,11 @@
-# Región 1 y sus lugares (02 §0.3, §4.1.1, §4.1.2; 03 §4.2.1). Ids de diorama sin renombrar (D-180):
-# muelle = Los Campos, plaza = El Cruce. `publico: true` = a la vista, apto para escenas con menores.
+# Region 1 and its places (02 §0.3, §4.1.1, §4.1.2; 03 §4.2.1). Diorama ids not renamed (D-180):
+# muelle = Los Campos, plaza = El Cruce. `publico: true` = in plain sight, suitable for scenes with minors.
 regiones:
   - id: R1
     nombre: { es-AR: "Región 1: Los Campos y El Cruce" }
     dioramas: [muelle, plaza]
     capitulos: [0, 1]
-    # Elenco de 02 §3.1 (D-166). Solo los 5 del prólogo y M1.1-M1.2 tienen ficha en F1.2; el resto entra en F8.
+    # Cast of 02 §3.1 (D-166). Only the 5 of the prologue and M1.1-M1.2 have a sheet in F1.2; the rest comes in F8.
     elenco:
       - NPC-INES
       - NPC-MAYA
@@ -21,7 +21,7 @@ regiones:
       - NPC-NOOR
       - NPC-GRACE
       - NPC-VANCE
-    # Saberes de la Región 1 (02 §1.5). F1.2 escribe las 6 fichas del prólogo y M1.1-M1.2; el resto, F8.
+    # Region 1 knowledge items (02 §1.5). F1.2 writes the 6 sheets of the prologue and M1.1-M1.2; the rest, F8.
     saberes:
       - SAB-AVIONETA
       - SAB-CORN

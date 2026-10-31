@@ -1,7 +1,7 @@
-// world/terrain/heightTexture.ts: la textura de altura y tierra del pasto (open-world-3d T6, PD-2), que world/terrain
-// arma y es dueña: RG16F (R altura, G peso de tierra) con filtro lineal de hardware (WebGL2), 1 m por texel sobre los
-// límites caminables más 50 m de cada lado (RUNTIME_TEXTURE_PX.grassHeight). El pasto de T8 la recibe y nunca arma
-// otra. Los valores salen de la malla dibujada (`heightAt`, `dirtAt`), así el pasto apoya donde se ve el suelo.
+// world/terrain/heightTexture.ts: the grass height and dirt texture (open-world-3d T6, PD-2), which world/terrain
+// builds and owns: RG16F (R height, G dirt weight) with hardware linear filtering (WebGL2), 1 m per texel over the walkable
+// bounds plus 50 m on each side (RUNTIME_TEXTURE_PX.grassHeight). T8 grass receives it and never builds
+// another. The values come from the drawn mesh (`heightAt`, `dirtAt`), so the grass rests where the ground is seen.
 import { DataTexture, DataUtils, HalfFloatType, LinearFilter, RGFormat } from "three";
 import { RUNTIME_TEXTURE_PX } from "@lg/art";
 import type { Bounds } from "@lg/core";
@@ -9,11 +9,11 @@ import type { Terrain } from "./buildTerrain";
 
 export interface HeightDirtMap {
   texture: DataTexture;
-  /** Esquina (x, z) del texel (0, 0) y metros por texel: el pasto pasa de mundo a UV con esto. */
+  /** Corner (x, z) of texel (0, 0) and meters per texel: the grass goes from world to UV with this. */
   originX: number;
   originZ: number;
   metersPerTexel: number;
-  /** Ancho y alto en texels (el `uHmBox` del pasto es origen y tamaño en metros). */
+  /** Width and height in texels (the grass `uHmBox` is origin and size in meters). */
   width: number;
   height: number;
 }
@@ -25,8 +25,8 @@ const texel = (map: HeightDirtMap, i: number, j: number, c: 0 | 1): number => {
 };
 
 /**
- * Open-world-3d T8: altura y tierra en (x, z) leídas de la MISMA textura como la lee la GPU (filtro lineal entre los
- * centros de texel, borde a borde): el recorte del pasto en la CPU decide con lo que el sombreador va a dibujar.
+ * Open-world-3d T8: height and dirt at (x, z) read from the SAME texture as the GPU reads it (linear filter between
+ * texel centers, edge to edge): the grass culling on the CPU decides with what the shader will draw.
  */
 export function sampleHeightDirt(map: HeightDirtMap, x: number, z: number): { height: number; dirt: number } {
   const u = (x - map.originX) / map.metersPerTexel - 0.5;

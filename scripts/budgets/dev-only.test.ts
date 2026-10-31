@@ -1,4 +1,4 @@
-// FD0 A1: el detector de check:dev-only encuentra lo que se siembra en un dist de fixture (sin falso verde).
+// FD0 A1: the check:dev-only detector finds what is seeded in a fixture dist (no false green).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -12,7 +12,7 @@ const put = (file: string, text: string): void => {
   writeFileSync(abs, text);
 };
 
-/** Un dist limpio con la forma del de apps/web. */
+/** A clean dist with the shape of apps/web's. */
 const cleanDist = (): void => {
   put("index.html", '<!doctype html><script type="module" src="/assets/index-abc.js"></script>\n');
   put("assets/index-abc.js", 'const a="lg:content:updated";import("./GameCanvas-x.js");export{a};\n');
@@ -27,7 +27,7 @@ afterEach(() => rmSync(dist, { recursive: true, force: true }));
 
 describe("check:dev-only (03 §6.5.1 punto 3)", () => {
   test("los marcadores son exactamente los de 03 §6.5.1", () => {
-    // Cambio registrado (open-world-3d T10 (b)): se suma `data-lg-dev-factors` (factores de medición de desarrollo).
+    // Recorded change (open-world-3d T10 (b)): `data-lg-dev-factors` is added (development measurement factors).
     expect([...DEV_ONLY_MARKERS]).toEqual(["__lg_director", "/__director/", "lg:director:", "DirectorPanel", "claude-agent-sdk", "LG_ANTHROPIC", "data-lg-dev-factors"]);
   });
 

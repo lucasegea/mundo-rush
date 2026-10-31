@@ -1,9 +1,9 @@
-// world/budget/WorldLoad.tsx — los ganchos de carga del mundo dentro del Canvas (open-world-3d T10 (d)):
-// `ShaderWarmup` compila los programas de lo que ya está en la escena con compileAsync y avisa (GameCanvas retiene el
-// frameloop mientras tanto); `FirstFrameMark` marca el primer cuadro dibujado. T10-integrate: lo que llega después
-// (mallas y mapas de la naturaleza, cuerpos de personajes, pasadas del postprocesado) se precompila al llegar con
-// `precompileWorld` / `usePrecompile`, sin retener el frameloop: cuerpos y naturaleza se muestran cuando su compilación
-// terminó; las pasadas del post empiezan a compilar al armarse el composer (su primer cuadro puede esperar el resto).
+// world/budget/WorldLoad.tsx — the world's loading hooks inside the Canvas (open-world-3d T10 (d)):
+// `ShaderWarmup` compiles the programs of what is already in the scene with compileAsync and signals (GameCanvas holds the
+// frameloop meanwhile); `FirstFrameMark` marks the first drawn frame. T10-integrate: what arrives later
+// (nature meshes and maps, character bodies, postprocessing passes) is precompiled on arrival with
+// `precompileWorld` / `usePrecompile`, without holding the frameloop: bodies and nature are shown when their compilation
+// finished; the post passes start compiling when the composer is built (its first frame may wait for the rest).
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useRef } from "react";
 import { WebGLRenderTarget, type Camera, type Object3D, type Scene, type WebGLRenderer } from "three";
@@ -12,8 +12,8 @@ import { worldFrame } from "../runtime";
 import { fullscreenPasses, precompile, reportFirstFrame, type WarmupResult } from "./loadWarmup";
 
 /**
- * Precompila `object` para dibujarse en `scene` con `camera`. `offscreen` (por defecto el del tier, `worldFrame.post`):
- * el cuadro va a un render target (el del composer), así que se compila con uno de 1 × 1 puesto, que se libera enseguida.
+ * Precompiles `object` to be drawn in `scene` with `camera`. `offscreen` (by default the tier's, `worldFrame.post`):
+ * the frame goes to a render target (the composer's), so it is compiled with a 1 × 1 one set, which is freed right away.
  */
 export function precompileWorld(gl: WebGLRenderer, object: Object3D, camera: Camera, scene: Scene, offscreen = worldFrame.post): Promise<WarmupResult> {
   const rt = offscreen ? new WebGLRenderTarget(1, 1) : null;
@@ -25,8 +25,8 @@ export function precompileWorld(gl: WebGLRenderer, object: Object3D, camera: Cam
 }
 
 /**
- * La precompilación contra la escena y la cámara del Canvas (para lo que llega tarde: cuerpos, naturaleza). La función
- * es estable (lee el estado del Canvas al llamarla): que drei cambie la cámara por defecto no relanza las cargas.
+ * Precompilation against the Canvas's scene and camera (for what arrives late: bodies, nature). The function
+ * is stable (it reads the Canvas state when called): drei changing the default camera does not relaunch the loads.
  */
 export function usePrecompile(): (object: Object3D) => Promise<WarmupResult> {
   const get = useThree((s) => s.get);
@@ -37,8 +37,8 @@ export function usePrecompile(): (object: Object3D) => Promise<WarmupResult> {
 }
 
 /**
- * Precompila las pasadas del composer del postprocesado (llega en su propio chunk, después de la primera escena): cada
- * escena de pantalla completa con su cámara, para la pantalla o para un render target según donde dibuja.
+ * Precompiles the postprocessing composer's passes (it arrives in its own chunk, after the first scene): each
+ * full-screen scene with its camera, for the screen or for a render target depending on where it draws.
  */
 export function precompilePasses(gl: WebGLRenderer, composer: { passes: readonly unknown[] }): void {
   for (const p of fullscreenPasses(composer)) {
@@ -46,7 +46,7 @@ export function precompilePasses(gl: WebGLRenderer, composer: { passes: readonly
   }
 }
 
-/** Compila con compileAsync lo que está en la escena y llama a `onReady` (también si falla o se pasa del tope). */
+/** Compiles with compileAsync what is in the scene and calls `onReady` (also if it fails or exceeds the cap). */
 export function ShaderWarmup({ onReady }: { onReady: () => void }) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
@@ -65,8 +65,8 @@ export function ShaderWarmup({ onReady }: { onReady: () => void }) {
 }
 
 /**
- * Marca `lg:world-first-frame` después del primer cuadro que dibuja: useFrame corre antes de `gl.render` en el mismo
- * cuadro, y la microtarea corre cuando el cuadro entero ya se envió.
+ * Marks `lg:world-first-frame` after the first frame it draws: useFrame runs before `gl.render` in the same
+ * frame, and the microtask runs when the whole frame has already been submitted.
  */
 export function FirstFrameMark() {
   const gl = useThree((s) => s.gl);

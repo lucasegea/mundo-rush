@@ -1,12 +1,12 @@
-// Modelos de texto falsos y determinísticos (03 §4.2 test/fakes/): sin red, sin claves, sin API paga (D-027).
-// El NPC responde de un guion; el observador decide con una función sobre el texto del jugador.
+// Fake, deterministic text models (03 §4.2 test/fakes/): no network, no keys, no paid API (D-027).
+// The NPC answers from a script; the observer decides with a function over the player's text.
 import type { TextModelProvider, TextRequest } from "../../src/providers/text.ts";
 
 export interface FakeModel extends TextModelProvider {
   readonly calls: TextRequest[];
 }
 
-/** NPC falso: devuelve las respuestas del guion en orden (y repite la última). */
+/** Fake NPC: returns the script's replies in order (and repeats the last one). */
 export function fakeNpcModel(replies: readonly string[] = ["Good, good. Your turn!"]): FakeModel {
   const calls: TextRequest[] = [];
   return {
@@ -25,14 +25,14 @@ export interface ObserverCall {
   attempt: number;
 }
 
-/** Lee del pedido del observador el turnId y el texto del jugador (como los vería un modelo). */
+/** Reads from the observer request the turnId and the player's text (as a model would see them). */
 export function readObserverRequest(req: TextRequest): { turnId: string; playerText: string } {
   const turnId = /Use turnId "([^"]+)"/.exec(req.system)?.[1] ?? "";
   const playerText = /Player said: (.*)$/m.exec(req.turns[0]?.text ?? "")?.[1] ?? "";
   return { turnId, playerText };
 }
 
-/** Observador falso: `decide` arma el texto de salida (JSON válido o no) para cada llamada. */
+/** Fake observer: `decide` builds the output text (valid JSON or not) for each call. */
 export function fakeObserverModel(decide: (call: ObserverCall) => string): FakeModel & { observed: ObserverCall[] } {
   const calls: TextRequest[] = [];
   const observed: ObserverCall[] = [];
@@ -58,7 +58,7 @@ export interface CriteriaRule {
   when: RegExp;
 }
 
-/** JSON de ObserverResult con los criterios que cumplen las reglas (cita = el texto del jugador). */
+/** ObserverResult JSON with the criteria the rules fulfil (quote = the player's text). */
 export function observerJson(call: ObserverCall, rules: readonly CriteriaRule[], extra: Record<string, unknown> = {}): string {
   return JSON.stringify({
     turnId: call.turnId,
@@ -73,7 +73,7 @@ export function observerJson(call: ObserverCall, rules: readonly CriteriaRule[],
   });
 }
 
-/** Reglas de M0.1 (saludo + nombre) y M0.3 (Yes + ubicar a Clover). */
+/** Rules of M0.1 (greeting + name) and M0.3 (Yes + locating Clover). */
 export const M01_RULES: CriteriaRule[] = [
   { id: "C1", when: /\b(hello|hi|hey|good morning)\b/i },
   { id: "C2", when: /\b(i'm|i am|my name is)\b/i },

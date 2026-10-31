@@ -1,4 +1,4 @@
-// Store único (03 §3.3, ADR-003): A6 claves exactas, acciones delgadas que no mutan, view-models estables.
+// Single store (03 §3.3, ADR-003): A6 exact keys, thin actions that do not mutate, stable view-models.
 import { describe, expect, test } from "vitest";
 import { createActions } from "../src/state/actions";
 import { selectDialogOnlyView, selectSettingsView, selectShellView } from "../src/state/selectors";
@@ -29,7 +29,7 @@ describe("A6: las claves de primer nivel son exactamente los 9 slices de 03 §3.
     expect([...SLICE_NAMES]).toEqual(EXPECTED);
     actions.bootCompleted(withWebgl);
     actions.setHighContrast(true);
-    // Las acciones no se cuelan como claves del estado.
+    // Actions do not sneak in as state keys.
     expect(Object.keys(store.getState()).sort()).toEqual([...EXPECTED].sort());
   });
 
@@ -115,7 +115,7 @@ describe("view-models (R14): mismo objeto mientras nada relevante cambie", () =>
     actions.bootCompleted(withWebgl);
     const s1: GameState = store.getState();
     expect(selectSettingsView(s1)).toBe(selectSettingsView(s1));
-    actions.selectPlace("x"); // cambia ui, no settings
+    actions.selectPlace("x"); // changes ui, not settings
     expect(selectSettingsView(store.getState())).toBe(selectSettingsView(s1));
     actions.setHighContrast(true);
     expect(selectSettingsView(store.getState())).not.toBe(selectSettingsView(s1));

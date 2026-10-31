@@ -1,18 +1,18 @@
-// Motor de audio falso para los tests de voz (F5.2): sin Web Audio ni micrófono (D-016). El test decide qué responde el
-// permiso, empuja bloques de captura como si hablara el jugador y dispara el fin de la reproducción.
+// Fake audio engine for the voice tests (F5.2): no Web Audio or microphone (D-016). The test decides what the
+// permission answers, pushes capture blocks as if the player were speaking and triggers the end of playback.
 import type { CaptureFrame } from "../src/services/audio/dsp";
 import type { AudioEngine, MicResult } from "../src/services/audio";
 
 export interface FakeAudioEngine extends AudioEngine {
-  /** Bloques de voz del NPC que se mandaron a reproducir. */
+  /** NPC voice blocks that were sent to play. */
   readonly played: Int16Array[];
   readonly resumed: number;
   readonly closed: boolean;
-  /** El jugador "habla": un bloque de captura de 40 ms (640 muestras a 16 kHz) con esa energía. */
+  /** The player "speaks": a 40 ms capture block (640 samples at 16 kHz) with that energy. */
   speak(rms?: number, value?: number): void;
-  /** Termina de sonar todo lo encolado. */
+  /** Finishes playing everything queued. */
   drain(): void;
-  /** El micrófono se pierde. */
+  /** The microphone is lost. */
   loseMic(): void;
 }
 
@@ -45,7 +45,7 @@ export function fakeAudioEngine(result: MicResult = { ok: true }): FakeAudioEngi
   };
 }
 
-/** Fábrica que entrega motores falsos y recuerda el último. */
+/** Factory that hands out fake engines and remembers the last one. */
 export function fakeEngineFactory(result: MicResult = { ok: true }): { createEngine: () => Promise<AudioEngine>; readonly last: FakeAudioEngine | null; readonly created: number } {
   let last: FakeAudioEngine | null = null;
   let created = 0;

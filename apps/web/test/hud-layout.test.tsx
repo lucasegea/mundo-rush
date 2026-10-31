@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-// Open-world-3d T10-integrate: a 375 px el aviso de hablar no tapa el minimapa, con el texto al 100 % y al 125 % (el de
-// fábrica). jsdom no tiene layout, así que se prueba el contrato: los números en rem de ui/hud/layout.ts (el hueco que
-// deja el HUD contra el círculo y su distancia al borde) y que el aviso y el zoom viven dentro del bloque que deja ese
-// hueco. Como todo es rem, la cuenta da lo mismo a cualquier tamaño de texto; se hace a 100 % y 125 % igual.
+// Open-world-3d T10-integrate: at 375 px the talk prompt does not cover the minimap, with text at 100 % and 125 % (the
+// default one). jsdom has no layout, so the contract is tested: the rem numbers of ui/hud/layout.ts (the gap the
+// HUD leaves against the circle and its distance from the edge) and that the prompt and the zoom live inside the block that leaves that
+// gap. Since everything is rem, the math is the same at any text size; it is done at 100 % and 125 % anyway.
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import worldSource from "../src/ui/hud/WorldHud.tsx?raw";
@@ -10,7 +10,7 @@ import { MINIMAP_CLEARANCE_NARROW, MINIMAP_CLEARANCE_SIDE, MINIMAP_OFFSET, MINIM
 import { WorldHud } from "../src/ui/hud/WorldHud";
 import { resetStore } from "./helpers";
 
-/** El número en rem de la clase de `classes` que empieza con `prefix` (`size-[7rem]`, `pb-[calc(8rem+…)]`). */
+/** The rem number of the `classes` class that starts with `prefix` (`size-[7rem]`, `pb-[calc(8rem+…)]`). */
 const rem = (classes: string, prefix: string): number => {
   const cls = classes.split(/\s+/).find((c) => c.startsWith(prefix));
   const m = cls?.match(/\[(?:calc\()?(\d+(?:\.\d+)?)rem/);
@@ -18,9 +18,9 @@ const rem = (classes: string, prefix: string): number => {
   return Number(m[1]);
 };
 
-/** El padding del HUD del mapa (la sección): `p-4` = 1rem. */
+/** The map HUD's padding (the section): `p-4` = 1rem. */
 const SECTION_PAD_REM = 1;
-/** Aire mínimo entre lo de abajo del HUD y el borde de arriba del minimapa. */
+/** Minimum air between what is at the bottom of the HUD and the top edge of the minimap. */
 const AIR_REM = 1;
 const TEXT_SCALES = [1, 1.25] as const;
 const SAFE_AREAS_PX = [0, 34] as const;
@@ -33,7 +33,7 @@ describe("a 375 px el aviso de hablar queda encima del minimapa", () => {
     const px = 16 * scale;
     const offset = rem(MINIMAP_OFFSET, "bottom-");
     for (const safe of SAFE_AREAS_PX) {
-      // Teléfono: el bloque entero (aviso y zoom) deja su hueco; desde md, la columna del zoom.
+      // Phone: the whole block (prompt and zoom) leaves its gap; from md, the zoom column.
       const narrowBottom = (SECTION_PAD_REM + rem(MINIMAP_CLEARANCE_NARROW, "pb-")) * px + safe;
       const narrowTop = (offset + rem(MINIMAP_SIZE, "size-")) * px + safe;
       expect(narrowBottom - narrowTop).toBeGreaterThanOrEqual(AIR_REM * px);
@@ -41,7 +41,7 @@ describe("a 375 px el aviso de hablar queda encima del minimapa", () => {
       const sideTop = (offset + rem(MINIMAP_SIZE, "md:size-")) * px;
       expect(sideBottom - sideTop).toBeGreaterThanOrEqual(AIR_REM * px);
     }
-    // AC55 sigue igual: 112 px y 160 px con el texto al 100 %.
+    // AC55 still holds: 112 px and 160 px with text at 100 %.
     if (scale === 1) expect([rem(MINIMAP_SIZE, "size-") * px, rem(MINIMAP_SIZE, "md:size-") * px]).toEqual([112, 160]);
   });
 
@@ -54,7 +54,7 @@ describe("a 375 px el aviso de hablar queda encima del minimapa", () => {
     for (const c of MINIMAP_CLEARANCE_NARROW.split(" ")) expect(block?.classList.contains(c), c).toBe(true);
     expect(block?.classList.contains("grid-cols-1")).toBe(true);
     expect(block?.classList.contains("md:grid-cols-[1fr_auto_1fr]")).toBe(true);
-    // El aviso solo va al centro desde md (en angosto no se fuerza a una columna que no existe).
+    // The prompt goes to the center only from md (on narrow screens a column that does not exist is not forced).
     expect(status?.classList.contains("md:col-start-2")).toBe(true);
     expect(status?.classList.contains("col-start-2")).toBe(false);
     const zoom = document.getElementById("world-zoom-out")?.closest(".justify-self-end");

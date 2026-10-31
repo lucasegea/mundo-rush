@@ -1,5 +1,5 @@
-// state/actions.ts — barril de acciones públicas: lo único que ui/ (y dev/director) despachan (R14, P0 T2).
-// Acciones delgadas: las reglas (tiers, saneo de ajustes, fase, pila de paneles) viven en @lg/core.
+// state/actions.ts — barrel of public actions: the only thing ui/ (and dev/director) dispatch (R14, P0 T2).
+// Thin actions: the rules (tiers, settings sanitizing, phase, panel stack) live in @lg/core.
 import {
   applyLook, applySettingsPatch, applyWorldEffects, canEnterWorld, cellAt, cellCenter, DEFAULT_MOVEMENT, downgradeTier, effectiveTier, facingFrom,
   headingYaw, IDLE, isWalkable, markWorldEnter, nearbyInteractables, nearestWalkable, phaseAfterBoot, planPath, popPanel, prepareDiorama, pushPanel, recenterYaw,
@@ -18,7 +18,7 @@ export interface DialogOnlyCatalog {
   npcs: NpcInfo[];
 }
 
-/** Contenido recompilado en caliente (modo director, FD0): lo que cambió, ya parseado por services/content. */
+/** Content hot-recompiled (director mode, FD0): what changed, already parsed by services/content. */
 export interface ContentUpdate {
   catalog: DialogOnlyCatalog | null;
   diorama: DioramaLayout | null;
@@ -26,20 +26,20 @@ export interface ContentUpdate {
 
 type Params = Record<string, string | number>;
 
-/** Opciones de "Pasar el turno" (03 §5.5.3). */
+/** Options for "Pass the turn" (03 §5.5.3). */
 export type PassChoice = "hint" | "repeat" | "simpler" | "continue";
 
-/** Largo máximo de un turno escrito (el mismo tope que valida el protocolo). */
+/** Maximum length of a written turn (the same cap the protocol validates). */
 export const MAX_TURN_CHARS = 500;
 
 const ACTIVE_STEPS = new Set(["pretask", "npcOpening", "playerTurn", "npcTurn", "signal", "nonConverging", "closing", "posttask", "containment"]);
 const WRITABLE_SUBS = new Set(["waiting", "speaking", "endPending"]);
 
-/** Línea del servidor → línea del historial (Lumi: solo id de plantilla). */
+/** Server line → history line (Lumi: template id only). */
 const lineFrom = (l: Extract<ServerMessage, { type: "npc.line" }>["line"]): DialogueLine =>
   ({ id: l.lineId, speaker: l.speaker, kind: l.kind, text: l.text, template: l.template });
 
-/** Aplica un mensaje del servidor al slice `dialogue` (puro: lo usa la acción `sceneMessage`). */
+/** Applies a server message to the `dialogue` slice (pure: used by the `sceneMessage` action). */
 export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): DialogueState {
   switch (msg.type) {
     case "scene.opened":
@@ -60,7 +60,7 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
       };
     }
     case "turn.transcript": {
-      // F5.2: lo que el servidor oyó del jugador. Parcial: se muestra mientras habla; final: entra al historial.
+      // F5.2: what the server heard from the player. Partial: shown while they speak; final: goes into the history.
       if (msg.speaker !== "player") return d;
       if (!msg.final) return { ...d, voice: { ...d.voice, heard: msg.text } };
       const text = msg.text.trim();
@@ -74,7 +74,7 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
     case "scene.end":
       return { ...d, outcome: msg.outcome };
     case "scene.safety":
-      // El turno cortado se marca en el historial (sin el texto del NPC: no se mostró).
+      // The cut-off turn is marked in the history (without the NPC text: it was not shown).
       return msg.action === "cut" && msg.layer !== "output"
         ? { ...d, history: [...d.history, { id: `cut-${d.history.length}`, speaker: "system", kind: "cut", text: null, template: null }], voice: { ...d.voice, heard: null } }
         : d;
@@ -83,7 +83,7 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
     case "scene.notice":
       return { ...d, notice: msg.code, noticeCause: msg.cause ?? null };
     case "conversation.state": {
-      // A2: medidores, lo que sabés del NPC y la escalera de ayuda (el servidor decide; el cliente solo muestra).
+      // A2: meters, what you know about the NPC, and the help ladder (the server decides; the client only displays).
       return {
         ...d,
         conversation: { npcName: msg.npcName, activeMeter: msg.activeMeter, meters: msg.meters, facts: msg.facts, stalled: msg.stalled, notice: msg.notice, help: msg.help, completed: msg.completed },
@@ -96,9 +96,9 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
 }
 
 /**
- * Open-world-3d T9: un `scene.end` con éxito suma al NPC de la escena abierta (`dialogue.npcId`, de `scene.opened`) a
- * `completedNpcs`. Cualquier otro final (parcial, tope, contención, cortada) o una escena sin NPC no cambia nada; un NPC
- * ya completado tampoco (devuelve el mismo objeto: nadie se entera).
+ * Open-world-3d T9: a successful `scene.end` adds the NPC of the open scene (`dialogue.npcId`, from `scene.opened`) to
+ * `completedNpcs`. Any other ending (partial, cap, containment, cut off) or a scene without an NPC changes nothing; an NPC
+ * already completed does not either (returns the same object: nobody is notified).
  */
 export function withCompletedNpc(p: GameState["progression"], outcome: SceneOutcome, npcId: string | null): GameState["progression"] {
   if (outcome !== "success" || npcId === null || p.completedNpcs.includes(npcId)) return p;
@@ -107,7 +107,7 @@ export function withCompletedNpc(p: GameState["progression"], outcome: SceneOutc
 
 export function createActions(store: GameStore) {
   const get = store.getState;
-  /** Aplica el cambio; un parche vacío no notifica a nadie. */
+  /** Applies the change; an empty patch notifies nobody. */
   const set = (fn: (s: GameState) => Partial<GameState>): void => {
     const patch = fn(get());
     if (Object.keys(patch).length > 0) store.setState(patch);
@@ -118,11 +118,11 @@ export function createActions(store: GameStore) {
   });
   const tierOf = (s: GameState) => effectiveTier(s.settings.graphics.tier, s.settings.graphics.suggestedTier);
 
-  /** Cambia ajustes por la regla del núcleo y anuncia el cambio (aria-live). */
+  /** Changes settings by the core rule and announces the change (aria-live). */
   const changeSettings = (patch: SettingsPatch, key: string, params: Params = {}, keyParams: Record<string, string> = {}): void =>
     set((s) => {
       const settings = applySettingsPatch(s.settings, patch);
-      // Si el tier efectivo pasa a dialog-only estando en el mapa, se baja a solo-diálogo.
+      // If the effective tier becomes dialog-only while on the map, it drops to dialogue-only.
       const phase = s.session.phase === "world" && !canEnterWorld(effectiveTier(settings.graphics.tier, settings.graphics.suggestedTier))
         ? "dialogOnly" : s.session.phase;
       return {
@@ -139,7 +139,7 @@ export function createActions(store: GameStore) {
       return { ui: { ...s.ui, panels, returnFocus: [...s.ui.returnFocus, openerId] } };
     });
 
-  /** Abre el HUD de diálogo y pide la escena al servicio (F4.2): una escena nueva arranca de cero (GDD §2.16). */
+  /** Opens the dialogue HUD and asks the service for the scene (F4.2): a new scene starts from scratch (GDD §2.16). */
   const openScene = (s: GameState, npcId: string | null, openerId: string | null): Partial<GameState> => {
     const seq = (s.dialogue.request?.seq ?? 0) + 1;
     return {
@@ -148,7 +148,7 @@ export function createActions(store: GameStore) {
     };
   };
 
-  /** Efectos de misión sobre el mundo con la regla del núcleo (03 §6.4.8); sin cambios, parche vacío. */
+  /** Mission effects on the world with the core rule (03 §6.4.8); no changes, empty patch. */
   const withEffects = (s: GameState, effects: readonly WorldEffect[]): Partial<GameState> => {
     const { flags, foundations, network } = s.world;
     const next = applyWorldEffects({ flags, foundations, intros: network.intros }, effects);
@@ -156,25 +156,25 @@ export function createActions(store: GameStore) {
     return { world: { ...s.world, flags: { ...next.flags }, foundations: { ...next.foundations }, network: { ...network, intros: [...next.intros] } } };
   };
 
-  /** Deja un comando para el servicio de escena (R5: la red vive en services/). */
+  /** Leaves a command for the scene service (R5: the network lives in services/). */
   const enqueue = (d: DialogueState, msg: DialogueState["outbox"][number]["msg"]): DialogueState =>
     ({ ...d, outbox: [...d.outbox, { seq: d.outboxSeq + 1, msg }], outboxSeq: d.outboxSeq + 1 });
 
   const canWrite = (d: DialogueState): boolean =>
     d.modality === "text" && d.state === "playerTurn" && d.turnSubstate !== null && WRITABLE_SUBS.has(d.turnSubstate);
 
-  /** F5.2: se puede abrir un turno hablado (escena en voz, tu turno esperando, audio listo y sin turno abierto). */
+  /** F5.2: a spoken turn can be opened (voice scene, your turn waiting, audio ready and no open turn). */
   const canTalk = (d: DialogueState): boolean =>
     d.modality === "voice" && d.state === "playerTurn" && d.turnSubstate === "waiting" && d.voice.audio === "ready" && d.voice.talk === "idle";
 
   const withVoice = (d: DialogueState, patch: Partial<VoiceUi>): DialogueState => ({ ...d, voice: { ...d.voice, ...patch } });
 
-  // ---------- mapa (F2) ----------
+  // ---------- map (F2) ----------
 
   const withIntent = (s: GameState, intent: MoveIntent): Partial<GameState> =>
     s.player.intent === intent ? {} : { player: { ...s.player, intent, path: intent.kind === "path" ? intent.waypoints.map((w) => [w.x, w.z] as [number, number]) : [] } };
 
-  /** Caminar hasta un punto: A* + suavizado del núcleo. Si no hay camino, se dice por aria-live. */
+  /** Walk to a point: A* + core smoothing. If there is no path, it is announced via aria-live. */
   const walkTo = (s: GameState, x: number, z: number): Partial<GameState> => {
     const { diorama } = s.world;
     const from = s.player.position;
@@ -184,7 +184,7 @@ export function createActions(store: GameStore) {
     return withIntent(s, { kind: "path", waypoints });
   };
 
-  /** Interactuar con `target` (o con el más cercano): si está al alcance, se habla; si no, se camina hasta él. */
+  /** Interact with `target` (or the nearest one): if within reach, talk; otherwise walk to it. */
   const interactWith = (s: GameState, target: string | null, npcOnly: boolean): Partial<GameState> => {
     const items = s.world.diorama?.interactables ?? [];
     const nearby = s.world.nearbyInteractables.filter((id) => !npcOnly || items.find((i) => i.id === id)?.kind === "npc");
@@ -192,14 +192,14 @@ export function createActions(store: GameStore) {
     const item = items.find((i) => i.id === id);
     if (!item || (npcOnly && item.kind !== "npc")) return {};
     if (!nearby.includes(item.id)) return walkTo(s, item.x, item.z);
-    if (item.kind !== "npc") return {}; // los objetos con glosario llegan con F3
+    if (item.kind !== "npc") return {}; // objects with a glossary arrive with F3
     return { ...standoff(s, item), ...openScene(s, item.id, null) };
   };
 
   /**
-   * Al empezar la charla desde el mapa el jugador se acomoda a 2,6 m del NPC, de su lado y mirándolo (plan
-   * estetica-c M1 ítem 4): `position = previous` (sin interpolar un paso), celda, orientación y un tick nuevo. El
-   * desplazamiento visual lo suaviza world/actors/. Los interactuables cercanos se recalculan desde la pose nueva.
+   * When the conversation starts from the map the player settles 2.6 m from the NPC, on their side and facing them (plan
+   * estetica-c M1 item 4): `position = previous` (no one-step interpolation), cell, orientation and a new tick. The
+   * visual displacement is smoothed by world/actors/. Nearby interactables are recomputed from the new pose.
    */
   const standoff = (s: GameState, npc: { x: number; z: number }): Partial<GameState> => {
     const { diorama } = s.world;
@@ -220,14 +220,14 @@ export function createActions(store: GameStore) {
     };
   };
 
-  // ---------- cámara en tercera persona (open-world-3d T4/T5, D-820, PD-5) ----------
+  // ---------- third-person camera (open-world-3d T4/T5, D-820, PD-5) ----------
 
   const withCamera = (s: GameState, patch: Partial<CameraState>): Partial<GameState> => ({ ui: { ...s.ui, camera: { ...s.ui.camera, ...patch } } });
 
-  /** La distancia vigente: con el mapa entero, la de `fitDistance`. */
+  /** The current distance: with the whole map, that of `fitDistance`. */
   const currentDistance = (c: CameraState): number => (c.overview ? c.fitDistance : Math.min(c.zoomDistance, c.fitDistance));
 
-  /** Un paso de zoom continuo (+1 acerca, -1 aleja); desde el mapa entero, el primer paso sale de él. */
+  /** One continuous zoom step (+1 closer, -1 farther); from the whole map, the first step leaves it. */
   const zoom = (direction: 1 | -1) => (s: GameState): Partial<GameState> => {
     const c = s.ui.camera;
     const zoomDistance = stepZoomDistance(currentDistance(c), c.fitDistance, direction);
@@ -236,7 +236,7 @@ export function createActions(store: GameStore) {
     return withCamera(s, { zoomDistance, overview, prevZoomDistance: overview ? c.prevZoomDistance : zoomDistance });
   };
 
-  /** V (PD-5): al mapa entero recordando la distancia, o de vuelta a ella. */
+  /** V (PD-5): to the whole map remembering the distance, or back to it. */
   const toggleOverview = (s: GameState): Partial<GameState> => {
     const c = s.ui.camera;
     if (!c.overview && zoomTAt(c.zoomDistance, c.fitDistance) < THIRD_PERSON.overviewToggleT) {
@@ -245,13 +245,13 @@ export function createActions(store: GameStore) {
     return withCamera(s, { overview: false, zoomDistance: c.prevZoomDistance });
   };
 
-  /** La intención de teclado en el mundo según el yaw vigente: moverse es relativo a la cámara (AC18). */
+  /** The keyboard intent in the world according to the current yaw: movement is camera-relative (AC18). */
   const dirIntent = (dir: { x: number; y: number }, yawDeg: number): MoveIntent => {
     const w = screenDirToWorld(dir, yawDeg);
     return { kind: "dir", x: w.x, z: w.z };
   };
 
-  /** Mirar: yaw e inclinación nuevos; si se camina con el teclado, la dirección gira con la cámara. */
+  /** Look: new yaw and pitch; if walking with the keyboard, the direction turns with the camera. */
   const look = (s: GameState, dx: number, dy: number): Partial<GameState> => {
     const c = s.ui.camera;
     const next = applyLook(c.yawDeg, c.pitchDeg, dx, dy);
@@ -262,14 +262,14 @@ export function createActions(store: GameStore) {
     return out;
   };
 
-  /** Una acción semántica (R10) aplicada al estado; fuera del mapa no hace nada. */
+  /** A semantic action (R10) applied to the state; outside the map it does nothing. */
   const semantic = (s: GameState, a: SemanticAction): Partial<GameState> => {
     if (!selectMapActive(s)) return {};
     switch (a.type) {
       case "move": {
         const player = { ...s.player, heldDir: { x: a.dir.x, y: a.dir.y } };
         if (a.dir.x === 0 && a.dir.y === 0) return { player, ...(s.player.intent.kind === "dir" ? withIntent({ ...s, player }, IDLE) : {}) };
-        // El yaw es el vivo de la cámara (D-820): antes era el fijo del preset (presetAngles), constante.
+        // The yaw is the live camera one (D-820): before it was the preset's fixed one (presetAngles), constant.
         return { player, ...withIntent({ ...s, player }, dirIntent(a.dir, s.ui.camera.yawDeg)) };
       }
       case "moveTo": return walkTo(s, a.x, a.z);
@@ -285,16 +285,16 @@ export function createActions(store: GameStore) {
     }
   };
 
-  /** Un paso fijo de simulación (30 Hz): mueve al jugador y recalcula los interactuables cercanos (núcleo). */
+  /** One fixed simulation step (30 Hz): moves the player and recomputes nearby interactables (core). */
   const simulate = (s: GameState): Partial<GameState> => {
     const { diorama } = s.world;
     const pos = s.player.position;
     if (!selectMapActive(s) || !diorama || !pos) return {};
     const v = s.player.velocity;
-    // Quieto y sin intención: nada cambia y nadie se entera (el store no notifica 30 veces por segundo).
+    // Still and with no intent: nothing changes and nobody is notified (the store does not notify 30 times per second).
     if (s.player.intent.kind === "idle" && v.x === 0 && v.z === 0 && s.player.previous === pos) return {};
     const { body, intent } = stepBody(diorama.grid, { x: pos.x, z: pos.z, vx: v.x, vz: v.z }, s.player.intent, s.player.running ? RUN_MOVEMENT : DEFAULT_MOVEMENT);
-    // Si no se movió, se conserva el mismo objeto: así el próximo paso ve previous === position y no notifica.
+    // If it did not move, the same object is kept: so the next step sees previous === position and does not notify.
     const position = body.x === pos.x && body.z === pos.z ? pos : { x: body.x, z: body.z };
     const nearby = nearbyInteractables(position, diorama.interactables);
     return {
@@ -315,9 +315,9 @@ export function createActions(store: GameStore) {
   };
 
   /**
-   * Recentrado (D-820, AC25): caminando hacia adelante (W sin lateral) o hacia un clic, desde 1,5 s después de la
-   * última mirada, la cámara gira hacia la marcha a lo sumo 90°/s; nunca con "reducir movimiento". El tiempo sin mirar
-   * se cuenta en pasos de simulación con movimiento (quieto, el lazo no notifica al store).
+   * Recentering (D-820, AC25): walking forward (W without lateral) or toward a click, from 1.5 s after the
+   * last look, the camera turns toward the direction of travel at most 90°/s; never with "reduce motion". Time without looking
+   * is counted in simulation steps with movement (when still, the loop does not notify the store).
    */
   const recenter = (s: GameState, vx: number, vz: number): Partial<GameState> => {
     const c = s.ui.camera;
@@ -334,7 +334,7 @@ export function createActions(store: GameStore) {
     return withCamera(s, { sinceLookS, yawDeg });
   };
 
-  /** Cámara al entrar a un mapa: la de tercera persona por defecto, o el mapa entero si el ajuste es `perspective3D`. */
+  /** Camera on entering a map: third-person by default, or the whole map if the setting is `perspective3D`. */
   const cameraFor = (settings: Settings, fitDistance: number): CameraState => {
     const overview = settings.camera === "perspective3D";
     const c = initialCamera(overview);
@@ -346,7 +346,7 @@ export function createActions(store: GameStore) {
       set((s) => ({ ui: { ...s.ui, announcement: announcement(s, key, params) } }));
     },
 
-    /** Restaura ajustes guardados en el dispositivo (o preferencias del sistema). Sin anuncio. */
+    /** Restores settings saved on the device (or system preferences). No announcement. */
     restoreSettings(patch: SettingsPatch | null): void {
       set((s) => {
         const settings = applySettingsPatch(s.settings, patch);
@@ -354,7 +354,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** Fin del arranque: tier sugerido por capacidades, fase inicial y menú principal abierto. */
+    /** End of startup: tier suggested by capabilities, initial phase and main menu open. */
     bootCompleted(caps: Capabilities): void {
       set((s) => {
         const settings = applySettingsPatch(s.settings, { graphics: { suggestedTier: suggestTier(caps) } });
@@ -363,7 +363,7 @@ export function createActions(store: GameStore) {
         return {
           settings,
           session: { ...s.session, phase: phaseAfterBoot(tier) },
-          // Sin WebGL se aterriza directo en solo-diálogo (§2.7.2.1); con WebGL, el menú principal elige.
+          // Without WebGL it lands directly in dialogue-only (§2.7.2.1); with WebGL, the main menu chooses.
           ui: caps.webgl2
             ? { ...s.ui, panels: [{ kind: "mainMenu" }], returnFocus: [null], announcement: announcement(s, key) }
             : { ...s.ui, panels: [], returnFocus: [], announcement: announcement(s, key) },
@@ -385,7 +385,7 @@ export function createActions(store: GameStore) {
     openMainMenu: (openerId: string | null = null) => openPanel({ kind: "mainMenu" }, openerId),
     openSettings: (openerId: string | null = null) => openPanel({ kind: "settings" }, openerId),
 
-    /** Cierra el panel de arriba y devuelve el foco a quien lo abrió. */
+    /** Closes the top panel and returns focus to whoever opened it. */
     closePanel(): void {
       set((s) => {
         if (s.ui.panels.length === 0) return {};
@@ -400,7 +400,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** Cierra todos los paneles y muestra la vista de la fase actual. */
+    /** Closes all panels and shows the current phase's view. */
     closeAllPanels(): void {
       set((s) => ({ ui: { ...s.ui, panels: [], returnFocus: [], focusRequest: null } }));
     },
@@ -413,8 +413,8 @@ export function createActions(store: GameStore) {
     },
 
     /**
-     * Al mapa solo si el tier lo permite; si no, se explica por aria-live y no se cambia nada. Open-world-3d T10 (d): la
-     * despacha el clic de "Explorar el mapa" (MainMenu); si deja entrar, marca `lg:world-enter` (una vez por página).
+     * To the map only if the tier allows it; otherwise it explains via aria-live and changes nothing. Open-world-3d T10 (d):
+     * dispatched by the click on "Explore the map" (MainMenu); if it lets you in, it marks `lg:world-enter` (once per page).
      */
     enterWorld(): void {
       if (canEnterWorld(tierOf(get()))) markWorldEnter(globalThis.performance);
@@ -431,12 +431,12 @@ export function createActions(store: GameStore) {
       set((s) => ({ ui: { ...s.ui, dialogOnlyPlaceId: placeId } }));
     },
 
-    /** Entrar a la escena con un NPC (o, con `null`, seguir la historia sin NPC: escenas de Lumi como M0.2). */
+    /** Enter the scene with an NPC (or, with `null`, follow the story without an NPC: Lumi scenes like M0.2). */
     enterScene(npcId: string | null, openerId: string | null = null): void {
       set((s) => openScene(s, npcId, openerId));
     },
 
-    /** Salir del HUD de diálogo: el servicio cierra la conexión (el servidor aborta una escena en curso). */
+    /** Leave the dialogue HUD: the service closes the connection (the server aborts a scene in progress). */
     leaveScene(): void {
       set((s) => {
         const top = s.ui.panels[s.ui.panels.length - 1];
@@ -448,7 +448,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** "Terminé" en modo texto: manda lo escrito y cierra el turno. Vacío o fuera de turno no manda nada y lo dice. */
+    /** "Done" in text mode: sends what was written and closes the turn. Empty or out of turn sends nothing and says so. */
     submitTurn(text: string): void {
       set((s) => {
         const clean = text.trim();
@@ -457,12 +457,12 @@ export function createActions(store: GameStore) {
         const body = clean.slice(0, MAX_TURN_CHARS);
         const d = enqueue(s.dialogue, { type: "turn.text", text: body });
         const line: DialogueLine = { id: `player-${d.outboxSeq}`, speaker: "player", kind: "player", text: body, template: null };
-        // Hasta que el servidor confirme, el turno queda cerrado del lado del cliente (no se manda dos veces).
+        // Until the server confirms, the turn stays closed on the client side (it is not sent twice).
         return { dialogue: { ...d, history: [...d.history, line], turnSubstate: "committed" } };
       });
     },
 
-    /** "Pasar el turno": abre el menú de las 4 opciones (03 §5.5.3). */
+    /** "Pass the turn": opens the menu of the 4 options (03 §5.5.3). */
     passTurn(): void {
       set((s) => {
         if (s.dialogue.state !== "playerTurn" || (s.dialogue.turnSubstate !== "waiting" && s.dialogue.turnSubstate !== "endPending")) return {};
@@ -470,7 +470,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** Una opción del menú de pase. `repeat` además vuelve a leer la última línea del NPC por aria-live, sin costo. */
+    /** One option of the pass menu. `repeat` also re-reads the NPC's last line via aria-live, at no cost. */
     choosePass(option: PassChoice): void {
       set((s) => {
         if (!s.dialogue.silenceMenuOpen) return {};
@@ -482,7 +482,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** Palabra fuera del glosario (o sin traducción visible): se marca para repasar, sin traducción inventada (D-068). */
+    /** Word outside the glossary (or without a visible translation): marked for review, no invented translation (D-068). */
     markForReview(word: string): void {
       set((s) => {
         const w = word.trim().toLowerCase();
@@ -494,9 +494,9 @@ export function createActions(store: GameStore) {
 
     setHintChip: (on: boolean) => changeSettings({ input: { hintChip: on } }, on ? "announce.hintChip.on" : "announce.hintChip.off"),
 
-    // ---------- voz (F5.2): la UI pide, services/audio ejecuta ----------
+    // ---------- voice (F5.2): the UI asks, services/audio executes ----------
 
-    /** "Hablar": abre el turno hablado (voice.turnStart). Fuera de turno o con el NPC sonando, no hace nada y lo dice. */
+    /** "Speak": opens the spoken turn (voice.turnStart). Out of turn or with the NPC sounding, it does nothing and says so. */
     voiceTalkStart(): void {
       set((s) => {
         if (!canTalk(s.dialogue)) return s.dialogue.voice.talk === "idle" ? { ui: { ...s.ui, announcement: announcement(s, "announce.notYourTurn") } } : {};
@@ -505,15 +505,15 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** "Terminé" o soltar "Hablar": el turno se cierra (services/audio manda el fin después de una cola corta de audio). */
+    /** "Done" or releasing "Speak": the turn closes (services/audio sends the end after a short audio tail). */
     voiceTalkEnd(): void {
       set((s) => (s.dialogue.voice.talk === "talking" ? { dialogue: withVoice(s.dialogue, { talk: "ending" }) } : {}));
     },
 
     /**
-     * services/audio terminó de mandar el audio del turno: voice.turnEnd al servidor. `heardSpeech`: el VAD local
-     * detectó voz (si no, el HUD sugiere revisar el micrófono). Con `send: false` el turno se descarta sin mandar el fin
-     * (la escena ya no está en tu turno, p. ej. por el tope de tiempo).
+     * services/audio finished sending the turn's audio: voice.turnEnd to the server. `heardSpeech`: the local VAD
+     * detected voice (if not, the HUD suggests checking the microphone). With `send: false` the turn is discarded without sending the end
+     * (the scene is no longer on your turn, e.g. because of the time cap).
      */
     voiceTurnClosed(heardSpeech: boolean, send = true): void {
       set((s) => {
@@ -523,7 +523,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** services/audio informa su estado, el nivel del micrófono o por qué no hay micrófono. */
+    /** services/audio reports its state, the microphone level, or why there is no microphone. */
     audioChanged(patch: Partial<Pick<VoiceUi, "audio" | "micProblem" | "level">>): void {
       set((s) => {
         const v = s.dialogue.voice;
@@ -532,7 +532,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    // ---------- servicio de escena (services/scene) ----------
+    // ---------- scene service (services/scene) ----------
 
     sceneConnecting(): void {
       set((s) => ({ dialogue: { ...s.dialogue, connection: "connecting" } }));
@@ -540,18 +540,18 @@ export function createActions(store: GameStore) {
     sceneConnected(): void {
       set((s) => ({ dialogue: { ...s.dialogue, connection: "open" } }));
     },
-    /** Falla clara: sin servidor de escenas no hay diálogo; se dice en el HUD y por aria-live. */
+    /** Clear failure: without a scene server there is no dialogue; it is said in the HUD and via aria-live. */
     sceneConnectionFailed(): void {
       set((s) => ({ dialogue: { ...s.dialogue, connection: "error" }, ui: { ...s.ui, announcement: announcement(s, "announce.sceneOffline") } }));
     },
     sceneConnectionClosed(): void {
       set((s) => (s.dialogue.connection === "open" ? { dialogue: { ...s.dialogue, connection: "closed" } } : {}));
     },
-    /** Comandos ya mandados por el servicio (hasta `seq` inclusive). */
+    /** Commands already sent by the service (up to and including `seq`). */
     outboxSent(seq: number): void {
       set((s) => (s.dialogue.outbox.length === 0 ? {} : { dialogue: { ...s.dialogue, outbox: s.dialogue.outbox.filter((o) => o.seq > seq) } }));
     },
-    /** Un mensaje del servidor de escena; `scene.effects` además cambia el mundo (03 §6.4.8). */
+    /** A message from the scene server; `scene.effects` also changes the world (03 §6.4.8). */
     sceneMessage(msg: ServerMessage): void {
       set((s) => {
         const dialogue = reduceSceneMessage(s.dialogue, msg);
@@ -573,7 +573,7 @@ export function createActions(store: GameStore) {
     lexiconLoaded(lexicon: Omit<Lexicon, "status">): void {
       set((s) => ({ dialogue: { ...s.dialogue, lexicon: { ...lexicon, status: "ready" } } }));
     },
-    /** Sin glosario el HUD sigue: tocar una palabra solo ofrece marcarla (nunca se inventa una traducción). */
+    /** Without a glossary the HUD continues: tapping a word only offers to mark it (a translation is never invented). */
     lexiconFailed(): void {
       set((s) => ({ dialogue: { ...s.dialogue, lexicon: { ...s.dialogue.lexicon, status: "error" } } }));
     },
@@ -592,17 +592,17 @@ export function createActions(store: GameStore) {
       }));
     },
 
-    /** Falla clara: sin contenido no hay lista; se dice por aria-live (sin datos inventados). */
+    /** Clear failure: without content there is no list; it is said via aria-live (no invented data). */
     contentFailed(): void {
       set((s) => ({ world: { ...s.world, catalog: "error" }, ui: { ...s.ui, announcement: announcement(s, "announce.contentFailed") } }));
     },
 
-    // ---------- mapa (F2) ----------
+    // ---------- map (F2) ----------
     dioramaLoading(): void {
       set((s) => ({ world: { ...s.world, dioramaStatus: "loading" } }));
     },
 
-    /** El layout compilado entra al núcleo (grilla, capas, NPCs) y el jugador aparece en el spawn. */
+    /** The compiled layout enters the core (grid, layers, NPCs) and the player appears at the spawn. */
     dioramaLoaded(layout: DioramaLayout): void {
       set((s) => {
         const diorama = prepareDiorama(layout);
@@ -628,10 +628,10 @@ export function createActions(store: GameStore) {
     },
 
     /**
-     * Recarga en caliente (FD0, 03 §6.5.2): entra el contenido recompilado. services/content solo la despacha sin
-     * escena abierta (el cambio aplica en la próxima escena). Si cambió el diorama actual, el núcleo re-deriva grilla
-     * y capas; el jugador se queda donde está si sigue siendo caminable; si no, pasa a la celda libre más cercana (o al
-     * spawn si no hay ninguna cerca). `ids`: los tocados.
+     * Hot reload (FD0, 03 §6.5.2): the recompiled content comes in. services/content only dispatches it with no open
+     * scene (the change applies in the next scene). If the current diorama changed, the core re-derives the grid
+     * and layers; the player stays where they are if still walkable; if not, moves to the nearest free cell (or to the
+     * spawn if none is near). `ids`: the ones touched.
      */
     contentReloaded(ids: readonly string[], update: ContentUpdate): void {
       if (ids.length === 0) return;
@@ -660,15 +660,15 @@ export function createActions(store: GameStore) {
     },
 
     /**
-     * Efectos de misión que emitió el servidor al cerrar una escena (`scene.effects`, F4.1, 03 §6.4.8): flags,
-     * fundaciones y presentaciones, con la misma regla del núcleo que usa el servidor (una fundación nunca retrocede;
-     * repetir un efecto no cambia nada). El mundo 3D los refleja leyendo el store.
+     * Mission effects the server emitted when closing a scene (`scene.effects`, F4.1, 03 §6.4.8): flags,
+     * foundations and presentations, with the same core rule the server uses (a foundation never goes back;
+     * repeating an effect changes nothing). The 3D world reflects them by reading the store.
      */
     sceneEffectsApplied(effects: readonly WorldEffect[]): void {
       set((s) => withEffects(s, effects));
     },
 
-    /** Única entrada de input del juego (R10): services/input y state/bridge.ts traducen dispositivos a esto. */
+    /** The game's single input entry (R10): services/input and state/bridge.ts translate devices to this. */
     dispatch(action: SemanticAction): void {
       set((s) => semantic(s, action));
     },
@@ -681,8 +681,8 @@ export function createActions(store: GameStore) {
     toggleOverview: () => set((s) => semantic(s, { type: "toggleOverview" })),
 
     /**
-     * Zoom a un t dado (0 = 2,5 m, 1 = el mapa entero). Lo usan la sonda de rendimiento (poses close, mid y full) y los
-     * tests; el jugador usa los pasos.
+     * Zoom to a given t (0 = 2.5 m, 1 = the whole map). Used by the performance probe (close, mid and full poses) and the
+     * tests; the player uses the steps.
      */
     zoomTo(t: number): void {
       set((s) => {
@@ -694,8 +694,8 @@ export function createActions(store: GameStore) {
     },
 
     /**
-     * world/camera avisa la distancia del mapa entero (cambia con el aspecto y el yaw). Con el mapa entero la distancia
-     * la sigue; si no, la pedida nunca pasa de ella (alejar de más no acumula pasos invisibles).
+     * world/camera reports the whole-map distance (it changes with aspect and yaw). With the whole map the distance
+     * follows it; otherwise the requested one never exceeds it (zooming out too far does not accumulate invisible steps).
      */
     cameraFitted(fitDistance: number): void {
       if (!Number.isFinite(fitDistance) || fitDistance <= THIRD_PERSON.minDistance) return;
@@ -707,14 +707,14 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** Un paso fijo de simulación; lo llama el lazo de services/simulation. */
+    /** One fixed simulation step; called by the services/simulation loop. */
     simulationStep(): void {
       set(simulate);
     },
 
     /**
-     * PerformanceMonitor (§2.7.2.2): baja la sugerencia un escalón. Nunca con un tier fijado a mano (gana la
-     * elección manual) ni durante una conversación (evita saltos visuales mientras se habla).
+     * PerformanceMonitor (§2.7.2.2): lowers the suggestion one notch. Never with a manually pinned tier (the manual
+     * choice wins) nor during a conversation (avoids visual jumps while talking).
      */
     performanceDeclined(): void {
       set((s) => {
@@ -728,7 +728,7 @@ export function createActions(store: GameStore) {
       });
     },
 
-    /** Pérdida del contexto WebGL (§2.7.2.4): a solo-diálogo sin perder nada, con aviso. */
+    /** WebGL context loss (§2.7.2.4): to dialogue-only without losing anything, with a notice. */
     contextLost(): void {
       set((s) => (s.session.phase !== "world" ? {} : {
         session: { ...s.session, phase: "dialogOnly" },
@@ -741,8 +741,8 @@ export function createActions(store: GameStore) {
 
 export type GameActions = ReturnType<typeof createActions>;
 
-/** true mientras la escena sigue viva en el servidor (03 §3.5.1, estados activos). */
+/** true while the scene is still alive on the server (03 §3.5.1, active states). */
 export const isSceneActive = (d: DialogueState): boolean => ACTIVE_STEPS.has(d.state);
 
-/** Las acciones del store único. */
+/** The single store's actions. */
 export const actions: GameActions = createActions(gameStore);

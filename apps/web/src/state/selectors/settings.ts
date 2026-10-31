@@ -1,4 +1,4 @@
-// Selectores del slice `settings`: tier efectivo (R12) y view-models de Ajustes y del documento.
+// Selectors of the `settings` slice: effective tier (R12) and view-models for Settings and the document.
 import {
   effectiveTier, FEEDBACK_MODES, NPC_SPEEDS, SELECTABLE_TIERS, TEXT_SCALES,
   type FeedbackMode, type NpcSpeed, type SelectableTier, type TextScale, type TierChoice,
@@ -6,7 +6,7 @@ import {
 import type { GameState } from "../store";
 import { createViewSelector } from "./view";
 
-/** Tier efectivo. Nunca `xr` (R12): lo garantiza effectiveTier del núcleo. */
+/** Effective tier. Never `xr` (R12): guaranteed by the core's effectiveTier. */
 export const selectEffectiveTier = (s: GameState): SelectableTier =>
   effectiveTier(s.settings.graphics.tier, s.settings.graphics.suggestedTier);
 
@@ -16,7 +16,7 @@ export interface SettingsView {
   highContrast: boolean;
   reduceMotion: boolean;
   subtitles: boolean;
-  /** Chip de pista a los 10 s (D-035). */
+  /** Hint chip at 10 s (D-035). */
   hintChip: boolean;
   npcSpeed: NpcSpeed;
   npcSpeeds: readonly NpcSpeed[];
@@ -26,7 +26,7 @@ export interface SettingsView {
   tierChoices: readonly TierChoice[];
   suggestedTier: SelectableTier;
   effectiveTier: SelectableTier;
-  /** Sin WebGL la elección manual no cambia nada: la UI lo explica. */
+  /** Without WebGL the manual choice changes nothing: the UI explains it. */
   tierLocked: boolean;
 }
 
@@ -58,7 +58,7 @@ export const selectSettingsView = createViewSelector(
 );
 
 export interface DocumentSettingsView {
-  /** Escala del texto raíz (1 = 100 %). */
+  /** Root text scale (1 = 100 %). */
   fontScale: number;
   highContrast: boolean;
   reduceMotion: boolean;

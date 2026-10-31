@@ -1,6 +1,6 @@
-// F4.1 A5: snapshots del prompt del NPC por NPC del prólogo (Inés en M0.1, Maya en M0.3; Kofi no tiene escena en
-// el prólogo). Más las reglas que el constructor siempre agrega: honestidad (D-061), sin corrección explícita (D-070),
-// rails de menores, ningún hueco `{{...}}` sin llenar y ningún dato personal.
+// F4.1 A5: snapshots of the NPC prompt per prologue NPC (Inés in M0.1, Maya in M0.3; Kofi has no scene in
+// the prologue). Plus the rules the builder always adds: honesty (D-061), no explicit correction (D-070),
+// minors rails, no unfilled `{{...}}` gap and no personal data.
 import { describe, expect, test } from "vitest";
 import { emptyWorldProgress } from "@lg/core/scene";
 import { readCatalog } from "../src/scene-runtime/catalog.ts";
@@ -21,7 +21,7 @@ const PROLOGUE = [
   { npc: "NPC-MAYA", mission: "M0.3", scene: "M0.3-E1", intros: ["NPC-MAYA"] },
 ] as const;
 
-// Patrones de datos personales: emails, teléfonos, URLs con usuario.
+// Personal-data patterns: emails, phones, URLs with a user.
 const PERSONAL = [/[\w.+-]+@[\w-]+\.[\w.]+/, /\+?\d[\d\s().-]{7,}\d/];
 
 describe("A5: prompt del NPC por NPC del prólogo", () => {

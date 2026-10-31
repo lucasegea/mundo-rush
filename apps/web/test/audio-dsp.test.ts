@@ -1,6 +1,6 @@
-// F5.2: el DSP del audio del cliente (services/audio/dsp/) con buffers sintéticos en vitest, sin navegador: PCM,
-// remuestreo, VAD por energía (silencio, voz simulada, ruido), nivel del medidor y armado de bloques de captura. Y el
-// worklet: solo envuelve dsp/ (P0 §7).
+// F5.2: the client audio DSP (services/audio/dsp/) with synthetic buffers in vitest, without a browser: PCM,
+// resampling, energy VAD (silence, simulated voice, noise), meter level and capture block assembly. And the
+// worklet: it only wraps dsp/ (P0 §7).
 import { describe, expect, test } from "vitest";
 import {
   CAPTURE_FRAME_MS, createCaptureFramer, DEFAULT_VAD, floatToPcm16, initialVad, levelFromRms, pcm16FromBytes, pcm16ToBytes,
@@ -11,7 +11,7 @@ const sine = (freq: number, rate: number, ms: number, amp = 0.5): Float32Array =
   const n = Math.round((rate * ms) / 1000);
   return Float32Array.from({ length: n }, (_, i) => amp * Math.sin((2 * Math.PI * freq * i) / rate));
 };
-/** Ruido pseudoaleatorio determinístico (LCG) de amplitud `amp`. */
+/** Deterministic pseudorandom noise (LCG) of amplitude `amp`. */
 const noise = (n: number, amp: number, seed = 7): Float32Array => {
   let x = seed;
   return Float32Array.from({ length: n }, () => {
@@ -19,7 +19,7 @@ const noise = (n: number, amp: number, seed = 7): Float32Array => {
     return ((x / 2 ** 31) * 2 - 1) * amp;
   });
 };
-/** Cruces por cero ascendentes por segundo ≈ frecuencia de un seno. */
+/** Ascending zero crossings per second ≈ frequency of a sine. */
 const zeroCrossHz = (s: Float32Array, rate: number): number => {
   let n = 0;
   for (let i = 1; i < s.length; i++) if ((s[i - 1] ?? 0) < 0 && (s[i] ?? 0) >= 0) n++;
@@ -59,7 +59,7 @@ describe("remuestreo", () => {
   });
 
   test("bajar promedia: un tono por encima de Nyquist de destino se atenúa mucho", () => {
-    const high = sine(12000, 48000, 200); // 12 kHz no entra en 16 kHz (Nyquist 8 kHz)
+    const high = sine(12000, 48000, 200); // 12 kHz does not fit in 16 kHz (Nyquist 8 kHz)
     expect(rms(resample(high, 48000, 16000))).toBeLessThan(rms(high) * 0.5);
   });
 
@@ -101,7 +101,7 @@ describe("VAD por energía", () => {
     const r = frames(voice, 10);
     expect(r.events).toEqual(["speechStart"]);
     expect(r.state.heardSpeech).toBe(true);
-    // Un golpe de 40 ms no alcanza (speechMs = 120).
+    // A 40 ms hit is not enough (speechMs = 120).
     expect(frames(voice, 2).state.heardSpeech).toBe(false);
   });
 
@@ -117,14 +117,14 @@ describe("VAD por energía", () => {
     const more = frames(0, 1, pause.state);
     expect(more.events).toEqual(["silence"]);
     expect(more.state).toMatchObject({ speaking: false, heardSpeech: true });
-    expect(frames(0, 80, more.state).events).toEqual([]); // una vez por pausa
+    expect(frames(0, 80, more.state).events).toEqual([]); // once per pause
     const short = vadStep(talked, 0, 40, { ...DEFAULT_VAD, silenceMs: 40 });
     expect(short.event).toBe("silence");
   });
 
   test("nivel del medidor en dB: piso, techo y monotonía", () => {
     expect(levelFromRms(0)).toBe(0);
-    expect(levelFromRms(0.0005)).toBe(0); // -66 dBFS, bajo el piso
+    expect(levelFromRms(0.0005)).toBe(0); // -66 dBFS, below the floor
     expect(levelFromRms(1)).toBe(1);
     expect(levelFromRms(0.01)).toBeCloseTo(1 / 3, 2); // -40 dBFS
     expect(levelFromRms(0.1)).toBeGreaterThan(levelFromRms(0.01));
@@ -135,13 +135,13 @@ describe("bloques de captura", () => {
   test("48 kHz: entradas de 128 muestras salen como bloques de 40 ms a 16 kHz, sin perder muestras", () => {
     const framer = createCaptureFramer({ sourceRate: 48000 });
     expect(framer.frameMs).toBe(CAPTURE_FRAME_MS);
-    const input = sine(250, 48000, 400, 0.4); // 19200 muestras = 10 bloques
+    const input = sine(250, 48000, 400, 0.4); // 19200 samples = 10 blocks
     const out = [];
     for (let i = 0; i < input.length; i += 128) out.push(...framer.push(input.subarray(i, i + 128)));
     expect(out).toHaveLength(10);
     expect(out.every((f) => f.pcm.length === 640)).toBe(true);
     expect(out[0]?.rms).toBeCloseTo(0.4 / Math.SQRT2, 2);
-    // Continuidad: el bloque 2 empieza donde el 1 terminó (mismo seno, sin saltos grandes en el borde).
+    // Continuity: block 2 starts where block 1 ended (same sine, no big jumps at the edge).
     const a = out[0]?.pcm ?? new Int16Array();
     const b = out[1]?.pcm ?? new Int16Array();
     expect(Math.abs((b[0] ?? 0) - (a[a.length - 1] ?? 0))).toBeLessThan(2000);
@@ -171,8 +171,8 @@ describe("el worklet solo envuelve dsp/ (P0 §7)", () => {
     expect([...code.matchAll(/^import .* from "([^"]+)";$/gm)].map((m) => m[1])).toEqual(["./dsp/capture"]);
     expect(code).not.toMatch(/new (Float32Array|Int16Array|ArrayBuffer)/);
     expect(code).not.toMatch(/Math\./);
-    expect(code).not.toMatch(/[^=!<>]\s[*/+-]\s/); // ni * / + - binarios
+    expect(code).not.toMatch(/[^=!<>]\s[*/+-]\s/); // no binary * / + - either
     expect(code).not.toMatch(/\bwhile\b/);
-    expect(code).not.toMatch(/^(?!declare ).*\bfunction\b/m); // solo las declaraciones de tipos del scope del worklet
+    expect(code).not.toMatch(/^(?!declare ).*\bfunction\b/m); // only the worklet scope's type declarations
   });
 });

@@ -1,27 +1,27 @@
-// Lints de texto de validate:content (04 F1.2; 02 §1.5 reglas 3-4, §2.2, §3.3, §6.6 #3/#5/#6/#15-#17).
-// Las listas viven en content/safety/blocklists/ y los topes en content/level-cards/: acá solo hay reglas.
+// Text lints of validate:content (04 F1.2; 02 §1.5 rules 3-4, §2.2, §3.3, §6.6 #3/#5/#6/#15-#17).
+// The lists live in content/safety/blocklists/ and the caps in content/level-cards/: here there are only rules.
 import type { ListaBloqueo } from "../schemas/control.ts";
 import type { Conjunto } from "./conjunto.ts";
 import type { Linea } from "./lineas.ts";
 import type { Hallazgo } from "./tipos.ts";
 
-/** Límite de palabra Unicode (\b de JS no entiende "fácil"). `*` final = cualquier sufijo de letras. */
+/** Unicode word boundary (JS's \b does not understand "fácil"). A trailing `*` = any letter suffix. */
 export const regexTermino = (termino: string, sinMayusculas: boolean): RegExp => {
   const comodin = termino.endsWith("*");
   const cuerpo = (comodin ? termino.slice(0, -1) : termino).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
   return new RegExp(`(?<![\\p{L}\\p{N}_])${cuerpo}${comodin ? "\\p{L}*" : ""}(?![\\p{L}\\p{N}_])`, sinMayusculas ? "iu" : "u");
 };
 
-/** Saca el marcado de inglés modelado (***…***) y los huecos {slot}: no son palabras del texto. */
+/** Strips modeled-English markup (***…***) and {slot} blanks: they are not words of the text. */
 const limpiar = (t: string): string => t.replace(/\*+/g, "").replace(/\{[a-z_0-9]+\}/g, " ");
 
-/** "Dear X," como encabezado de carta en una escena de modo escritura (única excepción de apelativos). */
+/** "Dear X," as a letter header in a writing-mode scene (the only exception to forms of address). */
 const esEncabezadoDeCarta = (l: Linea, termino: string): boolean =>
   termino.toLowerCase() === "dear" && l.escena?.modo_escritura === true && /^Dear\s+[^\s,]+(?:\s[^\s,]+)?,/.test(l.texto);
 
 const aplica = (lista: ListaBloqueo, l: Linea): boolean => {
   if (l.quien !== null && lista.excepto.includes(l.quien)) return false;
-  if (lista.aplica_a === "jugador") return false; // moderación de entrada en runtime (F4.2), no un lint de contenido
+  if (lista.aplica_a === "jugador") return false; // runtime input moderation (F4.2), not a content lint
   if (lista.aplica_a === "todo") return true;
   if (lista.aplica_a === "lumi") return l.quien === "LUMI" && l.idioma === "es";
   return l.idioma === "en";
@@ -47,7 +47,7 @@ export const lintBloqueos = (c: Conjunto, lineas: readonly Linea[], h: Hallazgo[
 const HORA = /\b\d{1,2}(?::\d{2})?\s?(?:a\.?m\.?|p\.?m\.?)(?![\p{L}])|\b\d{1,2}:\d{2}\b/giu;
 const UNIDADES = /\d\s*(?:%|m|km|cm|mm|kg|g|l|ml|ha|mi|ft|°)(?![\p{L}])|(?<![\p{L}])(?:percent|percentage|per\s+cent|por\s*ciento|meters?|metres?|kilometers?|kilometres?|miles|hectares?|liters?|litres?|metros?|kilómetros?|hectáreas?|litros?|times\s+more|veces\s+más)(?![\p{L}])/iu;
 
-/** Una línea con dígitos, porcentajes o unidades falla, salvo horas y las cantidades listadas por la escena. */
+/** A line with digits, percentages or units fails, except hours and the quantities listed by the scene. */
 export const encontrarCifra = (texto: string, permitidas: readonly string[] = []): string | null => {
   let t = limpiar(texto);
   for (const p of permitidas) t = t.split(p).join(" ");
@@ -67,9 +67,9 @@ export const lintCifras = (lineas: readonly Linea[], h: Hallazgo[]): void => {
   }
 };
 
-// ---------- Longitud por banda (02 §3.3, §6.6 #3) ----------
+// ---------- Length by band (02 §3.3, §6.6 #3) ----------
 
-/** Oraciones de una línea: corta en . ! ? … y descarta vacías. */
+/** Sentences of a line: splits on . ! ? … and drops empty ones. */
 export const oraciones = (texto: string): string[] =>
   limpiar(texto).split(/[.!?…]+/u).map((s) => s.trim()).filter((s) => /[\p{L}\p{N}]/u.test(s));
 
@@ -94,14 +94,14 @@ export const lintLongitud = (c: Conjunto, lineas: readonly Linea[], h: Hallazgo[
       if (permitidas.has(l.id)) usadas.add(l.id);
       else h.push({ nivel: "error", archivo: l.archivo, clave: l.clave, regla: "longitud", mensaje: `oración de ${palabras(larga)} palabras (máximo ${max} en ${l.banda}): "${larga}" — línea ${l.id}; si es [GUIONADA] de 02, va a content/lint-allowlist.yaml` });
     }
-    // Avisos (02 §6.6 #3): interjecciones y vocativos de 1-2 palabras quedan exentos del mínimo.
+    // Warnings (02 §6.6 #3): interjections and vocatives of 1-2 words are exempt from the minimum.
     const corta = ors.find((o) => palabras(o) > 2 && palabras(o) < min);
     if (corta !== undefined) h.push({ nivel: "aviso", archivo: l.archivo, clave: l.clave, regla: "longitud", mensaje: `oración de ${palabras(corta)} palabras bajo el mínimo ${min} de ${l.banda}: "${corta}"` });
     if (ors.filter((o) => palabras(o) > 2).length > tarjeta.oraciones_por_turno.max) {
       h.push({ nivel: "aviso", archivo: l.archivo, clave: l.clave, regla: "longitud", mensaje: `más de ${tarjeta.oraciones_por_turno.max} oraciones por turno en ${l.banda}` });
     }
   }
-  // Una excepción que ya no corresponde a ninguna línea larga es basura que tapa regresiones.
+  // An exception that no longer corresponds to any long line is garbage that hides regressions.
   for (const [id, a] of permitidas) {
     if (!usadas.has(id) && c.allowlist) {
       const i = c.allowlist.data.longitud.indexOf(a);
@@ -110,7 +110,7 @@ export const lintLongitud = (c: Conjunto, lineas: readonly Linea[], h: Hallazgo[
   }
 };
 
-/** Lumi: 6-14 palabras por oración y como mucho 2 oraciones (02 §2.7.1): solo aviso. */
+/** Lumi: 6-14 words per sentence and at most 2 sentences (02 §2.7.1): warning only. */
 export const lintLongitudLumi = (lineas: readonly Linea[], h: Hallazgo[]): void => {
   for (const l of lineas) {
     if (l.quien !== "LUMI" || l.idioma !== "es" || !l.clave.endsWith(".texto")) continue;

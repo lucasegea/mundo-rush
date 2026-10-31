@@ -1,6 +1,6 @@
-// world/camera/portrait.ts — la cámara de los retratos de solo-diálogo (plan estetica-c M3, D-030; R11: las cámaras viven
-// en world/camera/). El encuadre es puro: un busto de frente, un poco desde arriba, con la cabeza (y el sombrero) adentro
-// y los hombros abajo. La fábrica arma la PerspectiveCamera que usa el estudio de retratos (world/portraits/studio.ts).
+// world/camera/portrait.ts — the camera for dialogue-only portraits (plan estetica-c M3, D-030; R11: cameras live
+// in world/camera/). The framing is pure: a front-facing bust, slightly from above, with the head (and the hat) inside
+// and the shoulders below. The factory builds the PerspectiveCamera used by the portrait studio (world/portraits/studio.ts).
 import { PerspectiveCamera } from "three";
 
 export interface PortraitFraming {
@@ -9,13 +9,13 @@ export interface PortraitFraming {
   fovDeg: number;
 }
 
-/** Retrato cuadrado: campo de visión vertical y cuánto del busto entra (en radios de cabeza). */
+/** Square portrait: vertical field of view and how much of the bust fits (in head radii). */
 export const PORTRAIT_FOV_DEG = 24;
 const BUST_RADII = 3.4;
 
 /**
- * Encuadre de busto para una cabeza de centro `head` (metros del mundo, el personaje mirando a +z) y radio `radius`:
- * la cámara al frente y apenas arriba; mira un poco debajo del centro para que entren los hombros.
+ * Bust framing for a head with center `head` (world meters, the character facing +z) and radius `radius`:
+ * the camera in front and slightly above; it looks a little below the center so the shoulders fit.
  */
 export function portraitFraming(head: readonly [number, number, number], radius: number): PortraitFraming {
   const halfFov = (PORTRAIT_FOV_DEG * Math.PI) / 360;

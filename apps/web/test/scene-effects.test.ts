@@ -1,4 +1,4 @@
-// F4.1 (03 §6.4.8): el cliente aplica los efectos de misión que emite el servidor al cerrar una escena.
+// F4.1 (03 §6.4.8): the client applies the mission effects the server emits when closing a scene.
 import { beforeEach, describe, expect, test } from "vitest";
 import { actions } from "../src/state/actions";
 import { gameStore } from "../src/state/store";

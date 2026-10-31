@@ -1,7 +1,7 @@
-// Modo solo-diálogo (03 §2.7.1-§2.7.2, GDD §2.19): render alternativo sin WebGL. Lista de lugares de la región
-// (contenido de F1.2), quién está en cada uno con su retrato SVG (D-030) y "entrar a la escena" (abre el HUD de
-// diálogo de F4.2). "Seguir la historia" abre la escena que no tiene NPC (las de Lumi, como M0.2). Todo por teclado:
-// los lugares son botones con aria-pressed.
+// Dialog-only mode (03 §2.7.1-§2.7.2, GDD §2.19): alternative render without WebGL. List of the region's places
+// (F1.2 content), who is at each one with their SVG portrait (D-030) and "enter the scene" (opens the dialogue HUD
+// from F4.2). "Follow the story" opens the scene that has no NPC (Lumi's, like M0.2). All by keyboard:
+// places are buttons with aria-pressed.
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";
 import { selectDialogOnlyView, selectSettingsView, useGameView } from "../../state/selectors";

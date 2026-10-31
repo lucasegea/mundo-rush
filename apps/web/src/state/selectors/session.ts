@@ -1,4 +1,4 @@
-// Selectores del slice `session`.
+// Selectors of the `session` slice.
 import type { AppPhase } from "@lg/core";
 import type { GameState } from "../store";
 

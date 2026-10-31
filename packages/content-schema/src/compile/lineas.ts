@@ -1,20 +1,20 @@
-// Recorre el conjunto y saca cada texto que el juego dice o muestra, con quién lo dice, en qué idioma
-// y en qué banda. Los lints (lints.ts) corren sobre esta lista: un solo recorrido para todos.
+// Walks the set and extracts every text the game says or shows, with who says it, in which language
+// and in which band. The lints (lints.ts) run over this list: a single walk for all of them.
 import { Banda, esLineaLumi } from "../schemas/common.ts";
 import type { LineaGuionada } from "../schemas/common.ts";
 import type { Escena } from "../schemas/mision.ts";
 import type { Conjunto } from "./conjunto.ts";
 
 export interface Linea {
-  /** Id estable de la línea (lo usa content/lint-allowlist.yaml). */
+  /** Stable id of the line (used by content/lint-allowlist.yaml). */
   id: string;
   archivo: string;
   clave: string;
   texto: string;
-  /** NPC-*, LUMI o null (textos del mundo: sobres, explicaciones del cuaderno). */
+  /** NPC-*, LUMI or null (world texts: envelopes, notebook explanations). */
   quien: string | null;
   idioma: "en" | "es";
-  /** Banda MCER de la línea; null si no aplica el lint de longitud. */
+  /** CEFR band of the line; null if the length lint does not apply. */
   banda: string | null;
   escena: Escena | null;
 }
@@ -23,7 +23,7 @@ const lineasDeBloque = (
   out: Linea[], archivo: string, base: string, idBase: string, lineas: readonly LineaGuionada[], escena: Escena,
 ): void => {
   lineas.forEach((l, i) => {
-    if (esLineaLumi(l)) return; // las plantillas se lintean una vez, desde el catálogo
+    if (esLineaLumi(l)) return; // templates are linted once, from the catalog
     out.push({
       id: `${idBase}.${i}`, archivo, clave: `${base}[${i}].en`, texto: l.en,
       quien: l.quien, idioma: "en", banda: escena.banda, escena,
@@ -77,8 +77,8 @@ export const extraerLineas = (c: Conjunto): Linea[] => {
       out.push({ id: `${p.id}.reconocimiento`, archivo, clave: `${base}.linea_reconocimiento_en`, texto: p.linea_reconocimiento_en, quien: p.npc, idioma: "en", banda, escena: null });
     }
   }
-  // Frases firma: líneas en L2 que el NPC dice tal cual. Banda = la más baja de bandas_mcer.region_1
-  // ("A0-A1" -> A0): la frase se oye desde la primera escena del NPC, así que rige el tope más estricto.
+  // Signature phrases: L2 lines the NPC says verbatim. Band = the lowest of bandas_mcer.region_1
+  // ("A0-A1" -> A0): the phrase is heard from the NPC's first scene, so the strictest cap applies.
   const bandaDeNpc = new Map(c.npcs.map(({ data: n }) => [n.id as string, Banda.safeParse(n.bandas_mcer.region_1.split("-")[0]).data ?? null]));
   const conBase = (base: string, k: string): string => (base ? `${base}.${k}` : k);
   for (const { archivo, base, data: n } of c.npcs) {
@@ -87,10 +87,10 @@ export const extraerLineas = (c: Conjunto): Linea[] => {
       quien: n.id, idioma: "en", banda: bandaDeNpc.get(n.id) ?? null, escena: null,
     }));
   }
-  // uso_en_mundo es una descripción en español; lo que el juego dice son las citas entre comillas.
-  // El esquema no tiene hablante por entrada: el único NPC de la ficha es propuesta_por (creditos puede
-  // incluir "jugador"), y en 02 las citas de uso son la reacción de quien propuso el sitio
-  // (SITIO-PARADA: Ollie, "Now somebody waits for me!"). Se atribuyen a propuesta_por, con su banda.
+  // uso_en_mundo is a description in Spanish; what the game says are the quotes in quotation marks.
+  // The schema has no speaker per entry: the sheet's only NPC is propuesta_por (creditos may
+  // include "jugador"), and in 02 the usage quotes are the reaction of whoever proposed the site
+  // (SITIO-PARADA: Ollie, "Now somebody waits for me!"). They are attributed to propuesta_por, with its band.
   for (const { archivo, base, data: f } of c.fundaciones) {
     f.uso_en_mundo.forEach((u, i) => {
       [...u.matchAll(/"([^"]+)"|“([^”]+)”/gu)].forEach((m, j) => out.push({

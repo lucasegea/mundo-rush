@@ -1,7 +1,7 @@
-// world/materials/toon.ts — datos y texturas del material único del mundo (propuesta C §7, plan estetica-c M1 ítem 6):
-// rampa de 4 bandas (luminancia 150 / 195 / 232 / 255, filtro nearest: la sombra es clara, nunca negra) y una textura
-// de pincelada de 256 px en grises (manchas de 205 a 255) generada por código con semilla fija. Los datos son
-// funciones puras (testeables sin GPU); las texturas de three salen de ellos.
+// world/materials/toon.ts — data and textures of the world single material (proposal C §7, plan estetica-c M1 item 6):
+// 4-band ramp (luminance 150 / 195 / 232 / 255, nearest filter: the shadow is light, never black) and a 256 px
+// brushstroke texture in grays (blotches from 205 to 255) generated in code with a fixed seed. The data are
+// pure functions (testable without GPU); the three textures come from them.
 import { DataTexture, LinearFilter, LinearMipmapLinearFilter, NearestFilter, RepeatWrapping, RGBAFormat, SRGBColorSpace } from "three";
 import { rng } from "./rng";
 
@@ -9,11 +9,11 @@ export const TOON_BANDS = [150, 195, 232, 255] as const;
 export const BRUSH_SIZE = 256;
 export const BRUSH_MIN = 205;
 export const BRUSH_MAX = 255;
-/** Repeticiones de la pincelada sobre el terreno (propuesta C §7). */
+/** Brushstroke repeats over the terrain (proposal C §7). */
 export const BRUSH_REPEAT = 10;
 export const BRUSH_SEED = 3;
 
-/** Los 4 px RGBA de la rampa. */
+/** The ramp 4 RGBA px. */
 export function toonRampData(): Uint8Array {
   return new Uint8Array(TOON_BANDS.flatMap((v) => [v, v, v, 255]));
 }
@@ -28,8 +28,8 @@ export function toonRamp(): DataTexture {
 }
 
 /**
- * Pincelada: fondo 242 y 900 manchas elípticas de 205 a 254 al 55 %, que se envuelven en los bordes (la textura se
- * repite sin costura). Un valor por píxel, siempre entre 205 y 255. Determinística con la misma semilla.
+ * Brushstroke: background 242 and 900 elliptical blotches from 205 to 254 at 55 %, wrapping at the edges (the texture
+ * repeats seamlessly). One value per pixel, always between 205 and 255. Deterministic with the same seed.
  */
 export function brushPixels(seed = BRUSH_SEED): Uint8Array {
   const S = BRUSH_SIZE;

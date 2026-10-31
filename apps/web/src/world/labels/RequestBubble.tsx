@@ -1,5 +1,5 @@
-// world/labels/RequestBubble.tsx: la burbuja ámbar de pedido sobre un NPC (plan estetica-c M5). Flota con useFrame
-// (sin re-render de React); con "reducir movimiento" (`still`) queda quieta.
+// world/labels/RequestBubble.tsx: the amber request bubble over an NPC (plan estetica-c M5). It floats with useFrame
+// (no React re-render); with "reduce motion" (`still`) it stays still.
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { bubbleCenterY, createRequestBubble, disposeRequestBubble } from "./bubbleSprite";

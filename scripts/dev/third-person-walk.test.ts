@@ -1,4 +1,4 @@
-// open-world-3d M2: lo puro de los pasos AC28-AC30 de la caminata, con casos que tienen que fallar (lección FD0).
+// open-world-3d M2: the pure parts of the walk's AC28-AC30 steps, with cases that have to fail (FD0 lesson).
 import { describe, expect, test } from "vitest";
 import { angleDelta, beaconsOk, displacementYaw, forwardOf, forwardWalkOk, onScreen, projectWithMatrices, rightOf, turnFollowsYaw } from "./third-person-walk.ts";
 

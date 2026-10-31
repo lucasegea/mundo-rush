@@ -1,5 +1,5 @@
-# M0.2 · ¿Cómo se dice? (02 §4.4). Misión de Lumi: sin NPC en tiempo real, todo audio cacheado. Los bloques que 02
-# marca "no aplica" van presentes con su razón (excepción de 02 §4.3); las líneas van en lineas_guionadas.
+# M0.2 · ¿Cómo se dice? (02 §4.4). Lumi mission: no real-time NPC, all audio cached. The blocks that 02
+# marks "no aplica" are present with their reason (exception of 02 §4.3); the lines go in lineas_guionadas.
 id: M0.2
 titulo: { es-AR: "¿Cómo se dice?" }
 capitulo: 0

@@ -1,5 +1,5 @@
-// open-world-3d T2(f) (AC12, AC58): lo puro del lanzador por modo de GL. El navegador real lo prueban la caminata y la
-// sonda; acá: el modo por defecto, el modo desconocido, las banderas de cada modo y el renderer que no coincide.
+// open-world-3d T2(f) (AC12, AC58): the pure parts of the per-GL-mode launcher. The real browser is tested by the walk and the
+// probe; here: the default mode, the unknown mode, each mode's flags and the renderer that does not match.
 import { describe, expect, test } from "vitest";
 import { GL_MODES, glArgs, parseGlMode, rendererMismatch, VIEWPORT } from "./gl-mode.ts";
 

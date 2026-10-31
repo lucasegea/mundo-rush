@@ -1,46 +1,46 @@
-// @lg/art textures.ts: el inventario de texturas del mundo abierto (open-world-3d T6 paso 0, D-832, AC74) y la cuenta
-// de sus bytes, en dato puro y sin three. Una sola lista por look (`worldTextures(look)`, worldLook.ts, T7b): la leen el script `assets:texture-table` (la tabla por tier que
-// decide formato y tamaño ANTES de codificar), `estimateTextureMemory` de world/budget (memoria de GPU contra los topes
-// 24 / 48 / 96 MB de TIER_BUDGETS) y los módulos de world/ que crean cada textura (sus medidas salen de acá). Los .ktx2
-// se cuentan por su cabecera (`parseKtx2Header`): ancho, alto, niveles y modelo de color (ETC1S o UASTC) dan los bytes
-// del formato al que transcodifica el escritorio: BC7 para las dos variantes (D-832; ver `BASIS_TARGET`).
+// @lg/art textures.ts: the open world's texture inventory (open-world-3d T6 step 0, D-832, AC74) and the count
+// of their bytes, as pure data and without three. A single list per look (`worldTextures(look)`, worldLook.ts, T7b): read by the `assets:texture-table` script (the per-tier table that
+// decides format and size BEFORE encoding), `estimateTextureMemory` in world/budget (GPU memory against the caps
+// 24 / 48 / 96 MB of TIER_BUDGETS) and the world/ modules that create each texture (their measurements come from here). The .ktx2 files
+// are counted by their header (`parseKtx2Header`): width, height, levels and color model (ETC1S or UASTC) give the bytes
+// of the format the desktop transcodes to: BC7 for both variants (D-832; see `BASIS_TARGET`).
 import type { WorldTier } from "./density.ts";
 
-/** Formatos candidatos (D-832): las dos variantes de Basis y lo que se crea en tiempo de ejecución. */
+/** Candidate formats (D-832): the two Basis variants and what is created at runtime. */
 export const TEXTURE_FORMATS = ["etc1s", "uastc", "rgba8", "rg16f", "r8", "depth32"] as const;
 export type TextureFormat = (typeof TEXTURE_FORMATS)[number];
 
-/** Una textura que crea el mundo (por archivo .ktx2, lienzo, render target o DataTexture). */
+/** A texture the world creates (per .ktx2 file, canvas, render target or DataTexture). */
 export interface WorldTexture {
   id: string;
-  /** Para la tabla: suelo, rocas, árboles, impostores, pasto, cielo, etiquetas, sombra. */
+  /** For the table: ground, rocks, trees, impostors, grass, sky, labels, shadow. */
   group: string;
   width: number;
   height: number;
   mips: boolean;
   alpha: boolean;
-  /** Formato elegido (para un .ktx2, después de la tabla del paso 0) y los candidatos que la tabla compara. */
+  /** Chosen format (for a .ktx2, after the step 0 table) and the candidates the table compares. */
   format: TextureFormat;
   candidates: readonly TextureFormat[];
-  /** Cuántas hay en cada tier (0 = no se crea). */
+  /** How many there are in each tier (0 = not created). */
   count: Readonly<Record<WorldTier, number>>;
-  /** Ruta servida de un .ktx2 (desde la raíz del repo). */
+  /** Served path of a .ktx2 (from the repo root). */
   file?: string;
-  /** La tarea que la crea (T6 suelo y cielo, T7 árboles y rocas, T8 pasto): la tabla muestra también las por venir. */
+  /** The task that creates it (T6 ground and sky, T7 trees and rocks, T8 grass): the table also shows the upcoming ones. */
   task: "T6" | "T7" | "T8" | "m7";
-  /** Mapa normal (se codifica lineal y comprime peor: la estimación de bytes de archivo lo tiene en cuenta). */
+  /** Normal map (encoded linear and compresses worse: the file-byte estimate takes that into account). */
   normal?: boolean;
-  /** Lado en el mockup V6, si el elegido es otro (PD-4 paso 1: normales de 1024 a 512). */
+  /** Side in the V6 mockup, if the chosen one is different (PD-4 step 1: normals from 1024 to 512). */
   v6Px?: number;
 }
 
-/** Mapas fotográficos del suelo (Poly Haven, CC0): difuso en todo tier, normal donde DENSITY lo pide (D-832, PD-4). */
+/** Photographic ground maps (Poly Haven, CC0): diffuse in every tier, normal where DENSITY asks for it (D-832, PD-4). */
 export const GROUND_MAPS = ["leafy_grass", "sparse_grass", "forest_ground_04", "rock_face_03", "rocky_terrain"] as const;
 export type GroundMap = (typeof GROUND_MAPS)[number];
 /**
- * Lado de los mapas del suelo (px). Elegido con la tabla del paso 0 (AC74): el difuso queda en 1024 como en V6; los
- * normales bajan a 512 (PD-4 paso 1) y van en ETC1S (paso 2), porque con UASTC la descarga del muelle no entra en
- * `assets_muelle_mb` (ver `scripts/assets/texture-table.ts`).
+ * Side of the ground maps (px). Chosen with the step 0 table (AC74): the diffuse stays at 1024 as in V6; the
+ * normals drop to 512 (PD-4 step 1) and go in ETC1S (step 2), because with UASTC the dock download does not fit in
+ * `assets_muelle_mb` (see `scripts/assets/texture-table.ts`).
  */
 export const GROUND_DIFFUSE_PX = 1024;
 export const GROUND_NORMAL_PX = 512;
@@ -48,43 +48,43 @@ export const GROUND_NORMAL_V6_PX = 1024;
 export const TEXTURES_DIR = "apps/web/public/textures";
 export const groundTextureFile = (map: GroundMap, kind: "diff" | "nor"): string => `${TEXTURES_DIR}/${map.replace(/_/g, "-")}-${kind}.ktx2`;
 
-/** Medidas de lo que se dibuja en tiempo de ejecución (los módulos de world/ las leen de acá). */
+/** Measurements of what is drawn at runtime (the world/ modules read them from here). */
 export const RUNTIME_TEXTURE_PX = {
-  /** El atlas de matas del pasto V6 (cuatro variantes de 256 px, T8). */
+  /** The V6 grass tuft atlas (four 256 px variants, T8). */
   grassAtlas: [1024, 256],
-  /** El atlas de flores (cuatro celdas de 64 px, T7). */
+  /** The flower atlas (four 64 px cells, T7). */
   flowerAtlas: [256, 64],
-  /** El atlas de nubes: 3 cúmulos y 2 velos de 512 × 256 (T6). */
+  /** The cloud atlas: 3 cumulus and 2 veils of 512 × 256 (T6). */
   cloudAtlas: [512, 1280],
-  /** Un impostor por especie: vista de costado y copa desde arriba (T7, mockup `world.js:1319`). */
+  /** One impostor per species: side view and canopy from above (T7, mockup `world.js:1319`). */
   impostor: [512, 256],
-  /** Altura y tierra del pasto: RG16F de 1 m por texel sobre el área del pasto (T8, PD-2). */
+  /** Grass height and soil: RG16F of 1 m per texel over the grass area (T8, PD-2). */
   grassHeight: [240, 200],
 } as const;
 
-/** Especies con impostor (pinos y latifoliadas; los arbustos no tienen, T7). */
+/** Species with an impostor (pines and broadleaves; shrubs have none, T7). */
 export const IMPOSTOR_SPECIES = 5;
 
-// Open-world-3d T7b (D-841): el inventario es una función del look, `worldTextures(look)` de worldLook.ts (antes la
-// constante OPEN_WORLD_TEXTURES); las medidas, formatos y conteos por tier de arriba siguen siendo del núcleo.
+// Open-world-3d T7b (D-841): the inventory is a function of the look, `worldTextures(look)` in worldLook.ts (formerly the
+// OPEN_WORLD_TEXTURES constant); the measurements, formats and per-tier counts above are still the core's.
 
-/** Bytes por bloque de 4 × 4 del formato de escritorio al que transcodifica cada variante de Basis (D-832). */
+/** Bytes per 4 × 4 block of the desktop format that each Basis variant transcodes to (D-832). */
 export const BC_BLOCK_BYTES = { bc1: 8, bc3: 16, bc7: 16 } as const;
 export type BcTarget = keyof typeof BC_BLOCK_BYTES;
 
 /**
- * El formato de escritorio de toda textura Basis: BC7 (16 bytes por bloque), para UASTC y también para ETC1S, con o
- * sin alfa. Open-world-3d M3 (QA, AC42/AC74): `KTX2Loader` de three ordena los destinos de ETC1S por `priorityETC1S`
- * (ETC2 1, ETC1 2, BPTC 3, DXT 4); el escritorio con ANGLE/D3D11 tiene BPTC y no ETC, así que ETC1S sale en BC7, no en
- * BC1. La sonda lo midió (low a DPR 1,5: 7,2 MB, lo de BC7; con BC1 serían 3,9). BC7 es además el peor caso de todos
- * los destinos (ETC2 RGB 8, BC1 8, BC3 y ETC2 RGBA 16, ASTC 4x4 16), así que el tope por tier vale en cualquier GPU.
+ * The desktop format of every Basis texture: BC7 (16 bytes per block), for UASTC and also for ETC1S, with or
+ * without alpha. Open-world-3d M3 (QA, AC42/AC74): three's `KTX2Loader` orders the ETC1S targets by `priorityETC1S`
+ * (ETC2 1, ETC1 2, BPTC 3, DXT 4); desktop with ANGLE/D3D11 has BPTC and not ETC, so ETC1S comes out as BC7, not
+ * BC1. The probe measured it (low at DPR 1.5: 7.2 MB, the BC7 figure; with BC1 it would be 3.9). BC7 is also the worst case of all
+ * targets (ETC2 RGB 8, BC1 8, BC3 and ETC2 RGBA 16, ASTC 4x4 16), so the per-tier cap holds on any GPU.
  */
 export const BASIS_TARGET: BcTarget = "bc7";
 
-/** Niveles de la cadena completa de mipmaps. */
+/** Levels of the complete mipmap chain. */
 export const mipLevels = (w: number, h: number): number => Math.floor(Math.log2(Math.max(w, h))) + 1;
 
-/** Bytes de GPU de una textura comprimida por bloques: la suma de los niveles, cada uno redondeado a bloques de 4 × 4. */
+/** GPU bytes of a block-compressed texture: the sum of the levels, each rounded up to 4 × 4 blocks. */
 export function blockBytes(w: number, h: number, levels: number, target: BcTarget): number {
   let n = 0;
   for (let l = 0; l < levels; l++) n += Math.ceil(Math.max(1, w >> l) / 4) * Math.ceil(Math.max(1, h >> l) / 4) * BC_BLOCK_BYTES[target];
@@ -93,7 +93,7 @@ export function blockBytes(w: number, h: number, levels: number, target: BcTarge
 
 const BYTES_PER_PX: Record<Exclude<TextureFormat, "etc1s" | "uastc">, number> = { rgba8: 4, rg16f: 4, r8: 1, depth32: 4 };
 
-/** Bytes de GPU de una textura del inventario en su formato (sin contar cuántas hay). */
+/** GPU bytes of an inventory texture in its format (not counting how many there are). */
 export function gpuBytes(t: Pick<WorldTexture, "width" | "height" | "mips" | "alpha">, format: TextureFormat): number {
   const levels = t.mips ? mipLevels(t.width, t.height) : 1;
   if (format === "etc1s" || format === "uastc") return blockBytes(t.width, t.height, levels, BASIS_TARGET);
@@ -103,9 +103,9 @@ export function gpuBytes(t: Pick<WorldTexture, "width" | "height" | "mips" | "al
 }
 
 /**
- * Bytes de archivo estimados ANTES de codificar (la tabla del paso 0), por píxel con mipmaps, medidos con basisu 2.50
- * sobre los mapas de 1024 de Poly Haven (`leafy_grass`): ETC1S -q 128 0,14 en el difuso (196 KB) y 0,19 en el normal
- * (263 KB); UASTC nivel 2 sin supercompresión 1,0 (1.392 KB). Los lienzos y render targets no se bajan (0).
+ * File bytes estimated BEFORE encoding (the step 0 table), per pixel with mipmaps, measured with basisu 2.50
+ * on the 1024 Poly Haven maps (`leafy_grass`): ETC1S -q 128 0.14 on the diffuse (196 KB) and 0.19 on the normal
+ * (263 KB); UASTC level 2 without supercompression 1.0 (1,392 KB). Canvases and render targets are not downloaded (0).
  */
 export function estimatedFileBytes(t: Pick<WorldTexture, "width" | "height" | "mips" | "normal">, format: TextureFormat): number {
   const px = t.width * t.height * (t.mips ? 4 / 3 : 1);
@@ -115,11 +115,11 @@ export function estimatedFileBytes(t: Pick<WorldTexture, "width" | "height" | "m
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// KTX2 (Khronos KTX 2.0): la cabecera fija de 80 bytes, el índice de niveles y el DFD básico. Solo se lee lo que la
-// cuenta necesita; un archivo que no es KTX2 lanza un error con el motivo.
+// KTX2 (Khronos KTX 2.0): the fixed 80-byte header, the level index and the basic DFD. Only what the
+// count needs is read; a file that is not KTX2 throws an error with the reason.
 
 const KTX2_ID = [0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a];
-/** Modelos de color del DFD de Khronos (KHR_DF_MODEL_ETC1S y KHR_DF_MODEL_UASTC). */
+/** Khronos DFD color models (KHR_DF_MODEL_ETC1S and KHR_DF_MODEL_UASTC). */
 export const KTX2_COLOR_MODEL = { etc1s: 163, uastc: 166 } as const;
 
 export interface Ktx2Header {
@@ -145,7 +145,7 @@ export function parseKtx2Header(bytes: Uint8Array): Ktx2Header {
   const colorModel = bytes[dfd + 12];
   const format = colorModel === KTX2_COLOR_MODEL.etc1s ? "etc1s" : colorModel === KTX2_COLOR_MODEL.uastc ? "uastc" : null;
   if (!format) throw new Error(`KTX2 con modelo de color ${String(colorModel)} (se esperaba ETC1S 163 o UASTC 166)`);
-  // Muestras del bloque básico: 24 bytes de cabecera y 16 por muestra; canal 15 = alfa (en ETC1S, una segunda muestra).
+  // Basic block samples: 24 header bytes and 16 per sample; channel 15 = alpha (in ETC1S, a second sample).
   const blockSize = v.getUint16(dfd + 4 + 6, true);
   const samples = Math.max(0, Math.floor((blockSize - 24) / 16));
   let alpha = false;
@@ -153,14 +153,14 @@ export function parseKtx2Header(bytes: Uint8Array): Ktx2Header {
   return { width, height, levels, supercompression, format, alpha };
 }
 
-/** Bytes de GPU de un .ktx2 según su cabecera (lo que cuenta `estimateTextureMemory`, D-832). */
+/** GPU bytes of a .ktx2 according to its header (what `estimateTextureMemory` counts, D-832). */
 export const ktx2GpuBytes = (h: Ktx2Header): number => blockBytes(h.width, h.height, h.levels, BASIS_TARGET);
 
 /**
- * Lo que m7 ya crea en cada tier (world/budget/textures.ts lo cuenta con las medidas reales de cada módulo; un test de
- * apps/web compara estos números con ellos): la pincelada de 256 px con mipmaps, la rampa toon de 4 px, la sombra blob
- * de 64 px, las dos balizas de 64 px, una burbuja de 96 × 72 por NPC, dos etiquetas por NPC (normal y resaltada; la
- * tabla usa un chip típico de 300 × 58 px, el estimador usa `labelLayout`) y el mapa de sombra de 1024 en `high`.
+ * What m7 already creates in each tier (world/budget/textures.ts counts it with each module's real measurements; a test in
+ * apps/web compares these numbers with them): the 256 px brushstroke with mipmaps, the 4 px toon ramp, the 64 px blob shadow,
+ * the two 64 px beacons, one 96 × 72 bubble per NPC, two labels per NPC (normal and highlighted; the
+ * table uses a typical 300 × 58 px chip, the estimator uses `labelLayout`) and the 1024 shadow map at `high`.
  */
 export const M7_TEXTURE_PX = {
   brush: 256,

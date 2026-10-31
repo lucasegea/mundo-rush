@@ -1,7 +1,7 @@
-// Modelos guionados para recorrer el juego SIN clave y sin API paga (F4.2; D-027): `LG_FAKE_MODELS=1`, solo en modo
-// operador. Determinísticos y sin red. El NPC contesta con frases cortas de un guion fijo; el observador marca como
-// cumplidos todos los criterios de la escena en el primer turno del jugador (con su texto como cita), así el operador
-// recorre el prólogo entero por texto (H1) sin depender del modelo. No evalúa nada de verdad: es para ver el flujo.
+// Scripted models to walk through the game WITHOUT a key and without a paid API (F4.2; D-027): `LG_FAKE_MODELS=1`, operator mode
+// only. Deterministic and offline. The NPC replies with short phrases from a fixed script; the observer marks as
+// fulfilled all of the scene's criteria on the player's first turn (with their text as the quote), so the operator
+// can walk through the whole prologue by text (H1) without depending on the model. It evaluates nothing for real: it is for seeing the flow.
 import type { TextModelProvider, TextRequest } from "./text.ts";
 
 export const FAKE_MODELS_VAR = "LG_FAKE_MODELS";
@@ -16,7 +16,7 @@ export function scriptedNpcProvider(): TextModelProvider {
   };
 }
 
-/** Lee del pedido del observador el turnId, los ids de criterio y el texto del jugador (formato de observer.ts). */
+/** Reads from the observer request the turnId, the criterion ids and the player's text (observer.ts format). */
 function readRequest(req: TextRequest): { turnId: string; criteria: string[]; playerText: string } {
   const turnId = /Use turnId "([^"]+)"/.exec(req.system)?.[1] ?? "";
   const criteria = [...req.system.matchAll(/^- (C\d+):/gm)].map((m) => m[1] ?? "").filter(Boolean);
@@ -41,11 +41,11 @@ export function scriptedObserverProvider(): TextModelProvider {
 }
 
 /**
- * A2 (ADR-027): juez guionado de la conversación por medidores, para recorrer el flujo sin clave. Lee del pedido (formato
- * de conversation/judge.ts) el intercambio y la lista de hechos, y etiqueta con reglas de palabras: una pregunta revela el
- * primer hecho todavía no sabido de cada nivel (el motor descarta los de niveles cerrados), "I'm/I work/I like/from"
- * cuenta como dato propio, y en la fase del objetivo reconoce el recado, el pedido amable y las objeciones por palabras.
- * No evalúa nada de verdad: es para ver las barras moverse y la fase cambiar.
+ * A2 (ADR-027): scripted judge for the meters conversation, to walk through the flow without a key. Reads from the request (format
+ * of conversation/judge.ts) the exchange and the list of facts, and labels with word rules: a question reveals the
+ * first not-yet-known fact of each level (the engine discards those of closed levels), "I'm/I work/I like/from"
+ * counts as own data, and in the goal phase it recognizes the errand, the polite request and the objections by words.
+ * It evaluates nothing for real: it is for seeing the bars move and the phase change.
  */
 export function scriptedJudgeProvider(): TextModelProvider {
   return {
@@ -87,7 +87,7 @@ export function scriptedJudgeProvider(): TextModelProvider {
         if (/\b(garden|fence)\b/.test(p)) objections.push({ id: "para_que", quality: "yes" });
         if (/\bnell\b/.test(p)) objections.push({ id: "quien", quality: "yes" });
         if (/\b(care|bring back|help you)\b/.test(p)) objections.push({ id: "cuidado", quality: "yes" });
-        // D-813 (M6): reglas de palabras de otros libros; su objeción se emite solo si el pedido la lista (no inventa ids).
+        // D-813 (M6): word rules for other books; its objection is emitted only if the request lists it (it invents no ids).
         if (listed.has("pregunta") && /\b(silver|where did|who (finally )?kept)\b/.test(p)) objections.push({ id: "pregunta", quality: "yes" });
       }
       return Promise.resolve({

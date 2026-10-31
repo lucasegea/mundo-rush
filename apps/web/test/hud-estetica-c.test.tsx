@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-// Plan estetica-c M4 (HUD "papel y tinta", propuesta C §8): el HUD del mapa (objetivo con punto ámbar arriba a la
-// izquierda, ayuda abajo a la izquierda, aviso abajo al centro, calidad abajo a la derecha solo en desarrollo; en
-// pantallas angostas se ocultan la ayuda y la calidad), la ayuda que desaparece en la charla, y la regla de "todo en
-// rem": en los componentes que toca M4 no quedan tamaños en px (salvo bordes y radios, que no están en estos archivos).
-// Lo que se lee de tokens.css (radio, tipografía, reducir movimiento) se prueba en scripts/a11y/contrast.test.ts, que
-// lee el archivo real (en este proyecto de vitest el CSS importado llega vacío).
+// Plan estetica-c M4 (HUD "paper and ink", proposal C §8): the map HUD (objective with an amber dot top
+// left, help bottom left, prompt bottom center, quality bottom right in development only; on
+// narrow screens help and quality are hidden), the help that disappears in conversation, and the "everything in
+// rem" rule: in the components M4 touches no px sizes remain (except borders and radii, which are not in these files).
+// What is read from tokens.css (radius, typography, reduce motion) is tested in scripts/a11y/contrast.test.ts, which
+// reads the real file (in this vitest project imported CSS arrives empty).
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import dialogueSource from "../src/ui/dialogue/DialogueHud.tsx?raw";
@@ -33,7 +33,7 @@ afterEach(() => {
   consoleError.mockRestore();
 });
 
-/** El código sin comentarios (los comentarios pueden citar medidas de la propuesta en px). */
+/** The code without comments (comments may cite the proposal's px measurements). */
 const code = (src: string): string => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/^\s*\/\/.*$/gm, "");
 const PX = /\b\d+(?:\.\d+)?px\b/g;
 
@@ -42,14 +42,14 @@ describe("todo texto en rem (subir el texto al 200 % escala el HUD entero)", () 
 
   test("los componentes tocados no tienen tamaños en px", () => {
     for (const [name, src] of Object.entries(files)) {
-      expect(src.length, name).toBeGreaterThan(500); // guardia contra 0 medido
+      expect(src.length, name).toBeGreaterThan(500); // guard against a measured 0
       expect(code(src).match(PX) ?? [], name).toEqual([]);
     }
   });
 
   test("dientes: un tamaño en px metido en un componente se detecta", () => {
     expect(code(dialogueSource.replace("max-w-[47.5rem]", "max-w-[760px]")).match(PX)).toEqual(["760px"]);
-    // ...pero no si está en un comentario.
+    // ...but not if it is in a comment.
     expect(code("// la propuesta pide 22 px y 760px\nconst a = 1;").match(PX)).toBeNull();
   });
 });
@@ -70,7 +70,7 @@ describe("HUD del mapa", () => {
     expect((objective.querySelector('[aria-hidden="true"]') as HTMLElement).className).toContain("bg-amber");
     const help = screen.getByTestId("world-controls");
     expect(help.textContent).toContain("WASD");
-    // Pantallas angostas (390 px): la ayuda se oculta; desde md se ve.
+    // Narrow screens (390 px): help is hidden; from md it shows.
     expect(help.className.split(" ")).toEqual(expect.arrayContaining(["hidden", "md:block"]));
   });
 

@@ -1,2 +1,2 @@
-// services/quality/ — tiers como contrato (R12).
+// services/quality/ — tiers as a contract (R12).
 export * from "./quality";

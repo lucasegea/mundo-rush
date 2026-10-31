@@ -1,20 +1,20 @@
-// Plan estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art recibió la paleta, el núcleo de la pintura y la regla del bisel
-// de M1 sin reescribirlos. Acá se prueban sin three, sobre arreglos (los tests de los constructores por código siguen
-// en apps/web/test/estetica-c.test.ts, que importa de @lg/art).
+// Plan estetica-c M2 (architecture review 2026-10-12 §10.3): @lg/art received the palette, the paint core and the bevel rule
+// from M1 without rewriting them. Here they are tested without three, over arrays (the tests of the code constructors remain
+// in apps/web/test/estetica-c.test.ts, which imports from @lg/art).
 import { describe, expect, test } from "vitest";
 import {
   hexToLinear, maxDihedralDeg, MAX_DIHEDRAL_DEG, paintColors, PAINT_DEFAULTS, paintRange, PALETTE, tokenRgb, withinPaint,
   type PaletteToken,
 } from "../src/index";
 
-/** Cubo unitario sin bisel, 12 triángulos no indexados. */
+/** Unit cube without bevel, 12 non-indexed triangles. */
 function cube(): Float32Array {
   const v = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]];
   const faces = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [3, 7, 6], [3, 6, 2], [0, 4, 7], [0, 7, 3], [1, 2, 6], [1, 6, 5]];
   return new Float32Array(faces.flat().flatMap((i) => v[i] as number[]));
 }
 
-/** Octaedro: diedro entre normales de ~70,5°, por debajo del tope. */
+/** Octahedron: dihedral between normals of ~70.5°, below the cap. */
 function octahedron(): { pos: Float32Array; index: Uint16Array } {
   const pos = new Float32Array([1, 0, 0, -1, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 1, 0, 0, -1]);
   const index = new Uint16Array([0, 2, 4, 2, 1, 4, 1, 3, 4, 3, 0, 4, 2, 0, 5, 1, 2, 5, 3, 1, 5, 0, 3, 5]);

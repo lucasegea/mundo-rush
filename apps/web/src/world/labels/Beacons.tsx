@@ -1,11 +1,11 @@
-// world/labels/Beacons.tsx — balizas del mapa entero (open-world-3d T5, PD-5; mockup V6 `world.js` beaconTexture): al
-// alejar la cámara (t de 0,4 a 0,7) aparecen un disco ámbar sobre el jugador y uno rojo sobre cada NPC, de tamaño
-// proporcional a la distancia de la cámara, sin test de profundidad, para encontrar a la gente con el mapa entero. La
-// opacidad y la escala salen de `cameraLook` (el t y la distancia ya suavizados) en useFrame, sin re-render.
-// Todos los NPCs del diorama llevan baliza, también los ya visitados (T10-integrate, revisado contra AC30): AC30 pide las
-// balizas de los tres NPCs en el mapa entero y la Walk la corre después de una charla (AC29); con balizas solo para los
-// pendientes, un NPC completado antes dejaría dos y AC30 fallaría. Los pendientes los marca el minimapa (T9). Pasar a
-// solo pendientes es una decisión de plan que enmienda AC30, no un cambio de este archivo.
+// world/labels/Beacons.tsx — whole-map beacons (open-world-3d T5, PD-5; V6 mockup `world.js` beaconTexture): when
+// moving the camera away (t from 0.4 to 0.7) an amber disc appears over the player and a red one over each NPC, sized
+// proportionally to the camera distance, with no depth test, to find people with the whole map. The
+// opacity and scale come from `cameraLook` (the already-smoothed t and distance) in useFrame, without re-render.
+// All the diorama NPCs carry a beacon, also the already-visited ones (T10-integrate, reviewed against AC30): AC30 asks for the
+// beacons of the three NPCs on the whole map and the Walk runs it after a chat (AC29); with beacons only for
+// pending ones, an NPC completed earlier would leave two and AC30 would fail. The pending ones are marked by the minimap (T9). Switching to
+// pending only is a plan decision that amends AC30, not a change to this file.
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, Sprite, type Texture } from "three";
@@ -14,10 +14,10 @@ import { smoothstep } from "../camera/zoom";
 import { beaconMaterial } from "../materials/registry";
 import { cameraLook, followTarget } from "../runtime";
 
-/** Tamaño de la baliza por metro de distancia de cámara, y cuánto sube sobre la cabeza (mockup V6). */
+/** Beacon size per meter of camera distance, and how far it rises over the head (V6 mockup). */
 export const BEACON = { scalePerMeter: 0.045, lift: 2.6, liftPerMeter: 0.01, fadeFrom: 0.4, fadeTo: 0.7 } as const;
 
-/** Opacidad de las balizas para un t de zoom. */
+/** Opacity of the beacons for a zoom t. */
 export const beaconAlpha = (t: number): number => smoothstep(BEACON.fadeFrom, BEACON.fadeTo, t);
 
 function beaconTexture(fill: string): Texture {

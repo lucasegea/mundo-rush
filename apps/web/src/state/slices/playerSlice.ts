@@ -1,30 +1,30 @@
-// Slice `player` (03 §3.3). F2: posición lógica a 30 Hz (R7), intención de movimiento y velocidad, que escribe
-// el núcleo de movimiento por acciones. El avatar llega con el onboarding.
+// Slice `player` (03 §3.3). F2: logical position at 30 Hz (R7), movement intent and speed, written by
+// the movement core through actions. The avatar arrives with onboarding.
 import { IDLE, type Facing, type MoveIntent } from "@lg/core";
 
 export interface PlayerState {
-  /** Posición lógica (celda de la grilla y coordenadas de simulación, R7). */
+  /** Logical position (grid cell and simulation coordinates, R7). */
   cell: [number, number] | null;
   position: { x: number; z: number } | null;
   path: [number, number][];
-  /** Posición lógica del paso anterior: world/ interpola entre las dos (R7). */
+  /** Logical position of the previous step: world/ interpolates between the two (R7). */
   previous: { x: number; z: number } | null;
   velocity: { x: number; z: number };
   intent: MoveIntent;
   /**
-   * Open-world-3d T4 (D-820): la dirección de pantalla mantenida (WASD), así la intención en el mundo se recalcula cuando
-   * cambia el yaw de la cámara (moverse es relativo a la cámara). {0, 0} = ninguna.
+   * Open-world-3d T4 (D-820): the held screen direction (WASD), so the intent in the world is recomputed when
+   * the camera yaw changes (movement is camera-relative). {0, 0} = none.
    */
   heldDir: { x: number; y: number };
-  /** Shift mantenida: corre a 5,5 m/s. */
+  /** Shift held: runs at 5.5 m/s. */
   running: boolean;
-  /** Pasos de simulación aplicados (cambia en cada paso que movió algo). */
+  /** Simulation steps applied (changes on every step that moved something). */
   simTick: number;
   facing: Facing;
   avatar: string | null;
   gameName: string | null;
   pronouns: string | null;
-  /** Canasta: objetos prestados de misión. */
+  /** Basket: borrowed mission objects. */
   basket: string[];
 }
 

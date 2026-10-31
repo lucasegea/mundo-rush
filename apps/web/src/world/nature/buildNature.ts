@@ -1,16 +1,16 @@
-// world/nature/buildNature.ts — árboles, rocas y detalle del mundo abierto (open-world-3d T7, D2, PD-3, PD-9, AC37,
-// AC44, AC45, AC71), port de mockup V6 (`world.js` buildVegetation, updateLOD). Lo que se siembra es @lg/art
-// `vegetationScatter` (el mismo que la grilla de caminata del núcleo, `diorama.vegetation`), recortado por tier con
-// `takeVegetation`. Cada especie o variante es un grupo de instancias con un nivel por banda de distancia:
-//   · pinos y latifoliadas: completo (`near`), liviano (`mid`) e impostor (`far`), el relevo tramado ±4 m
-//   · arbustos: completo y liviano; rocas: cerca (`near`, con normal en medium y high) y lejos (`midFar`)
-//   · helechos, flores y piedritas: una banda (`nearMid`)
-//   · el contacto oscuro bajo troncos y rocas: una malla para todo (estático)
-// Todo se arma sin GPU (las mallas instanciadas empiezan vacías, con geometría de espera): el auditor de materiales y el
-// estimador miden este mismo grafo. `load` baja los .glb y .ktx2 y hornea los impostores con el renderer; `update`
-// recorre las instancias solo cuando la vista cambió (CullGate) y sube las que se ven.
-// Open-world-3d T7b (D-839): especies, escaneos de roca, mapas, colores, ganancia de la hoja, luces del horneado y
-// multiplicadores de densidad salen del look (`input.look`); el sembrado, las bandas, el recorte y los topes son núcleo.
+// world/nature/buildNature.ts — trees, rocks and detail of the open world (open-world-3d T7, D2, PD-3, PD-9, AC37,
+// AC44, AC45, AC71), port of the V6 mockup (`world.js` buildVegetation, updateLOD). What is seeded is @lg/art
+// `vegetationScatter` (the same as the core walk grid, `diorama.vegetation`), trimmed per tier with
+// `takeVegetation`. Each species or variant is a group of instances with one level per distance band:
+//   · pines and broadleaves: full (`near`), light (`mid`) and impostor (`far`), the handoff dithered ±4 m
+//   · shrubs: full and light; rocks: near (`near`, with normal on medium and high) and far (`midFar`)
+//   · ferns, flowers and pebbles: one band (`nearMid`)
+//   · the dark contact under trunks and rocks: one mesh for everything (static)
+// Everything is built without GPU (instanced meshes start empty, with placeholder geometry): the material auditor and the
+// estimator measure this same graph. `load` downloads the .glb and .ktx2 and bakes the impostors with the renderer; `update`
+// walks the instances only when the view changed (CullGate) and uploads the visible ones.
+// Open-world-3d T7b (D-839): species, rock scans, maps, colors, leaf gain, bake lights and
+// density multipliers come from the look (`input.look`); the seeding, bands, trimming and caps are core.
 import {
   BufferAttribute, BufferGeometry, Frustum, Group, InstancedMesh, Matrix4, Mesh, PlaneGeometry, Quaternion, RepeatWrapping,
   SRGBColorSpace, Euler, Vector3, Color, type Camera, type Material, type Texture, type WebGLRenderer, type WebGLRenderTarget,
@@ -32,16 +32,16 @@ import {
 } from "./materials";
 import { flowerAtlas } from "./textures";
 
-/** Cuánto se hunde la base de cada clase (m por unidad de escala, mockup): los troncos 0,1 (AC37), las rocas 0,12. */
+/** How far the base of each class sinks (m per scale unit, mockup): trunks 0.1 (AC37), rocks 0.12. */
 export const NATURE_SINK = { pine: 0.1, broad: 0.1, bush: 0.05, rock: 0.12, fern: 0.02, flower: 0.02, pebble: 0.3 } as const;
 type NatureKind = keyof typeof NATURE_SINK;
-/** Altura del contacto oscuro sobre el suelo (m). */
+/** Height of the dark contact above the ground (m). */
 export const AO_LIFT = 0.03;
 
-/** Alto aproximado (m por unidad de escala) del detalle hecho por código y de las rocas (la esfera antes de cargar). */
+/** Approximate height (m per scale unit) of the code-built detail and of the rocks (the sphere before loading). */
 const DETAIL_HEIGHT: Readonly<Record<Exclude<NatureKind, "pine" | "broad" | "bush">, number>> = { rock: 0.8, fern: 0.3, flower: 0.46, pebble: 0.6 };
 
-/** Tinte por instancia de árboles y helechos, con el corrimiento al turquesa del mockup (`tealTint`). */
+/** Per-instance tint of trees and ferns, with the mockup teal shift (`tealTint`). */
 const tealTint = (h1: number, h2: number): [number, number, number] => {
   const b = 0.85 + 0.25 * h2;
   return [b * (1 - 0.24 * h1), b * (1 + 0.05 * h1), b * (1 + 0.3 * h1)];
@@ -53,12 +53,12 @@ export interface RockVariant {
   outcrop: boolean;
 }
 
-/** Las variantes de roca de un look: cada malla de cada escaneo chico, y el afloramiento al final (mockup `rockSets`). */
+/** A look rock variants: each mesh of each small scan, and the outcrop at the end (mockup `rockSets`). */
 export const rockVariants = (scans: WorldLook["vegetation"]["rockScans"]): RockVariant[] => [
   ...scans.filter((r) => r.kind === "small").flatMap((r) => Array.from({ length: r.meshes }, (_, mesh) => ({ scan: r.scan, mesh, outcrop: false }))),
   ...scans.filter((r) => r.kind === "outcrop").map((r) => ({ scan: r.scan, mesh: 0, outcrop: true })),
 ];
-/** La variante de roca de un sitio (los afloramientos al afloramiento; las chicas en rueda). */
+/** The rock variant of a site (outcrops get the outcrop; small ones in rotation). */
 export function rockVariant(s: VegetationSpot, variants: readonly RockVariant[]): number {
   const small = variants.filter((r) => !r.outcrop).length;
   return s.out ? variants.length - 1 : s.v % small;
@@ -69,13 +69,13 @@ export interface NatureInput {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   tier: WorldTier;
   heightAt(x: number, z: number): number;
-  /** El look del diorama (open-world-3d T7b). */
+  /** The diorama look (open-world-3d T7b). */
   look: WorldLook;
-  /** Open-world-3d T10 (b): radios de LOD de los árboles; por defecto los del tier (OPEN_WORLD_DENSITY.treeLod). */
+  /** Open-world-3d T10 (b): tree LOD radii; by default the tier ones (OPEN_WORLD_DENSITY.treeLod). */
   treeLod?: TreeLodRadii;
 }
 
-/** Un tronco o una roca grande dentro de los límites, para la cámara (no tapar el plano de a dos). */
+/** A trunk or a large rock inside the bounds, for the camera (do not block the two-person shot). */
 export interface NatureObstacle {
   x: number;
   z: number;
@@ -86,18 +86,18 @@ export interface NatureObstacle {
 export interface Nature {
   group: Group;
   groups: NatureGroup[];
-  /** Base de cada árbol (para AC37): x, z, y de la base y su escala. */
+  /** Base of each tree (for AC37): x, z, y of the base and its scale. */
   treeBases: { x: number; z: number; y: number; s: number; kind: "pine" | "broad" | "bush" }[];
   obstacles: NatureObstacle[];
   gate: CullGate;
   /**
-   * Por cuadro: viento y, si la vista cambió, el recorrido. `t` es el zoom (T8: los radios de LOD se achican con él,
-   * treeLodShrink; 0 = los del tier). Devuelve si recorrió.
+   * Per frame: wind and, if the view changed, the walk. `t` is the zoom (T8: the LOD radii shrink with it,
+   * treeLodShrink; 0 = the tier ones). Returns whether it walked.
    */
   update(camera: Camera, px: number, pz: number, fogFar: number, dt: number, still: boolean, t?: number): boolean;
   /**
-   * Baja mallas y mapas y hornea los impostores (una vez). Si algo falla, la naturaleza queda sin dibujar. T10-integrate:
-   * `precompile` (si viene) compila el grupo ya armado antes de que el recorrido lo muestre; nunca debe rechazar.
+   * Downloads meshes and maps and bakes the impostors (once). If something fails, the nature is left undrawn. T10-integrate:
+   * `precompile` (if given) compiles the already-built group before the walk shows it; it must never reject.
    */
   load(renderer: WebGLRenderer, precompile?: (group: Group) => Promise<unknown>): Promise<void>;
   dispose(): void;
@@ -111,7 +111,7 @@ const emptyGeometry = (): BufferGeometry => {
 
 const instanced = (material: Material, capacity: number, castShadow: boolean, name: string): InstancedMesh => {
   const m = new InstancedMesh(emptyGeometry(), material, Math.max(1, capacity));
-  m.frustumCulled = false; // el recorrido de culling.ts ya decide qué instancias van
+  m.frustumCulled = false; // the culling.ts walk already decides which instances go
   m.count = 0;
   m.visible = false;
   m.setColorAt(0, new Color(1, 1, 1));
@@ -121,12 +121,12 @@ const instanced = (material: Material, capacity: number, castShadow: boolean, na
   return m;
 };
 
-/** Lectores por componente (también para atributos intercalados y normalizados: desnormalizan). */
+/** Readers per component (also for interleaved and normalized attributes: they denormalize). */
 const COMPONENT = ["getX", "getY", "getZ", "getW"] as const;
 
 /**
- * La geometría de una malla de un .glb en float y con la transformación de su nodo horneada: meshopt cuantiza (enteros
- * normalizados) y la escala de la cuantización vive en el nodo, así que la geometría sola no sirve para instanciar.
+ * The geometry of a mesh of a .glb in float and with its node transform baked: meshopt quantizes (normalized
+ * integers) and the quantization scale lives in the node, so the geometry alone is no good for instancing.
  */
 export function bakedGeometry(o: Mesh): BufferGeometry {
   const src = o.geometry as BufferGeometry;
@@ -167,7 +167,7 @@ export function buildNature(input: NatureInput): Nature {
   const pebbles = pebbleMaterial(u);
   const trees = [...lookSpecies(look, "pine"), ...lookSpecies(look, "broad")];
   const impostors = new Map(trees.map((sp) => [sp.name, impostorMaterial(u, sp.name)]));
-  // El blob como color sRGB (oscuro de verdad): en lineal, el verde oscuro se aclaraba sobre la base del tronco.
+  // The blob as an sRGB color (really dark): in linear, the dark green got lighter over the trunk base.
   const aoTex = blobTexture();
   aoTex.colorSpace = SRGBColorSpace;
   const aoMat = contactShadowMaterial(aoTex);
@@ -179,16 +179,16 @@ export function buildNature(input: NatureInput): Nature {
   const treeBases: Nature["treeBases"] = [];
   const obstacles: NatureObstacle[] = [];
   const ao: [number, number, number, number][] = [];
-  /** Geometrías a cargar: nivel → url y malla dentro del .glb. */
+  /** Geometries to load: level → url and mesh inside the .glb. */
   const pending: { mesh: InstancedMesh; url: string; index: number; tree?: TreeSpecies }[] = [];
-  /** Las geometrías hechas acá (helechos, flores, piedritas) y los grupos de árboles a ajustar al cargar. */
+  /** The geometries made here (ferns, flowers, pebbles) and the tree groups to adjust on load. */
   const owned: BufferGeometry[] = [];
   const impostorLevels: { mesh: InstancedMesh; species: TreeSpecies }[] = [];
   const sized: { group: NatureGroup; species: TreeSpecies }[] = [];
 
   const inside = (s: VegetationSpot): boolean => s.x >= input.bounds.minX && s.x <= input.bounds.maxX && s.z >= input.bounds.minZ && s.z <= input.bounds.maxZ;
 
-  /** Arma las entradas de una variante (mockup `group`): giro, inclinación, escala con variación, tinte. */
+  /** Builds the entries of a variant (mockup `group`): rotation, lean, scale with variation, tint. */
   const entries = (spots: VegetationSpot[], vi: number, kind: NatureKind, height: number, aoScale: number): NatureEntry[] =>
     spots.map((s, i) => {
       const rock = kind === "rock" || kind === "pebble";
@@ -209,7 +209,7 @@ export function buildNature(input: NatureInput): Nature {
       };
     });
 
-  /** Pinos, latifoliadas y arbustos: un grupo por especie, niveles completo, liviano e impostor (sin impostor los arbustos). */
+  /** Pines, broadleaves and shrubs: one group per species, full, light and impostor levels (shrubs have no impostor). */
   const treeGroups = (kind: "pine" | "broad" | "bush", list: VegetationSpot[], aoScale: number): void => {
     const species = lookSpecies(look, kind);
     species.forEach((sp, vi) => {
@@ -236,7 +236,7 @@ export function buildNature(input: NatureInput): Nature {
   treeGroups("broad", take.broads, 3.6);
   treeGroups("bush", take.bushes, 1.8);
 
-  // Rocas: una variante por malla de escaneo; cerca y lejos (en low, el afloramiento de cerca es el de lejos: mockup).
+  // Rocks: one variant per scan mesh; near and far (on low, the near outcrop is the far one: mockup).
   rocks.forEach((rv, vi) => {
     const mine = take.rocks.filter((s) => rockVariant(s, rocks) === vi);
     if (mine.length === 0) return;
@@ -251,7 +251,7 @@ export function buildNature(input: NatureInput): Nature {
     for (const s of mine) if (inside(s) && s.out) obstacles.push({ x: s.x, z: s.z, r: 0.45 * s.s, height: 0.6 * s.s });
   });
 
-  /** Detalle hecho por código: helechos (2 variantes), flores y piedritas, banda `nearMid`. */
+  /** Code-built detail: ferns (2 variants), flowers and pebbles, `nearMid` band. */
   const detail = (kind: "fern" | "flower" | "pebble", list: VegetationSpot[], geos: BufferGeometry[], material: Material): void => {
     owned.push(...geos);
     geos.forEach((geo, vi) => {
@@ -269,13 +269,13 @@ export function buildNature(input: NatureInput): Nature {
   detail("flower", take.flowers, [flowerClumpGeometry()], flowers);
   detail("pebble", take.pebbles, [pebbleGeometry(veg.colors.pebble)], pebbles);
 
-  // El contacto oscuro: estático, una llamada.
+  // The dark contact: static, one call.
   const aoGeo = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   owned.push(aoGeo);
   const aoMesh = new InstancedMesh(aoGeo, aoMat, Math.max(1, ao.length));
   aoMesh.name = "naturaleza:contacto";
   aoMesh.frustumCulled = false;
-  // 3 cm sobre el suelo (el mockup usaba 10): más alto, el quad tapaba la base del tronco vista desde arriba.
+  // 3 cm above the ground (the mockup used 10): higher, the quad covered the trunk base seen from above.
   ao.forEach(([x, y, z, s], i) => aoMesh.setMatrixAt(i, _m.compose(_p.set(x, y + AO_LIFT, z), _q.identity(), _s.set(s, s, s))));
   aoMesh.count = ao.length;
   group.add(aoMesh);
@@ -291,7 +291,7 @@ export function buildNature(input: NatureInput): Nature {
   const targets: WebGLRenderTarget[] = [];
   const textures: Texture[] = [];
 
-  /** Con la malla completa a mano, la esfera de cada árbol pasa a ser la de su geometría (mockup). */
+  /** With the full mesh at hand, each tree sphere becomes its geometry one (mockup). */
   const resize = (sp: TreeSpecies, geo: BufferGeometry): void => {
     geo.computeBoundingSphere();
     const bs = geo.boundingSphere;
@@ -325,7 +325,7 @@ export function buildNature(input: NatureInput): Nature {
       const distance = camPos.distanceTo(target.set(px, heightAt(px, pz), pz));
       if (!gate.shouldUpdate({ x: px, z: pz, yawDeg, pitchDeg, distance })) return false;
       frustum.setFromProjectionMatrix(pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
-      // Los radios del sombreador cambian junto con el recorrido: lo subido y lo tramado usan los mismos.
+      // The shader radii change together with the walk: what is uploaded and what is dithered use the same ones.
       u.uLod.value.set(full, mid);
       const view = { cx: px, cz: pz, camera: camPos, frustum, fogFar, full, mid };
       for (const g of groups) cullGroup(g, view);
@@ -379,7 +379,7 @@ export function buildNature(input: NatureInput): Nature {
           p.mesh.geometry = geo;
           if (p.tree) resize(p.tree, geo);
         }
-        // Mapas: los placeholders se cambian por los .ktx2 (mismo `USE_MAP`: sin recompilar).
+        // Maps: the placeholders are swapped for the .ktx2 (same `USE_MAP`: without recompiling).
         for (const [slot, t] of [[maps.leaf, leaf], [maps.bark, bark], [maps.rockDiff, rockDiff]] as const) {
           slot.value.dispose();
           slot.value = t;
@@ -397,7 +397,7 @@ export function buildNature(input: NatureInput): Nature {
         flowerTex.value = fl;
         flowers.map = fl;
         textures.push(fl);
-        // Impostores: cada especie se hornea con su malla completa y un follaje sin banda (fuera de la escena).
+        // Impostors: each species is baked with its full mesh and a bandless foliage (out of the scene).
         const bakeMat = foliageMaterial(u, maps, null);
         try {
           for (const sp of trees) {
@@ -419,7 +419,7 @@ export function buildNature(input: NatureInput): Nature {
           bakeMat.dispose();
         }
         for (const m of materials) m.needsUpdate = true;
-        // Los programas nuevos (mapa normal de las rocas, impostores) compilan antes del primer recorrido que los muestra.
+        // The new programs (rock normal map, impostors) compile before the first walk that shows them.
         if (precompile) await precompile(group);
         if (!alive) return;
         loaded = true;
@@ -439,5 +439,5 @@ export function buildNature(input: NatureInput): Nature {
   };
 }
 
-/** Los tipos de banda de cada nivel, para los tests (AC71: una variante de sombreador por banda). */
+/** The band types of each level, for the tests (AC71: one shader variant per band). */
 export const natureBands = (n: Nature): ShaderBand[] => n.groups.flatMap((g) => g.levels.map((l) => l.band));

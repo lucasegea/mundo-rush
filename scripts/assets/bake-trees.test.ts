@@ -1,8 +1,8 @@
-// Open-world-3d T7 (AC43): los árboles horneados con ez-tree. Hornear dos veces en memoria da los mismos bytes, que son
-// los versionados y los del registro (sha256, triángulos, generador con su sha256, preset y semilla); cada .glb tiene
-// solo POSITION, NORMAL, TEXCOORD_0 y COLOR_0, sin materiales, texturas ni imágenes; el liviano tiene a lo sumo el 35 %
-// de los triángulos del completo; ningún script usa GLTFExporter ni define FileReader; nada de apps/ ni packages/
-// importa ez-tree, y el build del cliente no lo contiene.
+// Open-world-3d T7 (AC43): the trees baked with ez-tree. Baking twice in memory gives the same bytes, which are
+// the versioned ones and the registry's (sha256, triangles, generator with its sha256, preset and seed); each .glb has
+// only POSITION, NORMAL, TEXCOORD_0 and COLOR_0, no materials, textures or images; the light one has at most 35 %
+// of the full one's triangles; no script uses GLTFExporter or defines FileReader; nothing in apps/ or packages/
+// imports ez-tree, and the client build does not contain it.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,8 +74,8 @@ describe("bake-trees (AC43)", async () => {
       const full = first.find((t) => t.species === sp && !t.light);
       const light = first.find((t) => t.species === sp && t.light);
       expect(full && light, sp.name).toBeTruthy();
-      // AC43 ("the light build has at most 35 percent of the full build's triangles"), fix 1 de QA: el tope es el
-      // literal del plan, no la constante que el código podría aflojar.
+      // AC43 ("the light build has at most 35 percent of the full build's triangles"), QA's fix 1: the cap is the
+      // plan's literal, not the constant the code could loosen.
       expect((light?.triangles ?? Infinity) / (full?.triangles ?? 1), sp.name).toBeLessThanOrEqual(0.35);
     }
     expect(LIGHT_TREE_MAX_SHARE).toBe(0.35);

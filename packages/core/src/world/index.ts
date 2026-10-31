@@ -1,6 +1,6 @@
-// world/ — reglas del mundo sin render: diorama listo para jugar (F2). F3.3 suma fundaciones y red.
+// world/ — world rules without rendering: playable diorama (F2). F3.3 adds foundations and network.
 export * from "./diorama";
-// Plan estetica-c M5: curvas catmull-rom de caminos y ríos.
+// Plan estetica-c M5: catmull-rom curves of paths and rivers.
 export * from "./curves";
-// Open-world-3d T9: el modelo puro del minimapa (arriba es adelante, 60 m, NPCs pendientes).
+// Open-world-3d T9: the pure minimap model (up is forward, 60 m, pending NPCs).
 export * from "./minimap";

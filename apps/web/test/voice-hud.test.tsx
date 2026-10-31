@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// F5.2: el HUD de diálogo en una escena de voz contra un servidor de escenas falso y un motor de audio falso (sin
-// navegador, sin micrófono, sin red). Pulsar-para-hablar y "Terminé" cierran el turno; indicador "te escucho /
-// pensando"; medidor; lo que se va oyendo; sin permiso de micrófono → modo texto con un mensaje claro.
+// F5.2: the dialogue HUD in a voice scene against a fake scene server and a fake audio engine (without a
+// browser, without a microphone, without network). Push-to-talk and "Terminé" close the turn; "I'm listening /
+// thinking" indicator; meter; what is being heard; without microphone permission → text mode with a clear message.
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ServerMessage } from "@lg/protocol";
@@ -45,7 +45,7 @@ const voiceOpening = (modality: "voice" | "text" = "voice"): ServerMessage[] => 
   st("playerTurn", "waiting", 0, modality),
 ];
 
-/** Arranca en solo-diálogo con voz y entra a hablar con Inés. */
+/** Starts in dialog-only with voice and goes to talk with Inés. */
 async function startVoice(server: FakeSceneServer, engines = fakeEngineFactory(), modality: "voice" | "text" = "voice") {
   await act(async () => {
     stop = await bootApp({ webgl2: false, scene: { connector: server.connector, audio: { createEngine: engines.createEngine } } });
@@ -92,7 +92,7 @@ describe("escena de voz", () => {
     expect(status().textContent).toContain("Cerrando tu turno");
     await act(async () => { vi.advanceTimersByTime(TALK_TAIL_MS); });
     expect(sentTypes(server)).toEqual(["scene.start", "voice.turnStart", "voice.turnEnd"]);
-    // El servidor confirma: turno del NPC → "pensando".
+    // The server confirms: NPC's turn → "thinking".
     await act(async () => { server.push(st("npcTurn", null, 1)); });
     expect(status().getAttribute("data-voice-phase")).toBe("thinking");
     expect(status().textContent).toContain("Inés Calder está pensando");
@@ -104,7 +104,7 @@ describe("escena de voz", () => {
     await startVoice(server);
     await act(async () => { fireEvent.pointerDown(talkButton()); fireEvent.pointerUp(talkButton()); });
     expect(status().getAttribute("data-voice-phase")).toBe("listening");
-    await act(async () => { vi.advanceTimersByTime(60_000); }); // un minuto en silencio: el turno sigue abierto
+    await act(async () => { vi.advanceTimersByTime(60_000); }); // one minute of silence: the turn stays open
     expect(sentTypes(server)).toEqual(["scene.start", "voice.turnStart"]);
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Terminé" })); });
     await act(async () => { vi.advanceTimersByTime(TALK_TAIL_MS); });
@@ -143,7 +143,7 @@ describe("escena de voz", () => {
       server.push({ type: "npc.line", line: { lineId: "r1", speaker: "NPC-INES", kind: "reply", text: "Nice to meet you, Nico!", template: null } });
       server.push(st("playerTurn", "waiting", 1));
     });
-    expect(talkButton().getAttribute("aria-disabled")).toBe("true"); // todavía suena
+    expect(talkButton().getAttribute("aria-disabled")).toBe("true"); // still sounding
     await act(async () => { fireEvent.pointerDown(talkButton()); });
     expect(sentTypes(server).filter((t) => t === "voice.turnStart")).toHaveLength(1);
     await act(async () => { engines.last?.drain(); });

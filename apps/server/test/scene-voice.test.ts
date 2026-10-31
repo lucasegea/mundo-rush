@@ -1,6 +1,6 @@
-// F5.1a: escena de voz en scene-runtime. A2 (tope de 5:00 con Live cerrado al entrar a closing y la línea de cierre
-// guionada; servidor Live falso), A3 (el TurnClip lo arma scene-runtime, llega al observador falso en cada turno y se
-// libera, también a los 10 s), moderación de salida en el runtime, caída a texto y costo por turno en el ledger.
+// F5.1a: voice scene in scene-runtime. A2 (5:00 cap with Live closed on entering closing and the scripted closing
+// line; fake Live server), A3 (the TurnClip is built by scene-runtime, reaches the fake observer on each turn and is
+// released, also at 10 s), output moderation in the runtime, fallback to text and per-turn cost in the ledger.
 import { afterEach, describe, expect, test } from "vitest";
 import { createMemoryCostLedger, costPolicyFromConfig } from "../src/cost/ledger.ts";
 import { loadModelsConfig } from "../src/config/models.ts";
@@ -21,13 +21,13 @@ afterEach(async () => {
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
-/** Abre M0.1 con Inés en voz y llega a playerTurn.waiting. */
+/** Opens M0.1 with Inés in voice and reaches playerTurn.waiting. */
 async function openVoice(h: Harness): Promise<void> {
   await h.session.receive({ type: "scene.start", npcId: "NPC-INES", modality: "voice" });
   expect(h.session.snapshot).toMatchObject({ state: "playerTurn", sub: "waiting" });
 }
 
-/** Un turno hablado: inicio, frames de audio, Terminé. */
+/** A spoken turn: start, audio frames, Done. */
 async function speak(h: Harness, frames: number[][]): Promise<void> {
   await h.session.receive({ type: "voice.turnStart" });
   for (const f of frames) expect(h.session.receiveAudio(Int16Array.from(f))).toBe(true);
@@ -40,21 +40,21 @@ describe("A3: el TurnClip", () => {
     const h = harness({ rules: M01_RULES, voice: () => (ref = createReferenceVoice()) });
     await openVoice(h);
     expect(h.of("scene.opened")[0]).toMatchObject({ modality: "voice" });
-    expect(must(ref).calls).toEqual(["open", "inject:user,model"]); // la apertura ya dicha entra como turno previo
+    expect(must(ref).calls).toEqual(["open", "inject:user,model"]); // the already-spoken opening enters as a previous turn
     await speak(h, [[1, 2], [3]]);
-    // El observador recibió el clip (16 kHz) además de la transcripción del adaptador.
+    // The observer received the clip (16 kHz) in addition to the adapter's transcript.
     const req = h.observer.calls[0];
     expect(req?.audio ? [...req.audio.pcm16] : null).toEqual([1, 2, 3]);
     expect(req?.audio?.sampleRate).toBe(16000);
     expect(h.observer.observed[0]?.playerText).toBe("Hello, I'm Nico.");
-    // Liberado al terminar el observador: no queda audio en memoria.
+    // Released when the observer finishes: no audio is left in memory.
     expect(h.clips).toHaveLength(1);
     expect(h.clips[0]?.released).toBe(true);
     expect(h.clips[0]?.sampleCount).toBe(0);
     expect(() => h.clips[0]?.pcm16()).toThrow(ReleasedClipError);
-    // El adaptador recibió el audio pero no guarda el clip (solo cuenta muestras).
+    // The adapter received the audio but doesn't keep the clip (it only counts samples).
     expect(must(ref).samplesReceived).toBe(3);
-    // Criterios cumplidos (saludo + nombre): la línea del NPC sale moderada y la escena cierra con éxito.
+    // Criteria fulfilled (greeting + name): the NPC line goes out moderated and the scene closes successfully.
     expect(h.of("npc.line").some((m) => m.line.kind === "reply" && m.line.text === "Nice to meet you, Nico!")).toBe(true);
     expect(h.of("scene.end")[0]?.outcome).toBe("success");
     expect(must(ref).closedWith).toBe("done");
@@ -72,7 +72,7 @@ describe("A3: el TurnClip", () => {
 
   test("si el observador no termina, el clip se libera a los 10 s", async () => {
     const hung = fakeObserverModel(() => "{}");
-    hung.generate = () => new Promise(() => {}); // nunca responde
+    hung.generate = () => new Promise(() => {}); // never answers
     const h = harness({ voice: () => createReferenceVoice(), observerModel: hung });
     await openVoice(h);
     await h.session.receive({ type: "voice.turnStart" });
@@ -90,7 +90,7 @@ describe("A3: el TurnClip", () => {
   test("audio fuera del turno hablado se descarta; en una escena de texto, receiveAudio dice que no", async () => {
     const h = harness({ voice: () => createReferenceVoice() });
     await openVoice(h);
-    expect(h.session.receiveAudio(Int16Array.from([1]))).toBe(true); // en voz, pero en waiting: se descarta
+    expect(h.session.receiveAudio(Int16Array.from([1]))).toBe(true); // in voice, but in waiting: it is discarded
     expect(h.clips).toHaveLength(0);
     const t = harness();
     await t.session.receive({ type: "scene.start", npcId: "NPC-INES" });
@@ -104,7 +104,7 @@ describe("A2: tope de 5:00 con la sesión Live (servidor falso)", () => {
     const s = server;
     const h = harness({ voice: () => createGeminiLiveProvider({ apiKey: "lg-test-key", model: "m", endpoint: s.url }) });
     await openVoice(h);
-    h.scheduler.advance(240_000); // softCap: solo marca
+    h.scheduler.advance(240_000); // softCap: only marks
     expect(h.session.snapshot.state).toBe("playerTurn");
     const before = h.sent.length;
     h.scheduler.advance(60_000); // hardCap
@@ -116,10 +116,10 @@ describe("A2: tope de 5:00 con la sesión Live (servidor falso)", () => {
     const closingAt = after.findIndex((m) => m.type === "scene.state" && m.state === "closing");
     const exitAt = after.findIndex((m) => m.type === "npc.line" && m.line.kind === "exit");
     expect(closingAt).toBeGreaterThanOrEqual(0);
-    expect(exitAt).toBeGreaterThan(closingAt); // la línea sale ya en closing, nunca en playerTurn
+    expect(exitAt).toBeGreaterThan(closingAt); // the line goes out already in closing, never in playerTurn
     expect(h.of("scene.end")[0]?.outcome).toBe("hardCap");
     expect(h.audioOut).toEqual([]);
-    // Nada pidió a Live la línea de cierre: después de abrir solo hubo la apertura inyectada.
+    // Nothing asked Live for the closing line: after opening there was only the injected opening.
     expect(s.connections[0]?.received.filter((m) => "clientContent" in m)).toHaveLength(1);
   });
 
@@ -192,7 +192,7 @@ describe("caída a texto (03 §5.8) y pases en voz", () => {
     expect(must(ref).closedWith).toBe("error");
     expect(h.of("scene.notice").map((n) => n.code)).toEqual(["model_unavailable"]);
     await h.session.receive({ type: "turn.text", text: "Hello?" });
-    expect(h.npc.calls).toHaveLength(1); // el NPC de texto sigue la escena
+    expect(h.npc.calls).toHaveLength(1); // the text NPC carries on with the scene
   });
 
   test("Más simple en voz: la nota [DIRECTOR] va al adaptador y su respuesta cierra el turno", async () => {
@@ -203,7 +203,7 @@ describe("caída a texto (03 §5.8) y pases en voz", () => {
     await h.session.receive({ type: "turn.choose", option: "simpler" });
     expect(must(ref).calls.at(-1)).toBe("inject:user");
     expect(h.session.snapshot).toMatchObject({ state: "playerTurn", sub: "waiting" });
-    expect(h.observer.calls).toHaveLength(0); // sin turno hablado no hay nada que observar
+    expect(h.observer.calls).toHaveLength(0); // without a spoken turn there is nothing to observe
   });
 
   test("en voz, turn.text se rechaza y voice.turnEnd sin turno abierto también", async () => {
@@ -226,16 +226,16 @@ describe("costo por turno en el ledger", () => {
     const kinds = ledger.entries().map((e) => e.kind);
     expect(kinds).toEqual(["turn", "scene"]);
     const turn = ledger.entries()[0];
-    // 75 audio in × 3 + 150 audio out × 12 + 1500 texto in × 0,75 (por millón).
+    // 75 audio in × 3 + 150 audio out × 12 + 1500 text in × 0.75 (per million).
     expect(turn?.usd).toBeCloseTo((75 * 3 + 150 * 12 + 1500 * 0.75) / 1e6, 12);
     expect(ledger.entries()[1]).toMatchObject({ kind: "scene", adapter: "gemini-live", turns: 1, wallSeconds: 60 });
-    expect(h.alerts).toEqual([]); // ~US$0,003 en un minuto: debajo de 0,05
+    expect(h.alerts).toEqual([]); // ~US$0.003 in a minute: below 0.05
   });
 
   test("un uso sin tarifa para su adaptador se avisa y la escena sigue (no tira el proceso)", async () => {
     const models = loadModelsConfig();
     const ledger = createMemoryCostLedger(costPolicyFromConfig(models));
-    // Adaptador "cascade" emitiendo uso por tokens: no hay tarifa para esa combinación.
+    // "cascade" adapter emitting token usage: there is no rate for that combination.
     const h = harness({ rules: M01_RULES, voice: () => createReferenceVoice({ adapter: "cascade" }), ledger });
     await openVoice(h);
     await speak(h, [[1]]);

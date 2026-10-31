@@ -1,5 +1,5 @@
-// world/labels/NameLabel.tsx — un chip de nombre sobre la cabeza de un NPC (plan estetica-c M1 ítem 14): Sprite de
-// tamaño constante en pantalla y siempre visible (sin depth test). Se rehace solo si cambian el nombre o el resaltado.
+// world/labels/NameLabel.tsx — a name chip above an NPC head (plan estetica-c M1 item 14): Sprite of
+// constant screen size and always visible (no depth test). It rebuilds itself only if the name or the highlight change.
 import { useEffect, useMemo } from "react";
 import { createNameLabel, disposeNameLabel } from "./labelSprite";
 

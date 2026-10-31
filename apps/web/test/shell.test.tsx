@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// A1 (Testing Library): recorrido del menú solo con teclado, ajustes que persisten en el store, aria-live que
-// anuncia cambios. La app arranca con boot() real, un navegador simulado y el contenido real compilado.
+// A1 (Testing Library): keyboard-only menu walkthrough, settings that persist in the store, aria-live that
+// announces changes. The app starts with the real boot(), a simulated browser and the real compiled content.
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -8,8 +8,8 @@ import { App } from "../src/App";
 import { gameStore } from "../src/state/store";
 import { bootApp, memoryPlatform, resetStore } from "./helpers";
 
-// jsdom no tiene WebGL ni ResizeObserver: el canvas de R3F no se monta acá (el mundo se prueba con funciones puras
-// y el store; el operador lo camina en el navegador). El shell no depende de lo que dibuje el canvas.
+// jsdom has neither WebGL nor ResizeObserver: the R3F canvas is not mounted here (the world is tested with pure functions
+// and the store; the operator walks it in the browser). The shell does not depend on what the canvas draws.
 vi.mock("../src/world/GameCanvas", () => ({ default: () => null }));
 
 let consoleError: ReturnType<typeof vi.spyOn>;
@@ -21,7 +21,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  // A9: cero errores de consola en cada recorrido (incluye warnings de act() de React).
+  // A9: zero console errors in each walkthrough (includes React act() warnings).
   expect(consoleError).not.toHaveBeenCalled();
   consoleError.mockRestore();
 });
@@ -44,7 +44,7 @@ describe("A1: menú principal solo con teclado", () => {
     const settings = within(nav).getByRole("button", { name: "Ajustes" });
     const close = within(nav).getByRole("button", { name: "Cerrar el menú" });
 
-    // El foco arranca en el primer ítem.
+    // Focus starts on the first item.
     expect(document.activeElement).toBe(world);
     await user.tab();
     expect(document.activeElement).toBe(dialogOnly);
@@ -52,29 +52,29 @@ describe("A1: menú principal solo con teclado", () => {
     expect(document.activeElement).toBe(settings);
     await user.keyboard("{End}");
     expect(document.activeElement).toBe(close);
-    await user.keyboard("{ArrowDown}"); // da la vuelta
+    await user.keyboard("{ArrowDown}"); // wraps around
     expect(document.activeElement).toBe(world);
     await user.keyboard("{ArrowUp}{ArrowUp}");
     expect(document.activeElement).toBe(settings);
 
-    // Enter abre Ajustes y el foco va al título.
+    // Enter opens Ajustes and focus goes to the title.
     await user.keyboard("{Enter}");
     expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Ajustes" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("slider", { name: "Tamaño del texto" }));
 
-    // Escape vuelve al menú con el foco en "Ajustes".
+    // Escape returns to the menu with focus on "Ajustes".
     await user.keyboard("{Escape}");
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Ajustes" }));
 
-    // Escape cierra el menú: queda la vista del mapa (placeholder hasta F2) con su título enfocado.
+    // Escape closes the menu: the map view remains (placeholder until F2) with its title focused.
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("navigation", { name: "Menú principal" })).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "El mapa" }));
     expect(gameStore.getState().session.phase).toBe("world");
 
-    // Desde la barra (antes de <main> en el orden de foco): Shift+Tab dos veces llega a "Menú"; Enter abre el
-    // menú; Escape devuelve el foco al botón de la barra.
+    // From the bar (before <main> in focus order): Shift+Tab twice reaches "Menú"; Enter opens the
+    // menu; Escape returns focus to the bar button.
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Ajustes" }));
     await user.tab({ shift: true });
@@ -98,15 +98,15 @@ describe("A1: ajustes que persisten en el store (y en el dispositivo)", () => {
     await user.click(screen.getByRole("button", { name: "Ajustes" }));
 
     const slider = screen.getByRole("slider", { name: "Tamaño del texto" });
-    // jsdom no implementa el paso con flechas de <input type="range"> (lo hace el navegador): se simula el
-    // cambio que produce la flecha. El resto del recorrido es teclado real.
+    // jsdom does not implement arrow-key stepping of <input type="range"> (the browser does): the
+    // change the arrow produces is simulated. The rest of the walkthrough is real keyboard.
     slider.focus();
     fireEvent.change(slider, { target: { value: "2" } });
     expect(gameStore.getState().settings.accessibility.textScale).toBe(150);
     expect(slider.getAttribute("aria-valuetext")).toBe("150 %");
     expect(document.documentElement.style.getPropertyValue("--lg-font-scale")).toBe("1.5");
 
-    await user.tab(); // alto contraste
+    await user.tab(); // high contrast
     expect(document.activeElement).toBe(screen.getByRole("checkbox", { name: "Alto contraste" }));
     await user.keyboard(" ");
     expect(gameStore.getState().settings.accessibility.highContrast).toBe(true);
@@ -124,13 +124,13 @@ describe("A1: ajustes que persisten en el store (y en el dispositivo)", () => {
     await user.click(screen.getByRole("radio", { name: "Baja" }));
     expect(gameStore.getState().settings.graphics.tier).toBe("low");
 
-    // Salir y volver a entrar: los valores siguen (vienen del store).
+    // Leave and re-enter: the values remain (they come from the store).
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Ajustes" }));
     expect((screen.getByRole("checkbox", { name: "Alto contraste" }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole("radio", { name: "Natural" }) as HTMLInputElement).checked).toBe(true);
 
-    // Copia local por la interfaz Platform (sin la sugerencia de tier).
+    // Local copy through the Platform interface (without the tier suggestion).
     const saved = JSON.parse(platform.data.get("settings.v1") ?? "{}") as { accessibility: { textScale: number }; graphics: object };
     expect(saved.accessibility.textScale).toBe(150);
     expect(saved.graphics).toEqual({ tier: "low" });
@@ -156,7 +156,7 @@ describe("A1: aria-live anuncia cambios de estado", () => {
     await user.click(screen.getByRole("checkbox", { name: "Alto contraste" }));
     await user.click(screen.getByRole("checkbox", { name: "Alto contraste" }));
     expect(status().textContent).toBe("Alto contraste activado.");
-    expect(status().firstElementChild).not.toBe(before); // nodo nuevo: el lector lo vuelve a leer
+    expect(status().firstElementChild).not.toBe(before); // new node: the reader reads it again
     stop();
   });
 });

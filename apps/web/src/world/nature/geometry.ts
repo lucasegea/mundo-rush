@@ -1,11 +1,11 @@
-// world/nature/geometry.ts — el detalle del suelo hecho por código (open-world-3d T7), port del mockup V6 (`world.js`
-// crownGeometry, rockGeometry, flowerClumpGeometry, impostor): helechos (tarjetas de hoja del mismo atlas que los
-// árboles), piedritas (icosaedro abollado con color por vértice) y matas de flores (cuatro tarjetas cruzadas de la
-// textura de lienzo propia). Más la geometría de las tarjetas de impostor (AC44: 3 quads, la copa horizontal al 58 %).
+// world/nature/geometry.ts — the code-built ground detail (open-world-3d T7), port of the V6 mockup (`world.js`
+// crownGeometry, rockGeometry, flowerClumpGeometry, impostor): ferns (leaf cards from the same atlas as the
+// trees), pebbles (dented icosahedron with per-vertex color) and flower clumps (four crossed cards from the
+// own canvas texture). Plus the impostor card geometry (AC44: 3 quads, the canopy horizontal at 58 %).
 import { BufferGeometry, Color, Float32BufferAttribute, IcosahedronGeometry, Vector3 } from "three";
 import { hash2, IMPOSTOR_CROWN_HEIGHT, mulberry32, type WorldLook } from "@lg/art";
 
-/** Los colores del detalle del look (open-world-3d T7b, D-839). */
+/** The look detail colors (open-world-3d T7b, D-839). */
 type NatureColors = WorldLook["vegetation"]["colors"];
 import type { BakeBox } from "../camera/bakeCamera";
 import { impostorFraming } from "../camera/bakeCamera";
@@ -17,9 +17,9 @@ const smooth = (a: number, b: number, x: number): number => {
 };
 
 /**
- * Un helecho (mockup `crownGeometry` con `far`, una tarjeta por hoja): `count` tarjetas de la hoja del atlas alrededor
- * de un elipsoide bajo. El color va dividido por la ganancia de la hoja del look (`leafGain`): el follaje la multiplica
- * donde muestrea hoja.
+ * A fern (mockup `crownGeometry` with `far`, one card per leaf): `count` cards of the atlas leaf around
+ * a low ellipsoid. The color is divided by the look leaf gain (`leafGain`): the foliage multiplies it
+ * where it samples leaf.
  */
 export function fernGeometry(variant: number, colors: NatureColors["fern"], leafGain: number): BufferGeometry {
   const o = { seed: 90 + variant * 7, cy: 0.12, rx: 0.4, ry: 0.16, rz: 0.4, count: 6, size: 0.5 };
@@ -56,10 +56,10 @@ export function fernGeometry(variant: number, colors: NatureColors["fern"], leaf
   return withAttributes(pos, nor, uv, col, idx);
 }
 
-/** Una piedrita (mockup `rockGeometry(31, 0.55, 0)`): icosaedro abollado, musgo arriba y oscuro abajo. */
+/** A pebble (mockup `rockGeometry(31, 0.55, 0)`): dented icosahedron, moss on top and dark below. */
 export function pebbleGeometry(colors: NatureColors["pebble"], seed = 31, squash = 0.55): BufferGeometry {
   const src = new IcosahedronGeometry(1, 0);
-  // Soldar por posición: las normales quedan suaves.
+  // Weld by position: the normals stay smooth.
   const p = src.getAttribute("position");
   const keyOf = new Map<string, number>();
   const verts: number[] = [];
@@ -101,7 +101,7 @@ export function pebbleGeometry(colors: NatureColors["pebble"], seed = 31, squash
   return g;
 }
 
-/** Una mata de flores (mockup `flowerClumpGeometry`): cuatro tarjetas giradas, cada una una celda del atlas. */
+/** A flower clump (mockup `flowerClumpGeometry`): four rotated cards, each one a cell of the atlas. */
 export function flowerClumpGeometry(): BufferGeometry {
   const pos: number[] = [], uv: number[] = [], nor: number[] = [], idx: number[] = [];
   const W = 0.62, H = 0.46;
@@ -110,7 +110,7 @@ export function flowerClumpGeometry(): BufferGeometry {
     const b = pos.length / 3;
     for (const [u, v] of [[0, 0], [1, 0], [1, 1], [0, 1]] as const) {
       const lx = (u - 0.5) * W;
-      // El lienzo se da vuelta al subir (flipY): v = 1 es la fila de arriba (las flores).
+      // The canvas is flipped on upload (flipY): v = 1 is the top row (the flowers).
       pos.push(ox + lx * ca, v * H, oz + lx * sa);
       uv.push((i + u * 0.98 + 0.01) / 4, v);
       nor.push(0, 1, 0);
@@ -127,8 +127,8 @@ export function flowerClumpGeometry(): BufferGeometry {
 }
 
 /**
- * Las tarjetas del impostor (AC44): dos verticales cruzadas (la vista de costado, mitad izquierda de la textura) y una
- * horizontal a IMPOSTOR_CROWN_HEIGHT del alto (la copa desde arriba, mitad derecha). 3 quads, 6 triángulos.
+ * The impostor cards (AC44): two crossed verticals (the side view, left half of the texture) and one
+ * horizontal at IMPOSTOR_CROWN_HEIGHT of the height (the canopy from above, right half). 3 quads, 6 triangles.
  */
 export function impostorGeometry(b: BakeBox): BufferGeometry {
   const { E, ymid, Et } = impostorFraming(b);

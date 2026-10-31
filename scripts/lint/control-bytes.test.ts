@@ -1,7 +1,7 @@
-// open-world-3d T7, fix 1 (QA, AC43 y A13/A14): tres regex de tests tenían un byte 0x08 (retroceso) donde iba `\b`,
-// escrito por un reemplazo de Python con string no crudo; la regex nunca podía coincidir y el guardián no tenía dientes.
-// Este test recorre los archivos de texto de apps/, packages/, scripts/ y tooling/ y rechaza todo byte de control C0
-// salvo tab, LF y CR. Los binarios (.glb, .ktx2, .wasm, ...) quedan fuera por extensión.
+// open-world-3d T7, fix 1 (QA, AC43 and A13/A14): three test regexes had a 0x08 byte (backspace) where `\b` belonged,
+// written by a Python replacement with a non-raw string; the regex could never match and the guard had no teeth.
+// This test walks the text files of apps/, packages/, scripts/ and tooling/ and rejects every C0 control byte
+// except tab, LF and CR. Binaries (.glb, .ktx2, .wasm, ...) are left out by extension.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,10 +10,10 @@ import { describe, expect, test } from "vitest";
 const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const ZONES = ["apps", "packages", "scripts", "tooling"];
 const TEXT = /\.(ts|tsx|js|mjs|cjs|json|jsonl|ya?ml|md|css|html|glsl|patch|txt|svg|snap)$|(^|\/)LICENSE$/;
-// Cambio registrado (open-world-3d T7b): fuera también apps/web/public/content/, la salida de build:content (en
-// .gitignore, no es fuente). Los tests de contenido la reescriben en paralelo y el recorrido la leía a medio borrar
-// (ENOENT en habilidades.json, verify en rojo 1 de 4 corridas). T7b fix 1 (QA): lo mismo con apps/server/generated/
-// (en .gitignore, salida generada que la suite reescribe en paralelo; ENOENT en generated/content/).
+// Recorded change (open-world-3d T7b): apps/web/public/content/ is also out, the build:content output (in
+// .gitignore, not source). The content tests rewrite it in parallel and the walk read it half-deleted
+// (ENOENT on habilidades.json, verify red 1 run in 4). T7b fix 1 (QA): the same with apps/server/generated/
+// (in .gitignore, generated output that the suite rewrites in parallel; ENOENT in generated/content/).
 const SKIP = /(^|\/)(node_modules|dist|\.vitest|coverage)(\/|$)|^apps\/web\/public\/content(\/|$)|^apps\/server\/generated(\/|$)/;
 const ALLOWED = new Set([0x09, 0x0a, 0x0d]);
 
@@ -51,7 +51,7 @@ describe("ningún archivo de texto lleva bytes de control C0 (salvo tab, LF, CR)
   test("apps/, packages/, scripts/ y tooling/ están limpios", () => {
     const files = textFiles();
     expect(files.length).toBeGreaterThan(400);
-    // Los tres tests que tenían el 0x08 están dentro del recorrido.
+    // The three tests that had the 0x08 are inside the walk.
     for (const rel of ["scripts/assets/bake-trees.test.ts", "apps/web/test/open-world-characters.test.ts", "apps/web/test/estetica-c.test.ts"]) {
       expect(files, rel).toContain(rel);
     }

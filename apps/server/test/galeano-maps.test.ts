@@ -1,12 +1,12 @@
-// book-mode slice-1 M6.1 (AC1, AC2): los dioramas compilados de U-GALEANO son mapas reales (props, NPCs) y son
-// recorribles. Se compila en memoria desde content/universes/U-GALEANO/ (la salida en disco está fuera de git).
+// book-mode slice-1 M6.1 (AC1, AC2): the compiled dioramas of U-GALEANO are real maps (props, NPCs) and are
+// walkable. Compiled in memory from content/universes/U-GALEANO/ (the on-disk output is outside git).
 //
-// Cambio registrado (open-world-3d T3, AC13; D-818 y el plan estetica-c M7, D-207, que retira `tiles` y `atlas_tiles`):
-// el test "muelle es un mapa de tiles con al menos 4 ids distintos" afirmaba `atlas_tiles` y una capa `suelo` del tamaño
-// de los límites; ahora afirma el formato de la maqueta (`terreno`, al menos un camino, sin `tiles` ni `atlas_tiles`).
-// El A* hasta cada NPC ahora además comprueba que la celda de llegada queda a 3 m o menos del NPC.
-// Cambio registrado (open-world-3d T6, AC34, D-819): "28x20 como antes" pasa a "al menos 140x100 m": el muelle es el
-// mundo abierto del mockup V6 (relieve, NPCs a 53-67 m, anillo no caminable orgánico). AC34 y AC35 se suman abajo.
+// Recorded change (open-world-3d T3, AC13; D-818 and the estetica-c plan M7, D-207, which retires `tiles` and `atlas_tiles`):
+// the test "muelle es un mapa de tiles con al menos 4 ids distintos" asserted `atlas_tiles` and a `suelo` layer the size
+// of the bounds; it now asserts the diorama format (`terreno`, at least one path, no `tiles` or `atlas_tiles`).
+// The A* to each NPC now also checks that the arrival cell is within 3 m of the NPC.
+// Recorded change (open-world-3d T6, AC34, D-819): "28x20 como antes" becomes "at least 140x100 m": the dock is the
+// open world of mockup V6 (relief, NPCs at 53-67 m, organic non-walkable ring). AC34 and AC35 are added below.
 import { compilarContenido } from "@lg/content-schema";
 import { cellAt, cellCenter, findPath, isWalkable, nearestWalkable, prepareDiorama, type DioramaLayout } from "@lg/core";
 import { describe, expect, test } from "vitest";
@@ -65,7 +65,7 @@ describe("AC2: NPCs en el mapa y alcanzables desde el spawn", () => {
   });
 });
 
-/** Largo (m) de un camino de celdas: suma de pasos entre centros (1 o raíz de 2 celdas). */
+/** Length (m) of a cell path: sum of steps between centers (1 or the root of 2 cells). */
 const pathLength = (cells: readonly (readonly [number, number])[], cell: number): number =>
   cells.slice(1).reduce((n, c, i) => {
     const [px, pz] = must(cells[i], "celda previa");
@@ -101,7 +101,7 @@ describe("open-world-3d T6: el mundo abierto del muelle (AC34, AC35)", () => {
     const edges = ring.map((p, i) => [p, must(ring[(i + 1) % ring.length], "vértice")] as const);
     const diagonal = edges.filter(([a, b]) => Math.abs(b[0] - a[0]) > 0.5 && Math.abs(b[1] - a[1]) > 0.5).length;
     expect(diagonal / edges.length).toBeGreaterThanOrEqual(0.4);
-    // El anillo no corta la aparición ni a los NPCs (los llanos del relieve quedan caminables).
+    // The ring cuts neither the spawn nor the NPCs (the relief's plains stay walkable).
     const sinNpcs = prepareDiorama({ ...layout("muelle"), npcs: [] });
     for (const p of [run.spawn, ...run.npcs]) {
       const c = cellAt(sinNpcs.grid, p.x, p.z);

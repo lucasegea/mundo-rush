@@ -1,7 +1,7 @@
-// Open-world-3d T9 (AC55, D-839): el contraste de los anillos del minimapa. Los puntos rojos de los NPCs pendientes son
-// interfaz (iguales en todo universo) y se dibujan sobre el suelo, el camino y el agua del look del diorama: su contorno
-// de tinta tiene que llegar a 3:1 (WCAG 1.4.11, no texto) contra cada uno, en cada look del catálogo. El rojo solo no
-// llega sobre el pasto (por eso existe el contorno); el rojo y la flecha del jugador contra el contorno, sí.
+// Open-world-3d T9 (AC55, D-839): the contrast of the minimap rings. The red dots of the pending NPCs are
+// interface (the same in every universe) and are drawn over the ground, the path and the water of the diorama's look: their ink outline
+// has to reach 3:1 (WCAG 1.4.11, non-text) against each one, in every look of the catalog. The red alone does not
+// reach it over the grass (that is why the outline exists); the red and the player's arrow against the outline do.
 import { describe, expect, test } from "vitest";
 import { MINIMAP_NON_TEXT_MIN, minimapColors, WORLD_LOOKS } from "@lg/art";
 import { contrastRatio, NON_TEXT_MIN } from "./contrast";

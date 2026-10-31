@@ -1,4 +1,4 @@
-// Fixtures de los tests del modo director: un repo temporal con `.director/` y, si hace falta, una copia de content/.
+// Fixtures for the director mode tests: a temp repo with `.director/` and, if needed, a copy of content/.
 import { cpSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -12,9 +12,9 @@ export const tempRoot = (withContent = false): string => {
   const dir = mkdtempSync(join(tmpdir(), "lg-director-"));
   if (withContent) {
     cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
-    // Plan estetica-c M2: el registro de assets nombra archivos servidos; sin ellos el contenido real no compila.
+    // Plan estetica-c M2: the asset registry names served files; without them the real content does not compile.
     cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
-    // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+    // Open-world-3d T6: the ground .ktx2 files are also served with a row in the registry.
     cpSync(join(ROOT, "apps/web/public/textures"), join(dir, "apps/web/public/textures"), { recursive: true });
   }
   return dir;
@@ -36,7 +36,7 @@ export const writeState = (root: string, s: DirectorSnapshot): void => {
   writeFileSync(join(root, ".director/state.json"), `${JSON.stringify(s)}\n`);
 };
 
-/** Escribe una sesión del diario con fecha de modificación `mtimeSec` (orden de las sesiones). */
+/** Writes a journal session with modification date `mtimeSec` (session order). */
 export const writeSession = (root: string, id: string, events: JournalEvent[], mtimeSec = 1_700_000_000): void => {
   const dir = join(root, ".director/journal");
   mkdirSync(dir, { recursive: true });
@@ -53,7 +53,7 @@ export const sampleEvents = (): JournalEvent[] => [
   { seq: 4, at: AT, type: "scene.end", result: "cerrada", criteriaMet: [] },
 ];
 
-/** req/res falsos para los manejadores de connect (sin red). */
+/** Fake req/res for the connect handlers (no network). */
 export const fakeHttp = (url: string, method = "GET") => {
   const res = {
     statusCode: 0,

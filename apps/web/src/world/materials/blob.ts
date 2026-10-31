@@ -1,9 +1,9 @@
-// world/materials/blob.ts — textura de la sombra blob (degradé radial verdoso, como el mockup), por código y sin canvas.
+// world/materials/blob.ts — blob shadow texture (greenish radial gradient, like the mockup), built in code and without canvas.
 import { DataTexture, LinearFilter, RGBAFormat } from "three";
 
 export const BLOB_SIZE = 64;
 
-/** Alfa por píxel: 0,45 en el centro, 0 en el borde, con caída suave. */
+/** Alpha per pixel: 0.45 at the center, 0 at the edge, with a smooth falloff. */
 export function blobAlpha(size = BLOB_SIZE): Uint8Array {
   const out = new Uint8Array(size * size);
   const c = (size - 1) / 2;

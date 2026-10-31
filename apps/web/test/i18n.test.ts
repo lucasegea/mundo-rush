@@ -1,4 +1,4 @@
-// i18n (ADR-019, D-045): claves tipadas, test de claves faltantes, plurales y voseo.
+// i18n (ADR-019, D-045): typed keys, missing-keys test, plurals and voseo.
 import { describe, expect, test } from "vitest";
 import { FEEDBACK_MODES, NPC_SPEEDS, SELECTABLE_TIERS, TEXT_SCALES } from "@lg/core";
 import { CATALOGS, isMessageKey, t, tDynamic } from "../src/i18n";
@@ -16,7 +16,7 @@ describe("claves faltantes", () => {
   test("toda clave literal de t(\"…\") en src/ existe en el catálogo", () => {
     const missing: string[] = [];
     for (const [file, code] of Object.entries(SOURCES)) {
-      if (file.includes("/i18n/")) continue; // el helper documenta t("…") en comentarios
+      if (file.includes("/i18n/")) continue; // the helper documents t("…") in comments
       for (const m of code.matchAll(/\bt\("([^"]+)"/g)) if (!isMessageKey(m[1] ?? "")) missing.push(`${file}: ${m[1]}`);
     }
     expect(missing).toEqual([]);
@@ -52,7 +52,7 @@ describe("claves faltantes", () => {
     run(() => a.enterWorld());
     run(() => { a.setTierChoice("low"); a.bootCompleted({ webgl2: true, deviceMemoryGb: 8, cores: 8 }); a.enterWorld(); });
     run(() => a.contentFailed());
-    keys.add("announce.storageUnavailable"); // lo emite boot/ (persistencia)
+    keys.add("announce.storageUnavailable"); // emitted by boot/ (persistence)
     expect([...keys].filter((k) => !isMessageKey(k))).toEqual([]);
     expect(keys.size).toBeGreaterThan(15);
   });
@@ -76,7 +76,7 @@ describe("t", () => {
 });
 
 describe("D-045: rioplatense con voseo", () => {
-  // Formas de tuteo y de "usted" que no van en la interfaz (voseo).
+  // "Tuteo" forms and "usted" forms that do not belong in the interface (voseo).
   const TUTEO = /\b(tú|puedes|tienes|quieres|eres|elige|entra|prueba|usa|vuelve|recarga|estás seguro de que)\b/i;
   test("ninguna cadena tutea", () => {
     const texts = Object.values(catalog).flatMap((v) => (typeof v === "string" ? [v] : Object.values(v)));

@@ -1,12 +1,12 @@
-// Plan estetica-c M1 (D-207), partes del núcleo: A1 (ángulos del lente largo), A9 (acomodo del jugador para la
-// charla, con línea libre sobre la grilla) y A11 (la cámara del jugador es solo perspective3D).
+// Plan estetica-c M1 (D-207), core parts: A1 (long-lens angles), A9 (player positioning for the
+// chat, with free line of sight over the grid) and A11 (the player camera is only perspective3D).
 import { describe, expect, test } from "vitest";
 import {
   applySettingsPatch, CAMERA_PRESETS, cellAt, circleBlocked, clearLine, DEFAULT_SETTINGS, isWalkable, presetAngles,
   STANDOFF_DISTANCE, standoffPoint, type SettingsPatch, type WalkGrid,
 } from "../src/index";
 
-/** Grilla de 20 × 20 m (celdas de 0,5 m, origen -10) con las celdas bloqueadas que diga `blocked(x, z)` (centro). */
+/** 20 × 20 m grid (0.5 m cells, origin -10) with the cells blocked that `blocked(x, z)` says (center). */
 function field(blocked: (x: number, z: number) => boolean = () => false): WalkGrid {
   const cols = 40;
   const walkable = new Uint8Array(cols * cols);
@@ -29,8 +29,8 @@ describe("A1 (núcleo): perspective3D es el lente largo de 50° / 45°", () => {
   });
 });
 
-// Cambio registrado (open-world-3d T5, PD-5 amienda D-208 para la vista por defecto, AC27): antes CAMERA_PRESETS era
-// exactamente ["perspective3D"] y ese era el default; ahora `thirdPerson` es el default y `perspective3D` sigue elegible.
+// Recorded change (open-world-3d T5, PD-5 amends D-208 for the default view, AC27): CAMERA_PRESETS used to be
+// exactly ["perspective3D"] and that was the default; now `thirdPerson` is the default and `perspective3D` is still selectable.
 describe("A11 ajustes: thirdPerson por defecto, perspective3D elegible; un valor viejo cae al default", () => {
   test("CAMERA_PRESETS es exactamente ['thirdPerson', 'perspective3D'] y thirdPerson es el default", () => {
     expect([...CAMERA_PRESETS]).toEqual(["thirdPerson", "perspective3D"]);
@@ -49,7 +49,7 @@ describe("A9 standoffPoint: 2,6 m del NPC, de su lado, caminable y con línea li
       const p = standoffPoint(from, NPC, g);
       expect(Math.abs(dist(p, NPC) - STANDOFF_DISTANCE)).toBeLessThanOrEqual(0.25);
       expect(free(g, p)).toBe(true);
-      // Del mismo lado: el ángulo entre (desde - NPC) y (punto - NPC) es menor a 90°.
+      // Same side: the angle between (from - NPC) and (point - NPC) is under 90°.
       expect((from.x - NPC.x) * (p.x - NPC.x) + (from.z - NPC.z) * (p.z - NPC.z)).toBeGreaterThan(0);
     }
   });
@@ -71,10 +71,10 @@ describe("A9 standoffPoint: 2,6 m del NPC, de su lado, caminable y con línea li
   });
 
   test("un punto libre detrás de un cerco (sin línea libre) no se elige", () => {
-    // Cerco en x ∈ [1.5, 2] de punta a punta: a 2,6 m sobre el eje x hay lugar libre, pero del otro lado.
+    // Fence at x ∈ [1.5, 2] end to end: at 2.6 m along the x axis there is free room, but on the other side.
     const g = field((x) => x > 1.5 && x < 2);
     const from = { x: 1.0, z: 0 };
-    expect(free(g, { x: 2.6, z: 0 })).toBe(true); // sin la línea libre, este sería el primero en elegirse
+    expect(free(g, { x: 2.6, z: 0 })).toBe(true); // without the free line of sight, this would be the first one picked
     expect(clearLine(g, from, { x: 2.6, z: 0 })).toBe(false);
     const p = standoffPoint(from, NPC, g);
     expect(p.x).toBeLessThan(1.5);

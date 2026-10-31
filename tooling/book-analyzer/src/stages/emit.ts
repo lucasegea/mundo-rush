@@ -1,19 +1,19 @@
-// Etapa EMIT — la ÚNICA etapa real de slice-1 y la única atada a @lg/content-schema (T2.3).
+// EMIT stage — the ONLY real stage of slice-1 and the only one tied to @lg/content-schema (T2.3).
 //
-// Toma el intermedio (organizado por campo del contrato) y produce los archivos YAML del universo en sus
-// SUBPATHS CANÓNICOS. Por cada ítem:
-//   1. lo valida contra el MISMO esquema zod que usa el compilador (conjunto.ts) — AC5;
-//   2. hace un round-trip (stringify → parse → re-valida) para GARANTIZAR que el YAML en disco valida, no solo
-//      el objeto en memoria;
-//   3. si algo no valida, EMIT no escribe NADA (igual que build.ts: un error deja el árbol intacto).
-// Recién con todo válido escribe un archivo por ítem, nombrado por su id para los tipos de "uno por archivo"
-// (así el compilador completo de M3 pasa el chequeo id↔nombre de archivo).
+// Takes the intermediate (organized by contract field) and produces the universe's YAML files in their
+// CANONICAL SUBPATHS. For each item:
+//   1. validates it against the SAME zod schema the compiler uses (conjunto.ts) — AC5;
+//   2. does a round-trip (stringify → parse → re-validate) to GUARANTEE that the YAML on disk validates, not just
+//      the in-memory object;
+//   3. if anything fails to validate, EMIT writes NOTHING (like build.ts: an error leaves the tree intact).
+// Only with everything valid does it write one file per item, named by its id for the "one per file" types
+// (so the complete M3 compiler passes the id↔file name check).
 //
-// Layout (S1/D-804): los archivos van bajo `<outDir>` = content/universes/<id>/, en el subpath canónico SIN el
-// prefijo `content/` (el reader de build.ts reañade `content/` al normalizar, así los 23 regexes de RUTAS matchean).
+// Layout (S1/D-804): files go under `<outDir>` = content/universes/<id>/, at the canonical subpath WITHOUT the
+// `content/` prefix (build.ts's reader re-adds `content/` when normalizing, so the 23 RUTAS regexes match).
 //
-// M3 SEAM: el intermedio de slice-1 es una muestra chica (prueba un archivo por campo). El intermedio Galeano
-// completo (R1 Potosí) entra en M3 y EMIT lo escribe sin cambios acá: EMIT ya es el contrato.
+// M3 SEAM: the slice-1 intermediate is a small sample (it proves one file per field). The complete Galeano
+// intermediate (R1 Potosí) comes in M3 and EMIT writes it without changes here: EMIT already is the contract.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { z } from "zod";
@@ -23,11 +23,11 @@ import {
 } from "@lg/content-schema";
 import type { Intermedio } from "../intermediate.ts";
 
-/** Un archivo listo para escribir: su subpath (relativo a outDir) y el valor validado que va serializado. */
+/** A file ready to write: its subpath (relative to outDir) and the validated value to serialize. */
 export interface ArchivoEmitido {
   subpath: string;
   valor: unknown;
-  /** Archivos de texto plano (prompts/*.txt): se escriben tal cual, sin pasar por YAML. */
+  /** Plain text files (prompts/*.txt): written as is, without going through YAML. */
   texto?: string;
 }
 
@@ -36,14 +36,14 @@ export interface ResultadoEmit {
   errores: string[];
 }
 
-/** Modos de emisión: un único archivo (singleton/archivo compuesto) o uno por ítem nombrado por su id. */
+/** Emission modes: a single file (singleton/composite file) or one per item named by its id. */
 type Emisor =
   | { clave: keyof Intermedio; modo: "archivo"; subpath: string; schema: z.ZodType }
   | { clave: keyof Intermedio; modo: "porId"; dir: string; schema: z.ZodType };
 
 /**
- * El contrato de EMIT: qué campo del intermedio va a qué subpath canónico y con qué esquema se valida.
- * El orden es el del contrato de la reconciliación. `manifiesto` es la cabeza del universo (D-804).
+ * EMIT's contract: which intermediate field goes to which canonical subpath and with which schema it is validated.
+ * The order is that of the reconciliation contract. `manifiesto` is the head of the universe (D-804).
  */
 const PLAN: Emisor[] = [
   { clave: "manifiesto", modo: "archivo", subpath: "manifiesto.yaml", schema: Universo },
@@ -61,8 +61,8 @@ const formatearIssues = (subpath: string, issues: readonly z.core.$ZodIssue[]): 
   issues.map((i) => `${subpath}: ${i.path.length ? `${i.path.join(".")}: ` : ""}${i.message}`);
 
 /**
- * Valida `valor` contra `schema` y, si pasa, garantiza que su YAML round-trippea (en disco también valida).
- * Devuelve el valor validado o acumula errores con el subpath como prefijo.
+ * Validates `valor` against `schema` and, if it passes, guarantees its YAML round-trips (it validates on disk too).
+ * Returns the validated value or accumulates errors prefixed with the subpath.
  */
 const validarYRoundTrip = (schema: z.ZodType, subpath: string, valor: unknown, errores: string[]): unknown | null => {
   const r = schema.safeParse(valor);
@@ -85,8 +85,8 @@ const idDe = (valor: unknown): string | null =>
     : null;
 
 /**
- * Planifica (puro, sin fs) los archivos a emitir desde el intermedio, validando cada uno. No escribe nada:
- * así se puede testear la validez y el "un archivo por campo" sin tocar disco. Un campo ausente se saltea.
+ * Plans (pure, no fs) the files to emit from the intermediate, validating each one. It writes nothing:
+ * so validity and "one file per field" can be tested without touching disk. An absent field is skipped.
  */
 export const planearEmit = (intermedio: Intermedio): ResultadoEmit => {
   const archivos: ArchivoEmitido[] = [];
@@ -99,7 +99,7 @@ export const planearEmit = (intermedio: Intermedio): ResultadoEmit => {
       if (data !== null) archivos.push({ subpath: em.subpath, valor: data });
       continue;
     }
-    // porId: un array de ítems; cada uno a <dir>/<id>.yaml.
+    // porId: an array of items; each one to <dir>/<id>.yaml.
     if (!Array.isArray(valor)) {
       errores.push(`${em.clave}: se esperaba una lista de ítems`);
       continue;
@@ -119,10 +119,10 @@ export const planearEmit = (intermedio: Intermedio): ResultadoEmit => {
   return { archivos, errores };
 };
 
-/** Nombre de un prompt: el mismo que `nombreBase` de conjunto.ts saca de content/prompts/<nombre>.txt. */
+/** Name of a prompt: the same that conjunto.ts's `nombreBase` takes from content/prompts/<name>.txt. */
 const NOMBRE_PROMPT = /^[a-z0-9][a-z0-9-]*$/;
 
-/** `prompts`: { nombre: texto } → prompts/<nombre>.txt (el universo trae su propio `npc-base`, sin heredar el de la campesino). */
+/** `prompts`: { name: text } → prompts/<name>.txt (the universe brings its own `npc-base`, without inheriting the farmer universe's). */
 const planearPrompts = (valor: unknown, archivos: ArchivoEmitido[], errores: string[]): void => {
   if (valor === undefined) return;
   if (valor === null || typeof valor !== "object" || Array.isArray(valor)) {
@@ -143,8 +143,8 @@ export interface SalidaEmit {
 }
 
 /**
- * EMIT real: planifica + valida; si no hay errores, escribe cada archivo bajo `outDir` y devuelve las rutas
- * escritas. Con cualquier error no escribe NADA (deja el universo intacto, como build.ts).
+ * Real EMIT: plans + validates; if there are no errors, writes each file under `outDir` and returns the written
+ * paths. With any error it writes NOTHING (leaves the universe intact, like build.ts).
  */
 export const emit = (intermedio: Intermedio, outDir: string): SalidaEmit => {
   const { archivos, errores } = planearEmit(intermedio);

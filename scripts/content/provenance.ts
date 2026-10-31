@@ -1,24 +1,24 @@
-// Procedencia de cada byte de terceros (open-world-3d T2(c), D-831, AC8). Recalcula el sha256 de todo archivo servido
-// (apps/web/public/{models,textures,audio,sprites,decoders}) y vendorizado (tooling/vendor/) y lo cruza con su fila:
-// content/assets-registry.yaml para los assets, content/code-registry.yaml para el código. Lee los YAML crudos (sin el
-// esquema zod) a propósito: cada chequeo es independiente, así una fila mala enciende SOLO el chequeo que le toca y no
-// tumba el parseo de los demás. El esquema (packages/content-schema) valida lo mismo al compilar; esto lo prueba en disco.
+// Provenance of every third-party byte (open-world-3d T2(c), D-831, AC8). Recomputes the sha256 of every served file
+// (apps/web/public/{models,textures,audio,sprites,decoders}) and vendored one (tooling/vendor/) and cross-checks it with its row:
+// content/assets-registry.yaml for assets, content/code-registry.yaml for code. Reads the raw YAML (without the zod
+// schema) on purpose: each check is independent, so a bad row lights up ONLY the check it concerns and does not
+// bring down the parsing of the others. The schema (packages/content-schema) validates the same at compile time; this proves it on disk.
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { parse } from "yaml";
 import { LICENCIAS_CON_ATRIBUCION, licenciaPermitida, pideArchivoLicencia } from "@lg/content-schema";
 
-/** Carpetas cuyos archivos van en el registro de assets. */
+/** Folders whose files go in the assets registry. */
 export const CARPETAS_ASSETS = ["apps/web/public/models", "apps/web/public/textures", "apps/web/public/audio", "apps/web/public/sprites"] as const;
-/** Carpetas cuyos archivos van en el registro de código. */
+/** Folders whose files go in the code registry. */
 export const CARPETAS_CODIGO = ["apps/web/public/decoders", "tooling/vendor"] as const;
 
 export const RUTA_ASSETS = "content/assets-registry.yaml";
 export const RUTA_CODIGO = "content/code-registry.yaml";
 export const RUTA_CREDITOS = "content/creditos.yaml";
 
-/** Una fila cruda (asset o código), con los campos que miran los chequeos. */
+/** A raw row (asset or code), with the fields the checks look at. */
 export interface Fila {
   registro: "assets" | "codigo";
   id: string;
@@ -29,16 +29,16 @@ export interface Fila {
   procedencia?: string | undefined;
   archivo_licencia?: string | undefined;
   atribucion_requerida?: boolean | undefined;
-  /** Solo código editado: su `<archivo>.patch` (open-world-3d T7). */
+  /** Edited code only: its `<file>.patch` (open-world-3d T7). */
   parche?: string | undefined;
 }
 
 export interface Arbol {
   root: string;
-  /** Archivos en disco bajo las carpetas de assets y de código (rutas posix desde root), ordenados. */
+  /** Files on disk under the assets and code folders (posix paths from root), sorted. */
   archivos: { assets: string[]; codigo: string[] };
   filas: Fila[];
-  /** Packs con entrada en content/creditos.yaml. */
+  /** Packs with an entry in content/creditos.yaml. */
   creditos: Set<string>;
 }
 
@@ -78,7 +78,7 @@ const filas = (registro: Fila["registro"], lista: unknown): Fila[] =>
     parche: typeof r.parche === "string" ? r.parche : undefined,
   }));
 
-/** Lee el árbol de `root`: archivos en disco, filas de los dos registros y créditos. */
+/** Reads the tree of `root`: files on disk, rows of the two registries and credits. */
 export const leerArbol = (root: string): Arbol => {
   const creditos = yaml(root, RUTA_CREDITOS).atribuciones;
   return {
@@ -94,19 +94,19 @@ export const leerArbol = (root: string): Arbol => {
 
 export const sha256De = (abs: string): string => createHash("sha256").update(readFileSync(abs)).digest("hex");
 
-/** Las filas que cubren archivos en disco (la de cada archivo, por registro). */
+/** The rows that cover files on disk (each file's, per registry). */
 const cubiertas = (a: Arbol): Fila[] => {
   const enDisco = new Set([...a.archivos.assets, ...a.archivos.codigo]);
   return a.filas.filter((f) => enDisco.has(f.archivo));
 };
 
-/** (1) Todo archivo tiene fila en SU registro, y toda fila de código nombra un archivo que existe. */
+/** (1) Every file has a row in ITS registry, and every code row names a file that exists. */
 export const sinFila = (a: Arbol): string[] => {
   const de = (registro: Fila["registro"]): Set<string> => new Set(a.filas.filter((f) => f.registro === registro).map((f) => f.archivo));
   const assets = de("assets");
   const codigo = de("codigo");
-  // Open-world-3d T7 (D-830): el `<archivo>.patch` de un archivo editado lo cubre la fila de ese archivo (`parche`);
-  // refetch.ts prueba que el upstream más el parche da los bytes versionados. Un .patch que ninguna fila nombra falla.
+  // Open-world-3d T7 (D-830): an edited file's `<file>.patch` is covered by that file's row (`parche`);
+  // refetch.ts proves that upstream plus the patch gives the versioned bytes. A .patch that no row names fails.
   for (const f of a.filas) if (f.registro === "codigo" && f.parche !== undefined) codigo.add(f.parche);
   const enDisco = new Set(a.archivos.codigo);
   return [
@@ -116,7 +116,7 @@ export const sinFila = (a: Arbol): string[] => {
   ];
 };
 
-/** (2) El sha256 de la fila es el de los bytes en disco. */
+/** (2) The row's sha256 is that of the bytes on disk. */
 export const hashDistinto = (a: Arbol): string[] =>
   cubiertas(a).flatMap((f) => {
     if (f.sha256 === undefined) return [`${f.archivo}: la fila "${f.id}" no tiene sha256`];
@@ -124,7 +124,7 @@ export const hashDistinto = (a: Arbol): string[] =>
     return real === f.sha256 ? [] : [`${f.archivo}: sha256 ${real} no coincide con la fila "${f.id}" (${f.sha256})`];
   });
 
-/** (3) Toda fila que cubre un archivo dice de dónde salió. */
+/** (3) Every row that covers a file says where it came from. */
 export const sinProcedencia = (a: Arbol): string[] =>
   cubiertas(a).filter((f) => f.procedencia === undefined).map((f) => `${f.archivo}: la fila "${f.id}" no tiene procedencia`);
 
@@ -132,12 +132,12 @@ const licenciasFuera = (a: Arbol, registro: Fila["registro"]): string[] =>
   a.filas.filter((f) => f.registro === registro && licenciaPermitida(f.licencia) === null)
     .map((f) => `${f.registro === "assets" ? RUTA_ASSETS : RUTA_CODIGO}: "${f.id}" tiene licencia "${f.licencia}", fuera de la lista D1`);
 
-/** (4) Licencias de los assets en la lista cerrada D1. */
+/** (4) Asset licenses in the closed D1 list. */
 export const licenciaAssetFuera = (a: Arbol): string[] => licenciasFuera(a, "assets");
-/** (5) Licencias del código en la lista cerrada D1. */
+/** (5) Code licenses in the closed D1 list. */
 export const licenciaCodigoFuera = (a: Arbol): string[] => licenciasFuera(a, "codigo");
 
-/** (6) CC-BY lleva `atribucion_requerida: true` y su línea en los créditos. */
+/** (6) CC-BY carries `atribucion_requerida: true` and its line in the credits. */
 export const atribucionFaltante = (a: Arbol): string[] =>
   a.filas.flatMap((f) => {
     const l = licenciaPermitida(f.licencia);
@@ -146,7 +146,7 @@ export const atribucionFaltante = (a: Arbol): string[] =>
     return a.creditos.has(f.pack ?? "") ? [] : [`${RUTA_ASSETS}: "${f.id}" es ${l} y el pack "${f.pack}" no está en ${RUTA_CREDITOS}`];
   });
 
-/** (7) MIT, Apache, BSD, ISC, 0BSD, Zlib y OFL llevan `archivo_licencia`, y ese archivo existe. */
+/** (7) MIT, Apache, BSD, ISC, 0BSD, Zlib and OFL carry `archivo_licencia`, and that file exists. */
 export const archivoLicenciaFaltante = (a: Arbol): string[] =>
   a.filas.flatMap((f) => {
     if (!pideArchivoLicencia(f.licencia)) return [];

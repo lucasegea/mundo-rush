@@ -1,5 +1,5 @@
-// F4.1: criterios de éxito sobre el observador (A3: nunca un criterio inventado) y efectos de misión / orden del
-// prólogo / presentaciones (A7), como reglas puras del núcleo.
+// F4.1: success criteria over the observer (A3: never an invented criterion) and mission effects / prologue
+// order / introductions (A7), as pure core rules.
 import { describe, expect, test } from "vitest";
 import {
   advanceStory, applyCriteriaReports, applyWorldEffects, closesMission, criteriaSatisfied, dedupeEffects, emptyCriteria,
@@ -25,7 +25,7 @@ describe("criterios", () => {
     expect(b.state.met).toEqual({ C1: "Hello!", C2: "I'm Nico." });
     expect(criteriaSatisfied(DEFS, b.state)).toBe(true);
     expect(metCriteriaIds(DEFS, b.state)).toEqual(["C1", "C2"]);
-    // Sin novedades devuelve el mismo estado.
+    // With nothing new it returns the same state.
     expect(applyCriteriaReports(DEFS, b.state, []).state).toBe(b.state);
   });
 
@@ -51,7 +51,7 @@ describe("efectos sobre el mundo (03 §6.4.8)", () => {
   });
 });
 
-// Prólogo mínimo con la forma del contenido real (M0.1 → M0.2 → M0.3 → M1.1).
+// Minimal prologue shaped like the real content (M0.1 → M0.2 → M0.3 → M1.1).
 const scene = (id: string, npc: string | null, efectos: MissionLike["escenas"][number]["efectos"] = []) =>
   ({ escena_id: id, npc, efectos, criterios_exito: [{ id: "C1" }] });
 const MISSIONS: MissionLike[] = [
@@ -102,7 +102,7 @@ describe("orden del prólogo y presentaciones (D-168)", () => {
   test("misión de dos escenas: los efectos de la misión salen al cerrar la última", () => {
     let p: StoryProgress = { completedMissions: ["M0.1", "M0.2", "M0.3", "M1.1"], completedScenes: [], intros: ["NPC-NELL", "NPC-OLLIE"] };
     const m = mission("M1.2");
-    expect(resolveScene(MISSIONS, NPC.ollie ?? null, p)).toEqual({ kind: "none" }); // primero la escena de Maya
+    expect(resolveScene(MISSIONS, NPC.ollie ?? null, p)).toEqual({ kind: "none" }); // Maya's scene first
     expect(closesMission(m, "M1.2-E1", p)).toBe(false);
     expect(sceneCloseEffects(m, "M1.2-E1", p)).toEqual([]);
     p = close(p, "M1.2", "M1.2-E1");

@@ -1,6 +1,6 @@
-// Open-world-3d T6 (plan v3 M3, D-819, D-832): lo puro de @lg/art para el mundo abierto. AC31 (triángulos del terreno y
-// del peor caso del pasto por tier, sin GPU), AC33 (reliefAt puro, determinístico y plano en los llanos) y la cabecera
-// KTX2 de AC42 (512 x 512, 10 niveles, destino BC7 da los bytes de bloque).
+// Open-world-3d T6 (plan v3 M3, D-819, D-832): the pure parts of @lg/art for the open world. AC31 (terrain triangles and
+// worst-case grass per tier, without a GPU), AC33 (pure, deterministic reliefAt that is flat on the flats) and the
+// KTX2 header of AC42 (512 x 512, 10 levels, BC7 target gives the block bytes).
 import { describe, expect, test } from "vitest";
 import {
   BASIS_TARGET, BC_BLOCK_BYTES, blockBytes, gpuBytes, grassWorstTriangles, ktx2GpuBytes, OPEN_WORLD_DENSITY, parseKtx2Header,
@@ -48,7 +48,7 @@ describe("AC33: reliefAt", () => {
         expect(reliefAt(p.x + dx, p.z + dz, 1545, pads)).toBe(at);
       }
     }
-    // Fuera del llano y de la mezcla manda el relieve crudo.
+    // Outside the flat and the blend, the raw relief rules.
     expect(reliefAt(60, -45, 1545, pads)).toBe(reliefRaw(60, -45, 1545));
   });
 
@@ -59,7 +59,7 @@ describe("AC33: reliefAt", () => {
   });
 });
 
-/** Una cabecera KTX2 mínima (los campos que lee parseKtx2Header) para un archivo UASTC o ETC1S. */
+/** A minimal KTX2 header (the fields parseKtx2Header reads) for a UASTC or ETC1S file. */
 function ktx2Header(w: number, h: number, levels: number, colorModel: number, alpha: boolean): Uint8Array {
   const b = new Uint8Array(200);
   const dv = new DataView(b.buffer);
@@ -71,7 +71,7 @@ function ktx2Header(w: number, h: number, levels: number, colorModel: number, al
   const dfd = 104;
   dv.setUint32(48, dfd, true);
   b[dfd + 4 + 8] = colorModel;
-  // Un canal de muestra (o dos con alfa): el id del canal va en el byte 3 de cada muestra de 16 bytes.
+  // One sample channel (or two with alpha): the channel id goes in byte 3 of each 16-byte sample.
   dv.setUint16(dfd + 4 + 6, alpha ? 24 + 32 : 24 + 16, true);
   b[dfd + 4 + 24 + 3] = 0;
   if (alpha) b[dfd + 4 + 40 + 3] = 15;
@@ -88,9 +88,9 @@ describe("AC42: la memoria de un .ktx2 sale de su cabecera", () => {
     expect(blockBytes(512, 512, 10, "bc7")).toBe(want);
   });
 
-  // Cambio registrado (open-world-3d M3, QA AC42/AC74): antes «ETC1S sin alfa va a BC1 (8 bytes por bloque); con alfa,
-  // a BC3». KTX2Loader transcodifica ETC1S a BC7 cuando hay BPTC (priorityETC1S: ETC2 1, ETC1 2, BPTC 3, DXT 4), y la
-  // sonda midió BC7 en el escritorio; se cuenta en BC7, el peor caso de todos los destinos.
+  // Recorded change (open-world-3d M3, QA AC42/AC74): before, "ETC1S without alpha goes to BC1 (8 bytes per block); with alpha,
+  // to BC3". KTX2Loader transcodes ETC1S to BC7 when BPTC is available (priorityETC1S: ETC2 1, ETC1 2, BPTC 3, DXT 4), and the
+  // probe measured BC7 on desktop; it is counted as BC7, the worst case of all targets.
   test("ETC1S, con o sin alfa, cuenta en BC7 (16 bytes por bloque), el destino que elige KTX2Loader con BPTC", () => {
     expect(BASIS_TARGET).toBe("bc7");
     expect(BC_BLOCK_BYTES[BASIS_TARGET]).toBe(16);
@@ -100,7 +100,7 @@ describe("AC42: la memoria de un .ktx2 sale de su cabecera", () => {
     for (let l = 0; l < 9; l++) want += Math.ceil(Math.max(1, 256 >> l) / 4) ** 2 * 16;
     expect(ktx2GpuBytes(opaque)).toBe(want);
     expect(ktx2GpuBytes(parseKtx2Header(ktx2Header(256, 256, 9, 163, true)))).toBe(want);
-    // Y el inventario (texture-table, estimateTextureMemory) usa los mismos bytes que la cabecera.
+    // And the inventory (texture-table, estimateTextureMemory) uses the same bytes as the header.
     expect(gpuBytes({ width: 256, height: 256, mips: true, alpha: false }, "etc1s")).toBe(want);
   });
 

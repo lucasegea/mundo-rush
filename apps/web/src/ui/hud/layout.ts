@@ -1,20 +1,20 @@
-// ui/hud/layout.ts — el lugar del minimapa y lo que el HUD del mapa le deja libre (open-world-3d T9, T10-integrate).
-// Todo en rem, como el resto del HUD: con el texto al 100 % o al 125 % (el de fábrica) el círculo y su hueco crecen
-// juntos, así que lo que no se tapa a un tamaño no se tapa a ninguno. Las clases son literales enteros para que
-// Tailwind las vea al escanear; test/hud-layout.test.tsx lee sus números y comprueba que el hueco alcanza.
+// ui/hud/layout.ts — the minimap's place and what the map HUD leaves free for it (open-world-3d T9, T10-integrate).
+// All in rem, like the rest of the HUD: with text at 100 % or 125 % (the factory one) the circle and its gap grow
+// together, so what is not covered at one size is not covered at any. The classes are whole literals so
+// Tailwind sees them when scanning; test/hud-layout.test.tsx reads their numbers and checks that the gap is enough.
 
-/** Distancia del minimapa al borde derecho e inferior de la pantalla (más el área segura). */
+/** Distance from the minimap to the right and bottom screen edge (plus the safe area). */
 export const MINIMAP_OFFSET = "bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))]";
 
-/** El círculo del minimapa: 7rem en teléfono, 10rem desde md (AC55: 112 y 160 px con el texto al 100 %). */
+/** The minimap circle: 7rem on phone, 10rem from md (AC55: 112 and 160 px with text at 100 %). */
 export const MINIMAP_SIZE = "size-[7rem] md:size-[10rem]";
 
 /**
- * En pantallas angostas el aviso de hablar y el zoom van en una sola columna, apilados sobre el minimapa: el bloque de
- * abajo entero deja libre su alto (7rem más 1rem de aire, más el área segura). Desde md no hace falta: el aviso va al
- * centro y solo la columna derecha deja el hueco (`MINIMAP_CLEARANCE_SIDE`).
+ * On narrow screens the talk prompt and the zoom go in a single column, stacked over the minimap: the whole bottom
+ * block leaves its height free (7rem plus 1rem of air, plus the safe area). From md it is not needed: the prompt goes in the
+ * center and only the right column leaves the gap (`MINIMAP_CLEARANCE_SIDE`).
  */
 export const MINIMAP_CLEARANCE_NARROW = "pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-0";
 
-/** Desde md, la columna derecha (el zoom) deja libre el alto del minimapa: 10rem más 1rem de aire. */
+/** From md, the right column (the zoom) leaves the minimap's height free: 10rem plus 1rem of air. */
 export const MINIMAP_CLEARANCE_SIDE = "md:pb-[11rem]";

@@ -1,19 +1,19 @@
-// scripts/assets/texture-table.ts: la tabla de texturas del mundo abierto (open-world-3d T6 paso 0, D-832, AC74). Antes
-// de codificar un solo .ktx2 imprime, por tier, cada textura que crea el mundo (mapas del suelo y de las rocas, hoja,
-// corteza, impostores, atlas del pasto, flores, nubes, etiquetas, mapa de sombra y los lienzos de m7): medidas, mipmaps,
-// formatos candidatos con sus bytes de GPU en el formato de escritorio (ETC1S y UASTC → BC7, `BASIS_TARGET`) y sus bytes de
-// archivo, y los totales contra `maxTextureMb` (24 / 48 / 96 MB) y contra la descarga del muelle en `high`
-// (`assets_muelle_mb` = 6 MB). Después recorre el orden fijo de recortes de PD-4 (1 normales de 1024 a 512, 2 normales
-// en ETC1S, 3 sin normales de roca en medium, 4 sin normales del suelo en medium, 5 parar y preguntar) y dice el primer
-// paso con el que todo entra: ese es el formato y tamaño elegido en `@lg/art` textures.ts. Con los .ktx2 ya versionados
-// usa sus bytes y su cabecera reales en vez de la estimación.
-// Open-world-3d T7b (D-841): el inventario es el de un look (`worldTextures(look)`) y la descarga suma sus árboles y rocas
-// (`natureModelFiles(look)`); run() imprime la tabla de cada look del catálogo WORLD_LOOKS y cada uno tiene que entrar
-// solo en 24 / 48 / 96 MB y en la descarga de 6 MB.
+// scripts/assets/texture-table.ts: the open world's texture table (open-world-3d T6 step 0, D-832, AC74). Before
+// encoding a single .ktx2 it prints, per tier, each texture the world creates (ground and rock maps, leaf,
+// bark, impostors, grass atlas, flowers, clouds, labels, shadow map and m7's canvases): sizes, mipmaps,
+// candidate formats with their GPU bytes in the desktop format (ETC1S and UASTC → BC7, `BASIS_TARGET`) and their file
+// bytes, and the totals against `maxTextureMb` (24 / 48 / 96 MB) and against the dock's download on `high`
+// (`assets_muelle_mb` = 6 MB). Then it walks PD-4's fixed order of cuts (1 normals from 1024 to 512, 2 normals
+// in ETC1S, 3 no rock normals on medium, 4 no ground normals on medium, 5 stop and ask) and says the first
+// step at which everything fits: that is the format and size chosen in `@lg/art` textures.ts. With the .ktx2 files already versioned
+// it uses their real bytes and header instead of the estimate.
+// Open-world-3d T7b (D-841): the inventory is that of a look (`worldTextures(look)`) and the download adds its trees and rocks
+// (`natureModelFiles(look)`); run() prints the table of each look of the WORLD_LOOKS catalog and each has to fit
+// alone in 24 / 48 / 96 MB and in the 6 MB download.
 //
 //   node scripts/assets/texture-table.ts [--report <archivo.md>]   (npm run assets:texture-table)
 //
-// Sale con 1 si ningún paso hasta el 4 entra (paso 5: /develop se detiene y le pasa la tabla al operador, AC74).
+// Exits with 1 if no step up to 4 fits (step 5: /develop stops and hands the table to the operator, AC74).
 import { existsSync, readFileSync, appendFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -27,12 +27,12 @@ import { DECODIFICADOR_BASIS } from "./inspect-budgets.ts";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MB = 1024 * 1024;
 const MBD = 1_000_000;
-/** NPCs del muelle de Potosí (MITAYO, CERRO, FACTOR): dos etiquetas y una burbuja por NPC. */
+/** NPCs of the Potosí dock (MITAYO, CERRO, FACTOR): two labels and a bubble per NPC. */
 export const MUELLE_NPCS = 3;
 
 /**
- * Lo que el muelle baja en `high` además de las texturas, en bytes, medido en disco. Desde T7 también los árboles
- * horneados, las rocas y el personaje de Quaternius (antes estimados); check:budgets los cuenta en la descarga.
+ * What the dock downloads on `high` besides the textures, in bytes, measured on disk. Since T7 also the baked
+ * trees, the rocks and the Quaternius character (before, estimated); check:budgets counts them in the download.
  */
 export interface OtherDownload {
   id: string;
@@ -51,13 +51,13 @@ const dirSize = (rel: string): number => {
   return readdirSync(abs).reduce((n, f) => n + statSync(join(abs, f)).size, 0);
 };
 
-/** Los .glb de la naturaleza del look que caen en `dir` (árboles o rocas), sumados. */
+/** The nature .glb files of the look that fall in `dir` (trees or rocks), summed. */
 const natureBytes = (look: WorldLook, dir: string): number =>
   natureModelFiles(look).filter((f) => f.startsWith(`${dir}/`)).reduce((n, f) => n + (fileSize(f) ?? 0), 0);
 
 export function otherDownloads(look: WorldLook): OtherDownload[] {
-  // T7: el transcodificador servido es el de DECODIFICADOR_BASIS (apps/web/public/decoders/), el mismo que cuenta
-  // inspect-budgets; el de three en node_modules queda como respaldo si todavía no está copiado.
+  // T7: the served transcoder is DECODIFICADOR_BASIS's (apps/web/public/decoders/), the same one that
+  // inspect-budgets counts; three's in node_modules stays as a fallback if it is not copied yet.
   const transcoder = (pub: string): OtherDownload => {
     const name = pub.slice(pub.lastIndexOf("/") + 1);
     const bytes = fileSize(pub) ?? fileSize(`node_modules/three/examples/jsm/libs/basis/${name}`);
@@ -73,19 +73,19 @@ export function otherDownloads(look: WorldLook): OtherDownload[] {
   ];
 }
 
-/** Una variante del inventario: el paso de PD-4 aplicado cambia formato, tamaño o presencia de los mapas. */
+/** A variant of the inventory: the applied PD-4 step changes the maps' format, size or presence. */
 type Variant = (t: WorldTexture) => WorldTexture;
 
-/** El V6 tal cual: normales de 1024 y en UASTC (la calidad del mockup), difusos ETC1S. */
+/** V6 as is: 1024 normals in UASTC (the mockup's quality), ETC1S diffuse. */
 const v6: Variant = (t) => (t.normal ? { ...t, width: t.v6Px ?? t.width, height: t.v6Px ?? t.height, format: "uastc" } : t);
 /**
- * El recorte 1 de PD-4 (normales de 1024 a 512) es para los mapas que en V6 son una sola imagen de 1024 (`v6Px`, las
- * normales del suelo). La normal de roca es un atlas 2 × 2 de escaneos de 512 (desviación T7): cada escaneo ya está en
- * 512, así que el atlas queda en 1024. Fix 1 de QA (hallazgo 6): antes se lo bajaba a 512 y las filas de los pasos no
- * describían lo servido (19,9 / 23,9 MB contra 20,9 / 24,9 del inventario, y el paso 1 parecía entrar).
+ * PD-4's cut 1 (normals from 1024 to 512) is for the maps that in V6 are a single 1024 image (`v6Px`, the ground
+ * normals). The rock normal is a 2 × 2 atlas of 512 scans (T7 deviation): each scan is already at
+ * 512, so the atlas stays at 1024. QA's fix 1 (finding 6): before, it was lowered to 512 and the step rows did not
+ * describe what is served (19.9 / 23.9 MB against the inventory's 20.9 / 24.9, and step 1 appeared to fit).
  */
 const to512: Variant = (t) => (t.v6Px ? { ...v6(t), width: 512, height: 512 } : v6(t));
-/** Los pasos de PD-4, acumulativos (cada uno sobre el anterior). */
+/** PD-4's steps, cumulative (each on top of the previous one). */
 export const CUT_STEPS: readonly { step: number; label: string; apply: Variant }[] = [
   { step: 0, label: "V6 tal cual (normales 1024 UASTC)", apply: v6 },
   { step: 1, label: "normales de 1024 a 512", apply: (t) => (t.normal ? to512(t) : t) },
@@ -100,7 +100,7 @@ export const CUT_STEPS: readonly { step: number; label: string; apply: Variant }
   },
 ];
 
-/** Bytes de GPU y de archivo de una textura en la variante: de la cabecera del .ktx2 si existe y coincide, si no estimados. */
+/** GPU and file bytes of a texture in the variant: from the .ktx2 header if it exists and matches, otherwise estimated. */
 export function textureBytes(t: WorldTexture): { gpu: number; file: number; measured: boolean } {
   if (t.file && (t.format === "etc1s" || t.format === "uastc")) {
     const abs = join(ROOT, t.file);
@@ -113,7 +113,7 @@ export function textureBytes(t: WorldTexture): { gpu: number; file: number; meas
   return { gpu: gpuBytes(t, t.format), file: estimatedFileBytes(t, t.format), measured: false };
 }
 
-/** Memoria de GPU de lo que m7 ya crea en el tier (con las etiquetas típicas de la tabla). */
+/** GPU memory of what m7 already creates in the tier (with the table's typical labels). */
 export function m7GpuBytes(tier: WorldTier, npcs = MUELLE_NPCS): number {
   const p = M7_TEXTURE_PX;
   const rgbaMips = (w: number, h: number): number => gpuBytes({ width: w, height: h, mips: true, alpha: true }, "rgba8");
@@ -124,7 +124,7 @@ export function m7GpuBytes(tier: WorldTier, npcs = MUELLE_NPCS): number {
 
 export interface TierTotals {
   gpuMb: Record<WorldTier, number>;
-  /** Descarga del muelle en `high`: los .ktx2 que se cargan en high más lo demás (MB decimales, como check:budgets). */
+  /** Dock download on `high`: the .ktx2 files loaded on high plus the rest (decimal MB, like check:budgets). */
   downloadMb: number;
   fits: boolean;
 }
@@ -142,7 +142,7 @@ export function totals(inv: readonly WorldTexture[], others: readonly OtherDownl
 }
 
 const kb = (b: number): string => `${Math.round(b / 1024)} KB`;
-// M3 (QA, AC42/AC74): ETC1S cuenta en BC7 como UASTC (`BASIS_TARGET`: KTX2Loader elige BPTC antes que DXT).
+// M3 (QA, AC42/AC74): ETC1S counts in BC7 as UASTC (`BASIS_TARGET`: KTX2Loader picks BPTC before DXT).
 const fmt = (f: TextureFormat): string => (f === "etc1s" ? "ETC1S→BC7" : f === "uastc" ? "UASTC→BC7" : f.toUpperCase());
 
 export function renderTable(
@@ -153,7 +153,7 @@ export function renderTable(
   out.push(`### Texturas del mundo abierto por tier, look \`${lookId}\` (T6 paso 0, D-832, AC74; T7b D-841)`, "");
   out.push("| Textura | Tarea | px | mips | Formato candidato: GPU (BC) / archivo | Elegido | low / medium / high |", "|---|---|---|---|---|---|---|");
   for (const t of inv) {
-    // Los candidatos se miden al tamaño del mockup V6 (antes de cualquier recorte); el elegido, al de @lg/art.
+    // The candidates are measured at the mockup V6 size (before any cut); the chosen one, at @lg/art's.
     const v6size = { ...t, width: t.v6Px ?? t.width, height: t.v6Px ?? t.height };
     const cands = t.candidates.map((f) => `${fmt(f)}: ${kb(gpuBytes(v6size, f))} / ${kb(estimatedFileBytes(v6size, f))}`).join("; ");
     const b = textureBytes(t);
@@ -176,7 +176,7 @@ export function renderTable(
   return out.join("\n");
 }
 
-/** Los totales de cada paso y el primero que entra (-1 si ninguno), sobre el inventario de un look. */
+/** The totals of each step and the first one that fits (-1 if none), over a look's inventory. */
 export function evaluate(
   others: readonly OtherDownload[], capMb: number, inv: readonly WorldTexture[],
 ): { rows: { step: number; label: string; t: TierTotals }[]; chosen: number } {
@@ -193,7 +193,7 @@ export function run(argv: readonly string[] = process.argv.slice(2), log: (s: st
     const { rows, chosen } = evaluate(others, capMb, inv);
     const md = renderTable(chosen, rows, others, capMb, inv, look.id);
     log(md);
-    // Lo elegido en @lg/art tiene que ser el paso que salió (sin esto, la tabla y el código podrían discrepar).
+    // What is chosen in @lg/art has to be the step that came out (without this, the table and the code could disagree).
     const current = totals(inv, others, capMb);
     log(`
 Inventario versionado (@lg/art), look ${look.id}: GPU ${WORLD_TIERS.map((t) => `${t} ${current.gpuMb[t].toFixed(1)} MB`).join(", ")}; descarga high ${current.downloadMb.toFixed(2)} MB; ${current.fits ? "entra" : "NO ENTRA"}.

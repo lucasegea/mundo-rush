@@ -1,4 +1,4 @@
-// F4.1: la eval en vivo (D-027) no llama a nada sin las dos llaves, y no está en verify ni en ningún script de npm.
+// F4.1: the live eval (D-027) calls nothing without both keys, and is not in verify nor in any npm script.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

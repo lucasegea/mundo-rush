@@ -1,5 +1,5 @@
-// Plan estetica-c M5 (D-207): el formato de la maqueta en el núcleo. Curvas catmull-rom, props con instancias, giro y
-// tinte, huella girada, agua por polígonos y ríos que bloquean la grilla; desde M7, sin capas de tiles.
+// Plan estetica-c M5 (D-207): the painted diorama format in the core. Catmull-rom curves, props with instances, rotation and
+// tint, rotated footprint, water by polygons and rivers that block the grid; since M7, no tile layers.
 import { describe, expect, test } from "vitest";
 import {
   buildWalkGrid, cellAt, distanceToPolyline, isWalkable, prepareDiorama, sampleCatmullRom, CURVE_SAMPLES_PER_SPAN,
@@ -43,7 +43,7 @@ describe("curvas catmull-rom", () => {
   test("una curva de verdad se sale de la cuerda (no es una polilínea por los puntos)", () => {
     const line = sampleCatmullRom([[0, 0], [4, 4], [8, 0]]);
     const mid = line[CURVE_SAMPLES_PER_SPAN / 2] as { x: number; z: number };
-    // El punto medio del primer tramo queda por encima de la cuerda (0,0)-(4,4).
+    // The midpoint of the first segment sits above the chord (0,0)-(4,4).
     expect(mid.z).toBeGreaterThan(mid.x);
   });
 
@@ -87,16 +87,16 @@ describe("props: instancias, giro y tinte", () => {
     const girado = base({ props: [{ ...largo, rotY: 90 }] });
     expect(walkableAt(girado, 2.5, 0)).toBe(true);
     expect(walkableAt(girado, 0, 2.5)).toBe(false);
-    // 270° es lo mismo que 90° para la huella.
+    // 270° is the same as 90° for the footprint.
     expect(walkableAt(base({ props: [{ ...largo, rotY: 270 }] }), 0, 2.5)).toBe(false);
   });
 
   test("giro de 45°: la huella es el rombo girado, no la caja sin girar", () => {
     const l = base({ props: [{ asset: "codigo/caja", pos: [0, 0, 0], tam: [6, 1, 1], rotY: 45 }] });
-    // Sobre la diagonal girada (three gira +y: x' = x cos + z sin, z' = -x sin + z cos): la caja llega hasta (2,1; -2,1).
+    // Over the rotated diagonal (three rotates +y: x' = x cos + z sin, z' = -x sin + z cos): the box reaches (2.1; -2.1).
     expect(walkableAt(l, 1.6, -1.6)).toBe(false);
     expect(walkableAt(l, 2.1, 2.1)).toBe(true);
-    // Donde estaría la caja sin girar, ya no bloquea.
+    // Where the box would be unrotated, it no longer blocks.
     expect(walkableAt(l, 2.75, 0)).toBe(true);
   });
 });
@@ -114,7 +114,7 @@ describe("agua, ríos y caminos en la grilla", () => {
     expect(walkableAt(l, -6, 0.25)).toBe(false);
     expect(walkableAt(l, 0, 3)).toBe(true);
     expect(walkableAt(l, 0, -2)).toBe(true);
-    // Teeth: sin el río, ese lugar es caminable.
+    // Teeth: without the river, that spot is walkable.
     expect(walkableAt(base(), 0, 0.5)).toBe(true);
   });
 

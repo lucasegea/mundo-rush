@@ -8,7 +8,7 @@ export type EstadoSaber = z.infer<typeof EstadoSaber>;
 export const Hecho = z.strictObject({
   id: HechoId,
   texto_es: z.string().min(1),
-  /** Tipo de fuente sugerida (02 §8): una pista para quien verifique, no una cita. */
+  /** Suggested source type (02 §8): a hint for whoever verifies, not a citation. */
   fuente_sugerida: z.string().min(1),
   rama: z.boolean(),
 });
@@ -17,15 +17,15 @@ export const Saber = z
   .strictObject({
     id: SaberId,
     titulo_corto: z.strictObject({ "es-AR": z.string().min(1) }),
-    /** Lo que dice el NPC (dentro de la tarjeta de nivel). null si lo dice Lumi por plantilla. */
+    /** What the NPC says (inside the level card). null if Lumi says it by template. */
     linea_en: z.string().min(1).nullable(),
-    /** Plantilla de Lumi que remite a la ficha, cuando dicho_por = LUMI (02 §2.7.1, campo saber). */
+    /** Lumi template that points to the sheet, when dicho_por = LUMI (02 §2.7.1, saber field). */
     plantilla: LumiId.nullable(),
-    /** Variante sin el hecho: la usa el build de release mientras la ficha no esté verificada (D-170). */
+    /** Variant without the fact: used by the release build while the sheet is not verified (D-170). */
     linea_sin_dato: z.string().min(1),
     explicacion_es: z.string().min(1),
     hechos: z.array(Hecho).min(1),
-    /** "[FUENTE-PENDIENTE: …]" hasta que una persona la verifique (02 §0.2 regla 9). */
+    /** "[FUENTE-PENDIENTE: …]" until a person verifies it (02 §0.2 rule 9). */
     fuente: z.string().min(1).nullable(),
     estado: EstadoSaber,
     dicho_por: z.union([NpcId, z.literal("LUMI")]),
@@ -33,11 +33,11 @@ export const Saber = z
     rama: z.boolean(),
     ficcion: z.boolean(),
     usable_como_argumento: z.boolean(),
-    // book-mode slice-1 (D-802): etiqueta de grounding de un saber de universo generado. `.optional()` INSIDE
-    //   el strictObject (D-801): la campesino la omite y el strictObject acepta la clave ausente. `book_fact`
-    //   es un hecho del mundo citable; `book_thesis` es un argumento del autor (p. ej. Galeano), que el gate de
-    //   M4 (grounding) exige marcado como tal y nunca presentado como hecho. La cita reusa el `fuente` de arriba
-    //   (D-802: no se agrega un campo de cita nuevo). M4 SEAM: scripts/content/grounding.ts lee este campo.
+    // book-mode slice-1 (D-802): grounding label of a generated-universe knowledge item. `.optional()` INSIDE
+    //   the strictObject (D-801): the farmer universe omits it and the strictObject accepts the absent key. `book_fact`
+    //   is a citable fact of the world; `book_thesis` is an author's argument (e.g. Galeano), which the M4
+    //   (grounding) gate requires to be marked as such and never presented as fact. The citation reuses the `fuente` above
+    //   (D-802: no new citation field is added). M4 SEAM: scripts/content/grounding.ts reads this field.
     clasificacion: z.enum(["book_thesis", "book_fact"]).optional(),
   })
   .refine((s) => (s.dicho_por === "LUMI") === (s.plantilla !== null) && (s.linea_en !== null || s.plantilla !== null), {

@@ -1,23 +1,23 @@
-// world/nature/culling.ts — qué instancias de árboles, rocas y detalle se suben a la GPU (open-world-3d T7, AC45), port
-// del mockup V6 (`world.js` updateLOD). Una instancia entra en cada nivel cuya banda contiene su distancia al jugador
-// (con el margen de @lg/art `bandLimits`) solo si su esfera toca el frustum, no está pasada la niebla ni su distancia
-// máxima (las rocas chicas), y la cámara no está dentro de ella (una copa que tapa la pantalla se esconde). Lo recorre
-// solo cuando la vista cambió de verdad (CullGate): el jugador se movió 1 m, el giro o la inclinación cambiaron 5° o el
-// zoom cambió la distancia de la cámara 1 m (un 5 % de lejos), y una vez más cuando la vista se asienta lejos del último
-// recorrido. Quieto, no se sube nada.
+// world/nature/culling.ts — which tree, rock and detail instances are uploaded to the GPU (open-world-3d T7, AC45), port
+// of the V6 mockup (`world.js` updateLOD). An instance enters each level whose band contains its distance to the player
+// (with the @lg/art margin `bandLimits`) only if its sphere touches the frustum, it is not past the fog nor its maximum
+// distance (small rocks), and the camera is not inside it (a canopy covering the screen is hidden). It walks
+// only when the view really changed (CullGate): the player moved 1 m, the turn or tilt changed 5° or the
+// zoom changed the camera distance by 1 m (5 % when far), and once more when the view settles far from the last
+// walk. Standing still, nothing is uploaded.
 import { Sphere, type Frustum, type InstancedMesh, type Vector3 } from "three";
 import { bandLimits, type ShaderBand } from "@lg/art";
 
-/** Una instancia: su lugar, su esfera (centro en altura y radio, en el mundo), su matriz y su tinte. */
+/** An instance: its place, its sphere (center at height and radius, in the world), its matrix and its tint. */
 export interface NatureEntry {
   x: number;
   z: number;
-  /** Altura de la base y escala de la instancia: con la malla cargada, la esfera se recalcula con ellas. */
+  /** Base height and scale of the instance: with the mesh loaded, the sphere is recomputed with them. */
   base: number;
   k: number;
   cy: number;
   rad: number;
-  /** Más allá de esta distancia al jugador no se dibuja (rocas chicas, SMALL_ROCK_MAX_DISTANCE); si no, Infinity. */
+  /** Beyond this distance to the player it is not drawn (small rocks, SMALL_ROCK_MAX_DISTANCE); otherwise, Infinity. */
   maxD: number;
   matrix: ArrayLike<number>;
   tint: readonly [number, number, number];
@@ -28,14 +28,14 @@ export interface NatureLevel {
   mesh: InstancedMesh;
 }
 
-/** Un grupo de instancias de una variante con sus niveles (completo, liviano, impostor; o una sola banda). */
+/** A group of instances of a variant with its levels (full, light, impostor; or a single band). */
 export interface NatureGroup {
   entries: NatureEntry[];
   levels: NatureLevel[];
 }
 
 export interface CullView {
-  /** El jugador (centro de las bandas). */
+  /** The player (center of the bands). */
   cx: number;
   cz: number;
   camera: Vector3;
@@ -47,7 +47,7 @@ export interface CullView {
 
 const sphere = new Sphere();
 
-/** ¿La instancia se ve? (esfera en el frustum, antes de la niebla y de su distancia máxima, cámara fuera de ella). */
+/** Is the instance seen? (sphere in the frustum, before the fog and its maximum distance, camera outside it). */
 export function entryVisible(e: NatureEntry, v: CullView): boolean {
   const d = Math.hypot(e.x - v.cx, e.z - v.cz);
   if (d - e.rad > v.fogFar || d > e.maxD) return false;
@@ -57,7 +57,7 @@ export function entryVisible(e: NatureEntry, v: CullView): boolean {
   return sphere.center.distanceTo(v.camera) >= e.rad * 0.8;
 }
 
-/** Sube a cada nivel sus instancias visibles dentro de su banda. Devuelve cuántas subió por nivel. */
+/** Uploads to each level its visible instances within its band. Returns how many it uploaded per level. */
 export function cullGroup(g: NatureGroup, v: CullView): number[] {
   const n = g.levels.map(() => 0);
   const lim = g.levels.map((l) => bandLimits(l.band, v.full, v.mid));
@@ -82,15 +82,15 @@ export function cullGroup(g: NatureGroup, v: CullView): number[] {
   return n;
 }
 
-/** Umbrales del recorrido (AC45). */
+/** Thresholds of the walk (AC45). */
 export const CULL_MOVE_M = 1;
 export const CULL_TURN_DEG = 5;
 
 export interface GateState {
-  /** El jugador. */
+  /** The player. */
   x: number;
   z: number;
-  /** Giro e inclinación de la vista (grados) y distancia de la cámara al jugador (m). */
+  /** Turn and tilt of the view (degrees) and camera distance to the player (m). */
   yawDeg: number;
   pitchDeg: number;
   distance: number;
@@ -99,9 +99,9 @@ export interface GateState {
 const angleDelta = (a: number, b: number): number => Math.abs((((a - b) % 360) + 540) % 360 - 180);
 
 /**
- * Por debajo de esto entre dos cuadros seguidos, la vista está quieta (la cámara terminó de asentarse). Fix 1 de QA
- * (hallazgo 5): con solo los umbrales, una cámara que se asienta por menos de 1 m o 5° quedaba con el recorrido de
- * mitad de camino y los triángulos de la sonda salían bimodales en una misma pose.
+ * Below this between two consecutive frames, the view is still (the camera finished settling). QA fix 1
+ * (finding 5): with only the thresholds, a camera settling by less than 1 m or 5° was left with the walk at
+ * half way and the probe triangles came out bimodal in the same pose.
  */
 export const CULL_REST_M = 1e-3;
 export const CULL_REST_DEG = 0.02;
@@ -113,14 +113,14 @@ const near = (a: GateState, b: GateState, m: number, deg: number): boolean =>
   && Math.abs(a.distance - b.distance) < m;
 
 /**
- * Decide cuándo recorrer: la primera vez, después solo si la vista cambió más que los umbrales desde el último, y una
- * vez más cuando la vista queda quieta en un lugar distinto del último recorrido (asentarse), así una pose fija da
- * siempre el mismo recorrido.
+ * Decides when to walk: the first time, afterwards only if the view changed more than the thresholds since the last, and one
+ * more time when the view stays still at a place different from the last walk (settling), so a fixed pose always gives
+ * the same walk.
  */
 export class CullGate {
   private last: GateState | null = null;
   private prev: GateState | null = null;
-  /** Cuántas veces dijo que sí (los tests y la sonda lo leen). */
+  /** How many times it said yes (the tests and the probe read it). */
   runs = 0;
 
   shouldUpdate(s: GateState): boolean {
@@ -140,13 +140,13 @@ export class CullGate {
     return changed || settled;
   }
 
-  /** La próxima consulta recorre sí o sí (cambió el contenido: llegaron las mallas). */
+  /** The next query walks no matter what (the content changed: the meshes arrived). */
   reset(): void {
     this.last = null;
   }
 }
 
-/** Giro y elevación (grados) de la dirección de la vista de una cámara (de su matriz del mundo, la columna -z). */
+/** Turn and elevation (degrees) of a camera view direction (from its world matrix, the -z column). */
 export function viewAngles(matrixWorld: { elements: ArrayLike<number> }): { yawDeg: number; pitchDeg: number } {
   const e = matrixWorld.elements;
   const fx = -(e[8] as number), fy = -(e[9] as number), fz = -(e[10] as number);

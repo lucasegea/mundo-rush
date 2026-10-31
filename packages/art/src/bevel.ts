@@ -1,15 +1,15 @@
-// @lg/art bevel.ts: la regla del bisel como función pura (propuesta C §7, plan estetica-c M1 A5): el mayor ángulo
-// diedro entre triángulos vecinos de una malla (el ángulo entre sus normales; 0 = coplanares, 90 = arista de caja).
-// Los vértices se sueldan por posición (las costuras de UV duplican vértices) y los triángulos degenerados se saltean.
-// Movida desde world/props/ en M2 tal cual: la usan los tests de los props por código y scripts/assets/optimize.ts
-// para rechazar piezas con aristas duras.
+// @lg/art bevel.ts: the bevel rule as a pure function (proposal C §7, plan estetica-c M1 A5): the largest
+// dihedral angle between neighboring triangles of a mesh (the angle between their normals; 0 = coplanar, 90 = box edge).
+// Vertices are welded by position (UV seams duplicate vertices) and degenerate triangles are skipped.
+// Moved from world/props/ in M2 as is: used by the code-prop tests and scripts/assets/optimize.ts
+// to reject pieces with hard edges.
 
-/** Mayor ángulo diedro (grados) entre triángulos que comparten una arista. `index` opcional (malla indexada). */
+/** Largest dihedral angle (degrees) between triangles that share an edge. `index` optional (indexed mesh). */
 export function maxDihedralDeg(positions: ArrayLike<number>, index?: ArrayLike<number> | null): number {
   const vertexCount = Math.floor(positions.length / 3);
   const triCount = index ? Math.floor(index.length / 3) : Math.floor(vertexCount / 3);
   const vid = (k: number): number => (index ? (index[k] as number) : k);
-  // Soldadura por posición cuantizada.
+  // Weld by quantized position.
   const weld = new Map<string, number>();
   const welded = new Int32Array(vertexCount);
   for (let v = 0; v < vertexCount; v++) {
@@ -60,5 +60,5 @@ export function maxDihedralDeg(positions: ArrayLike<number>, index?: ArrayLike<n
   return worst;
 }
 
-/** Ángulo máximo permitido por la regla del bisel. */
+/** Maximum angle allowed by the bevel rule. */
 export const MAX_DIHEDRAL_DEG = 80;

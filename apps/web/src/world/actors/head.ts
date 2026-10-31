@@ -1,10 +1,10 @@
-// world/actors/head.ts — la cabeza de los personajes por código (propuesta C §3, plan estetica-c M1 ítem 13 y M3): cabeza
-// redonda de radio 0,42, ojos ovalados con brillo, mejillas, peinado, sombrero y pañuelo o bufanda, fusionados en UNA
-// malla (una llamada). La usan el cuerpo con esqueleto (colgada del hueso `head`) y el cuerpo de cápsulas de reserva. La
-// boca va aparte (aparece solo al hablar, sin boca dibujada en reposo). Todo pintado por vértice con la paleta.
-// Segmentos medidos (plan estetica-c M3): con la cabeza y el cuerpo con esqueleto, el diorama de prueba entra en `medium`.
-// Desde M5 peinados, sombreros y pañuelos llegan descritos en el contenido (`apariencia` de cada ficha, vía CharacterLook);
-// acá solo se arman. En M6 la cabeza no tiene versión reducida: `low` entra en presupuesto sin tocarla (medido).
+// world/actors/head.ts — the characters' code-built head (proposal C §3, plan estetica-c M1 item 13 and M3): round head
+// of radius 0.42, oval eyes with highlight, cheeks, hairstyle, hat and scarf or neckwear, merged into ONE
+// mesh (one call). Used by the skeleton body (hung from the `head` bone) and the fallback capsule body. The
+// mouth is separate (it appears only when talking, no mouth drawn at rest). All painted per vertex with the palette.
+// Measured segments (plan estetica-c M3): with the head and the skeleton body, the test diorama fits in `medium`.
+// Since M5 hairstyles, hats and scarves arrive described in the content (each sheet's `apariencia`, via CharacterLook);
+// here they are only assembled. In M6 the head has no reduced version: `low` fits the budget without touching it (measured).
 import { SphereGeometry, type BufferGeometry } from "three";
 import { capsule, mergeParts, painted, sphere, torus } from "../props/geometry";
 import type { CharacterLook } from "./looks";
@@ -72,11 +72,11 @@ function scarf(look: CharacterLook, seed: number): BufferGeometry[] {
   }
 }
 
-/** Geometría de la cabeza: cabeza, peinado, ojos con brillo, mejillas, sombrero y pañuelo, en una malla centrada en 0. */
+/** Head geometry: head, hairstyle, eyes with highlight, cheeks, hat and scarf, in one mesh centered at 0. */
 export function characterHeadGeometry(look: CharacterLook, seed = 0): BufferGeometry {
   const parts: BufferGeometry[] = [
     painted(sphere(HEAD_RADIUS, 14, 9), look.skin, seed, { top: 0.1, bottomDark: 0.08 }),
-    // El pañuelo de cabeza reemplaza al casquete de pelo (lo primero de cada peinado); lo demás (rodete, pelo largo) queda.
+    // The head scarf replaces the hair cap (the first thing in each hairstyle); the rest (bun, long hair) stays.
     ...hair(look, seed).slice(look.scarf === "panuelo" ? 1 : 0),
   ];
   for (const x of [-0.14, 0.14]) {
@@ -88,7 +88,7 @@ export function characterHeadGeometry(look: CharacterLook, seed = 0): BufferGeom
   return mergeParts(parts);
 }
 
-/** La boca que aparece al hablar (propuesta C §3): un óvalo oscuro bajo los ojos. Se abre y cierra escalando y. */
+/** The mouth that appears when talking (proposal C §3): a dark oval under the eyes. It opens and closes by scaling y. */
 export function mouthGeometry(): BufferGeometry {
   return mergeParts([painted(sphere(0.07, 10, 6).scale(1, 0.55, 0.35).translate(0, -0.2, 0.392), "tinta", 0, { jitter: 0, bottomDark: 0 })]);
 }

@@ -1,2 +1,2 @@
-// world/water/ — agua con shader propio (plan estetica-c M1 ítem 9). Marcador de zona.
+// world/water/ — water with its own shader (plan estetica-c M1 item 9). Zone marker.
 export * from "./waterMaterial";

@@ -1,7 +1,7 @@
-// Open-world-3d T6 (plan v3 M3; D-819, D-823, D-828, D-832): el mundo abierto del muelle sin GPU. AC32 (el camino no
-// tiene huecos a ningún paso), AC36 (relieve de 2 a 8 m, pendientes), AC37 (todo apoyado en `heightAt`, el raycast del
-// suelo cae en la malla), AC38 (cielo), AC40 (niebla por zoom), AC42 (texturas: cabeceras KTX2 y memoria por tier) y
-// AC71 (la auditoría de materiales del mundo abierto), y la mitad de AC35 que mira la cámara (t = 1 sin vacío). El muelle es el de U-GALEANO compilado en memoria.
+// Open-world-3d T6 (plan v3 M3; D-819, D-823, D-828, D-832): the open-world dock without GPU. AC32 (the path
+// has no gaps at any step), AC36 (relief from 2 to 8 m, slopes), AC37 (everything rests on `heightAt`, the ground
+// raycast hits the mesh), AC38 (sky), AC40 (fog by zoom), AC42 (textures: KTX2 headers and memory per tier) and
+// AC71 (the open-world material audit), and the half of AC35 that concerns the camera (t = 1 without void). The dock is U-GALEANO's, compiled in memory.
 import {
   DEFAULT_LOOK, GROUND_MAPS, groundTextureFile, OPEN_WORLD_DENSITY, parseKtx2Header, skyEstimate, TERRAIN_APRON, TIER_BUDGETS, WORLD_TIERS,
   type WorldTier,
@@ -68,10 +68,10 @@ describe("AC36: relieve de 2 a 8 m, pendiente de 25° como mucho, de 8° como mu
           if (pads.some(([px, pz]) => Math.hypot(x - px, z - pz) <= 8)) steepestPad = Math.max(steepestPad, s);
         }
       }
-      // Los literales del AC (2 a 8 m, 8 m de llano), no las constantes que se prueban (QA M3, hallazgo 6).
+      // The AC's literals (2 to 8 m, 8 m of flat), not the constants under test (QA M3, finding 6).
       expect(lo).toBeGreaterThanOrEqual(2 - 0.05);
       expect(hi).toBeLessThanOrEqual(8 + 0.05);
-      expect(hi - lo).toBeGreaterThan(3); // hay relieve de verdad
+      expect(hi - lo).toBeGreaterThan(3); // there is real relief
       expect(steepest).toBeLessThanOrEqual(25);
       expect(steepestPad).toBeLessThanOrEqual(8);
     });
@@ -102,7 +102,7 @@ describe("AC32: un camino de 3 m en low no tiene huecos", () => {
     }
     expect(near.length).toBeGreaterThan(10);
     expect(Math.min(...near)).toBeGreaterThanOrEqual(0.5);
-    // A lo largo del centro, cada 0,25 m: el tramo más largo con tierra interpolada bajo 0,5.
+    // Along the center, every 0.25 m: the longest stretch with interpolated ground under 0.5.
     let gap = 0;
     let worst = 0;
     for (let i = 0; i < road.length - 1; i++) {
@@ -135,7 +135,7 @@ describe("AC37: actores, etiquetas, props y árboles sobre `heightAt`; el clic d
       worldGround.heightAt = () => 0;
       worldGround.lift = 0;
     }
-    // Props por código: cada malla suelta en su base (la `y` del layout es 0).
+    // Code props: each loose mesh at its base (the layout's `y` is 0).
     let props = 0;
     for (const b of d.boxes) {
       const m = scene.root.getObjectByName(b.asset);
@@ -144,7 +144,7 @@ describe("AC37: actores, etiquetas, props y árboles sobre `heightAt`; el clic d
       props += 1;
     }
     expect(props).toBeGreaterThan(0);
-    // Raycast hacia abajo en 20 puntos al azar (semilla fija) sobre el selector del suelo.
+    // Downward raycast at 20 random points (fixed seed) over the ground picker.
     const picker = scene.picker;
     expect(picker).not.toBeNull();
     scene.root.updateMatrixWorld(true);
@@ -164,8 +164,8 @@ describe("AC37: actores, etiquetas, props y árboles sobre `heightAt`; el clic d
   });
 });
 
-// LK6 (open-world-3d T7b): AC38 es una regla de DEFAULT_LOOK (el horizonte del cielo es la niebla), no del motor; corre
-// sobre DEFAULT_LOOK explícito. Un look de otro universo puede tener otro cielo.
+// LK6 (open-world-3d T7b): AC38 is a DEFAULT_LOOK rule (the sky horizon is the fog), not an engine one; it runs
+// on an explicit DEFAULT_LOOK. A look from another universe may have another sky.
 describe("AC38 (DEFAULT_LOOK): cielo de degradé cuyo horizonte es la niebla", () => {
   const SKY = DEFAULT_LOOK.sky;
   test("cénit, bruma y horizonte distintos; el horizonte es el token de la niebla; la cúpula pinta horizonte abajo", () => {
@@ -194,12 +194,12 @@ describe("AC38 (DEFAULT_LOOK): cielo de degradé cuyo horizonte es la niebla", (
 });
 
 /**
- * Las esquinas del suelo visto en el mapa entero (t = 1) que caen fuera del suelo dibujado, por aspecto y yaw. El suelo
- * dibujado es la extensión del terreno más el delantal (open-world-3d M3, TERRAIN_APRON): se lee la caja de la malla
- * `terreno:delantal` de la escena armada (lo medido es lo dibujado). El pivote en t = 1 es el centro del mapa
- * (pivotBlend 1), a THIRD_PERSON_VIEW.targetHeight sobre y = 0 (CameraRig: boundsCenter(bounds, 0)); el suelo se mide en
- * el plano del vértice más bajo de lo dibujado (el delantal está debajo de la falda): un rayo que baja choca con el
- * suelo real antes que con ese plano. groundReach (rig.ts) es max(|x|, |z|) de estas mismas esquinas.
+ * The corners of the ground seen on the whole map (t = 1) that fall outside the drawn ground, by aspect and yaw. The drawn
+ * ground is the terrain extent plus the apron (open-world-3d M3, TERRAIN_APRON): the box of the
+ * `terreno:delantal` mesh of the assembled scene is read (what is measured is what is drawn). The pivot at t = 1 is the center of the map
+ * (pivotBlend 1), at THIRD_PERSON_VIEW.targetHeight above y = 0 (CameraRig: boundsCenter(bounds, 0)); the ground is measured on
+ * the plane of the lowest vertex of what is drawn (the apron is below the skirt): a ray going down hits the
+ * real ground before that plane. groundReach (rig.ts) is max(|x|, |z|) of these same corners.
  */
 function voidCorners(aspects: readonly number[], yawStep: number): { out: { aspect: number; yaw: number; past: number }[]; ext: string } {
   const d = muelle();
@@ -231,12 +231,12 @@ function voidCorners(aspects: readonly number[], yawStep: number): { out: { aspe
   return { out, ext: `x ${ext.minX}..${ext.maxX}, z ${ext.minZ}..${ext.maxZ}` };
 }
 
-/** Los aspectos de AC35 (QA M3): escritorio, ultra ancho y teléfono en las dos orientaciones. */
+/** AC35's aspects (QA M3): desktop, ultrawide and phone in both orientations. */
 const AC35_ASPECTS = [16 / 10, 16 / 9, 2, 19.5 / 9, 21 / 9, 4 / 3, 3 / 4, 9 / 16, 9 / 19.5, 9 / 20];
 
 describe("AC35: en el mapa entero (t = 1) el suelo que ve la cámara no pasa lo dibujado (falda y delantal)", () => {
-  // Cambio registrado (open-world-3d M3, D-837): se borró la prueba «registrado: 21:9 y
-  // 9:19,5 pasan la falda solo en los yaws diagonales y por 30 m como mucho», que aceptaba el hueco; el delantal lo cierra.
+  // Recorded change (open-world-3d M3, D-837): the test «registrado: 21:9 y
+  // 9:19,5 pasan la falda solo en los yaws diagonales y por 30 m como mucho» was deleted, as it accepted the gap; the apron closes it.
   test("16:10, 16:9, 2:1, 19,5:9, 21:9, 4:3, 3:4, 9:16, 9:19,5 y 9:20, yaw cada 15°: ninguna esquina cae fuera", () => {
     const r = voidCorners(AC35_ASPECTS, 15);
     expect(r.out, r.ext).toEqual([]);
@@ -272,7 +272,7 @@ describe("AC35: en el mapa entero (t = 1) el suelo que ve la cámara no pasa lo 
     const [f0, f1] = (sh.uniforms["uEdgeFade"]?.value as { toArray(): number[] }).toArray() as [number, number];
     const skirt = scene.terrain.extent.maxX - d.bounds.maxX;
     expect([f0, f1]).toEqual([skirt - TERRAIN_APRON.fade[0], skirt - TERRAIN_APRON.fade[1]]);
-    // Todo el delantal (desde `overlap` m adentro de la extensión) queda pasado el final del fundido.
+    // The whole apron (from `overlap` m inside the extent) lies past the end of the fade.
     expect(skirt - TERRAIN_APRON.overlap).toBeGreaterThanOrEqual(f1);
     scene.dispose();
   });
@@ -293,10 +293,10 @@ describe("AC40: la niebla sigue al zoom y al tier", () => {
     }
   });
 
-  // QA M3 (hallazgo 4): antes la prueba recalculaba el smoothstep de la niebla adentro de la prueba. Ahora fija el
-  // camino real: el suelo es un MeshStandardMaterial con niebla, su sombreador conserva `fog_fragment` de three, que
-  // mezcla al `fogColor` con smoothstep(fogNear, fogFar, profundidad) (factor 1 en `far`), y el color de la niebla de la
-  // escena es la del look (DEFAULT_LOOK: el horizonte de la cúpula, AC38).
+  // QA M3 (finding 4): before, the test recomputed the fog smoothstep inside the test. Now it pins the
+  // real path: the ground is a MeshStandardMaterial with fog, its shader keeps three's `fog_fragment`, which
+  // mixes to `fogColor` with smoothstep(fogNear, fogFar, depth) (factor 1 at `far`), and the scene's fog color
+  // is the look's (DEFAULT_LOOK: the dome's horizon, AC38).
   test("la loma lejana en `far` toma el color de la niebla: el suelo pasa por fog_fragment de three con fog: true", () => {
     expect(ShaderChunk.fog_fragment).toMatch(/smoothstep\(\s*fogNear,\s*fogFar,\s*vFogDepth\s*\)/);
     expect(ShaderChunk.fog_fragment).toMatch(/mix\(\s*gl_FragColor\.rgb,\s*fogColor,\s*fogFactor\s*\)/);
@@ -345,8 +345,8 @@ describe("AC42: los mapas del suelo son .ktx2 y la memoria de texturas sale de s
       expect(e.mb, `${tier}: ${JSON.stringify(e.parts)}`).toBeLessThanOrEqual(TIER_BUDGETS[tier].maxTextureMb);
       for (const id of ["suelo/leafy_grass-diff", "impostores", "pasto/atlas", "pasto/altura"]) expect(e.parts[id], id).toBeGreaterThan(0);
     }
-    // Con cabecera, el difuso (ETC1S) cuenta los bytes de bloque BC7 de sus 11 niveles: el destino real de KTX2Loader con
-    // BPTC (cambio registrado M3, antes BC1 de 8 bytes; QA AC42).
+    // With a header, the diffuse (ETC1S) counts the BC7 block bytes of its 11 levels: KTX2Loader's real target with
+    // BPTC (recorded change M3, before 8-byte BC1; QA AC42).
     const diff = openWorldTextureParts("low", DEFAULT_LOOK, headers)["suelo/leafy_grass-diff"] as number;
     let bc7 = 0;
     for (let l = 0; l < 11; l++) bc7 += Math.ceil(Math.max(1, 1024 >> l) / 4) ** 2 * 16;
@@ -369,8 +369,8 @@ describe("AC71: la auditoría de materiales del mundo abierto (cambio registrado
     expect(a.byKind.agua).toBeLessThanOrEqual(1);
     expect(a.byKind.follaje).toBeLessThanOrEqual(4);
     expect(a.byKind.impostor).toBeLessThanOrEqual(5);
-    // Cambio registrado (open-world-3d T8, AC71, D-828): antes `pasto` <= 2 (el pasto no existía); ahora sus dos
-    // materiales (tarjetas y hojas reales), exactamente 2.
+    // Recorded change (open-world-3d T8, AC71, D-828): before, `pasto` <= 2 (the grass did not exist); now its two
+    // materials (cards and real leaves), exactly 2.
     expect(a.byKind.pasto).toBe(2);
     expect(a.surfaceInstances).toBeLessThanOrEqual(17);
     scene.dispose();
@@ -384,7 +384,7 @@ describe("AC71: la auditoría de materiales del mundo abierto (cambio registrado
       const tiles = scene.root.getObjectByName("terreno") as Group;
       expect(estimateBudget([tiles])).toEqual(e.partes["terreno"]);
       expect(estimateBudget([scene.sky?.group as Group])).toEqual(e.partes["cielo"]);
-      // Las baldosas más el delantal (open-world-3d M3, AC35).
+      // The tiles plus the apron (open-world-3d M3, AC35).
       expect(tiles.children.length).toBe(OPEN_WORLD_DENSITY[tier].terrainTiles[0] * OPEN_WORLD_DENSITY[tier].terrainTiles[1] + 1);
       scene.dispose();
     }

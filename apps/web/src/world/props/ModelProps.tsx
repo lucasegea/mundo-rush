@@ -1,6 +1,6 @@
-// world/props/ModelProps.tsx: dibuja los props `modelo/*` del diorama (plan estetica-c M2) cuando su .glb termina de
-// bajar. La huella ya bloquea la grilla desde el layout (dato), así que el juego no espera al modelo: si la carga falla,
-// el prop no se ve, se avisa por consola y nada más se rompe.
+// world/props/ModelProps.tsx: draws the diorama `modelo/*` props (plan estetica-c M2) once their .glb finishes
+// downloading. The footprint already blocks the grid from the layout (data), so the game does not wait for the model: if loading fails,
+// the prop is not seen, a console warning is given and nothing else breaks.
 import { useEffect, useState } from "react";
 import type { Object3D } from "three";
 import { fitToBox, loadModel, type ModelBox } from "./gltf";

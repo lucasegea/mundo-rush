@@ -1,4 +1,4 @@
-// FD0 A3/A10: esquemas del snapshot y del diario del modo director (03 §6.5.2).
+// FD0 A3/A10: schemas of the director-mode snapshot and journal (03 §6.5.2).
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
@@ -38,7 +38,7 @@ describe("DirectorSnapshot (v: 1)", () => {
   });
 
   test("el índice del paquete no expone el modo director (solo la subruta @lg/protocol/director)", () => {
-    // F4.1 suma los mensajes de escena al índice; ningún export del modo director entra.
+    // F4.1 adds the scene messages to the index; no director-mode export gets in.
     const directorExports = Object.keys(director);
     expect(directorExports.length).toBeGreaterThan(0);
     expect(Object.keys(index).filter((k) => directorExports.includes(k))).toEqual([]);

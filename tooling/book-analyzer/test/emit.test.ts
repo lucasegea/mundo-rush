@@ -1,6 +1,6 @@
-// AC4: EMIT escribe al menos un archivo por campo del contrato bajo los subpaths canónicos.
-// AC5: cada archivo que EMIT escribe parsea y valida contra su esquema de @lg/content-schema (cero errores).
-// Teeth: con un ítem inválido, EMIT no escribe NADA (deja el universo intacto).
+// AC4: EMIT writes at least one file per contract field under the canonical subpaths.
+// AC5: every file EMIT writes parses and validates against its @lg/content-schema schema (zero errors).
+// Teeth: with an invalid item, EMIT writes NOTHING (leaves the universe intact).
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,7 +18,7 @@ import type { Intermedio } from "../src/intermediate.ts";
 const AQUI = fileURLToPath(new URL(".", import.meta.url));
 const FIXTURE = join(AQUI, "..", "fixtures", "sample-intermediate.yaml");
 
-/** subpath canónico escrito por EMIT → esquema con el que el compilador lo valida (conjunto.ts). */
+/** canonical subpath written by EMIT → schema the compiler validates it with (conjunto.ts). */
 const ESQUEMA_DE: [RegExp, z.ZodType][] = [
   [/^manifiesto\.yaml$/, Universo],
   [/^world\/places\.yaml$/, ArchivoLugares],
@@ -51,7 +51,7 @@ describe("book-analyzer EMIT (M2)", () => {
     const { archivos, errores } = planearEmit(intermedio);
     expect(errores).toEqual([]);
     const subpaths = archivos.map((a) => a.subpath);
-    // Un archivo por campo en scope (manifiesto, diorama, npc, mission, conversacion, saber, glossary) + mundo y red.
+    // One file per in-scope field (manifiesto, diorama, npc, mission, conversacion, saber, glossary) + mundo and red.
     expect(subpaths).toContain("manifiesto.yaml");
     expect(subpaths).toContain("world/places.yaml");
     expect(subpaths.some((s) => /^dioramas\/.+\.yaml$/.test(s))).toBe(true);
@@ -67,7 +67,7 @@ describe("book-analyzer EMIT (M2)", () => {
     const { escritos, errores } = emit(intermedio, outDir);
     expect(errores).toEqual([]);
     expect(escritos.length).toBe(9);
-    // El id nombra el archivo de los tipos "uno por archivo" (así el compilador de M3 pasa id↔nombre).
+    // The id names the file for the "one per file" types (so the M3 compiler passes id↔name).
     expect(escritos).toContain("missions/M1.1.yaml");
     expect(escritos).toContain("npcs/NPC-SAMPLE.yaml");
     expect(escritos).toContain("saberes/SAB-SAMPLE.yaml");

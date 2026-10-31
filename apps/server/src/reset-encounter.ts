@@ -1,7 +1,7 @@
-// `npm run dev:reset-farmer` (o `npm run dev:reset-encounter -- --npc NPC-X` / `--conv CONV-X`): reinicio de desarrollo
-// de un encuentro de conversación por medidores (A2, ADR-027; docs/PLAY.md). Sirve con el servidor andando: el almacén de
-// encuentros se lee en cada escena. Toca solo apps/server/data/encounters.json (estado del encuentro + marca de reinicio
-// de sus misiones); el log de evidencia y el resto del progreso quedan igual. Cuenta del operador (op-local).
+// `npm run dev:reset-farmer` (or `npm run dev:reset-encounter -- --npc NPC-X` / `--conv CONV-X`): development reset
+// of a meters conversation encounter (A2, ADR-027; docs/PLAY.md). Works with the server running: the encounter store
+// is read on every scene. Touches only apps/server/data/encounters.json (encounter state + reset mark
+// for its missions); the evidence log and the rest of the progress stay the same. Operator account (op-local).
 import { OPERATOR_ACCOUNT } from "./config/operator.ts";
 import { GENERATED_CONTENT_DIR, readGeneratedContent } from "./content/loader.ts";
 import { resetEncounter, ResetError } from "./conversation/reset.ts";

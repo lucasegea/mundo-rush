@@ -1,4 +1,4 @@
-# Tarjeta de nivel A2 (02 §3.3). Solo servidor.
+# Level card A2 (02 §3.3). Server only.
 banda: A2
 palabras_por_oracion: { min: 6, max: 14 }
 oraciones_por_turno: { min: 2, max: 2, nota: null }

@@ -1,37 +1,37 @@
-// state/bridge.ts — ÚNICA puerta de world/ al store (03 §4.2.1, §4.3): la lista explícita de acciones que el
-// mundo 3D puede despachar. world/ lee solo de state/selectors/ y nunca escribe `nearbyInteractables` (lo deriva
-// el núcleo en cada paso de simulación). Un clic de R3F sobre una malla entra como acción semántica (R10, P0
-// ADR-025): el mismo traductor del núcleo que usa services/input.
+// state/bridge.ts — the ONLY door from world/ to the store (03 §4.2.1, §4.3): the explicit list of actions the
+// 3D world may dispatch. world/ reads only from state/selectors/ and never writes `nearbyInteractables` (the core derives
+// it on every simulation step). An R3F click on a mesh enters as a semantic action (R10, P0
+// ADR-025): the same core translator that services/input uses.
 import { LOOK_DRAG_PX as CORE_LOOK_DRAG_PX, markWorldFirstFrame, pointerAction, type PointerHit } from "@lg/core";
 import { actions } from "./actions";
 
 export type { PointerHit };
 
 /**
- * Open-world-3d T4 (D-820): el umbral clic/arrastre del núcleo, como número para world/ (que usa el núcleo solo como
- * tipos). Un clic de R3F con `event.delta` mayor fue un arrastre de mirada y no camina.
+ * Open-world-3d T4 (D-820): the core's click/drag threshold, as a number for world/ (which uses the core only as
+ * types). An R3F click with a larger `event.delta` was a look drag and does not walk.
  */
 export const LOOK_DRAG_PX: number = CORE_LOOK_DRAG_PX;
 
 export const bridge = {
-  /** Caminar hasta un punto del suelo (metros, plano XZ). */
+  /** Walk to a point on the ground (meters, XZ plane). */
   moveTo: (x: number, z: number): void => actions.moveTo(x, z),
-  /** Interactuar con un interactuable por id (o con el más cercano). */
+  /** Interact with an interactable by id (or with the nearest one). */
   interact: (target: string | null = null): void => actions.interact(target),
-  /** Clic del puntero sobre el mundo (raycast de R3F) → acción semántica. */
+  /** Pointer click on the world (R3F raycast) → semantic action. */
   pointer(hit: PointerHit, button = 0): void {
     const action = pointerAction(hit, button);
     if (action) actions.dispatch(action);
   },
-  /** PerformanceMonitor de drei: el FPS cayó por debajo del piso (§2.7.2.2). */
+  /** drei's PerformanceMonitor: FPS fell below the floor (§2.7.2.2). */
   performanceDeclined: (): void => actions.performanceDeclined(),
-  /** world/camera: la distancia del mapa entero cambió (aspecto o yaw); el zoom continuo la usa de tope (PD-5). */
+  /** world/camera: the whole-map distance changed (aspect or yaw); continuous zoom uses it as a cap (PD-5). */
   cameraFit: (fitDistance: number): void => actions.cameraFitted(fitDistance),
   /** `webglcontextlost` (§2.7.2.4). */
   contextLost: (): void => actions.contextLost(),
   /**
-   * Open-world-3d T10 (d): el primer cuadro del mundo se dibujó, con `programs` = renderer.info.programs.length. Marca
-   * `lg:world-first-frame` (una vez, y solo después de `lg:world-enter`; la regla es de @lg/core). No toca el store.
+   * Open-world-3d T10 (d): the world's first frame was drawn, with `programs` = renderer.info.programs.length. Marks
+   * `lg:world-first-frame` (once, and only after `lg:world-enter`; the rule belongs to @lg/core). Does not touch the store.
    */
   worldFirstFrame: (programs: number): boolean => markWorldFirstFrame(globalThis.performance, { programs }),
 } as const;

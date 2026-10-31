@@ -1,4 +1,4 @@
-// F4.2: modelos guionados para recorrer el prólogo sin clave (LG_FAKE_MODELS=1, solo modo operador; D-027).
+// F4.2: scripted models to walk through the prologue without a key (LG_FAKE_MODELS=1, operator mode only; D-027).
 import { describe, expect, test } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -26,7 +26,7 @@ describe("LG_FAKE_MODELS", () => {
     expect(textProvidersFromEnv(models, { LG_FAKE_MODELS: "1", LG_OPERATOR_MODE: "1" }).npcModel.id).toBe("scripted-npc");
     expect(textProvidersFromEnv(models, { LG_FAKE_MODELS: "1" }).npcModel.id).toBe("unavailable");
     expect(textProvidersFromEnv(models, { LG_OPERATOR_MODE: "1" }).npcModel.id).toBe("unavailable");
-    // La bandera gana sobre una clave presente: nunca llama a la API paga cuando se pidió el guion.
+    // The flag wins over a present key: it never calls the paid API when the script was requested.
     expect(textProvidersFromEnv(models, { LG_FAKE_MODELS: "1", LG_OPERATOR_MODE: "1", [GEMINI_KEY_VAR]: "x" }).observerModel.id).toBe("scripted-observer");
   });
 
@@ -63,7 +63,7 @@ describe("LG_FAKE_MODELS no escribe en el log real del operador (F7 lo lee como 
       expect(fake.persistent).toBe(false);
       expect(fake.evidence.list("op-local")).toHaveLength(1);
       expect(existsSync(paths.evidence)).toBe(false);
-      // Sin la bandera, el archivo de siempre (y no ve lo que escribió la corrida guionada).
+      // Without the flag, the usual file (and it doesn't see what the scripted run wrote).
       const real = storesFromEnv({ LG_OPERATOR_MODE: "1" }, paths);
       expect(real.persistent).toBe(true);
       expect(real.evidence.list("op-local")).toEqual([]);

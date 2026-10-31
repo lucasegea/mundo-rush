@@ -1,8 +1,8 @@
-# Lo retirado de la premisa v0.1 (Lantern Bay). Volcado TAL CUAL de 02 §0.5.1 (fuente única): una fila por fila
-# de la tabla, con su grupo y su campo testea. No se agregan ni se quitan entradas.
-# tipo: id / nombre = límite de palabra respetando mayúsculas; termino = límite de palabra sin mayúsculas.
-# No se retira (nunca entra acá): muelle y plaza (ids de diorama, D-180), Celeste (rama de pociones),
-# M0.x/M1.x/P-R1.x/HAB-*, las plantillas genéricas de Lumi y los ids genéricos de glosario.
+# What was retired from the v0.1 premise (Lantern Bay). Dumped VERBATIM from 02 §0.5.1 (single source): one row per row
+# of the table, with its group and its testea field. No entries are added or removed.
+# tipo: id / nombre = word boundary respecting case; termino = word boundary without case.
+# Never retired (never goes in here): muelle and plaza (diorama ids, D-180), Celeste (potion branch),
+# M0.x/M1.x/P-R1.x/HAB-*, Lumi's generic templates and the generic glossary ids.
 fuente: "02-narrative-script.md §0.5.1"
 filas:
   - grupo: "Ids de NPC de la v0.1 (17)"

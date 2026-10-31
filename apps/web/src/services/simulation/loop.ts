@@ -1,6 +1,6 @@
-// services/simulation — lazo de paso fijo (03 §2.4 #4, R7): a 30 Hz, independiente del framerate, despacha
-// `simulationStep` mientras el mapa se juega. El render (world/) interpola entre pasos en refs; el store solo ve
-// la posición lógica. Reloj y planificador inyectables: los tests avanzan el tiempo a mano.
+// services/simulation — fixed-step loop (03 §2.4 #4, R7): at 30 Hz, independent of framerate, dispatches
+// `simulationStep` while the map is being played. Rendering (world/) interpolates between steps in refs; the store only sees
+// the logical position. Clock and scheduler are injectable: tests advance time by hand.
 import { fixedSteps } from "@lg/core";
 
 export interface FrameScheduler {
@@ -15,12 +15,12 @@ export const browserScheduler = (): FrameScheduler => ({
 
 export interface SimulationDeps {
   step(): void;
-  /** ¿El mapa se está jugando? Si no, el lazo no acumula tiempo (al volver no hay un salto). */
+  /** Is the map being played? If not, the loop does not accumulate time (on return there is no jump). */
   isActive(): boolean;
   scheduler?: FrameScheduler;
 }
 
-/** Arranca el lazo. Devuelve la función que lo detiene. */
+/** Starts the loop. Returns the function that stops it. */
 export function startSimulation(deps: SimulationDeps): () => void {
   const scheduler = deps.scheduler ?? browserScheduler();
   let accumulator = 0;

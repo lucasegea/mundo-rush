@@ -1,2 +1,2 @@
-// settings/ — ajustes del jugador (slice `settings`, 03 §3.3).
+// settings/ — player settings (`settings` slice, 03 §3.3).
 export * from "./settings";

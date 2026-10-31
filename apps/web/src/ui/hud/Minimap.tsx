@@ -1,19 +1,19 @@
-// Minimapa (open-world-3d T9, M4; mockup V6 "heading up, 60 m"): abajo a la derecha, siempre se ve dónde estás y
-// dónde están los puntos rojos de los NPCs que faltan visitar. Arriba es adelante (el yaw de la cámara) y se ven 60 m
-// a la redonda; un NPC más lejos queda como flecha roja en el anillo, apuntando hacia él.
+// Minimap (open-world-3d T9, M4; mockup V6 "heading up, 60 m"): bottom right, you can always see where you are and
+// where the red dots of the NPCs still to visit are. Up is forward (the camera yaw) and 60 m are visible
+// all around; an NPC farther away stays as a red arrow on the ring, pointing toward it.
 //
-// Cómo se dibuja (AC56): un efecto con un intervalo de 100 ms lee el store con `readGame(selectMinimap)` y pinta un
-// canvas 2D. Nunca dentro del bucle de render de three (useFrame) ni por cuadro: a lo sumo 10 redibujos por segundo, y
-// ninguno si nada cambió (jugador quieto, giro ya llegado). El canvas pinta el suelo, el agua, los caminos y la flecha
-// del jugador; los puntos de los NPCs son elementos del DOM (`data-npc-id`, un anillo rojo con contorno de tinta, como
-// el mockup), así su contraste y su cantidad se leen sin mirar píxeles. Una lista visualmente oculta y el nombre
-// accesible de la raíz dicen a quién falta visitar y a cuántos metros está cada uno.
+// How it is drawn (AC56): an effect with a 100 ms interval reads the store with `readGame(selectMinimap)` and paints a
+// 2D canvas. Never inside three's render loop (useFrame) nor per frame: at most 10 redraws per second, and
+// none if nothing changed (player still, turn already reached). The canvas paints the ground, water, paths and the
+// player's arrow; the NPC dots are DOM elements (`data-npc-id`, a red ring with an ink outline, like
+// the mockup), so their contrast and count can be read without looking at pixels. A visually hidden list and the root's
+// accessible name say who is left to visit and how many meters away each one is.
 //
-// Se ve en el mapa jugable a cualquier zoom; en la charla no se monta (el shell muestra el HUD de diálogo en lugar del
-// del mapa) y en `dialog-only` tampoco (`selectMinimapVisible`). Con "reducir movimiento" el giro corta en vez de
-// suavizarse (`stepMinimapYaw` del núcleo). Los colores salen del look del diorama (D-839); acá no hay un solo hex.
-// Tamaño en rem (7rem en teléfono, 10rem desde md: 112 y 160 px con texto al 100 %), como el resto del HUD. El círculo
-// recibe el puntero (como los controles del HUD y el mockup): un clic encima no camina hasta el suelo de abajo.
+// Visible on the playable map at any zoom; it is not mounted in conversation (the shell shows the dialogue HUD instead of the
+// map one) nor in `dialog-only` (`selectMinimapVisible`). With "reduce motion" the turn cuts instead of
+// smoothing (`stepMinimapYaw` from the core). Colors come from the diorama look (D-839); there is not a single hex here.
+// Size in rem (7rem on phone, 10rem from md: 112 and 160 px with text at 100 %), like the rest of the HUD. The circle
+// receives the pointer (like the HUD controls and the mockup): a click on it does not walk to the ground below.
 import { useEffect, useRef } from "react";
 import type { MinimapModel } from "@lg/core";
 import { t } from "../../i18n";
@@ -22,11 +22,11 @@ import {
 } from "../../state/selectors";
 import { MINIMAP_OFFSET, MINIMAP_SIZE } from "./layout";
 
-/** Lado del punto de NPC y de la flecha del borde (rem), y su contorno de tinta. */
+/** Side of the NPC dot and the edge arrow (rem), and its ink outline. */
 const DOT = "1.125rem";
 const ARROW = "1.375rem";
 const HALO = "0.125rem";
-/** Flecha del borde (mockup V6 `.npc-dot.edge`): punta arriba; se gira hacia el NPC. */
+/** Edge arrow (mockup V6 `.npc-dot.edge`): tip up; it is rotated toward the NPC. */
 const ARROW_CLIP = "polygon(50% 0, 100% 100%, 50% 74%, 0 100%)";
 
 export function Minimap() {
@@ -51,15 +51,15 @@ function MinimapPanel() {
       prevYaw = view.yawDeg;
       const m = view.model;
       if (!m) return;
-      // El texto accesible (metros redondeados) se escribe en el DOM solo si cambió: sin re-render de React por paso.
+      // The accessible text (rounded meters) is written to the DOM only if it changed: no React re-render per step.
       const text = spoken(m.markers);
       if (root.current && root.current.getAttribute("aria-label") !== text.label) {
         root.current.setAttribute("aria-label", text.label);
         list.current?.querySelectorAll("li").forEach((li, i) => { li.textContent = text.items[i] ?? ""; });
       }
-      // Sin layout (lado 0: jsdom, o el HUD todavía sin medir) no hay nada que pintar.
+      // Without layout (side 0: jsdom, or the HUD not yet measured) there is nothing to paint.
       if (size <= 0) return;
-      // Sin cambios (mismo lugar, mismos pendientes, giro llegado, mismo tamaño) no se redibuja.
+      // Without changes (same place, same pending, turn reached, same size) it is not redrawn.
       const key = `${m.sizePx}|${m.yawDeg}|${m.player.x}|${m.player.z}|${m.markers.map((k) => k.id).join(",")}`;
       if (key === lastKey) return;
       lastKey = key;
@@ -70,10 +70,10 @@ function MinimapPanel() {
     tick();
     const id = setInterval(tick, MINIMAP_REDRAW_MS);
     return () => clearInterval(id);
-    // Los pendientes cambian el juego de anillos: se reinicia para pintarlos en su lugar enseguida.
+    // Pending ones change the set of rings: it resets so they are painted in place right away.
   }, [pending]);
 
-  // El texto del primer render; después lo mantiene el efecto.
+  // The first render's text; afterwards the effect maintains it.
   const first = spoken(readGame((s) => selectMinimap(s)).model?.markers ?? []);
   return (
     <section
@@ -102,13 +102,13 @@ function MinimapPanel() {
   );
 }
 
-/** El nombre accesible y la lista oculta: cada pendiente con su distancia en metros, o que ya no falta nadie. */
+/** The accessible name and the hidden list: each pending one with its distance in meters, or that nobody is left. */
 function spoken(markers: readonly MinimapModel["markers"][number][]): { label: string; items: string[] } {
   const items = markers.map((k) => t("minimap.item", { name: k.name, count: Math.round(k.distanceM) }));
   return { label: items.length > 0 ? t("minimap.label", { list: items.join("; ") }) : t("minimap.labelDone"), items };
 }
 
-/** Un anillo de NPC en su lugar: punto rojo con contorno de tinta, o flecha roja girada hacia él si está en el borde. */
+/** An NPC ring in place: red dot with ink outline, or red arrow turned toward it if it is on the edge. */
 function placeRing(el: HTMLSpanElement | undefined, k: MinimapModel["markers"][number], view: MinimapView): void {
   if (!el) return;
   const c = view.colors;
@@ -134,7 +134,7 @@ function placeRing(el: HTMLSpanElement | undefined, k: MinimapModel["markers"][n
   }
 }
 
-/** El fondo del minimapa en el canvas: suelo, agua, caminos, límites del diorama y la flecha del jugador (arriba). */
+/** The minimap background on the canvas: ground, water, paths, diorama limits and the player's arrow (up). */
 function paint(el: HTMLCanvasElement | null, view: MinimapView): void {
   const m = view.model;
   const g = el?.getContext("2d") ?? null;
@@ -182,7 +182,7 @@ function paint(el: HTMLCanvasElement | null, view: MinimapView): void {
     g.globalAlpha = 1;
   }
   g.restore();
-  // La flecha del jugador, siempre arriba (mockup V6), a escala del lado de 160.
+  // The player's arrow, always up (mockup V6), scaled to the 160 side.
   const u = m.sizePx / 160;
   const o = m.center;
   g.beginPath();

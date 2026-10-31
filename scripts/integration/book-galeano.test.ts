@@ -1,8 +1,8 @@
-// book-mode slice-1 M6.2 (T4, AC5..AC7): el servidor real (HTTP + WebSocket, modo operador) sobre el contenido de
-// servidor de U-GALEANO, con los modelos guionados de LG_FAKE_MODELS y los almacenes en memoria de storesFromEnv.
-// Un cliente WebSocket maneja el protocolo como lo hace el navegador: token, scene.start, turn.text. Cubre la cadena
-// MITAYO, CERRO, FACTOR y CONV-POTOSI de punta a punta sobre el socket (book-scene-chain.test la cubre sin socket).
-// Vive en scripts/ por la misma razón que prologue.test.ts (server y web no se importan entre sí).
+// book-mode slice-1 M6.2 (T4, AC5..AC7): the real server (HTTP + WebSocket, operator mode) over U-GALEANO's
+// server content, with the scripted models of LG_FAKE_MODELS and storesFromEnv's in-memory stores.
+// A WebSocket client drives the protocol as the browser does: token, scene.start, turn.text. Covers the chain
+// MITAYO, CERRO, FACTOR and CONV-POTOSI end to end over the socket (book-scene-chain.test covers it without a socket).
+// It lives in scripts/ for the same reason as prologue.test.ts (server and web do not import each other).
 import type { AddressInfo } from "node:net";
 import { compilarContenido } from "@lg/content-schema";
 import { ServerMessageSchema, type ServerMessage } from "@lg/protocol";
@@ -16,7 +16,7 @@ import { must, REPO_ROOT } from "../../apps/server/test/helpers.ts";
 const env = { LG_OPERATOR_MODE: "1", LG_FAKE_MODELS: "1", LG_UNIVERSE: "U-GALEANO" };
 const models = loadModelsConfig();
 const compiled = compilarContenido(leerContenido(REPO_ROOT, "U-GALEANO"), "dev");
-// El npc-base sale del propio universo (fixture + EMIT, M6.4): no se inyecta nada de la campesino.
+// The npc-base comes from the universe itself (fixture + EMIT, M6.4): nothing is injected from the farmer universe.
 const content = Object.freeze({ ...must(compiled.salida, "U-GALEANO no compila").servidor });
 
 interface Server { http: string; ws: string }
@@ -34,7 +34,7 @@ afterEach(async () => {
   }
 });
 
-/** Servidor nuevo con almacenes en memoria nuevos: cada test es una partida limpia. */
+/** New server with new in-memory stores: each test is a clean game. */
 async function startServer(): Promise<Server> {
   const stores = storesFromEnv(env, {}, models);
   expect(stores.persistent).toBe(false);
@@ -48,7 +48,7 @@ async function startServer(): Promise<Server> {
   return { http: `http://127.0.0.1:${port}`, ws: `ws://127.0.0.1:${port}` };
 }
 
-/** Una escena sobre un socket nuevo (como cada escena del navegador). */
+/** A scene over a new socket (like each browser scene). */
 class Scene {
   readonly messages: ServerMessage[] = [];
   private waiters: { pred: (m: ServerMessage) => boolean; done: (m: ServerMessage) => void }[] = [];
@@ -75,7 +75,7 @@ class Scene {
     return scene;
   }
 
-  /** Espera un mensaje (ya recibido o futuro) que cumpla `pred`, con tope para que una falla no cuelgue la suite. */
+  /** Waits for a message (already received or future) that satisfies `pred`, with a cap so a failure does not hang the suite. */
   until(pred: (m: ServerMessage) => boolean, label: string, from = 0, ms = 10_000): Promise<ServerMessage> {
     const hit = this.messages.slice(from).find(pred);
     if (hit) return Promise.resolve(hit);
@@ -88,8 +88,8 @@ class Scene {
   send(msg: unknown): void { this.socket.send(JSON.stringify(msg)); }
 
   /**
-   * scene.start y un turno por cada texto. La mano es del jugador cuando llega `playerTurn/waiting` con el `turnIndex`
-   * de los turnos ya jugados (el estado `speaking` es el eco de lo que acaba de mandar, no la mano devuelta).
+   * scene.start and one turn per text. The hand belongs to the player when `playerTurn/waiting` arrives with the `turnIndex`
+   * of the turns already played (the `speaking` state is the echo of what was just sent, not the returned hand).
    */
   async play(npcId: string, turns: readonly string[]): Promise<ServerMessage[]> {
     this.send({ type: "scene.start", npcId });
@@ -108,7 +108,7 @@ class Scene {
 
 const endings = (sent: ServerMessage[]) => sent.flatMap((m) => (m.type === "scene.end" ? [m.outcome] : []));
 
-/** Juega una escena entera sobre su propio socket y devuelve lo recibido. */
+/** Plays a whole scene over its own socket and returns what was received. */
 async function scene(srv: Server, npcId: string, turns: readonly string[]): Promise<ServerMessage[]> {
   return (await Scene.open(srv)).play(npcId, turns);
 }

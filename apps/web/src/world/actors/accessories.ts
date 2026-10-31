@@ -1,31 +1,31 @@
-// world/actors/accessories.ts — los accesorios por código del personaje de Quaternius (open-world-3d T7, AC47): la gorra
-// roja de la maqueta V6 (el `capColor` del look), el sombrero de paja, la boina y la bufanda. Se arman en las unidades del
-// modelo (la escena del glTF: centro de la cabeza a 2,4, como la maqueta) y skinned.ts los cuelga de su hueso con
-// `attach`. Cada grupo es UNA malla (una llamada) pintada por vértice; el material es el toon compartido.
-// Open-world-3d T7b (D-840): los accesorios son una tabla por juego de accesorios del look (`characters.accessories`), no
-// un switch; un look con otro juego (otros sombreros, otro cuello) suma una fila a ACCESSORY_TABLE.
-// T7 SEAM: el pañuelo de cabeza y el poncho de la maqueta llegan con la pantalla de apariencia (diferida, D3).
+// world/actors/accessories.ts — the code-built accessories for the Quaternius character (open-world-3d T7, AC47): the
+// red cap from the V6 diorama (the look's `capColor`), the straw hat, the beret and the scarf. They are built in the
+// model's units (the glTF scene: head center at 2.4, like the diorama) and skinned.ts hangs them from their bone with
+// `attach`. Each group is ONE mesh (one draw call) painted per vertex; the material is the shared toon one.
+// Open-world-3d T7b (D-840): the accessories are a table per accessory set of the look (`characters.accessories`), not
+// a switch; a look with another set (other hats, another neckwear) adds a row to ACCESSORY_TABLE.
+// T7 SEAM: the head scarf and the poncho from the diorama arrive with the appearance screen (deferred, D3).
 import { SphereGeometry, type BufferGeometry } from "three";
 import type { AccessorySetId, Hat, Scarf, WorldLook } from "@lg/art";
 import { mergeParts, painted, sphere, torus, type Paint } from "../props/geometry";
 import type { CharacterLook } from "./looks";
 
-/** Lo que los accesorios leen del look: su juego y el color de la gorra. */
+/** What the accessories read from the look: its set and the cap color. */
 export type AccessoryCast = Pick<WorldLook["characters"], "accessories" | "capColor">;
 type Build = (seed: number, cast: AccessoryCast) => BufferGeometry;
 
-/** Centro de la cabeza en unidades del modelo (maqueta V6). */
+/** Head center in model units (V6 diorama). */
 export const MODEL_HEAD_Y = 2.4;
-/** Altura del cuello, para la bufanda (maqueta V6). */
+/** Neck height, for the scarf (V6 diorama). */
 export const MODEL_NECK_Y = 1.93;
 
 const css = (rgb: number): Paint => `#${rgb.toString(16).padStart(6, "0")}`;
 const shade = (rgb: number, k: number): number =>
   (Math.round(((rgb >> 16) & 255) * k) << 16) | (Math.round(((rgb >> 8) & 255) * k) << 8) | Math.round((rgb & 255) * k);
-/** El color tal cual (la gorra se mide contra el `capColor` del look). */
+/** The color as is (the cap is measured against the look's `capColor`). */
 const FLAT = { top: 0, bottomDark: 0, jitter: 0 } as const;
 
-/** La gorra de la maqueta: casquete, visera hacia +z y botón, del color `color` (0xRRGGBB). */
+/** The diorama's cap: skullcap, visor toward +z and button, in color `color` (0xRRGGBB). */
 export function capGeometry(color: number, seed = 0): BufferGeometry {
   const y = MODEL_HEAD_Y;
   return mergeParts([
@@ -35,13 +35,13 @@ export function capGeometry(color: number, seed = 0): BufferGeometry {
   ]);
 }
 
-/** Un juego de accesorios: un armador por sombrero y por cuello (uno ausente no se dibuja). */
+/** An accessory set: one builder per hat and per neckwear (an absent one is not drawn). */
 export interface AccessorySet {
   hats: Readonly<Partial<Record<Hat, Build>>>;
   necks: Readonly<Partial<Record<Scarf, Build>>>;
 }
 
-/** Los juegos de accesorios por id (`WorldLook.characters.accessories`). `v6`: los de la maqueta V6. */
+/** The accessory sets by id (`WorldLook.characters.accessories`). `v6`: the ones from the V6 diorama. */
 export const ACCESSORY_TABLE: Readonly<Record<AccessorySetId, AccessorySet>> = {
   v6: {
     hats: {
@@ -62,7 +62,7 @@ export const ACCESSORY_TABLE: Readonly<Record<AccessorySetId, AccessorySet>> = {
   },
 };
 
-/** Los accesorios de una apariencia con el juego del look: el de la cabeza (sombrero o gorra) y el del cuello, o null. */
+/** The accessories of an appearance with the look's set: the head one (hat or cap) and the neck one, or null. */
 export function openWorldAccessories(look: CharacterLook, cast: AccessoryCast, seed = 0): { head: BufferGeometry | null; neck: BufferGeometry | null } {
   const set = ACCESSORY_TABLE[cast.accessories];
   const head = look.hat ? set.hats[look.hat] : undefined;

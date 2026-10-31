@@ -1,9 +1,9 @@
-// Plan estetica-c M5 (D-207): validate:content sobre el formato de la maqueta. Cada regla nueva tiene su fixture que
-// falla: el contenido real con una sola línea cambiada, y el error nombra archivo, clave y lo que está mal.
-// - un NPC puesto en un diorama sin `apariencia` en su ficha;
-// - un tinte que no es token de la paleta (@lg/art), en un prop o en una apariencia;
-// - un prop sin constructor por código ni fila en el registro (o con otro prefijo);
-// - el estimador de presupuesto corre para cada diorama y falla por encima de `medium` (50k triángulos, 120 llamadas).
+// Plan estetica-c M5 (D-207): validate:content over the diorama format. Each new rule has its fixture that
+// fails: the real content with a single line changed, and the error names file, key and what is wrong.
+// - an NPC placed in a diorama without `apariencia` in its card;
+// - a tint that is not a palette token (@lg/art), in a prop or in an appearance;
+// - a prop with neither a code constructor nor a registry row (or with another prefix);
+// - the budget estimator runs for each diorama and fails above `medium` (50k triangles, 120 calls).
 import { describe, expect, test } from "vitest";
 import { compilarContenido, estimarPresupuestoDiorama, formatearHallazgo } from "@lg/content-schema";
 import type { ArchivoFuente, Hallazgo } from "@lg/content-schema";
@@ -20,7 +20,7 @@ const CASA = "- { asset: codigo/casa, pos: [-9, 0, -7], tam: [4, 3, 3] }";
 const GALLINERO = "- { asset: modelo/quaternius-farm-buildings/gallinero, pos: [-12.5, 0, 8], tam: [3, 2.3, 2.7] }";
 const APARIENCIA_INES = "apariencia: { cuerpo: saco, remera: casa-3, pantalon: pantalon-2, piel: piel-2, pelo: pelo-2, peinado: largo, sombrero: null, cuello: panuelo, escala: 1 }\n";
 
-/** El contenido real con un reemplazo (el texto viejo tiene que estar: si no, el fixture no mide nada). */
+/** The real content with a replacement (the old text has to be there: otherwise the fixture measures nothing). */
 const mut = (ruta: string, viejo: string, nuevo: string, archivos: readonly ArchivoFuente[] = REAL): ArchivoFuente[] => {
   const f = archivos.find((a) => a.ruta === ruta);
   if (!f) throw new Error(`no existe ${ruta}`);
@@ -29,7 +29,7 @@ const mut = (ruta: string, viejo: string, nuevo: string, archivos: readonly Arch
   return archivos.map((a) => (a.ruta === ruta ? { ruta, texto: texto.replace(viejo, nuevo) } : a));
 };
 const errores = (archivos: readonly ArchivoFuente[]): Hallazgo[] => compilarContenido(archivos).errores;
-/** Exige un error en archivo › clave cuyo mensaje cumpla `re`; devuelve el mensaje. */
+/** Requires an error at file › key whose message satisfies `re`; returns the message. */
 const conError = (hs: readonly Hallazgo[], archivo: string, clave: string, re: RegExp): string => {
   const hit = hs.find((h) => h.archivo === archivo && h.clave === clave && re.test(h.mensaje));
   expect(hit, `se esperaba ${re} en ${archivo} › ${clave}; hubo:\n${hs.map(formatearHallazgo).join("\n")}`).toBeDefined();
@@ -129,7 +129,7 @@ describe("formato", () => {
 describe("presupuesto de medium en validate:content", () => {
   test("teeth: detalle de más pasa los 50k triángulos y falla con el desglose por parte", () => {
     const hs = errores(mut(TEST, "detalle:\n", "detalle:\n  - { tipo: matas, centro: [0, -8], radio: 3, cantidad: 10 }\n"));
-    // 10 matas = 1000 triángulos: el margen de test.yaml es 836.
+    // 10 tufts = 1000 triangles: test.yaml's margin is 836.
     const m = conError(hs, TEST, "", /presupuesto de medium pasado/);
     expect(m).toContain("50164 triángulos");
     expect(m).toMatch(/detalle 4 llamadas, \d+ triángulos/);
@@ -143,7 +143,7 @@ describe("presupuesto de medium en validate:content", () => {
   });
 
   test("plan estetica-c M6 teeth: el mismo chequeo corre por tier; un detalle pesado pasa los 25k de low con su densidad", () => {
-    // 200 matas: low conserva una de cada tres (67 × 100 triángulos), más que su margen de 2698 sobre test.yaml.
+    // 200 tufts: low keeps one in three (67 × 100 triangles), more than its 2698 margin over test.yaml.
     const hs = errores(mut(TEST, "detalle:\n", "detalle:\n  - { tipo: matas, centro: [0, -8], radio: 3, cantidad: 200 }\n"));
     const low = conError(hs, TEST, "", /presupuesto de low pasado/);
     expect(low).toContain("60 llamadas, 25000 triángulos");

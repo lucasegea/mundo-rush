@@ -1,9 +1,9 @@
-# M9.1 · Conocer a Harlan (A2, ADR-027). Prototipo del sistema de conversación por medidores: fuera de la numeración de
-# 02, sin requisitos, para jugarlo directo. No hay guion: Harlan trabaja con su ficha (content/conversaciones/CONV-HARLAN.yaml).
-# Medidor 1 "Conocer a Harlan" se llena con intercambio recíproco; medidor 2 "Conseguir lo que viniste a buscar" se abre
-# al llenarse el primero. El cierre lo dispara el código al llenarse el último medidor, nunca el modelo.
-# OJO (fuga): situacion, necesidad_npc, criterios_exito, ramas y la PRIMERA línea del NPC del cierre/salida entran al
-# prompt del NPC desde el primer turno. Nada de eso nombra el recado (los postes, Nell, la huerta).
+# M9.1 · Conocer a Harlan (A2, ADR-027). Prototype of the meter-based conversation system: outside the numbering of
+# 02, no requirements, to play it directly. There is no script: Harlan works from his sheet (content/conversaciones/CONV-HARLAN.yaml).
+# Meter 1 "Conocer a Harlan" fills with reciprocal exchange; meter 2 "Conseguir lo que viniste a buscar" opens
+# when the first one fills. The closing is triggered by the code when the last meter fills, never by the model.
+# WATCH OUT (leak): situacion, necesidad_npc, criterios_exito, ramas and the FIRST NPC line of the closing/exit go into the
+# NPC prompt from the first turn. None of that names the errand (the posts, Nell, the garden).
 id: M9.1
 titulo: { es-AR: "Conocer a Harlan" }
 capitulo: 1

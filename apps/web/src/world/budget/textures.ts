@@ -1,14 +1,14 @@
-// world/budget/textures.ts — memoria de texturas estimada por tier (plan estetica-c M6, 03 §2.7.1: ≤ 24 / 48 / 96 MB).
-// El mundo C casi no usa texturas: la pincelada de 256 px (con mipmaps), la rampa toon de 4 px, la sombra blob de 64 px,
-// un chip de nombre por NPC (CanvasTexture dibujada a 2x, con mipmaps) y una burbuja de pedido por NPC (cota de arriba);
-// en `high` además el mapa de sombra de 1024 (profundidad de 32 bits). Puro: las medidas salen de los mismos módulos
-// que crean las texturas (toon.ts, blob.ts, labels.ts, bubbleSprite.ts, lighting/params.ts). No cuenta los buffers de
-// pantalla del postprocesado (dependen de la resolución; los mide renderer.info en la instantánea del modo director).
-// Open-world-3d T6 (D-832, AC42): con `openWorld` suma además cada textura que crea el mundo abierto en ese tier (el
-// inventario OPEN_WORLD_TEXTURES de @lg/art: suelo, rocas, hoja, corteza, impostores, pasto, flores, nubes, la textura
-// de altura del pasto). Un .ktx2 cuya cabecera se pasa en `headers` cuenta con su ancho, alto, formato y niveles reales
-// (bytes de bloque del destino BC); el resto con su medida declarada.
-// Open-world-3d T7b (D-841): el inventario es el del look del diorama (`worldTextures(look)`, antes OPEN_WORLD_TEXTURES).
+// world/budget/textures.ts — estimated texture memory per tier (plan estetica-c M6, 03 §2.7.1: ≤ 24 / 48 / 96 MB).
+// World C barely uses textures: the 256 px brushstroke (with mipmaps), the 4 px toon ramp, the 64 px blob shadow,
+// a name chip per NPC (CanvasTexture drawn at 2x, with mipmaps) and a request bubble per NPC (upper bound);
+// on `high` also the 1024 shadow map (32-bit depth). Pure: the measurements come from the same modules
+// that create the textures (toon.ts, blob.ts, labels.ts, bubbleSprite.ts, lighting/params.ts). It does not count the
+// postprocessing screen buffers (they depend on resolution; renderer.info measures them in the director-mode snapshot).
+// Open-world-3d T6 (D-832, AC42): with `openWorld` it also adds each texture the open world creates at that tier (the
+// OPEN_WORLD_TEXTURES inventory from @lg/art: ground, rocks, leaf, bark, impostors, grass, flowers, clouds, the grass
+// height texture). A .ktx2 whose header is passed in `headers` counts with its real width, height, format and levels
+// (block bytes of the BC target); the rest with their declared size.
+// Open-world-3d T7b (D-841): the inventory is that of the diorama look (`worldTextures(look)`, formerly OPEN_WORLD_TEXTURES).
 import { gpuBytes, ktx2GpuBytes, worldTextures, type Ktx2Header, type WorldLook, type WorldTier } from "@lg/art";
 import { BLOB_SIZE } from "../materials/blob";
 import { BRUSH_SIZE, TOON_BANDS } from "../materials/toon";
@@ -16,22 +16,22 @@ import { BUBBLE_LAYOUT } from "../labels/bubbleSprite";
 import { SUN_SHADOW } from "../lighting/params";
 
 const RGBA = 4;
-/** La cadena de mipmaps suma un tercio. */
+/** The mipmap chain adds a third. */
 const MIPS = 4 / 3;
 const MB = 1024 * 1024;
 
 export interface TextureBudgetInput {
-  /** Medidas (px) del chip de nombre de cada NPC (labelLayout). */
+  /** Sizes (px) of each NPC's name chip (labelLayout). */
   labels: readonly { width: number; height: number }[];
-  /** Burbujas de pedido (una por NPC como cota de arriba). */
+  /** Request bubbles (one per NPC as an upper bound). */
   bubbles: number;
-  /** ¿Hay mapa de sombra direccional (solo `high`)? */
+  /** Is there a directional shadow map (`high` only)? */
   shadowMap: boolean;
-  /** El mundo abierto de un tier con un look; `headers` son las cabeceras KTX2 leídas de los archivos servidos (por ruta). */
+  /** The open world of a tier with a look; `headers` are the KTX2 headers read from the served files (by path). */
   openWorld?: { tier: WorldTier; look: WorldLook; headers?: Readonly<Record<string, Ktx2Header>> };
 }
 
-/** Bytes en GPU de las texturas del mundo abierto en un tier con un look, por id del inventario. */
+/** GPU bytes of the open world's textures at a tier with a look, by inventory id. */
 export function openWorldTextureParts(tier: WorldTier, look: WorldLook, headers: Readonly<Record<string, Ktx2Header>> = {}): Record<string, number> {
   const parts: Record<string, number> = {};
   for (const t of worldTextures(look)) {
@@ -46,7 +46,7 @@ export function openWorldTextureParts(tier: WorldTier, look: WorldLook, headers:
 export interface TextureEstimate {
   bytes: number;
   mb: number;
-  /** Por textura, para el mensaje de un test que falle. */
+  /** Per texture, for the message of a failing test. */
   parts: Record<string, number>;
 }
 

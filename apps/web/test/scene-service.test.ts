@@ -1,5 +1,5 @@
-// F4.2: servicio de escena (services/scene) y su conector, sin red. El conector real con fetch/WebSocket falsos; el
-// servicio contra un servidor de escenas falso y el store real.
+// F4.2: scene service (services/scene) and its connector, without network. The real connector with fake fetch/WebSocket; the
+// service against a fake scene server and the real store.
 import { SCENE_TOKEN_PATH as PROTO_TOKEN, SCENE_WS_PATH as PROTO_WS } from "@lg/protocol";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { browserSceneConnector, SCENE_TOKEN_PATH, SCENE_WS_PATH, type SceneHandlers } from "../src/services/scene/connector";
@@ -57,15 +57,15 @@ describe("conector", () => {
     const ws = FakeWs.last;
     if (!ws) throw new Error("sin WebSocket");
     expect(ws.url).toBe("ws://h/scene?token=abc");
-    expect(ws.binaryType).toBe("arraybuffer"); // F5.2: la voz del NPC llega como ArrayBuffer
+    expect(ws.binaryType).toBe("arraybuffer"); // F5.2: the NPC's voice arrives as an ArrayBuffer
     s.send("x");
     const bytes = new ArrayBuffer(4);
     s.sendBinary(bytes);
     expect(ws.sent).toEqual(["x", bytes]);
     ws.onmessage?.({ data: "{\"a\":1}" });
     const npc = new ArrayBuffer(2);
-    ws.onmessage?.({ data: npc }); // binario: va a onBinary, no a onMessage
-    ws.onmessage?.({ data: 42 }); // ni texto ni ArrayBuffer: se ignora
+    ws.onmessage?.({ data: npc }); // binary: goes to onBinary, not to onMessage
+    ws.onmessage?.({ data: 42 }); // neither text nor ArrayBuffer: ignored
     expect(h.got).toEqual(["{\"a\":1}"]);
     expect(h.bin).toEqual([npc]);
     ws.onclose?.();
@@ -120,7 +120,7 @@ describe("servicio de escena", () => {
     actions.leaveScene();
     actions.enterScene("NPC-INES", null);
     await server.waitOpen(2);
-    expect(fetchJson).toHaveBeenCalledTimes(3); // manifiesto + glosario + lumi, una sola vez
+    expect(fetchJson).toHaveBeenCalledTimes(3); // manifest + glossary + lumi, only once
   });
 
   test("salir cierra la conexión; un pedido que se reemplaza antes de abrir no se usa", async () => {
@@ -130,7 +130,7 @@ describe("servicio de escena", () => {
     actions.enterScene(null, null);
     await server.waitOpen(2);
     await vi.waitFor(() => expect(gameStore.getState().dialogue.connection).toBe("open"));
-    // La primera conexión (pedido viejo) se cerró sin mandar nada; la segunda arrancó la escena de Lumi.
+    // The first connection (stale request) was closed without sending anything; the second started Lumi's scene.
     expect(server.closed).toBe(1);
     expect(server.sent).toEqual([{ type: "scene.start", npcId: null }]);
     actions.leaveScene();

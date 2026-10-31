@@ -1,17 +1,17 @@
-// Formato de cable de la Live API (WebSocket crudo v1beta `BidiGenerateContent`, el que usa un prototipo de voz anterior).
-// Procedencia (ADR-005): forma del `setup` y lectura de `serverContent`/`goAway`/`sessionResumptionUpdate`/
-// `usageMetadata` portadas de un prototipo de voz anterior (public/index.html, startSession y handleServerMessage), con las
-// enmiendas de P0 §4.1: el setup lo arma el SERVIDOR, pide transcripción de entrada y de salida y desactiva la
-// detección automática de actividad (turnos manuales, D-091). Nada de esto viaja al cliente del juego.
+// Wire format of the Live API (raw WebSocket v1beta `BidiGenerateContent`, the one an earlier voice prototype uses).
+// Provenance (ADR-005): shape of the `setup` and reading of `serverContent`/`goAway`/`sessionResumptionUpdate`/
+// `usageMetadata` ported from an earlier voice prototype (public/index.html, startSession and handleServerMessage), with the
+// P0 §4.1 amendments: the setup is built by the SERVER, requests input and output transcription and disables
+// automatic activity detection (manual turns, D-091). None of this travels to the game client.
 import type { SceneVoiceSetup, ScriptedTurn, VoiceUsage } from "../types.ts";
 
 export const LIVE_ENDPOINT =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 
-/** Tasa del audio del jugador que acepta Live (03 §5.5). */
+/** Sample rate of the player audio that Live accepts (03 §5.5). */
 export const INPUT_SAMPLE_RATE = 16000;
 
-/** Mensaje `setup` armado por el servidor. `resumeHandle`: reanudación tras goAway o un corte. */
+/** `setup` message built by the server. `resumeHandle`: resumption after goAway or a drop. */
 export function liveSetupMessage(model: string, setup: SceneVoiceSetup, resumeHandle: string | null): unknown {
   return {
     setup: {
@@ -24,18 +24,18 @@ export function liveSetupMessage(model: string, setup: SceneVoiceSetup, resumeHa
         },
       },
       systemInstruction: { parts: [{ text: setup.systemInstruction }] },
-      // Turnos manuales: el NPC no puede responder hasta activityEnd (ADR-007, D-091).
+      // Manual turns: the NPC cannot respond until activityEnd (ADR-007, D-091).
       realtimeInputConfig: { automaticActivityDetection: { disabled: true } },
       inputAudioTranscription: {},
       outputAudioTranscription: {},
-      // Red de seguridad si una escena se alarga por un bug (03 §5.4 punto 5).
+      // Safety net if a scene drags on because of a bug (03 §5.4 point 5).
       contextWindowCompression: { slidingWindow: {} },
       sessionResumption: resumeHandle ? { handle: resumeHandle } : {},
     },
   };
 }
 
-/** Turnos de contexto: si el último es del usuario, el modelo responde (turnComplete); si es del modelo, no. */
+/** Context turns: if the last one is the user's, the model responds (turnComplete); if it is the model's, it doesn't. */
 export const clientContentMessage = (turns: readonly ScriptedTurn[]): unknown => ({
   clientContent: {
     turns: turns.map((t) => ({ role: t.role, parts: [{ text: t.text }] })),
@@ -46,7 +46,7 @@ export const clientContentMessage = (turns: readonly ScriptedTurn[]): unknown =>
 export const ACTIVITY_START = { realtimeInput: { activityStart: {} } };
 export const ACTIVITY_END = { realtimeInput: { activityEnd: {} } };
 
-/** El PCM se codifica en el momento de la llamada: el adaptador no guarda la referencia al audio (contrato, regla 3). */
+/** The PCM is encoded at call time: the adapter does not keep the reference to the audio (contract, rule 3). */
 export const audioMessage = (pcm16: Int16Array): unknown => ({
   realtimeInput: {
     audio: {
@@ -56,14 +56,14 @@ export const audioMessage = (pcm16: Int16Array): unknown => ({
   },
 });
 
-/** "10s", "1.5s" → segundos; cualquier otra cosa → null (LT: parseDurationSeconds). */
+/** "10s", "1.5s" → seconds; anything else → null (LT: parseDurationSeconds). */
 export function parseDurationSeconds(d: unknown): number | null {
   if (typeof d !== "string") return null;
   const m = /^(\d+(?:\.\d+)?)s$/.exec(d.trim());
   return m?.[1] ? Number(m[1]) : null;
 }
 
-/** base64 de PCM16 little-endian → Int16Array propia (copia). */
+/** base64 of little-endian PCM16 → its own Int16Array (a copy). */
 export function decodePcm16(b64: string): Int16Array {
   const buf = Buffer.from(b64, "base64");
   const even = buf.byteLength - (buf.byteLength % 2);
@@ -72,7 +72,7 @@ export function decodePcm16(b64: string): Int16Array {
   return out;
 }
 
-/** "audio/pcm;rate=24000" → 24000; sin tasa o con otra, 24000 (la salida de Live). */
+/** "audio/pcm;rate=24000" → 24000; with no rate or another one, 24000 (Live's output). */
 export const outputSampleRate = (mime: string): 24000 | 16000 => (/rate=16000/.test(mime) ? 16000 : 24000);
 
 interface ModalityCount {
@@ -88,7 +88,7 @@ interface UsageMetadata {
   responseTokensDetails?: ModalityCount[];
 }
 
-/** usageMetadata → tokens por modalidad (LT: suma por modalidad, con los totales planos como respaldo). */
+/** usageMetadata → tokens per modality (LT: sum per modality, with the flat totals as fallback). */
 export function usageFromMetadata(raw: unknown): VoiceUsage {
   const u = (raw ?? {}) as UsageMetadata;
   const sum = (details: ModalityCount[] | undefined, modality: string): number =>

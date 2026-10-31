@@ -1,14 +1,14 @@
-// Panel de la conversación por medidores (A2, ADR-027; informe de investigación 2.5.D): barras animadas con etiqueta y fase,
-// "Lo que sabés de <nombre>" y la escalera de ayuda (pista de Lumi → frases sugeridas). SIN NÚMEROS: cada barra es un
-// ancho, y para lectores de pantalla una palabra ("un poco", "casi"). Anda igual en voz y en texto: en texto, tocar una
-// frase la pone en la caja; en voz, se lee en voz alta. El escalón de ayuda es el mayor entre el del servidor (turnos sin
-// progreso) y el del reloj de silencio del cliente (solo en tu turno esperando).
-// Plan estetica-c M4 (propuesta C §6 y §8): el medidor es una tarjeta de papel con título ("Conocer a <NPC>"), "N de M"
-// y un segmento por medidor con su etiqueta. Logrado: ámbar lleno con borde oscuro y etiqueta en negrita. Actual:
-// rayado ámbar (lo avanzado, ámbar lleno). Pendiente: vacío. El estado va además por atributo (`data-state`) y por
-// texto para lectores de pantalla, nunca solo por color (el ámbar sobre el papel da 1,85:1). "N de M" cuenta medidores
-// logrados, no es un puntaje: el resto de la tarjeta no muestra números. Sobre el mapa la tarjeta va arriba a la
-// izquierda (`floating`); en pantallas angostas baja y queda dentro del panel de diálogo.
+// Meter-based conversation panel (A2, ADR-027; the research report 2.5.D): animated bars with label and phase,
+// "What you know about <name>" and the help ladder (Lumi's hint → suggested phrases). NO NUMBERS: each bar is a
+// width, and for screen readers a word ("a little", "almost"). Works the same in voice and text: in text, tapping a
+// phrase puts it in the box; in voice, it is read aloud. The help step is the higher of the server's (turns without
+// progress) and the client's silence clock (only on your turn, waiting).
+// Plan estetica-c M4 (proposal C §6 and §8): the meter is a paper card with a title ("Get to know <NPC>"), "N of M"
+// and one segment per meter with its label. Achieved: full amber with dark border and bold label. Current:
+// amber hatching (what is advanced, full amber). Pending: empty. State also goes by attribute (`data-state`) and by
+// text for screen readers, never by color alone (amber on paper gives 1.85:1). "N of M" counts achieved meters,
+// it is not a score: the rest of the card shows no numbers. Over the map the card sits at the top left
+// (`floating`); on narrow screens it drops down and stays inside the dialogue panel.
 import { useEffect, useState } from "react";
 import { t, type MessageKey } from "../../i18n";
 import type { ConversationUi } from "../../state/selectors";
@@ -16,14 +16,14 @@ import { Button } from "../primitives";
 
 type MeterStatus = ConversationUi["meters"][number]["status"];
 
-/** Estado de cada segmento, por atributo y por texto (propuesta C §8): logrado, actual, pendiente. */
+/** State of each segment, by attribute and by text (proposal C §8): achieved, current, pending. */
 export const SEGMENT_STATE: Readonly<Record<MeterStatus, "logrado" | "actual" | "pendiente">> = {
   full: "logrado",
   active: "actual",
   locked: "pendiente",
 };
 
-/** Forma del segmento por estado: borde oscuro y lleno (logrado), rayado (actual), vacío (pendiente). */
+/** Segment shape by state: dark border and filled (achieved), hatched (current), empty (pending). */
 const SEGMENT_CLASS: Readonly<Record<MeterStatus, string>> = {
   full: "border-amber-strong bg-amber",
   active: "border-amber-strong bg-paper lg-stripes",
@@ -33,7 +33,7 @@ const SEGMENT_CLASS: Readonly<Record<MeterStatus, string>> = {
 const fillWord = (fill: number): MessageKey =>
   fill >= 1 ? "conv.fill.full" : fill >= 0.75 ? "conv.fill.most" : fill >= 0.4 ? "conv.fill.half" : fill > 0 ? "conv.fill.some" : "conv.fill.empty";
 
-/** Escalón de ayuda del reloj del cliente: sube a 1 y a 2 con el silencio; cualquier cambio de `resetKey` lo reinicia. */
+/** Help step from the client clock: goes up to 1 and 2 with silence; any change of `resetKey` resets it. */
 export function useIdleHelp(active: boolean, delays: readonly [number, number], resetKey: string): 0 | 1 | 2 {
   const [level, setLevel] = useState<{ key: string; level: 0 | 1 | 2 }>({ key: resetKey, level: 0 });
   useEffect(() => {
@@ -50,18 +50,18 @@ export function useIdleHelp(active: boolean, delays: readonly [number, number], 
 
 export interface ConversationPanelProps {
   conv: ConversationUi;
-  /** Tu turno esperando: el reloj de silencio corre solo acá. */
+  /** Your turn, waiting: the silence clock runs only here. */
   waiting: boolean;
   idleMs: readonly [number, number];
-  /** Cambia con cada línea nueva (reinicia el reloj de silencio). */
+  /** Changes with each new line (resets the silence clock). */
   resetKey: string;
-  /** Texto: tocar una frase la pone en la caja. Voz: null (la frase se lee en voz alta). */
+  /** Text: tapping a phrase puts it in the box. Voice: null (the phrase is read aloud). */
   onPhrase: ((phrase: string) => void) | null;
-  /** Sobre el mapa: la tarjeta del medidor flota arriba a la izquierda desde pantallas medianas (M4). */
+  /** Over the map: the meter card floats at the top left from medium screens up (M4). */
   floating?: boolean;
 }
 
-/** La tarjeta del medidor: título, "N de M", fase actual y un segmento por medidor. */
+/** The meter card: title, "N of M", current phase and one segment per meter. */
 function MeterCard({ conv, floating }: { conv: ConversationUi; floating: boolean }) {
   const active = conv.meters.find((m) => m.id === conv.activeMeter) ?? null;
   const done = conv.meters.filter((m) => m.status === "full").length;

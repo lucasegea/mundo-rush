@@ -1,19 +1,19 @@
-// El "intermedio": el artefacto que el analizador pasa de etapa en etapa hasta EMIT.
+// The "intermediate": the artifact the analyzer passes from stage to stage until EMIT.
 //
-// En book-mode slice-1 el intermedio es la INTERPRETACIÓN del libro hecha a mano (la lectura literaria de
-// la investigación, docs/research/book-mode/galeano-universe-interpretation.md), ya organizada por campo del contrato
-// del engine. Las etapas de arriba (INGEST/EXTRACT/DESIGN/LANG-FIT) son stubs honestos que lo leen y lo pasan
-// tal cual; EMIT es la única etapa real y la única atada a @lg/content-schema (valida y escribe).
+// In book-mode slice-1 the intermediate is the hand-made INTERPRETATION of the book (the literary reading by
+// the research, docs/research/book-mode/galeano-universe-interpretation.md), already organized by engine contract
+// field. The upstream stages (INGEST/EXTRACT/DESIGN/LANG-FIT) are honest stubs that read it and pass it along
+// as is; EMIT is the only real stage and the only one tied to @lg/content-schema (validates and writes).
 //
-// M3 SEAM: cuando las etapas de arriba se vuelvan reales, INGEST leerá el libro crudo y EXTRACT→LANG-FIT
-// GENERARÁN este intermedio en vez de recibirlo hecho a mano. La forma del intermedio (las claves de abajo)
-// es el límite entre "lo generado" y "lo que EMIT sabe escribir", y no cambia cuando eso pase.
+// M3 SEAM: once the upstream stages become real, INGEST will read the raw book and EXTRACT→LANG-FIT will
+// GENERATE this intermediate instead of receiving it hand-made. The shape of the intermediate (the keys below)
+// is the boundary between "what is generated" and "what EMIT knows how to write", and it does not change when that happens.
 import { parse } from "yaml";
 
 /**
- * Claves de alto nivel del intermedio, una por campo del contrato (reconciliación slice-1 §"Contrato único").
- * Los valores van como `unknown`: EMIT es quien los valida contra el esquema del engine (T2.3), no las etapas
- * de arriba (que son tontas a propósito). `mundo` agrupa regiones+lugares (un solo archivo canónico places.yaml).
+ * Top-level keys of the intermediate, one per contract field (slice-1 reconciliation §"Contrato único").
+ * Values are `unknown`: EMIT is the one that validates them against the engine schema (T2.3), not the upstream
+ * stages (which are dumb on purpose). `mundo` groups regions+places (a single canonical file, places.yaml).
  */
 export interface Intermedio {
   manifiesto?: unknown;
@@ -25,7 +25,7 @@ export interface Intermedio {
   conversaciones?: unknown[];
   saberes?: unknown[];
   glossary?: unknown;
-  /** Textos planos del servidor (nombre sin extensión → texto), p. ej. `npc-base`: EMIT los escribe a prompts/<nombre>.txt. */
+  /** Plain server texts (name without extension → text), e.g. `npc-base`: EMIT writes them to prompts/<name>.txt. */
   prompts?: unknown;
 }
 
@@ -33,13 +33,13 @@ export const CLAVES_INTERMEDIO = [
   "manifiesto", "mundo", "dioramas", "npcs", "red", "missions", "conversaciones", "saberes", "glossary", "prompts",
 ] as const;
 
-/** Error de forma del intermedio (antes de validar contra los esquemas del engine, que es trabajo de EMIT). */
+/** Shape error of the intermediate (before validating against the engine schemas, which is EMIT's job). */
 export class ErrorIntermedio extends Error {}
 
 /**
- * Parsea el texto del intermedio (YAML o JSON — `parse` de la lib yaml acepta JSON, que es YAML válido) y
- * chequea solo la FORMA: un objeto en la raíz y ninguna clave desconocida (un typo de clave se tragaría un
- * campo entero sin avisar). No valida los valores: eso lo hace EMIT contra @lg/content-schema.
+ * Parses the text of the intermediate (YAML or JSON — the yaml lib's `parse` accepts JSON, which is valid YAML) and
+ * checks only the SHAPE: an object at the root and no unknown key (a key typo would swallow a whole
+ * field silently). It does not validate the values: EMIT does that against @lg/content-schema.
  */
 export const parsearIntermedio = (texto: string): Intermedio => {
   let raw: unknown;

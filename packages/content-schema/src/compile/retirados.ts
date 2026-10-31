@@ -1,5 +1,5 @@
-// Búsqueda de lo retirado de la v0.1 en todo content/ (02 §0.5.1, regla del test; 04 F1.2 A3).
-// Ids y nombres: límite de palabra, respetando mayúsculas. Términos: límite de palabra, sin mayúsculas.
+// Search for what was retired from v0.1 across content/ (02 §0.5.1, the test rule; 04 F1.2 A3).
+// Ids and names: word boundary, respecting case. Terms: word boundary, case-insensitive.
 import { isPair, isScalar, isSeq, parseDocument, visit } from "yaml";
 import type { FilaRetirada } from "../schemas/control.ts";
 import { regexTermino } from "./lints.ts";
@@ -7,7 +7,7 @@ import type { ArchivoFuente, Hallazgo } from "./tipos.ts";
 
 export const RUTA_RETIRADOS = "content/retired-ids.yaml";
 
-/** Clave YAML del escalar que contiene `offset` (`escenas[0].cierre_guionado[1].en`), o la línea si no es YAML. */
+/** YAML key of the scalar that contains `offset` (`escenas[0].cierre_guionado[1].en`), or the line if it is not YAML. */
 export const claveEnOffset = (ruta: string, texto: string, offset: number): string => {
   const linea = `línea ${texto.slice(0, offset).split("\n").length}`;
   if (!ruta.endsWith(".yaml")) return linea;
@@ -31,7 +31,7 @@ export const claveEnOffset = (ruta: string, texto: string, offset: number): stri
   return encontrada ?? linea;
 };
 
-/** Hallazgos de filas `testea: si` en los archivos de content/ (salvo el propio retired-ids.yaml). */
+/** Findings from `testea: si` rows in the content/ files (except retired-ids.yaml itself). */
 export const buscarRetirados = (filas: readonly FilaRetirada[], archivos: readonly ArchivoFuente[]): Hallazgo[] => {
   const h: Hallazgo[] = [];
   const patrones = filas

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { createRng, createRngFromState, seedToState } from "../src/index";
 
-// Valores dorados de mulberry32: fijan el algoritmo (si cambian, los replays guardados se rompen).
+// Golden values of mulberry32: they pin the algorithm (if they change, saved replays break).
 const GOLDEN_SEED_1 = [627074, 2735, 527447];
 const GOLDEN_KESTREL_STATE = 1679345713;
 
@@ -17,7 +17,7 @@ describe("Rng con semilla", () => {
   });
 
   test("valores fijados: la secuencia no cambia entre versiones ni máquinas", () => {
-    // Si este test falla, cambió el algoritmo: todo replay guardado deja de reproducirse.
+    // If this test fails, the algorithm changed: every saved replay stops reproducing.
     const rng = createRng(1);
     expect([rng.int(0, 1_000_000), rng.int(0, 1_000_000), rng.int(0, 1_000_000)]).toEqual(GOLDEN_SEED_1);
     expect(seedToState("kestrel")).toBe(GOLDEN_KESTREL_STATE);

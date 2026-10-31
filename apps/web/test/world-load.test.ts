@@ -1,9 +1,9 @@
-// Open-world-3d T10-code (T10 (d), D-835): la carga del mundo en lo puro. compileAsync antes del primer cuadro (nunca
-// rechaza: un fallo o el tope dejan dibujar), el primer cuadro marca `lg:world-first-frame` solo después de
-// `lg:world-enter` y registra `programs.length` una vez, y la precarga del menú quieto (chunk 3D y .glb de los árboles)
-// corre una sola vez, solo con requestIdleCallback y solo con el menú arriba y el mapa disponible.
-// T10-integrate: lo que llega tarde se precompila con `precompile` (destino del tier, nunca rechaza) y la precarga sale
-// de una sola lista (WORLD_PRELOAD: chunk 3D, post, naturaleza, mapa, decodificadores).
+// Open-world-3d T10-code (T10 (d), D-835): world loading in pure form. compileAsync before the first frame (never
+// rejects: a failure or the cap lets drawing proceed), the first frame marks `lg:world-first-frame` only after
+// `lg:world-enter` and records `programs.length` once, and the idle-menu preload (3D chunk and the trees' .glb)
+// runs only once, only with requestIdleCallback and only with the menu up and the map available.
+// T10-integrate: what arrives late is precompiled with `precompile` (the tier's target, never rejects) and the preload comes
+// from a single list (WORLD_PRELOAD: 3D chunk, post, nature, map, decoders).
 import { DEFAULT_LOOK, natureModelFiles, publicUrl, rockFile, treeFile } from "@lg/art";
 import { LOAD_MARKS, markWorldEnter, markWorldFirstFrame } from "@lg/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -18,7 +18,7 @@ import characterSource from "../src/world/actors/Character.tsx?raw";
 import natureSource from "../src/world/nature/buildNature.ts?raw";
 import postSource from "../src/world/post/Post.tsx?raw";
 
-/** Una Performance de prueba: guarda las marcas en orden. */
+/** A test Performance: keeps the marks in order. */
 const fakePerf = () => {
   const marks: { name: string; detail?: unknown }[] = [];
   return {
@@ -28,7 +28,7 @@ const fakePerf = () => {
   };
 };
 
-/** Timers manuales: `fire()` dispara el tope. */
+/** Manual timers: `fire()` triggers the cap. */
 const manualTimers = () => {
   let cb: (() => void) | null = null;
   const t: WarmupTimers & { fire(): void; cleared: number } = {
@@ -73,7 +73,7 @@ describe("orden de las marcas (lg:world-enter antes de lg:world-first-frame)", (
   test("sin entrada por el menú no hay marca de primer cuadro; con entrada, una sola y con los programas", () => {
     const perf = fakePerf();
     const log = vi.fn();
-    // La marca real del puente (bridge.worldFirstFrame) es markWorldFirstFrame de @lg/core sobre `performance`.
+    // The bridge's real mark (bridge.worldFirstFrame) is @lg/core's markWorldFirstFrame over `performance`.
     const mark = (programs: number): boolean => markWorldFirstFrame(perf, { programs });
     expect(reportFirstFrame(mark, 9, log)).toBe(false);
     expect(perf.marks).toEqual([]);
@@ -179,9 +179,9 @@ describe("precarga con el menú quieto", () => {
   });
 });
 
-// ---------- T10-integrate: lo que llega tarde se precompila al llegar; la precarga sale de una sola lista ----------
+// ---------- T10-integrate: what arrives late is precompiled on arrival; the preload comes from a single list ----------
 
-/** Un renderer de prueba: guarda el destino puesto en cada compilación y el orden de los cambios. */
+/** A test renderer: keeps the target set on each compilation and the order of the changes. */
 const fakeRenderer = (result: () => Promise<unknown> = () => Promise.resolve()) => {
   const log: string[] = [];
   let target: string | null = null;
@@ -233,7 +233,7 @@ describe("precompile (lo que llega después de la primera escena)", () => {
     const blur = pass("desenfoque");
     const composer = {
       passes: [
-        { scene: "mundo", camera: "cam", fullscreenMaterial: null }, // RenderPass: sin material propio
+        { scene: "mundo", camera: "cam", fullscreenMaterial: null }, // RenderPass: no material of its own
         pass("efectos", { renderToScreen: true, effects: [{ luminancePass: luminance, blurPass: blur, intensity: 1 }, { again: luminance }, null] }),
         pass("copia"),
       ],
@@ -248,14 +248,14 @@ describe("precompile (lo que llega después de la primera escena)", () => {
   });
 
   test("los que llegan tarde la usan: cuerpos antes de cambiarse, naturaleza antes de mostrarse, pasadas del post", () => {
-    // Character: el cuerpo con esqueleto se muestra recién cuando su compilación terminó.
+    // Character: the skinned body is shown only once its compilation has finished.
     expect(characterSource).toMatch(/await precompile\(built\.root\);\s*if \(alive\) setSkinned\(built\);\s*else disposeSkinnedCharacter\(built\);/);
-    // buildNature: precompila el grupo antes de `loaded = true` (el recorrido lo muestra recién ahí).
+    // buildNature: precompiles the group before `loaded = true` (the walk shows it only then).
     expect(natureSource).toMatch(/if \(precompile\) await precompile\(group\);\s*if \(!alive\) return;\s*loaded = true;/);
-    // Post: por prop, sin importar módulos del canvas (el chunk del post queda aparte).
+    // Post: by prop, without importing canvas modules (the post chunk stays separate).
     expect(postSource).not.toMatch(/from "\.\.\/budget\//);
     expect(gameCanvasSource).toContain("precompile={precompilePasses}");
-    // El destino de la precompilación sigue al tier (render target con post).
+    // The precompilation target follows the tier (render target with post).
     expect(gameCanvasSource).toContain('worldFrame.post = post !== "none";');
   });
 });
@@ -289,7 +289,7 @@ describe("precarga: una sola lista de objetivos", () => {
   });
 
   test("los decodificadores existen en public/decoders (un renombre no deja una precarga muerta)", () => {
-    // Solo las rutas (glob sin cargar): lo que hay en public/decoders/.
+    // Only the paths (glob without loading): what is in public/decoders/.
     const onDisk = Object.keys(import.meta.glob("../public/decoders/*", { query: "?url" })).map((k) => k.split("/").pop());
     for (const f of DECODER_FILES) expect(onDisk, f).toContain(f);
   });

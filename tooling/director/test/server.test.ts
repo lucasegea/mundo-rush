@@ -1,5 +1,5 @@
-// F4.1 A8 (pendiente de FD0): `npm run dev:director` levanta apps/server con LG_DEV_CONTENT_WATCH=1. Sin levantar
-// nada real: el arranque se prueba con un spawn falso y la config del director se carga con loadConfigFromFile.
+// F4.1 A8 (pending from FD0): `npm run dev:director` starts apps/server with LG_DEV_CONTENT_WATCH=1. Without starting
+// anything real: startup is tested with a fake spawn and the director config is loaded with loadConfigFromFile.
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

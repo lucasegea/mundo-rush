@@ -1,4 +1,4 @@
-// F2: diorama listo para jugar, acciones semánticas (R10), pasos de zoom (D-197) y presets de cámara (R11).
+// F2: diorama ready to play, semantic actions (R10), zoom steps (D-197) and camera presets (R11).
 import { describe, expect, test } from "vitest";
 import {
   CAMERA_PRESET_IDS, DEFAULT_ZOOM_STEP, dirFromHeld, downgradeTier, isWalkable, pointerAction,
@@ -21,11 +21,11 @@ describe("diorama", () => {
   test("cajas, NPCs, interactuables y grilla", () => {
     const d = prepareDiorama(layout);
     expect(d.spawn).toEqual({ x: -3, z: 0 });
-    expect(d.boxes).toEqual([{ asset: "codigo/caja", x: 2, y: 0, z: 0, w: 1, h: 1, d: 1, rotY: null, tint: null }]); // sin `tam` no hay caja
+    expect(d.boxes).toEqual([{ asset: "codigo/caja", x: 2, y: 0, z: 0, w: 1, h: 1, d: 1, rotY: null, tint: null }]); // without `tam` there is no box
     expect(d.interactables.map((i) => [i.id, i.kind, i.radius])).toEqual([["NPC-NELL", "npc", 1.5], ["OBJ-CARTEL", "object", 1]]);
     const g = d.grid;
     expect([g.cols, g.rows]).toEqual([16, 8]);
-    // La caja (1,5..2,5 × -0,5..0,5) bloquea; el polígono también; el NPC ocupa su medio metro.
+    // The box (1.5..2.5 × -0.5..0.5) blocks; so does the polygon; the NPC takes up its half meter.
     expect(isWalkable(g, 11, 4)).toBe(false);
     expect(isWalkable(g, 0, 7)).toBe(false);
     expect(isWalkable(g, 6, 4)).toBe(false);
@@ -39,7 +39,7 @@ describe("diorama", () => {
 
 describe("acciones semánticas (R10)", () => {
   test("la lista del contrato (R10 + zoom de D-197)", () => {
-    // Cambio registrado (open-world-3d T4, D-820): la lista gana `look`, `run` y `toggleOverview` al final.
+    // Recorded change (open-world-3d T4, D-820): the list gains `look`, `run` and `toggleOverview` at the end.
     expect([...SEMANTIC_ACTIONS]).toEqual(["move", "moveTo", "interact", "talk", "cancel", "openNotebook", "zoomIn", "zoomOut", "look", "run", "toggleOverview"]);
   });
   test("puntero: suelo → moveTo, interactuable → interact; otros botones no hacen nada", () => {
@@ -56,7 +56,7 @@ describe("acciones semánticas (R10)", () => {
   test("rueda acumulada (D-208): una muesca de mouse es un paso; un trackpad necesita sumar una muesca", () => {
     expect(wheelZoom(0, 100)).toEqual({ acc: 0, action: { type: "zoomOut" } });
     expect(wheelZoom(0, -120)).toEqual({ acc: 0, action: { type: "zoomIn" } });
-    // Trackpad: eventos chicos se suman hasta WHEEL_NOTCH_PX y dan UN paso.
+    // Trackpad: small events add up to WHEEL_NOTCH_PX and give ONE step.
     let acc = 0;
     const actions: string[] = [];
     for (let i = 0; i < 24; i++) {
@@ -65,9 +65,9 @@ describe("acciones semánticas (R10)", () => {
       if (r.action) actions.push(r.action.type);
     }
     expect(actions).toEqual(Array(Math.floor((24 * 4) / WHEEL_NOTCH_PX)).fill("zoomOut"));
-    // Cambio de sentido: lo acumulado se descarta.
+    // Direction change: what was accumulated is discarded.
     expect(wheelZoom(40, -10)).toEqual({ acc: -10, action: null });
-    // En líneas (Firefox) cada evento es una muesca.
+    // In lines (Firefox) each event is a notch.
     expect(wheelZoom(0, 3, 1)).toEqual({ acc: 0, action: { type: "zoomOut" } });
     expect(wheelZoom(7, 0)).toEqual({ acc: 7, action: null });
     expect(wheelZoom(7, Number.NaN)).toEqual({ acc: 7, action: null });
@@ -87,7 +87,7 @@ describe("cámara: presets (R11) y zoom (D-197, D-208)", () => {
     expect([...CAMERA_PRESET_IDS]).toEqual(["thirdPerson", "dialogueFrame", "perspective3D", "xrTabletop"]);
     expect(presetAngles("perspective3D")).toEqual({ pitchDeg: 50, yawDeg: 45 });
     expect(presetAngles("dialogueFrame")).toEqual({ pitchDeg: 20, yawDeg: 45 });
-    // Declarado sin implementar: hasta E-XR da los del lente largo (M7 SEAM en camera.ts).
+    // Declared without implementing: until E-XR it gives the long-lens ones (M7 SEAM in camera.ts).
     expect(presetAngles("xrTabletop")).toEqual(presetAngles("perspective3D"));
   });
   test("escalera de D-208: de 160 a 22 m, el inicio en 30 m, la cantidad sale del arreglo", () => {
@@ -96,7 +96,7 @@ describe("cámara: presets (R11) y zoom (D-197, D-208)", () => {
     expect(zoomDistance(DEFAULT_ZOOM_STEP)).toBe(30);
     expect(zoomDistance(ZOOM_STEPS - 1)).toBe(22);
     expect(zoomDistance(0)).toBeGreaterThanOrEqual(150);
-    // Del más lejos al más cerca, siempre baja, y cada paso es parecido (entre 1,2x y 1,45x el siguiente).
+    // From farthest to nearest, it always goes down, and each step is similar (between 1.2x and 1.45x the next).
     for (let i = 1; i < ZOOM_STEPS; i++) {
       const ratio = zoomDistance(i - 1) / zoomDistance(i);
       expect(ratio).toBeGreaterThan(1.2);

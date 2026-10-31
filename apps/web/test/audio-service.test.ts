@@ -1,6 +1,6 @@
-// F5.2: el servicio de audio con el store real, un motor falso y un transporte falso (sin Web Audio, sin red).
-// Turnos lentos: el turno lo abre y lo cierra el jugador; después de "Terminé" se manda una cola corta y recién ahí
-// voice.turnEnd; la voz del NPC suena y bloquea el turno hasta terminar; sin micrófono, texto con el motivo.
+// F5.2: the audio service with the real store, a fake engine and a fake transport (no Web Audio, no network).
+// Slow turns: the player opens and closes the turn; after "Terminé" a short tail is sent and only then
+// voice.turnEnd; the NPC's voice plays and blocks the turn until it finishes; without a microphone, text with the reason.
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import type { ServerMessage } from "@lg/protocol";
 import { NPC_SAMPLE_RATE, PLAYBACK_STUCK_GRACE_MS, startAudioService, TALK_TAIL_MS, TURN_ACK_TIMEOUT_MS, type AudioService, type Schedule, type VoiceTransport } from "../src/services/audio";
@@ -9,7 +9,7 @@ import { gameStore } from "../src/state/store";
 import { fakeEngineFactory } from "./fake-audio";
 import { resetStore } from "./helpers";
 
-/** Temporizadores manuales. */
+/** Manual timers. */
 function manualTimers(): { schedule: Schedule; advance(ms: number): void; now: () => number } {
   let t = 0;
   let tasks: { at: number; fn: () => void }[] = [];
@@ -51,7 +51,7 @@ let service: AudioService | null = null;
 beforeEach(() => resetStore());
 afterEach(() => { service?.stop(); service = null; });
 
-/** Escena de voz abierta con Inés, en playerTurn.waiting, con el micrófono listo. */
+/** Open voice scene with Inés, in playerTurn.waiting, with the microphone ready. */
 async function setup(result?: Parameters<typeof fakeEngineFactory>[0]) {
   const timers = manualTimers();
   const engines = fakeEngineFactory(result);
@@ -111,23 +111,23 @@ describe("preparar el micrófono", () => {
 describe("un turno hablado", () => {
   test("Hablar → los bloques van al servidor; Terminé → cola corta → voice.turnEnd; después pensando", async () => {
     const s = await setup();
-    s.engines.last?.speak(); // antes de hablar: solo medidor, nada se manda
+    s.engines.last?.speak(); // before speaking: meter only, nothing is sent
     expect(s.transport.sent).toHaveLength(0);
     actions.voiceTalkStart();
     expect(s.outbox()).toEqual(["voice.turnStart"]);
     expect(s.voice()).toMatchObject({ audio: "listening", talk: "talking" });
-    expect(s.engines.last?.resumed).toBe(1); // AudioContext reanudado dentro del gesto
+    expect(s.engines.last?.resumed).toBe(1); // AudioContext resumed inside the gesture
     for (let i = 0; i < 5; i++) s.engines.last?.speak();
     expect(s.transport.sent).toHaveLength(5);
     actions.voiceTalkEnd();
     expect(s.voice().talk).toBe("ending");
-    s.engines.last?.speak(); // la cola: todavía se manda
+    s.engines.last?.speak(); // the tail: still sent
     expect(s.transport.sent).toHaveLength(6);
     expect(s.outbox()).toEqual(["voice.turnStart"]);
     s.timers.advance(TALK_TAIL_MS);
     expect(s.outbox()).toEqual(["voice.turnStart", "voice.turnEnd"]);
     expect(s.voice()).toMatchObject({ audio: "thinking", talk: "idle", turnHint: null });
-    s.engines.last?.speak(); // turno cerrado: nada más se manda
+    s.engines.last?.speak(); // turn closed: nothing else is sent
     expect(s.transport.sent).toHaveLength(6);
   });
 
@@ -157,9 +157,9 @@ describe("un turno hablado", () => {
     s.transport.npc(Int16Array.from([1, 2, 3]));
     expect(s.engines.last?.played).toHaveLength(1);
     expect(s.voice().audio).toBe("playing");
-    actions.sceneMessage(voiceState("playerTurn", "waiting", 1)); // el servidor ya devolvió el turno; el audio sigue sonando
+    actions.sceneMessage(voiceState("playerTurn", "waiting", 1)); // the server already returned the turn; the audio keeps playing
     actions.voiceTalkStart();
-    expect(s.outbox()).toEqual(["voice.turnStart", "voice.turnEnd"]); // no se abrió otro turno
+    expect(s.outbox()).toEqual(["voice.turnStart", "voice.turnEnd"]); // no other turn was opened
     s.engines.last?.drain();
     expect(s.voice().audio).toBe("ready");
     actions.voiceTalkStart();
@@ -172,9 +172,9 @@ describe("un turno hablado", () => {
     actions.voiceTalkEnd();
     s.timers.advance(TALK_TAIL_MS);
     actions.sceneMessage(voiceState("npcTurn", null, 1));
-    s.transport.npc(new Int16Array(NPC_SAMPLE_RATE)); // 1 s de voz
+    s.transport.npc(new Int16Array(NPC_SAMPLE_RATE)); // 1 s of voice
     s.timers.advance(500);
-    s.transport.npc(new Int16Array(NPC_SAMPLE_RATE)); // otro segundo: el vigía se reprograma (2 s + margen)
+    s.transport.npc(new Int16Array(NPC_SAMPLE_RATE)); // another second: the watchdog is rescheduled (2 s + margin)
     actions.sceneMessage(voiceState("playerTurn", "waiting", 1));
     s.timers.advance(2000 + PLAYBACK_STUCK_GRACE_MS - 1);
     expect(s.voice().audio).toBe("playing");
@@ -229,7 +229,7 @@ describe("un turno hablado", () => {
 
 test("un turno abierto sin captura (estado desfasado) igual manda el fin al cerrarse: el servidor nunca queda colgado", async () => {
   const s = await setup();
-  service?.release(); // el servicio ya no captura, pero el store dice que hay un turno abierto
+  service?.release(); // the service no longer captures, but the store says a turn is open
   const d = gameStore.getState().dialogue;
   gameStore.setState({ dialogue: { ...d, voice: { ...d.voice, talk: "talking" } } });
   actions.voiceTalkEnd();
@@ -241,13 +241,13 @@ describe("medidor y micrófono", () => {
   test("el nivel se publica cada 100 ms (pico del intervalo, en pasos de 0,05)", async () => {
     const s = await setup();
     s.timers.advance(100);
-    s.engines.last?.speak(0.1); // -20 dBFS → 0,666… → 0,65
+    s.engines.last?.speak(0.1); // -20 dBFS → 0.666… → 0.65
     expect(s.voice().level).toBeCloseTo(0.65, 5);
-    s.engines.last?.speak(0.5); // dentro del intervalo: no publica todavía
+    s.engines.last?.speak(0.5); // within the interval: does not publish yet
     expect(s.voice().level).toBeCloseTo(0.65, 5);
     s.timers.advance(100);
     s.engines.last?.speak(0);
-    expect(s.voice().level).toBeCloseTo(0.9, 5); // el pico (0,5 → -6 dBFS) del intervalo
+    expect(s.voice().level).toBeCloseTo(0.9, 5); // the peak (0.5 → -6 dBFS) of the interval
   });
 
   test("el servidor pasa la escena a texto (sin clave): se suelta el micrófono", async () => {

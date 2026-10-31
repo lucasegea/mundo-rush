@@ -1,9 +1,9 @@
-# Plantillas de Lumi (02 §2.7): catálogo genérico (§2.7.2) y del prólogo + M1.1-M1.2 (§2.7.3), tal cual.
-# Lumi solo dice estas líneas (ADR-008). ***…*** = inglés modelado (voz L2); {slot} = hueco; todas en draft (D-067).
-# Modos "todos" = accompanied, flagOnly, moreHelp. Bandas "A0-B1" = A0, A1, A2, B1.
+# Lumi templates (02 §2.7): generic catalog (§2.7.2) and the prologue + M1.1-M1.2 (§2.7.3), verbatim.
+# Lumi only says these lines (ADR-008). ***…*** = modeled English (L2 voice); {slot} = gap; all in draft (D-067).
+# Modes "todos" = accompanied, flagOnly, moreHelp. Bands "A0-B1" = A0, A1, A2, B1.
 idioma_l1: es-AR
 plantillas:
-  # ---------- Catálogo genérico (02 §2.7.2) ----------
+  # ---------- Generic catalog (02 §2.7.2) ----------
   - id: LUMI-SEN-2-01
     funcion: senal
     escalon: 2
@@ -433,7 +433,7 @@ plantillas:
     saber: null
     nota: null
     estado: draft
-  # ---------- Prólogo y M1.1-M1.2 (02 §2.7.3): modos todos, bandas A0-A1 ----------
+  # ---------- Prologue and M1.1-M1.2 (02 §2.7.3): all modes, bands A0-A1 ----------
   - id: LUMI-ONB-01
     funcion: onboarding
     escalon: null
@@ -1006,7 +1006,7 @@ plantillas:
     saber: null
     nota: null
     estado: draft
-  # A2 (ADR-027): M9.1, la conversación libre con Harlan por medidores. Prototipo fuera de la numeración de 02.
+  # A2 (ADR-027): M9.1, the free conversation with Harlan through meters. Prototype outside the numbering of 02.
   - id: LUMI-M9.1-PRE
     funcion: pre_tarea
     escalon: null

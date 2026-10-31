@@ -1,9 +1,9 @@
-// world/water/waterMaterial.ts — el agua con shader propio (propuesta C §7, plan estetica-c M1 ítem 9): bandas de
-// `agua` y `agua-honda` y brillos que corren, con la niebla y el tono incluidos (el shader no usa los de three). Una sola
-// instancia por look (clase `agua` del registro). Con "reducir movimiento" el tiempo no avanza y los brillos quedan quietos.
-// Open-world-3d T7b (D-839, D-842): los colores (bandas, brillo, bruma propia) son tokens del look en su paleta, y la
-// niebla de partida es la del look en t = 0 (Lighting la mueve cada cuadro, antes del primer dibujo). Looks distintos
-// dan materiales distintos del MISMO sombreador: difieren solo en uniforms.
+// world/water/waterMaterial.ts — water with its own shader (proposal C §7, plan estetica-c M1 item 9): bands of
+// `agua` and `agua-honda` and moving highlights, with fog and tone included (the shader does not use three ones). A single
+// instance per look (class `agua` of the registry). With "reduce motion" time does not advance and the highlights stay still.
+// Open-world-3d T7b (D-839, D-842): the colors (bands, highlight, own haze) are look tokens in its palette, and the
+// starting fog is the look one at t = 0 (Lighting moves it each frame, before the first draw). Different looks
+// give different materials of the SAME shader: they differ only in uniforms.
 import { Color, ShaderMaterial } from "three";
 import type { LookId, WorldLook } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
@@ -50,7 +50,7 @@ void main() {
 
 const waters = new Map<LookId, ShaderMaterial>();
 
-/** El agua de un look (una instancia por look, creada la primera vez que se pide). */
+/** The water of a look (one instance per look, created the first time it is requested). */
 export function waterMaterial(look: WorldLook): ShaderMaterial {
   let water = waters.get(look.id);
   if (!water) {
@@ -77,14 +77,14 @@ export function waterMaterial(look: WorldLook): ShaderMaterial {
   return water;
 }
 
-/** Avanza el tiempo del agua; con "reducir movimiento" no se mueve. */
+/** Advances the water time; with "reduce motion" it does not move. */
 export function tickWater(m: ShaderMaterial, dtSec: number, reduceMotion: boolean): void {
   if (reduceMotion) return;
   const u = m.uniforms["uTime"];
   if (u) u.value = (u.value as number) + dtSec;
 }
 
-/** La niebla propia del agua sigue a la de la escena (D-208: escala con la distancia de la cámara). */
+/** The water own fog follows the scene one (D-208: scales with the camera distance). */
 export function setWaterFog(m: ShaderMaterial, near: number, far: number): void {
   const n = m.uniforms["uFogNear"];
   const f = m.uniforms["uFogFar"];

@@ -1,6 +1,6 @@
-// Ajustes (GDD §2.19): tamaño de texto, alto contraste, reducir movimiento, subtítulos, velocidad de los
-// vecinos, modo de feedback (placeholder hasta F6) y calidad gráfica (R12). Cada cambio va al store por una
-// acción y se anuncia por aria-live. Escape o "Volver" cierran y devuelven el foco.
+// Settings (GDD §2.19): text size, high contrast, reduce motion, subtitles, neighbor speed,
+// feedback mode (placeholder until F6) and graphics quality (R12). Each change goes to the store through an
+// action and is announced via aria-live. Escape or "Back" close and return focus.
 import type { KeyboardEvent } from "react";
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";

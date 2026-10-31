@@ -1,4 +1,4 @@
-// open-world-3d T2(b) (AC6): react y react-dom fijos con ~19.3.0 y una guarda sobre lo instalado.
+// open-world-3d T2(b) (AC6): react and react-dom pinned at ~19.3.0 and a guard over what is installed.
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

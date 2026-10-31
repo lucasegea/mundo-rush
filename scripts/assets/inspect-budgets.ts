@@ -1,24 +1,24 @@
-// scripts/assets/inspect-budgets.ts: triángulos, tamaño y materiales por pieza y por diorama (plan estetica-c M2,
-// 03 §6.4.1 y §2.7.3). Lo corre check:budgets: el primer diorama (muelle) entra en `assets_muelle_mb` y muelle + plaza
-// en `assets_muelle_plaza_mb` (scripts/budgets/budgets.json, copia de la tabla de 03 §2.7.3; ningún umbral cambia acá).
-// Los demás dioramas se informan sin tope, porque la tabla no les da uno; el de prueba (`test`) además se mide contra
-// `assets_muelle_mb` y falla si se pasa (plan estetica-c M4, nota de QA M3). Además, toda pieza servida en
-// apps/web/public/models tiene que haber salido del pipeline: sin texturas y con color por vértice. Desde M3 la descarga de
-// cada diorama suma los archivos de personaje (los cuerpos base y el de clips, filas con bloque `personaje` del
-// registro): todo diorama muestra al jugador y a sus vecinos, así que se cuentan enteros (cota de arriba). Desde M5 el
-// estimador de presupuesto de validate:content usa los `triangulos` y `primitivas` de cada fila del registro (el
-// compilador no lee .glb): acá se comparan con la pieza medida y una fila sin medida o con otra medida falla. Desde M6
-// los cuerpos reducidos de `low` (`-bajo`) también son filas `personaje`: entran en la cota de arriba de cada diorama.
-// Cambio registrado (open-world-3d T6, D-832, AC42): `assets_muelle_mb` (6 MB, sin cambio) cuenta TODO lo que baja el
-// muelle del mundo abierto en `high`, no solo los `modelo/*` y los personajes: el muelle es el de U-GALEANO (un diorama
-// con `terreno.relieve`), y su carga suma los .ktx2 del inventario de @lg/art que `high` crea y el transcodificador Basis
-// (js y wasm). T7 SEAM: los árboles horneados (.glb de models/generated/trees) entran acá. Cada archivo de esa carga
-// tiene que tener fila en content/assets-registry.yaml o content/code-registry.yaml; uno sin fila falla nombrándolo.
-// Open-world-3d T7b (D-841): la carga del mundo abierto es la de un look (`cargaMundoAbierto(look)`: sus mapas y su
-// vegetación) y run() recorre TODO el catálogo WORLD_LOOKS: cada look tiene que entrar solo en `assets_muelle_mb` y tener
-// cada archivo registrado (un look nuevo no entra al juego si se pasa).
+// scripts/assets/inspect-budgets.ts: triangles, size and materials per piece and per diorama (plan estetica-c M2,
+// 03 §6.4.1 and §2.7.3). Run by check:budgets: the first diorama (dock) goes into `assets_muelle_mb` and dock + plaza
+// into `assets_muelle_plaza_mb` (scripts/budgets/budgets.json, a copy of the 03 §2.7.3 table; no threshold changes here).
+// The other dioramas are reported without a cap, because the table gives them none; the test one (`test`) is also measured against
+// `assets_muelle_mb` and fails if it goes over (plan estetica-c M4, QA M3 note). Also, every piece served in
+// apps/web/public/models must have come out of the pipeline: no textures and with vertex color. Since M3 each diorama's
+// download adds the character files (the base bodies and the clips one, rows with a `personaje` block in the
+// registry): every diorama shows the player and their neighbors, so they are counted whole (upper bound). Since M5 the
+// budget estimator of validate:content uses each registry row's `triangulos` and `primitivas` (the
+// compiler does not read .glb): here they are compared with the measured piece and a row with no measurement or a different one fails. Since M6
+// the reduced `low` bodies (`-bajo`) are also `personaje` rows: they enter each diorama's upper bound.
+// Recorded change (open-world-3d T6, D-832, AC42): `assets_muelle_mb` (6 MB, unchanged) counts EVERYTHING the open-world
+// dock downloads on `high`, not only the `modelo/*` and the characters: the dock is U-GALEANO's (a diorama
+// with `terreno.relieve`), and its load adds the .ktx2 files of the @lg/art inventory that `high` creates and the Basis transcoder
+// (js and wasm). T7 SEAM: the baked trees (.glb of models/generated/trees) enter here. Each file of that load
+// must have a row in content/assets-registry.yaml or content/code-registry.yaml; one without a row fails, naming it.
+// Open-world-3d T7b (D-841): the open-world load is that of a look (`cargaMundoAbierto(look)`: its maps and its
+// vegetation) and run() walks the WHOLE WORLD_LOOKS catalog: each look has to fit alone in `assets_muelle_mb` and have
+// each file registered (a new look does not enter the game if it goes over).
 //
-// Uso: node scripts/assets/inspect-budgets.ts   Sale con 1 si un presupuesto se pasa o una pieza no es del pipeline.
+// Usage: node scripts/assets/inspect-budgets.ts   Exits with 1 if a budget is exceeded or a piece is not from the pipeline.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -33,7 +33,7 @@ export const MODELOS = "apps/web/public/models";
 const MB = 1_000_000;
 
 export interface PiezaMedida {
-  /** Ruta desde la raíz del repo. */
+  /** Path from the repo root. */
   archivo: string;
   bytes: number;
   triangulos: number;
@@ -43,39 +43,39 @@ export interface PiezaMedida {
   conColor: boolean;
 }
 
-/** Un archivo de la carga de un diorama que no es un prop (texturas .ktx2, el transcodificador, T7: árboles y rocas). */
+/** A file in a diorama's load that is not a prop (.ktx2 textures, the transcoder, T7: trees and rocks). */
 export interface ArchivoCarga {
   archivo: string;
   bytes: number;
 }
 
-/** El transcodificador Basis que baja todo mundo abierto (KTX2Loader lo carga desde /decoders/). */
+/** The Basis transcoder that every open world downloads (KTX2Loader loads it from /decoders/). */
 export const DECODIFICADOR_BASIS = ["apps/web/public/decoders/basis_transcoder.js", "apps/web/public/decoders/basis_transcoder.wasm"] as const;
-/** El universo cuyo muelle es el mundo abierto (open-world-3d): su carga entra en `assets_muelle_mb`. */
+/** The universe whose dock is the open world (open-world-3d): its load enters `assets_muelle_mb`. */
 export const UNIVERSO_MUELLE = "U-GALEANO";
 
 /**
- * Lo que baja un diorama con relieve en `high` con un look, además de sus props: los .ktx2 de su inventario, el
- * transcodificador y (T7) sus árboles y rocas.
+ * What a diorama with relief downloads on `high` with a look, besides its props: the .ktx2 of its inventory, the
+ * transcoder and (T7) its trees and rocks.
  */
 export function cargaMundoAbierto(look: WorldLook): string[] {
   const ktx2 = worldTextures(look).flatMap((t) => (t.file && t.count.high > 0 ? [t.file] : []));
-  // T7: los árboles horneados y las rocas (el mundo los baja enteros: el tier cambia cuántos se dibujan, no cuáles).
+  // T7: the baked trees and the rocks (the world downloads them whole: the tier changes how many are drawn, not which).
   return [...new Set([...ktx2, ...natureModelFiles(look), ...DECODIFICADOR_BASIS])].sort();
 }
 
 export interface DioramaMedido {
   id: string;
-  /** Archivos .glb distintos que usa (se bajan una vez), personajes incluidos. */
+  /** Distinct .glb files it uses (downloaded once), characters included. */
   modelos: string[];
-  /** Open-world-3d T6: lo demás que baja (texturas .ktx2, transcodificador); vacío en un diorama sin relieve. */
+  /** Open-world-3d T6: the rest of what it downloads (.ktx2 textures, transcoder); empty in a diorama without relief. */
   extras: ArchivoCarga[];
   bytes: number;
-  /** Triángulos de los modelos por cada vez que aparecen. */
+  /** Triangles of the models for each time they appear. */
   triangulos: number;
 }
 
-/** Mide un .glb (ya optimizado o no). */
+/** Measures a .glb (already optimized or not). */
 export async function medirPieza(archivo: string, bytes: Uint8Array): Promise<PiezaMedida> {
   const doc = await (await crearIO()).readBinary(bytes);
   const root = doc.getRoot();
@@ -93,14 +93,14 @@ export async function medirPieza(archivo: string, bytes: Uint8Array): Promise<Pi
 }
 
 /**
- * Los props `modelo/*` de cada diorama → archivos y peso de descarga. `personajes` son los archivos de personaje (se
- * bajan con cualquier diorama; sus triángulos se miden en el test del diorama, no acá).
+ * The `modelo/*` props of each diorama → files and download weight. `personajes` are the character files (downloaded
+ * with any diorama; their triangles are measured in the diorama's test, not here).
  */
 export function medirDioramas(
   dioramas: readonly { id: string; props?: readonly { asset: string }[] | undefined; terreno?: { relieve?: boolean | undefined } | undefined }[],
   piezas: ReadonlyMap<string, PiezaMedida>,
   personajes: readonly string[] = [],
-  /** Open-world-3d T6: la carga extra de un diorama con relieve (cargaMundoAbierto con sus bytes). */
+  /** Open-world-3d T6: the extra load of a diorama with relief (cargaMundoAbierto with its bytes). */
   cargaAbierta: readonly ArchivoCarga[] = [],
 ): DioramaMedido[] {
   return dioramas.map((d) => {
@@ -124,7 +124,7 @@ export interface ChequeoDescarga {
 
 const mb = (bytes: number): string => (bytes / MB).toFixed(3);
 
-/** Presupuestos de 03 §2.7.3 sobre los dioramas medidos y las reglas del pipeline sobre cada pieza. */
+/** Budgets of 03 §2.7.3 over the measured dioramas and the pipeline rules over each piece. */
 export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: readonly DioramaMedido[], b: Budgets): ChequeoDescarga {
   const lineas: string[] = [];
   let ok = true;
@@ -154,8 +154,8 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
   tope("descarga inicial del vertical slice", ["muelle", "plaza"], b.assets_muelle_plaza_mb, "assets_muelle_plaza_mb");
   for (const d of dioramas.filter((x) => x.id !== "muelle" && x.id !== "plaza")) {
     lineas.push(`info diorama ${d.id}: ${d.modelos.length} modelo(s), ${mb(d.bytes)} MB, ${d.triangulos} triángulos de modelos (sin tope en 03 §2.7.3)`);
-    // El diorama de prueba contra el tope del primer diorama (plan estetica-c M3, con los personajes). Desde M4 (nota de
-    // QA M3) pasarse FALLA el build: antes solo avisaba, y un aviso no frena a nadie.
+    // The test diorama against the first diorama's cap (plan estetica-c M3, with the characters). Since M4 (QA
+    // M3 note) going over FAILS the build: before it only warned, and a warning stops no one.
     if (d.id === "test") {
       const pasa = d.bytes / MB <= b.assets_muelle_mb;
       if (!pasa) ok = false;
@@ -166,8 +166,8 @@ export function chequearDescarga(piezas: readonly PiezaMedida[], dioramas: reado
 }
 
 /**
- * Open-world-3d T6 (AC42): cada archivo de la carga del mundo abierto tiene fila en el registro de assets o en el de
- * código; uno sin fila (o que no existe en disco) falla nombrándolo.
+ * Open-world-3d T6 (AC42): each file in the open-world load has a row in the assets registry or in the
+ * code one; one without a row (or that does not exist on disk) fails, naming it.
  */
 export function chequearCargaRegistrada(carga: readonly { archivo: string; bytes: number | null }[], registrados: ReadonlySet<string>): ChequeoDescarga {
   const lineas: string[] = [];
@@ -180,7 +180,7 @@ export function chequearCargaRegistrada(carga: readonly { archivo: string; bytes
   return { ok, lineas };
 }
 
-/** Lo que el registro dice de una pieza (plan estetica-c M5). */
+/** What the registry says about a piece (plan estetica-c M5). */
 export interface FilaMedida {
   id: string;
   archivo: string;
@@ -189,8 +189,8 @@ export interface FilaMedida {
 }
 
 /**
- * Cada pieza servida contra su fila del registro: `triangulos` y `primitivas` tienen que estar y coincidir con lo medido,
- * porque el estimador de validate:content cuenta con ellos. Una pieza sin fila la informa el registro de licencias.
+ * Each served piece against its registry row: `triangulos` and `primitivas` must be present and match the measurement,
+ * because validate:content's estimator relies on them. A piece without a row is reported by the license registry.
  */
 export function chequearMedidasRegistro(piezas: readonly PiezaMedida[], filas: readonly FilaMedida[]): ChequeoDescarga {
   const lineas: string[] = [];
@@ -214,7 +214,7 @@ export function chequearMedidasRegistro(piezas: readonly PiezaMedida[], filas: r
 
 const aPosix = (p: string): string => p.split(sep).join("/");
 
-/** Los .glb servidos, con su ruta desde root. */
+/** The served .glb files, with their path from root. */
 export function listarModelos(root = ROOT): string[] {
   const out: string[] = [];
   const recorrer = (dir: string): void => {
@@ -262,7 +262,7 @@ export async function run(root = ROOT, log: (s: string) => void = console.log, b
   const abiertos = universo.conjunto.dioramas.map((d) => d.data).filter((d) => d.terreno?.relieve === true);
   const m = chequearMedidasRegistro(piezas, contenido.conjunto.registroAssets?.data.assets ?? []);
   let ok = m.ok;
-  // T7b (D-841): cada look del catálogo, solo, contra los mismos topes (los modelos y personajes son los mismos).
+  // T7b (D-841): each look of the catalog, alone, against the same caps (the models and characters are the same).
   for (const look of Object.values(WORLD_LOOKS)) {
     const carga = cargaMundoAbierto(look).map((archivo) => ({ archivo, bytes: tamano(archivo) }));
     const dioramas = medirDioramas(

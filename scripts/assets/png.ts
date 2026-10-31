@@ -1,19 +1,19 @@
-// scripts/assets/png.ts: decodificador de PNG mínimo (plan estetica-c M3) para muestrear por UV la textura de paleta de
-// un pack (KayKit trae un atlas de degradé) antes de descartarla. Sin dependencias nuevas: solo zlib de Node. Cubre lo
-// que traen los packs: 8 bits por canal, sin entrelazado, en RGB, RGBA, gris, gris con alfa o paleta. El resto falla
-// nombrando el formato. `codificarPng` existe para los tests (fixtures con textura). Open-world-3d T7: también 16 bits
-// por canal (los PNG 1k de Poly Haven), redondeados a 8 al decodificar.
+// scripts/assets/png.ts: minimal PNG decoder (plan estetica-c M3) to sample by UV a pack's palette texture
+// (KayKit ships a gradient atlas) before discarding it. No new dependencies: only Node's zlib. Covers what
+// the packs ship: 8 bits per channel, non-interlaced, in RGB, RGBA, gray, gray with alpha or palette. Anything else fails
+// naming the format. `codificarPng` exists for the tests (fixtures with texture). Open-world-3d T7: also 16 bits
+// per channel (Poly Haven's 1k PNGs), rounded to 8 when decoding.
 import { deflateSync, inflateSync } from "node:zlib";
 
 export interface Imagen {
   ancho: number;
   alto: number;
-  /** RGBA de 8 bits, fila por fila desde arriba. */
+  /** 8-bit RGBA, row by row from the top. */
   rgba: Uint8Array;
 }
 
 const FIRMA = [137, 80, 78, 71, 13, 10, 26, 10];
-/** Canales por tipo de color de PNG. */
+/** Channels per PNG color type. */
 const CANALES: Readonly<Record<number, number>> = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
 
 const TABLA_CRC = Int32Array.from({ length: 256 }, (_, n) => {
@@ -79,7 +79,7 @@ export function decodificarPng(datos: Uint8Array): Imagen {
       if (filtro > 4) throw new Error(`png: filtro ${filtro} desconocido`);
       fila[x] = (v + pred) & 255;
     }
-    // 16 bits: cada muestra a 8 bits redondeada (alto * 256 + bajo) * 255 / 65535.
+    // 16 bits: each sample to 8 bits rounded (high * 256 + low) * 255 / 65535.
     const m = bps === 1 ? fila : Uint8Array.from({ length: ancho * canales }, (_, k) => Math.round((((fila[k * 2] as number) << 8) | (fila[k * 2 + 1] as number)) * 255 / 65535));
     for (let x = 0; x < ancho; x++) {
       const i = (y * ancho + x) * 4;
@@ -101,7 +101,7 @@ export function decodificarPng(datos: Uint8Array): Imagen {
   return { ancho, alto, rgba };
 }
 
-/** RGBA de 8 bits → PNG (filtro 0). Para fixtures de tests. */
+/** 8-bit RGBA → PNG (filter 0). For test fixtures. */
 export function codificarPng(img: Imagen): Uint8Array {
   const paso = img.ancho * 4;
   const crudo = Buffer.alloc((paso + 1) * img.alto);
@@ -122,7 +122,7 @@ export function codificarPng(img: Imagen): Uint8Array {
   return new Uint8Array(Buffer.concat([Buffer.from(FIRMA), trozo("IHDR", ihdr), trozo("IDAT", deflateSync(crudo)), trozo("IEND", new Uint8Array())]));
 }
 
-/** El color sRGB (0 a 1) de la imagen en una UV de glTF (origen arriba a la izquierda, con repetición). */
+/** The sRGB color (0 to 1) of the image at a glTF UV (origin top left, with repeat). */
 export function muestrear(img: Imagen, u: number, v: number): [number, number, number] {
   const envolver = (t: number): number => t - Math.floor(t);
   const x = Math.min(img.ancho - 1, Math.floor(envolver(u) * img.ancho));

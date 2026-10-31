@@ -1,6 +1,6 @@
-// Menú principal: lista de botones nativos. Tab y Shift+Tab recorren; además flechas, Inicio y Fin mueven el
-// foco dentro de la lista; Escape cierra el menú cuando hay una vista detrás. Open-world-3d T10 (d): el clic en
-// "Explorar el mapa" despacha enterWorld, que marca `lg:world-enter` (inicio de la medida de carga, AC63).
+// Main menu: list of native buttons. Tab and Shift+Tab move through; also arrows, Home and End move
+// focus within the list; Escape closes the menu when there is a view behind it. Open-world-3d T10 (d): the click on
+// "Explore the map" dispatches enterWorld, which marks `lg:world-enter` (start of the load measurement, AC63).
 import type { KeyboardEvent } from "react";
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";

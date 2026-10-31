@@ -1,8 +1,8 @@
-// Plan estetica-c M3: personajes con esqueleto sin GPU (D-016). Cada ficha de content/npcs/ y el jugador tienen
-// apariencia y no repiten silueta ni remera donde conviven; cada clip del set mínimo existe en el manifiesto y apunta a
-// huesos que existen en los tres cuerpos servidos; la máquina de animación y la selección por tier (tests puros); el
-// repintado de prendas, la cabeza en el hueso `head`, los gestos sobre el esqueleto real, y el diorama de prueba con los
-// personajes con esqueleto dentro de `medium`.
+// Plan estetica-c M3: skinned characters without GPU (D-016). Each sheet in content/npcs/ and the player have an
+// appearance and do not repeat silhouette or shirt where they coexist; each clip of the minimal set exists in the manifest and points to
+// bones that exist in the three served bodies; the animation machine and the tier selection (pure tests); the
+// garment repaint, the head on the `head` bone, the gestures on the real skeleton, and the test diorama with the
+// skinned characters within `medium`.
 import { tokenRgb, withinPaint } from "@lg/art";
 import { prepareDiorama, type DioramaRuntime } from "@lg/core";
 import { Bone, Group, Quaternion, Vector3, type Object3D } from "three";
@@ -35,7 +35,7 @@ const served = (asset: string): Uint8Array => {
   if (url === undefined) throw new Error(`no está servido ${asset}`);
   return fromDataUrl(url);
 };
-/** El JSON de un .glb (sin decodificar buffers). */
+/** The JSON of a .glb (without decoding buffers). */
 const glbJson = (b: Uint8Array): { nodes: { name: string }[]; skins?: { joints: number[] }[]; animations?: { name: string; channels: { target: { node: number } }[] }[] } => {
   const len = new DataView(b.buffer, b.byteOffset).getUint32(12, true);
   return JSON.parse(new TextDecoder().decode(b.subarray(20, 20 + len)));
@@ -263,7 +263,7 @@ describe("M3 personaje con esqueleto (sin GPU)", () => {
     const idle = chooseAnimation({ speed: 0, reduceMotion: false, scene: null, gesture: null });
     driveCharacter(c, idle, 0.5, 0, true, false);
     expect(c.state.base).toBe("Idle");
-    // El mismo instante sin gesto y con asentir (a 0,3 s del arranque la cabeza va bajando ~0,19 rad).
+    // The same instant without a gesture and with a nod (at 0.3 s from the start the head is going down ~0.19 rad).
     const twin = await character("NPC-INES");
     driveCharacter(twin, idle, 0.5, 0, true, false);
     driveCharacter(twin, idle, 0.3, 0, true, false);
@@ -309,7 +309,7 @@ describe("M3 personaje con esqueleto (sin GPU)", () => {
     const perActor = estimateBudget(actors.slice(0, 1));
     const msg = JSON.stringify({ e, perActor, actors: estimateBudget(actors) });
     expect(auditMaterials(all).surfaceInstances, msg).toBeLessThanOrEqual(2);
-    expect(perActor.drawCalls, msg).toBe(2); // cuerpo y cabeza (la boca, solo al hablar)
+    expect(perActor.drawCalls, msg).toBe(2); // body and head (the mouth, only when speaking)
     expect(withinBudget(e, { maxDrawCalls: 120, maxTriangles: 50_000 }), msg).toBe(true);
   });
 });

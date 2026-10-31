@@ -1,5 +1,5 @@
-// Selectores del slice `world`: view-model del modo solo-diálogo (lugares de la región y quién está en cada uno)
-// y, desde F2, lo que world/ dibuja, el aviso de interacción del HUD y los parámetros de render del mapa.
+// Selectors of the `world` slice: dialogue-only mode view-model (the region's places and who is at each one)
+// and, since F2, what world/ draws, the HUD's interaction prompt and the map's render parameters.
 import { THIRD_PERSON, zoomTAt, type CameraPresetId, type DioramaRuntime, type Panel, type SelectableTier } from "@lg/core";
 import type { CharacterLook } from "@lg/art";
 import type { GameState } from "../store";
@@ -44,9 +44,9 @@ export const selectDialogOnlyView = createViewSelector(
   },
 );
 
-// ---------- mapa (F2) ----------
+// ---------- map (F2) ----------
 
-/** El mapa se juega (input y simulación): fase `world`, diorama cargado y ningún panel encima. */
+/** The map is being played (input and simulation): phase `world`, diorama loaded and no panel on top. */
 export const selectMapActive = (s: GameState): boolean =>
   s.session.phase === "world" && s.ui.panels.length === 0 && s.world.diorama !== null;
 
@@ -55,20 +55,20 @@ export interface MapActor {
   name: string;
   x: number;
   z: number;
-  /** Apariencia de su ficha (plan estetica-c M5); null si el catálogo no cargó o la ficha no la trae. */
+  /** Look of its sheet (plan estetica-c M5); null if the catalog did not load or the sheet does not carry it. */
   look: CharacterLook | null;
 }
 
 export interface MapView {
   status: GameState["world"]["dioramaStatus"];
   diorama: DioramaRuntime | null;
-  /** NPCs del diorama con su nombre del catálogo (o el id si el catálogo no cargó). */
+  /** The diorama's NPCs with their catalog name (or the id if the catalog did not load). */
   actors: MapActor[];
 }
 
 const npcName = (npcs: GameState["world"]["npcs"], id: string): string => npcs.find((n) => n.id === id)?.name ?? id;
 
-/** Lo que world/ dibuja: el diorama (estático) y los NPCs. Cambia al cargar un diorama o el catálogo. */
+/** What world/ draws: the diorama (static) and the NPCs. Changes when a diorama or the catalog loads. */
 export const selectMapView = createViewSelector(
   (s: GameState) => [s.world.dioramaStatus, s.world.diorama, s.world.npcs] as const,
   (status, diorama, npcs): MapView => ({
@@ -82,10 +82,10 @@ export const selectMapView = createViewSelector(
 );
 
 /**
- * Burbuja ámbar de pedido (propuesta C §3, plan estetica-c M5): los NPCs del diorama con un pedido abierto, según
- * `npcStates[id].requestIcon` del slice `world`, la señal más angosta que ya existe para "este NPC tiene un pedido". El
- * NPC de la charla en curso no la muestra (el panel ya lo nombra). M5 SEAM: hoy nadie escribe `requestIcon`, así que la
- * lista sale vacía en el juego; la llena el sistema de misiones o del tablero cuando abra pedidos por NPC.
+ * Amber request bubble (proposal C §3, plan estetica-c M5): the diorama's NPCs with an open request, according to
+ * `npcStates[id].requestIcon` of the `world` slice, the narrowest signal that already exists for "this NPC has a request". The
+ * NPC of the ongoing conversation does not show it (the panel already names them). M5 SEAM: today nobody writes `requestIcon`, so the
+ * list comes out empty in the game; it is filled by the mission system or the board when it opens requests per NPC.
  */
 export const selectRequestBubbles = createViewSelector(
   (s: GameState) => [s.world.diorama, s.world.npcStates, selectConversationFrame(s)?.npcId ?? null] as const,
@@ -100,8 +100,8 @@ export interface InteractionPrompt {
 }
 
 /**
- * Aviso de interacción (03 §2.4 #5, F2 A8): el interactuable más cercano que el núcleo dejó en
- * `nearbyInteractables`. Solo en el mapa y sin paneles encima.
+ * Interaction prompt (03 §2.4 #5, F2 A8): the nearest interactable the core left in
+ * `nearbyInteractables`. Only on the map and with no panels on top.
  */
 export const selectInteractionPrompt = createViewSelector(
   (s: GameState) => [s.session.phase, s.ui.panels.length, s.world.nearbyInteractables, s.world.diorama, s.world.npcs] as const,
@@ -113,8 +113,8 @@ export const selectInteractionPrompt = createViewSelector(
 );
 
 /**
- * El NPC resaltado en el mundo (plan estetica-c M1 ítem 15): el mismo que nombra el aviso del HUD, porque los dos salen
- * de `selectInteractionPrompt` (A13). Sin nadie en rango, o si lo más cercano no es un NPC, no hay resaltado.
+ * The NPC highlighted in the world (plan estetica-c M1 item 15): the same one the HUD prompt names, because both come
+ * from `selectInteractionPrompt` (A13). With nobody in range, or if the nearest is not an NPC, there is no highlight.
  */
 export const selectHighlightedNpc = createViewSelector(
   (s: GameState) => [selectInteractionPrompt(s)] as const,
@@ -124,12 +124,12 @@ export const selectHighlightedNpc = createViewSelector(
 export interface WorldHudView {
   mapStatus: GameState["world"]["dioramaStatus"];
   prompt: InteractionPrompt | null;
-  /** Zoom continuo (PD-5): la distancia pedida redondeada (m), o null con el mapa entero. */
+  /** Continuous zoom (PD-5): the requested distance rounded (m), or null with the whole map. */
   zoomMeters: number | null;
-  /** En el tope cercano (2,5 m) o lejano (el mapa entero): los botones de zoom quedan aria-disabled. */
+  /** At the near cap (2.5 m) or far cap (the whole map): the zoom buttons stay aria-disabled. */
   zoomAtMin: boolean;
   zoomAtMax: boolean;
-  /** Tier efectivo: el chip de calidad de abajo a la derecha (solo en desarrollo, plan estetica-c M4). */
+  /** Effective tier: the quality chip at the bottom right (development only, plan estetica-c M4). */
   tier: SelectableTier;
 }
 
@@ -146,8 +146,8 @@ export const selectWorldHudView = createViewSelector(
 );
 
 /**
- * Plano de a dos (plan estetica-c M1 ítem 3): mientras el panel de arriba es la escena con un NPC que está en el
- * diorama, world/ encuadra a los dos. Las posiciones son las lógicas (el jugador ya acomodado por `standoffPoint`).
+ * Two-shot (plan estetica-c M1 item 3): while the top panel is the scene with an NPC who is in the
+ * diorama, world/ frames both. The positions are the logical ones (the player already settled by `standoffPoint`).
  */
 export interface ConversationFrame {
   npcId: string;
@@ -167,35 +167,35 @@ export const selectConversationFrame = createViewSelector(
   },
 );
 
-/** Tope de cuadros con una escena de conversación arriba (03 §2.7.4): libera CPU para el audio y el WebSocket. */
+/** Frame cap with a conversation scene on top (03 §2.7.4): frees CPU for audio and the WebSocket. */
 export const CONVERSATION_MAX_FPS = 30;
 
 export interface WorldRenderView {
   tier: SelectableTier;
   /**
-   * `dialogueFrame` mientras dura una charla con un NPC del diorama; si no, `thirdPerson` (open-world-3d T5, PD-5: un
-   * ajuste `perspective3D` abre la misma cámara con el mapa entero). Yaw, inclinación y zoom NO van acá: cambian con
-   * cada arrastre y CameraRig los lee con `readGame(selectCameraView)` dentro de useFrame (D-820), sin re-render.
+   * `dialogueFrame` during a conversation with a diorama NPC; otherwise `thirdPerson` (open-world-3d T5, PD-5: a
+   * `perspective3D` setting opens the same camera with the whole map). Yaw, pitch and zoom do NOT go here: they change with
+   * every drag and CameraRig reads them with `readGame(selectCameraView)` inside useFrame (D-820), without re-render.
    */
   preset: CameraPresetId;
   /**
-   * t de zoom pedido, cuantizado a 0,05 (lo que depende de él en React: qué etiquetas se dibujan). La cámara usa el
-   * exacto de `selectCameraView`.
+   * Requested zoom t, quantized to 0.05 (what depends on it in React: which labels are drawn). The camera uses the
+   * exact one from `selectCameraView`.
    */
   zoomBand: number;
-  /** "Reducir movimiento" (D-053, F2 A7): la cámara corta en vez de seguir con suavizado. */
+  /** "Reduce motion" (D-053, F2 A7): the camera cuts instead of following with smoothing. */
   cameraMotion: "follow" | "cut";
-  /** Postprocesado permitido (el nivel por tier lo fija TIER_PARAMS); apagado con "reducir movimiento" (§2.9). */
+  /** Postprocessing allowed (the level per tier is set by TIER_PARAMS); off with "reduce motion" (§2.9). */
   post: boolean;
   /**
-   * Un panel tapa el mapa: el canvas pasa a frameloop "demand" (§2.7.4). Con la escena arriba sigue vivo (la
-   * transición de cámara y el idle de los personajes, plan estetica-c M1 ítem 5), con el tope de `conversationFps`.
+   * A panel covers the map: the canvas goes to frameloop "demand" (§2.7.4). With the scene on top it stays alive (the
+   * camera transition and the characters' idle, plan estetica-c M1 item 5), with the `conversationFps` cap.
    */
   paused: boolean;
   /**
-   * Plan estetica-c M6 (03 §2.7.4): con una escena de conversación arriba, el tope de cuadros (30); si no, null y manda
-   * el `targetFps` del tier. world/ además congela lo no esencial (agua, NPCs de fondo) y no mide rendimiento mientras
-   * dura (PerformanceMonitor nunca baja ni sube el tier por el tope propio de la charla).
+   * Plan estetica-c M6 (03 §2.7.4): with a conversation scene on top, the frame cap (30); otherwise null and the tier's
+   * `targetFps` rules. world/ also freezes the non-essential (water, background NPCs) and does not measure performance while
+   * it lasts (PerformanceMonitor never lowers or raises the tier because of the conversation's own cap).
    */
   conversationFps: number | null;
 }
@@ -216,35 +216,35 @@ export const selectWorldRender = createViewSelector(
   },
 );
 
-// ---------- cámara en tercera persona (open-world-3d T4/T5, D-820, PD-5) ----------
+// ---------- third-person camera (open-world-3d T4/T5, D-820, PD-5) ----------
 
 const zoomTOf = (c: GameState["ui"]["camera"]): number => (c.overview ? 1 : zoomTAt(c.zoomDistance, c.fitDistance));
 
-/** t de zoom pedido cuantizado (ver `WorldRenderView.zoomBand`). */
+/** Quantized requested zoom t (see `WorldRenderView.zoomBand`). */
 export const selectZoomBand = (s: GameState): number => Math.round(zoomTOf(s.ui.camera) / ZOOM_BAND) * ZOOM_BAND;
 
 export interface CameraView {
   yawDeg: number;
   pitchDeg: number;
-  /** Distancia pedida (m); world/camera la acota a su `fitDistance` vivo. */
+  /** Requested distance (m); world/camera clamps it to its live `fitDistance`. */
   zoomDistance: number;
-  /** Mapa entero: la distancia es la de `fitDistance`, sea cual sea. */
+  /** Whole map: the distance is that of `fitDistance`, whatever it is. */
   overview: boolean;
-  /** Distancia del mapa entero que tiene el store (world/camera la corrige con `bridge.cameraFit`). */
+  /** Whole-map distance held by the store (world/camera corrects it with `bridge.cameraFit`). */
   fitDistance: number;
-  /** t de zoom pedido (0 = 2,5 m, 1 = el mapa entero) con la distancia del mapa entero del store. */
+  /** Requested zoom t (0 = 2.5 m, 1 = the whole map) with the store's whole-map distance. */
   t: number;
-  /** "Reducir movimiento": zoom, inclinación y pivote cortan, sin suavizado. */
+  /** "Reduce motion": zoom, pitch and pivot cut, without smoothing. */
   reduceMotion: boolean;
-  /** Distancias del zoom (m): las del núcleo, que world/ no importa en tiempo de ejecución. */
+  /** Zoom distances (m): the core's, which world/ does not import at runtime. */
   minDistance: number;
   userPitchMin: number;
   userPitchMax: number;
 }
 
 /**
- * Lo que CameraRig lee en cada cuadro con `readGame` (03 §2.3, D-820): sin suscripción ni re-render por arrastre. El
- * objeto se reusa mientras nada cambió.
+ * What CameraRig reads every frame with `readGame` (03 §2.3, D-820): no subscription or re-render per drag. The
+ * object is reused while nothing changed.
  */
 export const selectCameraView = createViewSelector(
   (s: GameState) => [s.ui.camera.yawDeg, s.ui.camera.pitchDeg, s.ui.camera.zoomDistance, s.ui.camera.overview, s.ui.camera.fitDistance, s.settings.accessibility.reduceMotion] as const,

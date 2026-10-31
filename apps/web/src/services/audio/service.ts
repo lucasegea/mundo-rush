@@ -1,27 +1,27 @@
-// Servicio de audio del cliente (F5.2): une la máquina de estados (machine.ts), el motor (único AudioContext, micrófono
-// y cola, AudioEngine) y el transporte de voz (VoiceTransport) con el store. La UI pide por acciones ("Hablar",
-// "Terminé"); acá se ejecuta: con el turno abierto los bloques del micrófono van al servidor, al cerrarlo se manda una
-// cola corta de audio (para no comerse la última sílaba) y recién después `voice.turnEnd`. La voz del NPC suena por la
-// cola y, mientras suena, no se puede hablar (nadie pisa a nadie). El medidor de nivel corre siempre que hay micrófono.
-// El cliente no guarda audio: los bloques se mandan y se sueltan (D-108).
+// Client audio service (F5.2): ties the state machine (machine.ts), the engine (single AudioContext, microphone
+// and queue, AudioEngine) and the voice transport (VoiceTransport) to the store. The UI asks via actions ("Talk",
+// "Done"); this is where they run: with the turn open the microphone blocks go to the server, on closing it a short
+// tail of audio is sent (so the last syllable is not cut off) and only then `voice.turnEnd`. The NPC voice plays through the
+// queue and, while it plays, you cannot talk (nobody talks over anybody). The level meter runs whenever there is a microphone.
+// The client does not store audio: blocks are sent and dropped (D-108).
 import type { GameActions } from "../../state/actions";
 import type { GameStore } from "../../state/store";
 import { DEFAULT_VAD, initialVad, levelFromRms, vadStep, type CaptureFrame, type VadState } from "./dsp";
 import { audioTransition, type AudioEvent, type AudioState } from "./machine";
 import type { AudioEngine, VoiceTransport } from "./types";
 
-/** = NPC_AUDIO_SAMPLE_RATE de @lg/protocol (servidor → cliente). */
+/** = NPC_AUDIO_SAMPLE_RATE from @lg/protocol (server → client). */
 export const NPC_SAMPLE_RATE = 24000;
-/** Audio que se sigue mandando después de "Terminé" (ms). */
+/** Audio that keeps being sent after "Done" (ms). */
 export const TALK_TAIL_MS = 250;
-/** Si el servidor no saca la escena de tu turno en este tiempo tras "Terminé" (rechazó el turno), se vuelve a listo. */
+/** If the server does not take the scene out of your turn within this time after "Done" (it rejected the turn), go back to ready. */
 export const TURN_ACK_TIMEOUT_MS = 5000;
 /**
- * Vigía de reproducción: si la cola no avisa que se vació en (lo encolado desde el último vaciado + este margen), se da
- * por terminada. Sin esto, un AudioContext que no avanza dejaba el HUD en "sonando" y el jugador sin poder hablar.
+ * Playback watchdog: if the queue does not signal it drained within (what was queued since the last drain + this margin), it is considered
+ * finished. Without this, an AudioContext that does not advance left the HUD on "playing" and the player unable to talk.
  */
 export const PLAYBACK_STUCK_GRACE_MS = 4000;
-/** Cada cuánto se publica el nivel del micrófono en el store (ms) y con qué paso (evita re-renders por ruido). */
+/** How often the microphone level is published to the store (ms) and with what step (avoids re-renders from noise). */
 export const LEVEL_INTERVAL_MS = 100;
 const LEVEL_STEP = 0.05;
 
@@ -43,11 +43,11 @@ export interface AudioServiceDeps {
 }
 
 export interface AudioService {
-  /** Prepara el micrófono para una escena: "voice" si hay, "text" si no (y el HUD dice por qué). */
+  /** Prepares the microphone for a scene: "voice" if available, "text" otherwise (and the HUD says why). */
   prepare(): Promise<"voice" | "text">;
-  /** Suelta micrófono y audio (fin de la escena, salir del HUD). */
+  /** Releases microphone and audio (end of the scene, leaving the HUD). */
   release(): void;
-  /** Para el servicio. */
+  /** Stops the service. */
   stop(): void;
 }
 
@@ -59,7 +59,7 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
 
   let state: AudioState = "off";
   let engine: AudioEngine | null = null;
-  /** Sube con cada prepare/release: un prepare viejo que termina tarde se descarta. */
+  /** Increments with each prepare/release: a stale prepare that finishes late is discarded. */
   let generation = 0;
   let capturing = false;
   let vad: VadState = initialVad();
@@ -68,10 +68,10 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
   let levelAt = 0;
   let levelPeak = 0;
   let stopped = false;
-  /** Segundos de voz del NPC encolados desde el último vaciado y la cancelación del vigía. */
+  /** Seconds of NPC voice queued since the last drain and the watchdog cancellation. */
   let queuedSeconds = 0;
   let cancelStuck: (() => void) | null = null;
-  /** Último `estado.subestado` de la escena visto (para reaccionar a cambios, no a cada render del store). */
+  /** Last scene `estado.subestado` seen (to react to changes, not to every store render). */
   let sceneKey = "";
 
   const go = (ev: AudioEvent): void => {
@@ -96,7 +96,7 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
   };
 
   const onFrame = (frame: CaptureFrame): void => {
-    // Medidor: el pico del intervalo, cuantizado.
+    // Meter: the peak of the interval, quantized.
     levelPeak = Math.max(levelPeak, frame.rms);
     const t = now();
     if (t - levelAt >= LEVEL_INTERVAL_MS) {
@@ -109,14 +109,14 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
     transport.sendPlayerAudio(frame.pcm);
   };
 
-  /** Cierra el turno hablado: deja de mandar audio y avisa (con o sin `voice.turnEnd`). */
+  /** Closes the spoken turn: stops sending audio and signals (with or without `voice.turnEnd`). */
   const closeTurn = (send: boolean): void => {
     clearTimers();
     capturing = false;
     actions.voiceTurnClosed(vad.heardSpeech, send);
     go("talkEnd");
     if (!send) return go("turnReturned");
-    // Si el servidor no sacó la escena de tu turno (rechazó el turno), no quedarse "pensando" para siempre.
+    // If the server did not take the scene out of your turn (it rejected the turn), do not stay "thinking" forever.
     cancelAck = schedule(TURN_ACK_TIMEOUT_MS, () => {
       cancelAck = null;
       const d = store.getState().dialogue;
@@ -126,12 +126,12 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
 
   const onTalk = (talk: "idle" | "talking" | "ending"): void => {
     if (talk === "talking" && state === "ready") {
-      engine?.resume(); // estamos dentro del gesto que abrió el turno
+      engine?.resume(); // we are inside the gesture that opened the turn
       vad = initialVad();
       capturing = true;
       go("talkStart");
     } else if (talk === "ending" && !cancelTail) {
-      // Sin captura abierta no hay cola que esperar: el fin sale ya (el servidor nunca queda con el turno colgado).
+      // With no capture open there is no queue to wait for: the end goes out right away (the server never ends up with a dangling turn).
       if (!capturing) return closeTurn(true);
       cancelTail = schedule(tailMs, () => {
         cancelTail = null;
@@ -141,16 +141,16 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
   };
 
   const onScene = (d: ReturnType<GameStore["getState"]>["dialogue"]): void => {
-    if (d.voice.talk !== "idle" && d.state !== "playerTurn") return closeTurn(false); // p. ej. tope de tiempo
+    if (d.voice.talk !== "idle" && d.state !== "playerTurn") return closeTurn(false); // e.g. time cap
     const key = `${d.state}.${d.turnSubstate ?? ""}`;
     const changed = key !== sceneKey;
     sceneKey = key;
     if (changed && key === "playerTurn.waiting" && state === "thinking") {
       cancelAck?.();
       cancelAck = null;
-      go("turnReturned"); // la respuesta llegó sin audio (línea segura, error) o ya terminó
+      go("turnReturned"); // the response arrived without audio (safe line, error) or already finished
     }
-    // El servidor pasó la escena a texto (sin clave, voz perdida): se suelta el micrófono.
+    // The server switched the scene to text (no key, voice lost): the microphone is released.
     if (d.modality === "text" && d.sceneId !== null && engine) release();
   };
 
@@ -158,7 +158,7 @@ export function startAudioService(deps: AudioServiceDeps): AudioService {
     if (!engine || state === "off" || state === "asking" || state === "noPermission") return;
     engine.play(pcm16, NPC_SAMPLE_RATE);
     go("npcAudio");
-    // Vigía: se reprograma con cada pedazo según cuánto audio hay encolado.
+    // Watchdog: rescheduled with each chunk depending on how much audio is queued.
     queuedSeconds += pcm16.length / NPC_SAMPLE_RATE;
     cancelStuck?.();
     cancelStuck = schedule(Math.ceil(queuedSeconds * 1000) + PLAYBACK_STUCK_GRACE_MS, () => {

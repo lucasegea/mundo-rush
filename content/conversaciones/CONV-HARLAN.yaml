@@ -1,9 +1,9 @@
-# Ficha de conversación por medidores (ADR-027; informe de investigación 2.5.C) de Harlan Moss, para el encuentro M9.1.
-# Solo servidor. El inglés (*_en) arma los prompts del NPC y del juez; el español (*_es) es lo que ve el HUD.
-# Regla de oro: lo del medidor de objetivo (tema_en, lo_que_el_npc_quiere_en, puente_en, objeciones) NO entra al prompt
-# del NPC mientras dure "conocer": no puede filtrar lo que no tiene.
-# Contenido inventado sobre el canon de 02 §3.4.11 (borrador, revisar en F8): el nieto Eli, la perra Pepper, que vive
-# solo, la rutina del amanecer y su opinión sobre el Cruce. Nada contradice el canon (sin "año malo", sin dinero).
+# Meter-based conversation sheet (ADR-027; the research report 2.5.C) for Harlan Moss, for the M9.1 encounter.
+# Server only. The English (*_en) builds the NPC and judge prompts; the Spanish (*_es) is what the HUD shows.
+# Golden rule: what belongs to the goal meter (tema_en, lo_que_el_npc_quiere_en, puente_en, objeciones) does NOT go into the NPC
+# prompt while "conocer" lasts: it cannot leak what it does not have.
+# Content invented on top of the canon of 02 §3.4.11 (draft, review in F8): the grandson Eli, the dog Pepper, that he lives
+# alone, the dawn routine and his opinion on the Cruce. Nothing contradicts the canon (no "bad year", no money).
 id: CONV-HARLAN
 npc: NPC-HARLAN
 persona_extra_en: |

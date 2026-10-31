@@ -1,4 +1,4 @@
-// Open-world-3d T4/T5 (D-820, PD-5): mirada, correr, recentrado y zoom continuo en el núcleo, puro.
+// Open-world-3d T4/T5 (D-820, PD-5): look, run, recentering and continuous zoom in the core, pure.
 import { describe, expect, test } from "vitest";
 import {
   applyLook, clampPitch, DEFAULT_MOVEMENT, gridFromRows, headingYaw, IDLE, KEY_LOOK_PX_PER_STEP, LOOK_DRAG_PX, normalizeYaw, recenterYaw,
@@ -33,13 +33,13 @@ describe("AC17 mirar: inclinación acotada a [6, 55] y yaw normalizado a [0, 360
   test("Q gira a la izquierda (yaw sube) y R a la derecha, 95°/s a 30 Hz", () => {
     expect(applyLook(0, 17, -KEY_LOOK_PX_PER_STEP, 0).yawDeg).toBeCloseTo(95 / 30, 9);
     expect(applyLook(0, 17, KEY_LOOK_PX_PER_STEP, 0).yawDeg).toBeCloseTo(360 - 95 / 30, 9);
-    // Con yaw 90, adelante es -x: girar a la izquierda desde mirar a -z.
+    // With yaw 90, forward is -x: turning left from looking at -z.
     expect(screenDirToWorld({ x: 0, y: 1 }, 90).x).toBeCloseTo(-1, 12);
     expect(LOOK_DRAG_PX).toBe(6);
   });
 });
 
-/** Un campo abierto de 200 × 200 m (celdas de 0,5 m) para medir velocidades. */
+/** An open field of 200 × 200 m (0.5 m cells) to measure speeds. */
 const field = () => gridFromRows(Array.from({ length: 400 }, () => ".".repeat(400)), 0.5, -100, -100);
 
 function walk(intent: MoveIntent, seconds: number, cfg = DEFAULT_MOVEMENT): { body: Body; speed: number } {
@@ -78,8 +78,8 @@ describe("AC21 correr con Shift", () => {
 });
 
 describe("AC29 un camino nunca queda orbitando un punto intermedio", () => {
-  // Con 3,5 m/s a 30 Hz un paso es 0,117 m; un punto intermedio que quedaba a 0,05-0,067 m antes de un paso se
-  // cruzaba ida y vuelta para siempre (arriveRadius 0,05). Barrido de distancias, caminando y corriendo.
+  // With 3.5 m/s at 30 Hz a step is 0.117 m; an intermediate point that sat 0.05-0.067 m before a step would be
+  // crossed back and forth forever (arriveRadius 0.05). Sweep of distances, walking and running.
   test.each([["caminando", DEFAULT_MOVEMENT], ["corriendo", RUN_MOVEMENT]] as const)("%s: todo punto intermedio entre 0,3 y 1,3 m", (_, cfg) => {
     const g = field();
     const stalls: number[] = [];
@@ -97,7 +97,7 @@ describe("AC29 un camino nunca queda orbitando un punto intermedio", () => {
 describe("AC25 recentrado", () => {
   const simulate = (forward: boolean, reduceMotion: boolean) => {
     let yaw = 0;
-    const heading = 90; // 90° fuera de la cámara
+    const heading = 90; // 90° away from the camera
     const trace: { t: number; yaw: number }[] = [];
     for (let i = 1; i <= Math.round(3 / SIM_DT); i++) {
       const t = i * SIM_DT;
@@ -112,11 +112,11 @@ describe("AC25 recentrado", () => {
     let prev = 0;
     for (const p of tr) {
       expect(Math.abs(yawDelta(prev, p.yaw))).toBeLessThanOrEqual(90 * SIM_DT + 1e-9);
-      // La barra de 1,5 s es la del plan (AC25), escrita como número: no se toma de la constante que prueba.
+      // The 1.5 s bar is the plan's (AC25), written as a number: it is not taken from the constant under test.
       if (p.t < 1.5 - 1e-9) expect(p.yaw).toBe(0);
       prev = p.yaw;
     }
-    // Y arranca apenas pasada la barra (no más tarde que un paso después de 1,5 s).
+    // And it starts right after the bar (no later than one step after 1.5 s).
     expect(tr.find((p) => p.t >= 1.5 + SIM_DT + 1e-9)?.yaw ?? 0).toBeGreaterThan(0);
   });
   test("de costado (solo D) y con «reducir movimiento» el yaw no cambia", () => {

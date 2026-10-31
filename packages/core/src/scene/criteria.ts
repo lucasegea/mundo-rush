@@ -1,10 +1,10 @@
-// Evaluación de criterios de éxito sobre los resultados del observador (03 §5.7, F4.1). Reglas determinísticas:
-// solo cuentan ids que existen en la escena (el observador nunca inventa un criterio), un criterio "cumplido" necesita
-// una cita del jugador, y lo cumplido no se pierde (nonConverging nunca quita progreso, invariante d).
+// Evaluation of success criteria over the observer's results (03 §5.7, F4.1). Deterministic rules:
+// only ids that exist in the scene count (the observer never invents a criterion), a "met" criterion needs
+// a quote from the player, and what has been met is not lost (nonConverging never removes progress, invariant d).
 
 export interface CriterionDef {
   readonly id: string;
-  /** Los opcionales no hacen falta para cerrar con éxito. */
+  /** Optional ones are not needed to close successfully. */
   readonly optional: boolean;
 }
 
@@ -15,7 +15,7 @@ export interface CriterionReport {
 }
 
 export interface CriteriaState {
-  /** criterio → cita del jugador que lo cumplió. */
+  /** criterion → player quote that met it. */
   readonly met: Readonly<Record<string, string>>;
 }
 
@@ -23,9 +23,9 @@ export const emptyCriteria = (): CriteriaState => ({ met: {} });
 
 export interface CriteriaUpdate {
   readonly state: CriteriaState;
-  /** Criterios que pasaron a cumplidos con este reporte. */
+  /** Criteria that became met with this report. */
   readonly newlyMet: readonly string[];
-  /** Ids que no existen en la escena: se descartan (nunca se inventan criterios). */
+  /** Ids that do not exist in the scene: they are discarded (criteria are never invented). */
   readonly unknown: readonly string[];
 }
 
@@ -48,7 +48,7 @@ export function applyCriteriaReports(defs: readonly CriterionDef[], state: Crite
   return { state: newlyMet.length === 0 ? state : { met }, newlyMet, unknown };
 }
 
-/** Todos los criterios obligatorios cumplidos (una escena sin criterios obligatorios nunca se da por cumplida sola). */
+/** All mandatory criteria met (a scene without mandatory criteria is never considered met on its own). */
 export function criteriaSatisfied(defs: readonly CriterionDef[], state: CriteriaState): boolean {
   const required = defs.filter((d) => !d.optional);
   return required.length > 0 && required.every((d) => d.id in state.met);

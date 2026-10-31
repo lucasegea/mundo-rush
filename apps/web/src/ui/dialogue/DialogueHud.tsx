@@ -1,18 +1,18 @@
-// HUD de diálogo (F4.2; GDD §2.6, 03 §2.6, R14). UN SOLO componente para las dos superficies: encima del canvas del
-// mapa (`surface="canvas"`) y en el modo solo-diálogo (`surface="dialogOnly"`); solo cambia el marco. Muestra el
-// historial con subtítulos, la entrada de texto con "Terminé" (cierra el turno), "Pasar el turno" y sus 4 opciones,
-// el chip silencioso de pista a los 10 s (D-035, desactivable) y el glosario al tocar una palabra según el build
-// (D-131); una palabra sin entrada se marca para repasar, nunca se traduce (D-068). Teclado primero.
-// F5.2: en una escena de voz, en lugar de la caja de texto: "Hablar" (mantener apretado = pulsar-para-hablar; tocar
-// una vez abre el turno y "Terminé" lo cierra), indicador "te escucho / pensando", lo que se va oyendo y el medidor
-// del micrófono. Sin micrófono o sin permiso la escena va por texto y se dice por qué.
-// A2 (ADR-027): en una conversación libre por medidores, el panel de medidores, "Lo que sabés de…" y la escalera de
-// ayuda (ConversationPanel), en voz y en texto.
-// Plan estetica-c M4 (propuesta C §8, "papel y tinta"): sobre el mapa, tarjeta de papel abajo al centro (hasta 47,5rem)
-// con el chip ámbar del nombre, la línea del NPC más grande, la palabra nueva subrayada con puntos, el indicador de
-// turno (punto gris "habla", punto verde que late "tu turno", quieto con "reducir movimiento") y la barra de andamiaje
-// con Terminé, el botón oscuro, a la derecha. Misma estructura, mismos ids: cambian tokens y disposición. Todo en rem.
-// Lee view-models de state/selectors y despacha state/actions: no conoce la red ni el protocolo.
+// Dialogue HUD (F4.2; GDD §2.6, 03 §2.6, R14). ONE SINGLE component for both surfaces: over the map canvas
+// (`surface="canvas"`) and in dialog-only mode (`surface="dialogOnly"`); only the frame changes. Shows the
+// history with subtitles, the text input with "Done" (closes the turn), "Pass the turn" and its 4 options,
+// the silent hint chip at 10 s (D-035, can be turned off) and the glossary on tapping a word according to the build
+// (D-131); a word with no entry is marked for review, never translated (D-068). Keyboard first.
+// F5.2: in a voice scene, instead of the text box: "Speak" (hold = push-to-talk; tap
+// once opens the turn and "Done" closes it), a "listening / thinking" indicator, what is being heard and the
+// microphone meter. Without a microphone or permission the scene goes by text and says why.
+// A2 (ADR-027): in a free meter-based conversation, the meter panel, "What you know about…" and the help ladder
+// (ConversationPanel), in voice and in text.
+// Plan estetica-c M4 (proposal C §8, "paper and ink"): over the map, a paper card at bottom center (up to 47.5rem)
+// with the amber name chip, the larger NPC line, the new word underlined with dots, the turn indicator
+// (gray dot "speaking", pulsing green dot "your turn", still with "reduce motion") and the scaffolding bar
+// with Done, the dark button, on the right. Same structure, same ids: tokens and layout change. All in rem.
+// Reads view-models from state/selectors and dispatches state/actions: it knows neither the network nor the protocol.
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { t, type MessageKey } from "../../i18n";
 import { actions, type PassChoice } from "../../state/actions";
@@ -25,19 +25,19 @@ import { ConversationPanel } from "./ConversationPanel";
 export type HudSurface = "dialogOnly" | "canvas";
 
 /**
- * Orden de la barra de andamiaje de la propuesta C §8: Repetir · Más despacio · Pista · Escribir · Terminé. Las
- * opciones de "Pasar el turno" van en ese orden (`simpler` es la más cercana a "Más despacio"; `continue` no está en
- * la propuesta y va al final del grupo) y Terminé cierra la barra, a la derecha.
- * M4 SEAM: "Escribir" (pasar de voz a texto dentro de la misma escena) pide cambiar la lógica de turnos y de
- * modalidad, fuera de M4; cuando exista entra entre `hint` y Terminé.
+ * Order of the scaffolding bar from proposal C §8: Repeat · Slower · Hint · Write · Done. The
+ * "Pass the turn" options go in that order (`simpler` is the closest to "Slower"; `continue` is not in
+ * the proposal and goes at the end of the group) and Done closes the bar, on the right.
+ * M4 SEAM: "Write" (switching from voice to text within the same scene) requires changing the turn and
+ * modality logic, outside M4; when it exists it goes between `hint` and Done.
  */
 export const PASS_OPTIONS: readonly PassChoice[] = ["repeat", "simpler", "hint", "continue"];
 
 const FRAME: Record<HudSurface, string> = {
   dialogOnly: "mx-auto flex max-w-3xl flex-col gap-4 p-4 md:p-6",
-  // Sobre el mapa: tarjeta de papel abajo al centro, opaca, que recibe el puntero (el resto del shell lo deja pasar al
-  // canvas). Alto máximo ~45 % para no tapar el plano de a dos (plan estetica-c M1 ítem 16); lo que no entra scrollea
-  // adentro. Ancho hasta 47,5rem (propuesta C §8).
+  // Over the map: paper card at bottom center, opaque, receiving the pointer (the rest of the shell lets it through to
+  // the canvas). Max height ~45 % so it does not cover the two-shot (plan estetica-c M1 item 16); what does not fit scrolls
+  // inside. Width up to 47.5rem (proposal C §8).
   canvas: "pointer-events-auto fixed inset-x-3 bottom-3 mx-auto flex max-h-[45dvh] max-w-[47.5rem] flex-col gap-3 overflow-y-auto rounded-card border-2 border-card-line bg-paper p-4 shadow-card",
 };
 
@@ -48,7 +48,7 @@ const DOT_CLASS: Readonly<Record<DotKind, string>> = {
   listening: "bg-danger",
 };
 
-/** Punto del indicador de turno. Solo late en tu turno y nunca con "reducir movimiento" (`data-pulse`). */
+/** Turn indicator dot. Pulses only on your turn and never with "reduce motion" (`data-pulse`). */
 function TurnDot({ kind, reduceMotion }: { kind: DotKind; reduceMotion: boolean }) {
   const pulse = kind === "turn" && !reduceMotion;
   return (
@@ -59,7 +59,7 @@ function TurnDot({ kind, reduceMotion }: { kind: DotKind; reduceMotion: boolean 
   );
 }
 
-/** Terminé: el botón oscuro a la derecha de la barra. Espacio y Enter lo activan (botón nativo); la tecla se muestra. */
+/** Done: the dark button on the right of the bar. Space and Enter activate it (native button); the key is shown. */
 function DoneButton({ disabled, onClick }: { disabled: boolean; onClick(): void }) {
   return (
     <Button id="scene-done" variant="primary" className="ml-auto" aria-disabled={disabled} aria-keyshortcuts="Space Enter" onClick={onClick}>
@@ -72,11 +72,11 @@ function DoneButton({ disabled, onClick }: { disabled: boolean; onClick(): void 
 interface WordChoice {
   word: string;
   key: string;
-  /** Id del botón que la abrió (el foco vuelve ahí al cerrar). */
+  /** Id of the button that opened it (focus returns there on close). */
   from: string;
 }
 
-/** Chip de pista: corre solo en `waiting`, con el ajuste prendido y sin nada escrito; cualquier cambio lo reinicia. */
+/** Hint chip: runs only in `waiting`, with the setting on and nothing typed; any change resets it. */
 function useHintChip(active: boolean, delayMs: number, resetKey: string): boolean {
   const [shown, setShown] = useState<string | null>(null);
   useEffect(() => {
@@ -88,8 +88,8 @@ function useHintChip(active: boolean, delayMs: number, resetKey: string): boolea
 }
 
 /**
- * La frase de la causa de un `model_unavailable` (open-world-3d T1). Solo `http` con estado lleva número; sin estado
- * (red caída) va la frase sin código, nunca "null".
+ * The phrase for the cause of a `model_unavailable` (open-world-3d T1). Only `http` with a status carries a number; with no status
+ * (network down) the phrase goes without a code, never "null".
  */
 export function noticeCauseText(cause: NonNullable<DialogueHudView["noticeCause"]>): string {
   if (cause.kind === "http") return cause.status === null ? t("scene.notice.cause.http_sin_codigo") : t("scene.notice.cause.http", { status: cause.status });
@@ -109,7 +109,7 @@ function phaseText(view: DialogueHudView): string {
   }
 }
 
-/** Mantener "Hablar" al menos esto (ms) cuenta como pulsar-para-hablar: al soltar se cierra el turno. Menos, es un toque. */
+/** Holding "Speak" at least this long (ms) counts as push-to-talk: on release the turn closes. Shorter is a tap. */
 export const HOLD_TO_TALK_MS = 400;
 
 function voiceStatus(v: VoiceHudView, npcName: string | null): string {
@@ -122,7 +122,7 @@ function voiceStatus(v: VoiceHudView, npcName: string | null): string {
   }
 }
 
-/** Controles de voz: Hablar (mantener o tocar), Terminé, Pasar el turno, indicador, lo oído y el medidor. */
+/** Voice controls: Speak (hold or tap), Done, Pass the turn, indicator, what was heard and the meter. */
 function voiceDot(v: VoiceHudView): DotKind {
   if (v.phase === "listening") return "listening";
   return v.phase === "yourTurn" ? "turn" : "speaking";
@@ -132,7 +132,7 @@ function VoiceControls({ v, npcName, canPass, reduceMotion }: { v: VoiceHudView;
   const talk = useRef<HTMLButtonElement>(null);
   const pressedAt = useRef<number | null>(null);
 
-  // Teclado primero: cuando vuelve tu turno, el foco va a "Hablar".
+  // Keyboard first: when your turn comes back, focus goes to "Speak".
   const canTalk = v.canTalk;
   useEffect(() => {
     if (canTalk && !document.getElementById("word-title")) talk.current?.focus();
@@ -143,7 +143,7 @@ function VoiceControls({ v, npcName, canPass, reduceMotion }: { v: VoiceHudView;
     pressedAt.current = null;
     if (at !== null && Date.now() - at >= HOLD_TO_TALK_MS) actions.voiceTalkEnd();
   };
-  // Teclado (click sin puntero, detail = 0): Espacio/Enter abre el turno y, otra vez, lo cierra.
+  // Keyboard (click without pointer, detail = 0): Space/Enter opens the turn and, again, closes it.
   const onClick = (e: MouseEvent<HTMLButtonElement>): void => {
     if (e.detail !== 0) return;
     if (v.canTalk) actions.voiceTalkStart();
@@ -190,9 +190,9 @@ function VoiceControls({ v, npcName, canPass, reduceMotion }: { v: VoiceHudView;
 function LineView({ line, onWord }: { line: HudLine; onWord(choice: WordChoice): void }) {
   const speaker = line.who === "player" ? t("scene.you") : line.who === "lumi" ? t("scene.lumi") : line.name;
   if (line.who === "system") return <li className="text-sm italic text-ink-muted">{t("scene.cut")}</li>;
-  // La línea del NPC va más grande (propuesta C §8: 22 sobre 16, o sea 1,375rem; escala con el tamaño de texto).
+  // The NPC line is larger (proposal C §8: 22 over 16, i.e. 1.375rem; scales with the text size).
   const big = line.who === "npc";
-  // Palabras con tabindex itinerante: Tab entra a la línea por la primera palabra; las flechas recorren el resto.
+  // Words with roving tabindex: Tab enters the line at the first word; the arrows move through the rest.
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     const words = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-word]")];
@@ -258,8 +258,8 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
   const [word, setWord] = useState<WordChoice | null>(null);
   const chip = useHintChip(view.hintChipEnabled && view.waiting && draft.trim() === "", view.hintChipDelayMs, `${view.lines.length}`);
 
-  // Teclado primero: cuando VUELVE tu turno, el foco va a la caja de texto (salvo que estés leyendo una palabra).
-  // Solo en la transición de canWrite: cerrar la tarjeta de una palabra devuelve el foco a la palabra, no a la caja.
+  // Keyboard first: when your turn COMES BACK, focus goes to the text box (unless you are reading a word).
+  // Only on the canWrite transition: closing a word's card returns focus to the word, not to the box.
   const canWrite = view.canWrite;
   useEffect(() => {
     if (canWrite && !document.getElementById("word-title")) input.current?.focus();
@@ -291,7 +291,7 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {view.npcId && surface === "dialogOnly" ? <Portrait id={view.npcId} name={view.npcName ?? view.npcId} size={64} /> : null}
-          {/* El chip ámbar del nombre (propuesta C §8): texto del chip sobre ámbar ≥ 7:1, con el borde oscuro. */}
+          {/* The amber name chip (proposal C §8): chip text on amber ≥ 7:1, with the dark border. */}
           <h1 id="scene-title" ref={heading} tabIndex={-1} data-testid="name-chip" className="rounded-full border-2 border-amber-strong bg-amber px-3 py-0.5 text-lg font-bold text-on-amber">{title}</h1>
         </div>
         <Button id="scene-leave" onClick={() => actions.leaveScene()}>{t("scene.leave")}</Button>

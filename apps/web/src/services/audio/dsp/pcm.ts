@@ -1,7 +1,7 @@
-// Conversiones PCM puras (F5.2, D-094): float [-1, 1] ↔ PCM16 little-endian mono, el framing binario del WebSocket de
-// escena (ADR-017). Sin DOM ni Web Audio: corren en el hilo principal, en el worklet y en vitest.
+// Pure PCM conversions (F5.2, D-094): float [-1, 1] ↔ little-endian mono PCM16, the binary framing of the scene
+// WebSocket (ADR-017). No DOM or Web Audio: they run on the main thread, in the worklet and in vitest.
 
-/** Float32 [-1, 1] → PCM16 (satura fuera de rango). */
+/** Float32 [-1, 1] → PCM16 (clamps out-of-range values). */
 export function floatToPcm16(input: Float32Array): Int16Array {
   const out = new Int16Array(input.length);
   for (let i = 0; i < input.length; i++) {
@@ -18,7 +18,7 @@ export function pcm16ToFloat(input: Int16Array): Float32Array {
   return out;
 }
 
-/** Bytes de un frame binario (PCM16 little-endian) → muestras; un byte suelto al final se descarta. */
+/** Bytes of a binary frame (little-endian PCM16) → samples; a trailing stray byte is dropped. */
 export function pcm16FromBytes(bytes: ArrayBuffer): Int16Array {
   const view = new DataView(bytes);
   const out = new Int16Array(Math.floor(bytes.byteLength / 2));
@@ -26,7 +26,7 @@ export function pcm16FromBytes(bytes: ArrayBuffer): Int16Array {
   return out;
 }
 
-/** Muestras → bytes PCM16 little-endian (copia propia, lista para mandar). */
+/** Samples → little-endian PCM16 bytes (its own copy, ready to send). */
 export function pcm16ToBytes(pcm: Int16Array): ArrayBuffer {
   const out = new ArrayBuffer(pcm.length * 2);
   const view = new DataView(out);

@@ -1,5 +1,5 @@
-// FD0 A8 y A9: la CLI sobre un .director/ de fixture y el servidor MCP (cuatro herramientas, cada una devuelve lo
-// mismo que read.ts). El MCP se prueba en proceso con el transporte en memoria del SDK: sin red ni stdio.
+// FD0 A8 and A9: the CLI over a fixture .director/ and the MCP server (four tools, each returns the
+// same as read.ts). The MCP is tested in-process with the SDK's in-memory transport: no network or stdio.
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";

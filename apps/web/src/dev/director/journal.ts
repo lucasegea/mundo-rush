@@ -1,5 +1,5 @@
-// Eventos del diario de sesiones de prueba que salen de comparar dos estados (03 §6.5.2, D-192).
-// Puro: mismo par de estados → mismos eventos. Solo texto final, nunca audio (D-108).
+// Events of the test-session journal that come out of comparing two states (03 §6.5.2, D-192).
+// Pure: same pair of states → same events. Final text only, never audio (D-108).
 import type { JournalEventInput } from "@lg/protocol/director";
 import {
   selectCurrentDiorama, selectFinalLines, selectOpenScene, selectPlayerTile, type GameState,
@@ -19,7 +19,7 @@ export function journalEvents(prev: GameState | null, next: GameState, at: strin
   const is = selectOpenScene(next);
   const sameScene = was !== null && is !== null && was.sceneId === is.sceneId && was.npcId === is.npcId;
   if (was && !sameScene) {
-    // Hasta F4 la escena es un placeholder: se cierra sin resultado ni criterios evaluados.
+    // Until F4 the scene is a placeholder: it closes with no result and no evaluated criteria.
     out.push({ type: "scene.end", at, result: "cerrada", criteriaMet: [] });
   }
   if (is && !sameScene) {

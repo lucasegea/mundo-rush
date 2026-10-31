@@ -1,27 +1,27 @@
-// services/input/ — dispositivos → acciones semánticas (R10, D-145, D-197). Es el ÚNICO lugar del cliente que
-// escucha teclado, rueda, puntero o gamepad (lint). Nadie más ve una tecla: el store recibe `move`, `interact`, `talk`,
-// `cancel`, `openNotebook`, `zoomIn`/`zoomOut` y, desde open-world-3d T4 (D-820), `look`, `run` y `toggleOverview`. El
-// clic sobre una malla lo resuelve el raycast de R3F en world/ y entra por state/bridge.ts con el mismo traductor del
-// núcleo (`pointerAction`); un arrastre de más de LOOK_DRAG_PX lo traduce este servicio a `look` (Pointer Events, sin
-// pointer lock) y world/ descarta el clic que R3F dispara al soltarlo (`event.delta`).
+// services/input/ — devices → semantic actions (R10, D-145, D-197). It is the client's ONLY place that
+// listens to keyboard, wheel, pointer or gamepad (lint). Nobody else sees a key: the store receives `move`, `interact`, `talk`,
+// `cancel`, `openNotebook`, `zoomIn`/`zoomOut` and, since open-world-3d T4 (D-820), `look`, `run` and `toggleOverview`. A
+// click on a mesh is resolved by R3F's raycast in world/ and enters through state/bridge.ts with the same translator from the
+// core (`pointerAction`); a drag longer than LOOK_DRAG_PX is translated by this service to `look` (Pointer Events, without
+// pointer lock) and world/ discards the click R3F fires on release (`event.delta`).
 import { dirFromHeld, KEY_LOOK_PX_PER_STEP, LOOK_DRAG_PX, wheelZoom, type HeldDirection, type SemanticAction } from "@lg/core";
 import { CHARACTER_KEYMAP, DEFAULT_KEYMAP, type KeyBinding } from "./keymap";
 
 export interface InputDeps {
-  /** Donde se escucha (window en la app; un EventTarget cualquiera en los tests). */
+  /** Where to listen (window in the app; any EventTarget in tests). */
   target: EventTarget;
   dispatch(action: SemanticAction): void;
-  /** ¿El mapa está jugándose? Fuera de él, las teclas siguen su comportamiento normal del navegador. */
+  /** Is the map being played? Outside of it, keys keep the browser's normal behavior. */
   isActive(): boolean;
   keymap?: Readonly<Record<string, KeyBinding>>;
-  /** Reloj de Q y R mantenidas (inyectable en los tests). */
+  /** Clock for held Q and R (injectable in tests). */
   timers?: { every(ms: number, fn: () => void): () => void };
 }
 
-/** Selector del contenedor del canvas: la rueda solo hace zoom sobre el mapa, no sobre un panel. */
+/** Selector of the canvas container: the wheel only zooms over the map, not over a panel. */
 export const WORLD_SURFACE_ATTR = "data-lg-world";
 
-/** Q y R mantenidas emiten `look` a 30 Hz (95°/s, THIRD_PERSON.keyLookDegPerS). */
+/** Held Q and R emit `look` at 30 Hz (95°/s, THIRD_PERSON.keyLookDegPerS). */
 export const KEY_LOOK_INTERVAL_MS = 1000 / 30;
 
 const browserTimers = { every(ms: number, fn: () => void): () => void { const id = setInterval(fn, ms); return () => clearInterval(id); } };
@@ -38,9 +38,9 @@ const overWorld = (t: EventTarget | null): boolean => {
 };
 
 /**
- * Traductor de arrastre (D-820), puro: hasta pasar LOOK_DRAG_PX desde donde se apretó no emite nada (es un clic, que
- * resuelve el raycast de world/); pasado el umbral, cada movimiento emite `look` con el desplazamiento desde el anterior y
- * sigue "mirando" hasta soltar.
+ * Drag translator (D-820), pure: until LOOK_DRAG_PX is exceeded from where it was pressed it emits nothing (it is a click, which
+ * is resolved by world/'s raycast); past the threshold, each movement emits `look` with the displacement from the previous one and
+ * keeps "looking" until release.
  */
 export function createDragLook(threshold: number = LOOK_DRAG_PX) {
   let down: { x: number; y: number } | null = null;
@@ -52,7 +52,7 @@ export function createDragLook(threshold: number = LOOK_DRAG_PX) {
       last = { x, y };
       looking = false;
     },
-    /** El `look` de este movimiento, o null (sin botón apretado o todavía dentro del umbral). */
+    /** The `look` of this movement, or null (no button pressed or still within the threshold). */
     move(x: number, y: number): SemanticAction | null {
       if (!down) return null;
       if (!looking && Math.hypot(x - down.x, y - down.y) <= threshold) return null;
@@ -61,7 +61,7 @@ export function createDragLook(threshold: number = LOOK_DRAG_PX) {
       last = { x, y };
       return action.dx === 0 && action.dy === 0 ? null : action;
     },
-    /** Al soltar: "drag" si miró, "tap" si fue un clic, null si no había botón apretado. */
+    /** On release: "drag" if it looked, "tap" if it was a click, null if no button was pressed. */
     up(): "drag" | "tap" | null {
       const was = down === null ? null : looking ? "drag" : "tap";
       down = null;
@@ -74,7 +74,7 @@ export function createDragLook(threshold: number = LOOK_DRAG_PX) {
   };
 }
 
-/** Arranca el servicio. Devuelve la función que suelta todos los listeners. */
+/** Starts the service. Returns the function that releases all listeners. */
 export function startInput(deps: InputDeps): () => void {
   const keymap = deps.keymap ?? DEFAULT_KEYMAP;
   const timers = deps.timers ?? browserTimers;
@@ -88,7 +88,7 @@ export function startInput(deps: InputDeps): () => void {
     deps.dispatch({ type: "move", dir });
   };
 
-  // ---------- Q y R: mirar mientras se mantienen ----------
+  // ---------- Q and R: look while held ----------
   const lookKeys = new Set<-1 | 1>();
   let stopLookTimer: (() => void) | null = null;
   const lookTick = (): void => {
@@ -114,14 +114,14 @@ export function startInput(deps: InputDeps): () => void {
     const e = event as KeyboardEvent;
     const binding = keymap[e.code] ?? CHARACTER_KEYMAP[e.key];
     if (!binding || e.altKey || e.ctrlKey || e.metaKey || isEditable(e.target) || !deps.isActive()) return;
-    e.preventDefault(); // las flechas no desplazan la página mientras se camina
+    e.preventDefault(); // arrow keys do not scroll the page while walking
     if (binding.kind === "hold") {
       held.add(binding.dir);
       emitDir();
     } else if (binding.kind === "look") {
-      if (lookKeys.has(binding.dir)) return; // repetición del teclado: el reloj ya emite
+      if (lookKeys.has(binding.dir)) return; // keyboard repeat: the clock already emits
       lookKeys.add(binding.dir);
-      lookTick(); // el primer paso enseguida, sin esperar al reloj
+      lookTick(); // first step right away, without waiting for the clock
       syncLookTimer();
     } else if (binding.kind === "run") {
       setRun(true);
@@ -143,7 +143,7 @@ export function startInput(deps: InputDeps): () => void {
     }
   };
 
-  // ---------- puntero: arrastre = mirar (D-820) ----------
+  // ---------- pointer: drag = look (D-820) ----------
   const drag = createDragLook();
   let pointerId: number | null = null;
   const onPointerDown = (event: Event): void => {
@@ -165,7 +165,7 @@ export function startInput(deps: InputDeps): () => void {
     drag.up();
   };
 
-  // Al perder el foco la ventana no llegan los keyup ni el pointerup: se suelta todo.
+  // When the window loses focus neither keyup nor pointerup arrive: everything is released.
   const onBlur = (): void => {
     held.clear();
     emitDir();
@@ -176,7 +176,7 @@ export function startInput(deps: InputDeps): () => void {
     drag.up();
   };
 
-  // Rueda acumulada (D-208): un paso por muesca, también con los muchos eventos chicos de un trackpad.
+  // Accumulated wheel (D-208): one step per notch, also with the many small events of a trackpad.
   let wheelAcc = 0;
   const onWheel = (event: Event): void => {
     const e = event as WheelEvent;

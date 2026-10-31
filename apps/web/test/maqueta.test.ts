@@ -1,14 +1,14 @@
-// Plan estetica-c M5 (D-207): el diorama en el formato de la maqueta, sin GPU (D-016).
-// - test.yaml migrado camina IGUAL que el de tiles: la grilla compilada se compara celda por celda con el fixture de 43c2b48;
-// - cada NPC se alcanza desde el spawn por pasillos de 2 celdas o más (03 §6.4.5);
-// - terreno: los caminos aplanan las lomas y se pintan `camino`, el agua hunde el terreno y no se camina, la paleta por zona;
-// - detalle sembrado por zonas: la cantidad exacta, fuera de caminos, agua y celdas bloqueadas;
-// - el estimador de validate:content (tabla de @lg/art) da EXACTAMENTE lo que world/budget/estimate.ts mide sobre el grafo real;
-// - la tabla de costos contra los constructores (props, cerco, árboles, cabezas, detalle);
-// - la burbuja ámbar de pedido: sale de `selectRequestBubbles` (vacía hoy: M5 SEAM) y es un Sprite de la clase etiqueta;
-// - la apariencia llega del contenido (catálogo) y una mal formada falla clara.
-// Plan estetica-c M6: el estimador por tier (densidad reducida en `low`, pasada de sombra en `high`) contra el grafo real
-// de esa densidad; `low` dentro de 60 llamadas y 25k triángulos con todo a la vista (el zoom más lejano, 160 m).
+// Plan estetica-c M5 (D-207): the diorama in the diorama format, without GPU (D-016).
+// - migrated test.yaml walks THE SAME as the tile one: the compiled grid is compared cell by cell with the 43c2b48 fixture;
+// - each NPC is reachable from the spawn through corridors of 2 cells or more (03 §6.4.5);
+// - terrain: paths flatten the hills and are painted `camino`, water sinks the terrain and cannot be walked, the palette per zone;
+// - detail sown by zones: the exact amount, away from paths, water and blocked cells;
+// - validate:content's estimator (the @lg/art table) gives EXACTLY what world/budget/estimate.ts measures on the real graph;
+// - the cost table against the builders (props, fence, trees, heads, detail);
+// - the amber request bubble: it comes from `selectRequestBubbles` (empty today: M5 SEAM) and is a Sprite of the label class;
+// - the appearance comes from the content (catalog) and a malformed one fails clearly.
+// Plan estetica-c M6: the per-tier estimator (reduced density in `low`, shadow pass in `high`) against the real graph
+// of that density; `low` within 60 calls and 25k triangles with everything in view (the farthest zoom, 160 m).
 import {
   BODY_IDS, CODE_PROP_ASSETS, codePropTriangles, DETAIL_TRIANGLES, HAIR_STYLES, HATS, headTriangles, insidePolygon, isCodeProp,
   PAINTED_LOOK, PLAYER_LOOK, polylineDistance, SCARVES, TIER_BUDGETS, tokenRgb, WORLD_TIERS, type CodePropAsset, type SceneDensity,
@@ -68,7 +68,7 @@ describe("la grilla de test.yaml migrado es la de tiles, celda por celda", () =>
       for (let c = 0; c < row.length; c++) if (row[c] !== GRID_FIXTURE.celdas[r]?.[c]) diffs.push(`${c},${r}: ${row[c]} (era ${GRID_FIXTURE.celdas[r]?.[c]})`);
     });
     expect(diffs).toEqual([]);
-    expect(rows.join("").split("#").length - 1).toBeGreaterThan(50); // mide algo: hay celdas bloqueadas
+    expect(rows.join("").split("#").length - 1).toBeGreaterThan(50); // it measures something: there are blocked cells
   });
 
   test("teeth: sin el estanque, la grilla ya no coincide", () => {
@@ -77,7 +77,7 @@ describe("la grilla de test.yaml migrado es la de tiles, celda por celda", () =>
   });
 });
 
-/** Celdas donde entra un cuerpo de 2 × 2 celdas (pasillo de 2 o más, 03 §6.4.5), por su esquina [col, row]. */
+/** Cells where a 2 × 2-cell body fits (corridor of 2 or more, 03 §6.4.5), by its corner [col, row]. */
 function corridorReach(g: WalkGrid, from: { x: number; z: number }): Uint8Array {
   const ok = (c: number, r: number): boolean => isWalkable(g, c, r) && isWalkable(g, c + 1, r) && isWalkable(g, c, r + 1) && isWalkable(g, c + 1, r + 1);
   const seen = new Uint8Array(g.cols * g.rows);
@@ -110,7 +110,7 @@ const reachesNpc = (d: DioramaRuntime, id: string): boolean => {
     for (let c = 0; c < d.grid.cols; c++) {
       if (!seen[r * d.grid.cols + c]) continue;
       const p = cellCenter(d.grid, c, r);
-      // La esquina del bloque de 2 × 2: su centro es la esquina compartida.
+      // The 2 × 2 block's corner: its center is the shared corner.
       if (Math.hypot(p.x + d.grid.cellSize / 2 - npc.x, p.z + d.grid.cellSize / 2 - npc.z) <= npc.radius) return true;
     }
   }
@@ -146,7 +146,7 @@ describe("terreno de la maqueta", () => {
     }
     const pond = d.ground.ponds[0] ?? [];
     expect(t.heightAt(8, -6)).toBeLessThan(-0.3);
-    // La pintura (@lg/art insidePolygon) y la grilla (núcleo) coinciden sobre el agua.
+    // The paint (@lg/art insidePolygon) and the grid (core) agree over the water.
     let inside = 0;
     for (let r = 0; r < d.grid.rows; r++) {
       for (let c = 0; c < d.grid.cols; c++) {
@@ -166,7 +166,7 @@ describe("terreno de la maqueta", () => {
     const hCon = buildTerrain({ bounds, ground: con.ground, look: PAINTED_LOOK }).heightAt(30, 0);
     const hSin = buildTerrain({ bounds, ground: sin.ground, look: PAINTED_LOOK }).heightAt(30, 0);
     expect(hSin).toBeGreaterThan(1);
-    // Lejos la malla es gruesa: el punto interpola vértices de los costados del camino, por eso no da 0 justo.
+    // Far away the mesh is coarse: the point interpolates vertices from the path's sides, hence it is not exactly 0.
     expect(Math.abs(hCon), `${hCon} contra ${hSin}`).toBeLessThan(0.25 * hSin);
   });
 
@@ -226,7 +226,7 @@ describe("detalle por zonas", () => {
   });
 });
 
-/** Lo que el estimador de validate:content necesita: el registro y las apariencias del contenido real. */
+/** What validate:content's estimator needs: the registry and the real content's appearances. */
 const contexto = () => {
   const c = compiledContent().conjunto;
   return {
@@ -252,7 +252,7 @@ async function actor(look: CharacterLook, density: SceneDensity = "full"): Promi
   return buildSkinnedCharacter(body.scene, clips.clips, look, 7).root;
 }
 
-/** El grafo real de un diorama con todo a la vista: escena, modelos, personajes, etiqueta y burbuja por NPC, sombras. */
+/** A diorama's real graph with everything in view: scene, models, characters, label and bubble per NPC, shadows. */
 async function realGraph(d: DioramaRuntime, density: SceneDensity = "full"): Promise<Group> {
   const scene = buildDioramaScene(d, density);
   const models = new Group();
@@ -268,8 +268,8 @@ async function realGraph(d: DioramaRuntime, density: SceneDensity = "full"): Pro
 }
 
 /**
- * Un diorama sintético pesado para los dientes del estimador: los límites, props y NPCs de test.yaml, sin caminos, agua
- * ni detalle propios, y 400 matas en dos zonas libres (plan estetica-c M7: antes se armaba sobre el fixture de tiles).
+ * A heavy synthetic diorama for the estimator's teeth: test.yaml's limits, props and NPCs, without its own paths, water
+ * or detail, and 400 bushes in two free zones (plan estetica-c M7: before, it was built on the tile fixture).
  */
 const heavyDiorama = (): DioramaSource => {
   const base: Partial<DioramaSource> = { ...contexto().source("test") };
@@ -304,7 +304,7 @@ describe("el estimador de validate:content es el grafo que dibuja world/", () =>
   });
 });
 
-/** Lo que dibuja la escena (sin la pasada de sombra, que no es un objeto del grafo). */
+/** What the scene draws (without the shadow pass, which is not a graph object). */
 const sinSombra = (partes: Record<string, { drawCalls: number; triangles: number }>) =>
   Object.entries(partes).filter(([k]) => k !== PARTE_SOMBRA).reduce((a, [, e]) => ({ drawCalls: a.drawCalls + e.drawCalls, triangles: a.triangles + e.triangles }), { drawCalls: 0, triangles: 0 });
 
@@ -463,7 +463,7 @@ describe("burbuja ámbar de pedido", () => {
       ui: { ...s.ui, panels: [{ kind: "scene", npcId: "NPC-INES" }] },
     }));
     expect(selectRequestBubbles(talking)).toEqual(["NPC-NELL"]);
-    // Un id que no está en el diorama no aparece.
+    // An id that is not in the diorama does not appear.
     expect(selectRequestBubbles(pedido(s0, "NPC-OTRO"))).toEqual([]);
   });
 
@@ -480,7 +480,7 @@ describe("burbuja ámbar de pedido", () => {
   });
 
   test("queda arriba de la etiqueta; flota, y con «reducir movimiento» queda quieta", () => {
-    // center.y negativo: el sprite sube por encima de su punto de anclaje más de un alto de etiqueta.
+    // negative center.y: the sprite rises above its anchor point by more than one label height.
     const still = bubbleCenterY(0, true);
     expect(still).toBeLessThan(-1 / BUBBLE_LABEL_RATIO);
     for (const t of [0.3, 0.9, 1.4]) expect(bubbleCenterY(t, true)).toBe(still);

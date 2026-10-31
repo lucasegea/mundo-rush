@@ -1,7 +1,7 @@
-// Plan estetica-c M1 (D-207): las partes puras del look C en world/, sin GPU (D-016). Cámara de lente largo (A1),
-// borde invisible (A2), terreno (A3), material único (A4), bisel (A5), props (A6), plano de a dos (A8), etiquetas (A12),
-// presupuesto estimado (A15) y la paleta como única fuente de los hex. Lo que vive en el store (A7, A9, A10, A13) está
-// en map.test.tsx sobre el mapa real.
+// Plan estetica-c M1 (D-207): the pure parts of look C in world/, no GPU (D-016). Long-lens camera (A1),
+// invisible edge (A2), terrain (A3), single material (A4), bevel (A5), props (A6), two-person shot (A8), labels (A12),
+// estimated budget (A15) and the palette as the only source of hex values. What lives in the store (A7, A9, A10, A13) is
+// in map.test.tsx over the real map.
 import {
   CAMERA_PRESET_IDS, cellCenter, circleBlocked, isWalkable, prepareDiorama, presetAngles, zoomDistance, ZOOM_DISTANCES,
   type DioramaLayout, type DioramaRuntime,
@@ -21,8 +21,8 @@ import {
 import { buildDioramaScene } from "../src/world/dioramas/scene";
 import { LABEL_HIDE_DISTANCE, labelEntries, LABEL_STYLES, labelVisibleAt } from "../src/world/labels/labels";
 import { createNameLabel } from "../src/world/labels/labelSprite";
-// Cambio registrado (open-world-3d T7b, D-838/D-839): SUN, HEMI, FOG, TONE y BACKGROUND pasaron al look (`WorldLook.light`,
-// `fog`, `background` de @lg/art) y la `fogFor` de distancia de D-208 se fundió en la del zoom (world/sky/palette.ts).
+// Recorded change (open-world-3d T7b, D-838/D-839): SUN, HEMI, FOG, TONE and BACKGROUND moved to the look (`WorldLook.light`,
+// `fog`, `background` of @lg/art) and D-208's distance `fogFor` was merged into the zoom one (world/sky/palette.ts).
 import { SUN_SHADOW, sunShadowFor } from "../src/world/lighting/params";
 import { fogFor } from "../src/world/sky/palette";
 import { zoomTAt } from "../src/world/camera/zoom";
@@ -38,9 +38,9 @@ import { compiledClientContent, contentLooks, lookOf } from "./helpers";
 
 const layout = (): DioramaLayout => pickDiorama(compiledClientContent()["dioramas.json"], "test");
 const testDiorama = (): DioramaRuntime => prepareDiorama(layout());
-/** 16:9, 21:9, 4:3 y dos verticales (9:16 y el de un teléfono, 9:19,5). */
+/** 16:9, 21:9, 4:3 and two portrait ones (9:16 and a phone's, 9:19.5). */
 const ASPECTS = [16 / 9, 21 / 9, 4 / 3, 9 / 16, 9 / 19.5];
-/** El rayo más largo de una esquina de la pantalla hasta el suelo (m), con la cámara de juego a esa distancia. */
+/** The longest ray from a screen corner to the ground (m), with the game camera at that distance. */
 const longestRay = (dist: number, aspect: number, pitchDeg = 50): number => {
   const fov = perspectiveFov(aspect);
   const off = cameraOffset(pitchDeg, 0, dist);
@@ -119,11 +119,11 @@ describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () =>
     const reach = Math.max(...ASPECTS.map((a) => groundReach(far, pitchDeg, yawDeg, perspectiveFov(a), a)));
     expect(reach).toBeLessThan(TERRAIN_SKIRT);
     expect(reach).toBeGreaterThan(48);
-    // Más cerca, menos alcance (y el de 40 m, el lejano de M1, entraba en la falda vieja).
+    // Closer, less reach (and the 40 m one, M1's far plane, fell inside the old skirt).
     const reaches = ZOOM_DISTANCES.map((dist) => groundReach(dist, pitchDeg, yawDeg, 30, 21 / 9));
     for (let i = 1; i < reaches.length; i++) expect(reaches[i] as number).toBeLessThan(reaches[i - 1] as number);
     expect(groundReach(40, pitchDeg, yawDeg, 30, 21 / 9)).toBeLessThan(48);
-    // Con horizonte a la vista no hay alcance finito.
+    // With the horizon in view there is no finite reach.
     expect(groundReach(30, 5, 45, 30, 16 / 9)).toBe(Infinity);
   });
 
@@ -135,14 +135,14 @@ describe("A2 borde invisible: la cámara nunca ve más allá del terreno", () =>
         const { near, far } = cameraClip(dist, pitchDeg, fov, aspect);
         expect(far, `${dist} m, ${aspect.toFixed(2)}`).toBeGreaterThanOrEqual(longestRay(dist, aspect, pitchDeg) * FAR_MARGIN);
         expect(far).toBeGreaterThanOrEqual(PERSPECTIVE.far);
-        // Lo más cercano que se ve (la esquina de abajo) queda bien lejos del plano cercano.
+        // The closest thing visible (the bottom corner) stays well away from the near plane.
         expect(near).toBeLessThan(0.5 * dist);
         expect(near).toBeGreaterThanOrEqual(PERSPECTIVE.near);
       }
     }
     expect(cameraClip(30, pitchDeg, 30, 16 / 9)).toEqual({ near: PERSPECTIVE.near, far: PERSPECTIVE.far });
     expect(cameraClip(160, pitchDeg, 30, 16 / 9).far).toBeGreaterThan(250);
-    // Plano de a dos vertical: se ve el horizonte, el lejano queda en el de siempre.
+    // Vertical two-person shot: the horizon is visible, the far plane stays the usual one.
     expect(cameraClip(TWO_SHOT.distance, TWO_SHOT.pitchDeg, 40.5, 9 / 16).far).toBe(PERSPECTIVE.far);
   });
 });
@@ -220,7 +220,7 @@ describe("A4 material único del mundo", () => {
     expect(a.length).toBe(BRUSH_SIZE * BRUSH_SIZE);
     expect(Math.min(...a)).toBeGreaterThanOrEqual(BRUSH_MIN);
     expect(Math.max(...a)).toBeLessThanOrEqual(BRUSH_MAX);
-    expect(Math.min(...a)).toBeLessThan(230); // hay manchas
+    expect(Math.min(...a)).toBeLessThan(230); // there are patches
     expect(brushPixels(3)).toEqual(a);
     expect(brushPixels(4)).not.toEqual(a);
     const tex = brushTexture(3);
@@ -237,9 +237,9 @@ describe("A4 material único del mundo", () => {
     expect(audit.surfaceInstances).toBeLessThanOrEqual(2);
     expect(audit.byKind.toon).toBe(1);
     expect(audit.byKind.agua).toBe(1);
-    // Open-world-3d T6 (AC71, D-828): cambio registrado. La aserción vieja era la lista de 4 clases ["toon", "agua",
-    // "etiqueta", "sombra-blob"]; la lista crece con las 6 del mundo abierto. El tope de 2 superficies del diorama
-    // campesino no cambia (la auditoría del mundo abierto está en apps/web/test/open-world.test.ts, AC71).
+    // Open-world-3d T6 (AC71, D-828): recorded change. The old assertion was the list of 4 classes ["toon", "agua",
+    // "etiqueta", "sombra-blob"]; the list grows with the 6 of the open world. The cap of 2 surfaces of the farmer
+    // diorama does not change (the open-world audit is in apps/web/test/open-world.test.ts, AC71).
     expect([...WORLD_MATERIAL_KINDS]).toEqual(["toon", "agua", "etiqueta", "sombra-blob", "terreno", "pasto", "follaje", "impostor", "cielo", "nube"]);
     const toon = toonMaterial();
     expect(toon.vertexColors).toBe(true);
@@ -290,7 +290,7 @@ describe("A5 regla del bisel", () => {
       expect(maxDihedralDeg(g.getAttribute("position").array, g.index?.array ?? null), `reducido ${b.asset} ${b.w}×${b.h}×${b.d}`).toBeLessThan(MAX_DIHEDRAL_DEG);
     }
 
-    // Los `modelo/*` (glTF de M2) pasan la regla en scripts/assets/optimize.ts o la registran (bisel) en el registro.
+    // The `modelo/*` entries (M2 glTF) pass the rule in scripts/assets/optimize.ts or register it (bevel) in the registry.
     for (const b of testDiorama().boxes.filter((x) => x.asset.startsWith("codigo/"))) {
       const g = buildProp(b.asset, { w: b.w, h: b.h, d: b.d }, 0);
       expect(maxDihedralDeg(g.getAttribute("position").array, g.index?.array ?? null), `${b.asset} ${b.w}×${b.h}×${b.d}`).toBeLessThan(MAX_DIHEDRAL_DEG);
@@ -313,7 +313,7 @@ describe("A5 regla del bisel", () => {
 describe("A6 props por código", () => {
   test("todo asset codigo/* de test.yaml tiene constructor; uno inexistente falla nombrándolo", () => {
     const props = layout().props ?? [];
-    // Desde M2 un prop es `codigo/*` (constructor) o `modelo/*` (glTF con registro; lo chequea validate:content).
+    // Since M2 a prop is `codigo/*` (builder) or `modelo/*` (glTF with a registry entry; validate:content checks it).
     expect(props.every((p) => p.asset.startsWith("codigo/") || p.asset.startsWith("modelo/")), props.map((p) => p.asset).join(", ")).toBe(true);
     for (const p of props.filter((x) => x.asset.startsWith("codigo/"))) expect(PROP_BUILDERS[p.asset as CodePropAsset], p.asset).toBeTypeOf("function");
     expect(() => buildProp("codigo/inexistente", { w: 1, h: 1, d: 1 })).toThrow(/codigo\/inexistente/);
@@ -322,7 +322,7 @@ describe("A6 props por código", () => {
   test("los árboles nuevos bloquean su huella en la grilla; sin ellos, ese lugar es caminable", () => {
     const l = layout();
     const trees = (l.props ?? []).filter((p) => p.asset === "codigo/arbol" || p.asset === "codigo/pino");
-    // Desde M5 los árboles repetidos van como `instancias` de un solo prop.
+    // Since M5 repeated trees go as `instancias` of a single prop.
     const spots = trees.flatMap((p) => (p.instancias ? p.instancias.map((i) => i.pos) : p.pos ? [p.pos] : []));
     expect(spots.length).toBeGreaterThanOrEqual(8);
     const withTrees = prepareDiorama(l);
@@ -353,12 +353,12 @@ describe("A8 plano de a dos en 3/4", () => {
     expect(f.target[1]).toBeCloseTo(TWO_SHOT.chestHeight - 0.9, 9);
     expect(f.target[0]).toBeCloseTo(0, 9);
     expect(f.target[2]).toBeCloseTo(1.3, 9);
-    // La línea jugador-NPC va por z; la perpendicular es yaw ±90° y el corrimiento acerca la cámara al lado del jugador
-    // (+z), que es hacia donde mira el NPC.
+    // The player-NPC line goes along z; the perpendicular is yaw ±90° and the shift brings the camera toward the player's side
+    // (+z), which is where the NPC faces.
     expect(f.chosen.leanDeg).toBe(27);
-    // Perpendicular del lado elegido: (-nz, nx) · side con n = (0, 1) del NPC al jugador, o sea yaw ∓90°.
+    // Perpendicular of the chosen side: (-nz, nx) · side with n = (0, 1) from the NPC to the player, i.e. yaw ∓90°.
     expect(Math.abs(shortestYawDelta(f.chosen.side === 1 ? -90 : 90, f.yawDeg))).toBeCloseTo(27, 6);
-    // Corrida hacia +z (el lado del jugador, hacia donde mira el NPC).
+    // Shift toward +z (the player's side, where the NPC faces).
     expect(cameraOffset(20, f.yawDeg, 12.5)[2]).toBeGreaterThan(0);
     expect(Math.abs(f.yawDeg)).toBeCloseTo(90 - 27, 6);
   });
@@ -390,7 +390,7 @@ describe("A8 plano de a dos en 3/4", () => {
     const f = twoShotFrame(player, npc, [], loma);
     expect(f.target[1]).toBeCloseTo(7 + TWO_SHOT.chestHeight - 0.9, 9);
     expect(f.chosen.score).toBe(0);
-    // El suelo de cada uno: entre 2 m y 6 m la mira queda a 4 m más la altura del pecho menos la bajada.
+    // Each one's ground: between 2 m and 6 m the aim sits at 4 m plus chest height minus the drop.
     const rampa = (_x: number, z: number): number => (z > 1 ? 6 : 2);
     expect(twoShotFrame(player, npc, [], rampa).target[1]).toBeCloseTo(4 + TWO_SHOT.chestHeight - 0.9, 9);
   });
@@ -422,8 +422,8 @@ describe("A12 etiquetas de nombre", () => {
 
 describe("A13/A14 paleta: una sola fuente de los hex", () => {
   test("luz, niebla y fondo de la propuesta C §5 salen de la paleta", () => {
-    // Cambio registrado (T7b): los valores viven en los looks (los dos looks del catálogo comparten la luz de C §5). La
-    // niebla de 34 a 78 m (D-208) ya no existe: desde T5 la niebla es la del zoom, igual para todo diorama (AC40).
+    // Recorded change (T7b): the values live in the looks (both catalog looks share C §5's light). The
+    // 34 to 78 m fog (D-208) no longer exists: since T5 the fog is the zoom one, the same for every diorama (AC40).
     for (const look of [PAINTED_LOOK, DEFAULT_LOOK]) {
       expect(look.light.sun).toMatchObject({ color: "#FFF1D6", intensity: 2.3, elevationDeg: 48, azimuthDeg: -30 });
       expect(look.light.hemi).toMatchObject({ sky: "#D6ECF2", ground: "#6E8B4A", intensity: 1.15 });
@@ -434,12 +434,12 @@ describe("A13/A14 paleta: una sola fuente de los hex", () => {
   });
 
   test("ningún archivo nuevo de world/ escribe un hex fuera de palette.ts", () => {
-    // Cambio registrado (open-world-3d T6): se suma `sky` (el cielo nuevo tampoco escribe hex; sus colores salen de palette.ts).
-    // Cambio registrado (open-world-3d T7): se suma `nature` (sus colores son números de @lg/art NATURE_COLORS y la gorra
-    // CAP_COLOR; antes la zona no existía).
+    // Recorded change (open-world-3d T6): `sky` is added (the new sky does not write hex either; its colors come from palette.ts).
+    // Recorded change (open-world-3d T7): `nature` is added (its colors are @lg/art NATURE_COLORS numbers and the cap
+    // CAP_COLOR; the zone did not exist before).
     const zones = "materials|terrain|water|labels|budget|lighting|actors|dioramas|camera|props|sky|nature";
     const src = import.meta.glob("../src/world/*/**/*.{ts,tsx}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-    // Plan estetica-c M7: lo de HD-2D (props/Boxes.tsx) se retiró; ya no hay excepciones.
+    // Plan estetica-c M7: the HD-2D stuff (props/Boxes.tsx) was retired; there are no exceptions anymore.
     const files = Object.entries(src)
       .map(([path, text]) => [path.replace(/^.*\/src\/world\//, ""), text] as const)
       .filter(([rel]) => new RegExp(`^(${zones})/`).test(rel));
@@ -461,7 +461,7 @@ describe("personajes chibi (ítem 13)", () => {
     expect(heads).toBeLessThanOrEqual(3);
     expect(HEAD_RADIUS).toBe(0.42);
     for (const id of Object.keys(contentLooks())) expect(buildChibi(lookOf(id)).meshes.length).toBeLessThanOrEqual(6);
-    // Desde M3 los accesorios son piezas sueltas (sombrero, peinado, pañuelo o bufanda), no uno solo por personaje.
+    // Since M3 accessories are separate pieces (hat, hairstyle, scarf or muffler), not a single one per character.
     expect(contentLooks()["player"]?.hat).toBe("gorra");
     expect(contentLooks()["NPC-INES"]?.scarf).toBe("panuelo");
     expect(contentLooks()["NPC-NELL"]?.hairStyle).toBe("rodete");
@@ -498,8 +498,8 @@ describe("agua (ítem 9)", () => {
   test("material propio de la clase agua, con niebla; con «reducir movimiento» los brillos quedan quietos", () => {
     const m = waterMaterial(PAINTED_LOOK);
     expect(materialKind(m)).toBe("agua");
-    // Niebla propia: la de la escena en t = 0. Cambio registrado (T7b): antes los 34/78 m de D-208, que la luz pisaba en
-    // el primer cuadro con la del zoom; ahora arranca con la del zoom del look (45/250 m), la que dibuja.
+    // Own fog: the scene's at t = 0. Recorded change (T7b): it used to be D-208's 34/78 m, which the light overwrote on
+    // the first frame with the zoom one; now it starts with the look's zoom one (45/250 m), the one that is drawn.
     const fog0 = fogFor(PAINTED_LOOK.fog.range, 1, 0);
     expect(m.uniforms["uFogNear"]?.value).toBe(fog0.near);
     expect(m.uniforms["uFogFar"]?.value).toBe(fog0.far);
@@ -524,19 +524,19 @@ describe("D-208 zoom lejano: niebla, sombra, tilt-shift, etiquetas y presupuesto
     expect(viewScale(160)).toBeCloseTo(160 / 30, 9);
   });
 
-  // Cambio registrado (open-world-3d T7b, "los dos fogFor se funden en uno"): la niebla de distancia de D-208
-  // (`fogFor(viewScale(d))`, 34-78 m escalada) no tenía llamadas desde T5; la escena usa la del zoom con el rango del look.
-  // El test sigue pidiendo lo mismo de esa niebla, la que se dibuja: en cada paso de zoom del núcleo, con la escala de
-  // niebla de cada densidad y cada look del catálogo, el jugador nunca entra en la niebla y el rayo más largo al suelo
-  // queda a lo sumo con 60 % de bruma. La parte "34-78 m de cerca" y su teeth eran de la niebla fija de M1 y se van.
+  // Recorded change (open-world-3d T7b, "the two fogFor merge into one"): D-208's distance fog
+  // (`fogFor(viewScale(d))`, 34-78 m scaled) had no callers since T5; the scene uses the zoom one with the look's range.
+  // The test still asks the same of that fog, the one that is drawn: at each core zoom step, with each density's
+  // fog scale and each catalog look, the player never enters the fog and the longest ray to the ground
+  // ends up with at most 60 % haze. The "34-78 m up close" part and its teeth belonged to M1's fixed fog and are gone.
   test("niebla: de cerca y de lejos el jugador y la mitad de abajo nítidos (la del zoom, para cada look)", () => {
     const fit = zoomDistance(0);
     for (const look of [PAINTED_LOOK, DEFAULT_LOOK]) for (const density of SCENE_DENSITIES) for (const dist of ZOOM_DISTANCES) {
       const fog = fogFor(look.fog.range, DENSITY[density].fogScale, zoomTAt(dist, fit));
       expect(fog.far).toBeGreaterThan(fog.near);
-      // El jugador (a `dist` de la cámara) nunca entra en la niebla.
+      // The player (at `dist` from the camera) never enters the fog.
       expect(fog.near, `${look.id} ${density} ${dist} m`).toBeGreaterThan(dist);
-      // El rayo más largo al suelo (arriba de la pantalla) no queda tapado del todo: a lo sumo 60 % de bruma.
+      // The longest ray to the ground (top of the screen) is not fully covered: at most 60 % haze.
       for (const aspect of ASPECTS) {
         const t = (longestRay(dist, aspect, pitchDeg) - fog.near) / (fog.far - fog.near);
         expect(t, `${look.id} ${density} ${dist} m, ${aspect.toFixed(2)}`).toBeLessThan(0.6);
@@ -559,11 +559,11 @@ describe("D-208 zoom lejano: niebla, sombra, tilt-shift, etiquetas y presupuesto
     expect(sunShadowFor(viewScale(22))).toEqual({ half: SUN_SHADOW.half, distance: SUN_SHADOW.distance, near: SUN_SHADOW.near, far: SUN_SHADOW.far });
     for (const dist of ZOOM_DISTANCES) {
       const box = sunShadowFor(viewScale(dist));
-      // La caja cubre la parte de abajo de la pantalla y el jugador (la mitad cercana de la huella).
+      // The box covers the bottom of the screen and the player (the near half of the footprint).
       const fp = frustumGroundFootprint([0, PERSPECTIVE.targetHeight, 0], pitchDeg, yawDeg, dist, 30, 16 / 9) ?? [];
       const nearHalf = Math.max(...fp.slice(0, 2).map(([x, z]) => Math.max(Math.abs(x), Math.abs(z))));
       expect(box.half, `${dist} m`).toBeGreaterThanOrEqual(nearHalf);
-      // El sol queda a la misma proporción de la caja, y el plano lejano alcanza el fondo de la caja.
+      // The sun stays at the same proportion of the box, and the far plane reaches the bottom of the box.
       expect(box.distance / box.half).toBeCloseTo(SUN_SHADOW.distance / SUN_SHADOW.half, 9);
       expect(box.far).toBeGreaterThan(box.distance + box.half * Math.SQRT2);
     }
@@ -599,13 +599,13 @@ describe("D-208 zoom lejano: niebla, sombra, tilt-shift, etiquetas y presupuesto
     expect(shown).toContain(65);
     expect(shown).toContain(30);
     expect(labelEntries(actors, "NPC-NELL", null, 160)).toEqual([{ id: "NPC-NELL", name: "Nell", highlighted: true }]);
-    // El NPC de la escena no muestra etiqueta ni resaltado ni de cerca.
+    // The scene's NPC shows no label or highlight, not even up close.
     expect(labelEntries(actors, "NPC-NELL", "NPC-NELL", 160)).toEqual([]);
     expect(labelEntries(actors, null, null, TWO_SHOT.distance)).toHaveLength(3);
   });
 
   test("presupuesto en `medium` a 160 m: el terreno extendido y todo el diorama a la vista entran", () => {
-    // El estimador suma todo el grafo sin recortar por frustum: es la vista lejana, donde todo entra en pantalla.
+    // The estimator sums the whole graph without frustum culling: it is the far view, where everything fits on screen.
     const d = testDiorama();
     const scene = buildDioramaScene(d);
     const actors = ["player", ...d.npcs.map((n) => n.id)].map((id) => buildChibi(lookOf(id)).root);
@@ -618,7 +618,7 @@ describe("D-208 zoom lejano: niebla, sombra, tilt-shift, etiquetas y presupuesto
     const terrain = estimateBudget(scene.root.children.filter((c) => c.name === "terreno"));
     const msg = JSON.stringify({ e, terrain });
     expect(withinBudget(e, MEDIUM), msg).toBe(true);
-    // La falda lejana (de 35 a 160 m) cuesta poco: el terreno entero sigue debajo de 13k triángulos.
+    // The far skirt (35 to 160 m) is cheap: the whole terrain stays under 13k triangles.
     expect(terrain.triangles, msg).toBeLessThan(13_000);
     expect(scene.terrain.extent.maxX - d.bounds.maxX).toBe(TERRAIN_SKIRT);
   });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// A2 (ADR-027): el panel de la conversación por medidores dentro del HUD de diálogo, contra el servidor de escenas falso.
-// Barras con etiqueta y fase y SIN números; "Lo que sabés de…"; la escalera de ayuda (servidor y reloj del cliente);
-// tocar una frase sugerida la pone en la caja (texto); en voz se muestra para leer; el aviso de cierre.
+// A2 (ADR-027): the conversation panel by meters inside the dialogue HUD, against the fake scene server.
+// Bars with label and phase and NO numbers; "Lo que sabés de…"; the help ladder (server and client clock);
+// tapping a suggested phrase puts it in the box (text); in voice it is shown to read; the closing notice.
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ConversationStateMessage } from "@lg/protocol";
@@ -75,11 +75,11 @@ describe("panel de medidores", () => {
     expect(within(panel).getByRole("img", { name: "Conseguir lo que viniste a buscar: se abre después" })).toBeTruthy();
     expect(within(panel).getByText("Lo que sabés de Harlan")).toBeTruthy();
     expect(within(panel).getByText("Su padre construyó el granero rojo")).toBeTruthy();
-    // Nada de números de XP: el único número es "N de M" (medidores logrados), que es un conteo.
+    // No XP numbers: the only number is "N de M" (meters achieved), which is a count.
     expect(within(panel).getByTestId("conv-count").textContent).toBe("0 de 2");
     expect((panel.textContent ?? "").replace("0 de 2", "")).not.toMatch(/\d/);
     expect((screen.getByTestId("meter-fill-conocer") as HTMLElement).style.width).toBe("35%");
-    // Se abre la segunda fase.
+    // The second phase opens.
     await act(async () => {
       server.push(conv({
         activeMeter: "recado",
@@ -164,7 +164,7 @@ describe("M4 (estetica-c): el medidor como tarjeta de segmentos", () => {
     expect(seg("conocer").textContent).toBe("Conocer a Harlan · logrado");
     expect(seg("recado").textContent).toBe("Conseguir lo que viniste a buscar · actual");
     expect(seg("trato").textContent).toBe("Cerrar el trato · pendiente");
-    // El texto del estado es para lectores de pantalla (la forma lo dice a la vista).
+    // The status text is for screen readers (the shape says it at a glance).
     expect(within(seg("conocer")).getByText(/logrado/).className).toContain("sr-only");
   });
 

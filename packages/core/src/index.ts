@@ -1,10 +1,10 @@
-// @lg/core — TS puro: reglas del juego (03 §4.2, R4). Sin DOM, sin Node, sin React/three/zustand.
-// Núcleo base de F1.1b: ids de dominio con marca, Clock y Rng inyectables, EventLog append-only.
-// F1.3: tiers de calidad (R12), ajustes del jugador y fase/paneles del shell.
-// F2: movimiento (grilla, A*, colisión, controlador), input semántico (R10), cámara (R11) y diorama.
-// F4.2: glosario por build y palabras tocables del HUD de diálogo (dialogue/).
-// F4.1: máquina de escena, criterios de éxito y efectos de misión (también por la subruta @lg/core/scene).
-// A2: medidores de conversación (ADR-027; también por la subruta @lg/core/conversation).
+// @lg/core — pure TS: game rules (03 §4.2, R4). No DOM, no Node, no React/three/zustand.
+// F1.1b base core: branded domain ids, injectable Clock and Rng, append-only EventLog.
+// F1.3: quality tiers (R12), player settings and shell phase/panels.
+// F2: movement (grid, A*, collision, controller), semantic input (R10), camera (R11) and diorama.
+// F4.2: per-build glossary and tappable words of the dialogue HUD (dialogue/).
+// F4.1: scene machine, success criteria and mission effects (also through the @lg/core/scene subpath).
+// A2: conversation meters (ADR-027; also through the @lg/core/conversation subpath).
 export const PACKAGE_NAME = "@lg/core";
 
 export * from "./ids";

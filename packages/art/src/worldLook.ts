@@ -1,19 +1,19 @@
-// @lg/art worldLook.ts: el look del mundo (open-world-3d T7b, D-838..D-842, revisión de arquitectura 2026-10-29 "Per-universe world look").
-// El motor del mundo (forma y relieve del terreno, sembrado, recorte y LOD, topes por tier, cámara, clases de material y
-// código de los sombreadores, colores de la interfaz y de las etiquetas) es uno solo; lo que cambia de un universo a
-// otro (un libro de terror tendrá un mundo de terror) es el LOOK: paleta, cielo y niebla, luz, mapas y grado del suelo,
-// vegetación, personajes, agua y camino. Un look es dato puro (sin three) y world/ lo recibe como parámetro: nada de
-// world/ importa estos valores como constantes globales ni escribe un hex (D-838, test de apps/web).
+// @lg/art worldLook.ts: the world look (open-world-3d T7b, D-838..D-842, architecture review 2026-10-29 "Per-universe world look").
+// The world engine (terrain shape and relief, planting, culling and LOD, per-tier caps, camera, material classes and
+// shader code, interface and label colors) is a single one; what changes from one universe to
+// another (a horror book will have a horror world) is the LOOK: palette, sky and fog, light, ground maps and grade,
+// vegetation, characters, water and path. A look is pure data (no three) and world/ receives it as a parameter: nothing in
+// world/ imports these values as global constants or writes a hex (D-838, apps/web test).
 //
-// El catálogo es fijo (`WORLD_LOOKS`). En T7b tiene los dos looks que el juego ya dibuja en 0034931, sin un valor nuevo:
-//   · `pradera` (DEFAULT_LOOK): el mundo abierto de la maqueta V6 (Quaternius, cielo, mapas del suelo, bosque)
-//   · `pintado`: el look C de m7 de los dioramas planos (KayKit, bruma de fondo y niebla); es DEFAULT_LOOK con esas
-//     tres diferencias, que hasta 0034931 se elegían con `relieve` en cada componente (D-840 las saca de ahí).
-// T7b SEAM (diferido por el plan): el campo `look` del manifiesto del universo, las carpetas de assets por look, la
-// validación por look de sombreros y cuerpos de las fichas y los looks nuevos del catálogo.
-// T8 (D-839): el bloque `grass` (colores del atlas y de las hojas, tinte de parches, tinte de la cama, multiplicador de
-// matas); world/nature/grass.ts y la cama del suelo lo leen como uniforms y textura. T9 SEAM (D-839): los colores del minimapa (suelo, camino, agua) salen de
-// `palette`/`road`/`water` del look; el punto de NPC es núcleo y su contraste >= 3:1 se prueba contra cada look.
+// The catalog is fixed (`WORLD_LOOKS`). In T7b it has the two looks the game already draws at 0034931, with no new value:
+//   · `pradera` (DEFAULT_LOOK): the open world of the V6 diorama (Quaternius, sky, ground maps, forest)
+//   · `pintado`: the m7 look C of the flat dioramas (KayKit, background haze and fog); it is DEFAULT_LOOK with those
+//     three differences, which until 0034931 were chosen with `relieve` in each component (D-840 takes them out of there).
+// T7b SEAM (deferred by the plan): the universe manifest's `look` field, the per-look asset folders, the
+// per-look validation of hats and bodies in the sheets and the new looks of the catalog.
+// T8 (D-839): the `grass` block (atlas and blade colors, patch tint, bed tint, tuft
+// multiplier); world/nature/grass.ts and the ground bed read it as uniforms and texture. T9 SEAM (D-839): the minimap colors (ground, path, water) come from
+// the look's `palette`/`road`/`water`; the NPC dot is core and its contrast >= 3:1 is tested against each look.
 import { CAP_COLOR, BODY_IDS, HATS, SCARVES, type BodyId, type Hat, type Scarf, type ShirtToken } from "./looks.ts";
 import { PALETTE, SHIRT_TOKENS, type PaletteToken } from "./palette.ts";
 import { OPEN_WORLD_DENSITY, WORLD_TIERS, type WorldTier } from "./density.ts";
@@ -28,27 +28,27 @@ import {
 export const LOOK_IDS = ["pradera", "pintado"] as const;
 export type LookId = (typeof LOOK_IDS)[number];
 
-/** Los esqueletos de personaje que un look puede pedir (world/actors/rigs.ts tiene la especificación de cada uno). */
+/** The character skeletons a look can ask for (world/actors/rigs.ts has the specification of each one). */
 export const CHARACTER_RIGS = ["kaykit", "quaternius"] as const;
 export type CharacterRig = (typeof CHARACTER_RIGS)[number];
-/** Los juegos de accesorios por código (world/actors/accessories.ts: una tabla por juego, no un switch). */
+/** The code accessory sets (world/actors/accessories.ts: one table per set, not a switch). */
 export const ACCESSORY_SETS = ["v6"] as const;
 export type AccessorySetId = (typeof ACCESSORY_SETS)[number];
 
-/** Las cinco ranuras del splat del suelo (el sombreador es uno; el look elige qué mapa va en cada ranura). */
+/** The five ground splat slots (the shader is a single one; the look chooses which map goes in each slot). */
 export const GROUND_SLOTS = ["grass", "sparse", "dirt", "rock", "rockAlt"] as const;
 export type GroundSlot = (typeof GROUND_SLOTS)[number];
 
 export type Vec3 = readonly [number, number, number];
-/** Niebla de cerca (t = 0) y del mapa entero (t = 1) del zoom continuo, antes de la escala del tier (AC40). */
+/** Fog up close (t = 0) and at the whole map (t = 1) of the continuous zoom, before the tier scale (AC40). */
 export interface FogRange {
   near: readonly [number, number];
   far: readonly [number, number];
 }
-/** Una parada de degradé del atlas de nubes: [posición 0..1, color CSS con alfa]. */
+/** A gradient stop of the cloud atlas: [position 0..1, CSS color with alpha]. */
 export type CloudStop = readonly [number, string];
 
-/** Un escaneo de roca del look (los de vegetation.ts ROCK_SCANS): malla cerca/lejos y cuántas variantes dibuja. */
+/** A rock scan of the look (those of vegetation.ts ROCK_SCANS): near/far mesh and how many variants it draws. */
 export interface RockScanSpec {
   scan: RockScan;
   kind: "small" | "outcrop";
@@ -57,7 +57,7 @@ export interface RockScanSpec {
   meshes: number;
 }
 
-/** Los colores del detalle hecho por código (la forma de vegetation.ts NATURE_COLORS, sin los literales). */
+/** The colors of the code-made detail (the shape of vegetation.ts NATURE_COLORS, without the literals). */
 export interface NatureColorSet {
   fern: { low: number; high: number };
   pebble: { rock: number; warm: number; moss: number };
@@ -67,51 +67,51 @@ export interface NatureColorSet {
   flowerTint: readonly (readonly [number, number, number])[];
 }
 
-/** El bloque del pasto de un look (T8): ver `WorldLook.grass`. */
+/** A look's grass block (T8): see `WorldLook.grass`. */
 export interface GrassLook {
-  /** Atlas de tarjetas (4 variantes de 256 px): pie de cada hoja, dos medios, cuatro puntas, motas de flor y su tallo. */
+  /** Card atlas (4 variants of 256 px): foot of each blade, two middles, four tips, flower specks and their stem. */
   atlas: { base: number; mid: readonly [number, number]; tips: readonly [number, number, number, number]; flowers: readonly [number, number, number]; flowerStem: number };
-  /** Hojas reales cerca del jugador (sRGB 0..1): pie, medio (dos), punta (dos, según la hoja). */
+  /** Real blades near the player (sRGB 0..1): foot, middle (two), tip (two, depending on the blade). */
   blade: { base: Vec3; mid: readonly [Vec3, Vec3]; tip: readonly [Vec3, Vec3] };
-  /** Tinte de parches: de `dark` a `warm` según un patrón grande, por `gain`. */
+  /** Patch tint: from `dark` to `warm` according to a large pattern, by `gain`. */
   tint: { dark: Vec3; warm: Vec3; gain: Vec3 };
-  /** Multiplicador del color del suelo bajo el disco de pasto (la cama, ground shader `uBedTint`). */
+  /** Multiplier of the ground color under the grass disc (the bed, ground shader `uBedTint`). */
   bed: Vec3;
-  /** Multiplicador de las matas del tier (<= 1). */
+  /** Multiplier of the tier's tufts (<= 1). */
   density: number;
 }
 
 export interface WorldLook {
   id: LookId;
-  /** Los hex de la paleta (palette.ts). Los `paleta` de cada diorama re-apuntan nombres DENTRO de esta paleta. */
+  /** The palette's hex values (palette.ts). Each diorama's `paleta` re-points names INSIDE this palette. */
   palette: Readonly<Record<PaletteToken, string>>;
-  /** La cúpula (de arriba abajo) y el atlas de nubes del mundo abierto (world/sky). */
+  /** The dome (top to bottom) and the open world's cloud atlas (world/sky). */
   sky: {
     zenith: string;
     haze: string;
     horizon: string;
     clouds: { cumulus: readonly CloudStop[]; wisp: readonly CloudStop[]; opacity: number };
   };
-  /** Color de la niebla y su rango con el zoom (AC38, AC40); `background` es el fondo del canvas. */
+  /** Fog color and its range with zoom (AC38, AC40); `background` is the canvas background. */
   fog: { color: string; range: FogRange };
   background: string;
-  /** Luz de la escena (propuesta C §5), el tono de salida y las luces del horneado de los impostores (T7). */
+  /** Scene light (proposal C §5), the output tone and the impostor-baking lights (T7). */
   light: {
     sun: { color: string; intensity: number; elevationDeg: number; azimuthDeg: number };
     hemi: { sky: string; ground: string; intensity: number };
     exposure: number;
     impostor: { sky: number; ground: number; hemiIntensity: number; sun: number; sunIntensity: number };
   };
-  /** Suelo del mundo abierto: mapa por ranura, colores por vértice (tokens) y grado del pasto (uniforms, D-842). */
+  /** Open-world ground: map per slot, per-vertex colors (tokens) and grass grade (uniforms, D-842). */
   ground: {
     maps: Readonly<Record<GroundSlot, GroundMap>>;
     vertex: Readonly<Record<"low" | "high" | "alternate" | "forest" | "rock" | "rockWarm", PaletteToken>>;
     grassGrade: { low: Vec3; high: Vec3; sparseGain: number };
   };
   /**
-   * Bosque y detalle del mundo abierto. Cada especie nombra su preset de ez-tree (`name`, scripts/assets/tree-presets.ts)
-   * y su archivo horneado. `density` multiplica los conteos de cada tier (<= 1: el tope del tier es del núcleo; lo de
-   * adentro de los límites siempre queda, porque la grilla del núcleo bloquea esos troncos, AC46).
+   * Forest and detail of the open world. Each species names its ez-tree preset (`name`, scripts/assets/tree-presets.ts)
+   * and its baked file. `density` multiplies the counts of each tier (<= 1: the tier's cap is the core's; what is
+   * inside the bounds always stays, because the core's grid blocks those trunks, AC46).
    */
   vegetation: {
     species: readonly TreeSpecies[];
@@ -122,7 +122,7 @@ export interface WorldLook {
     colors: NatureColorSet;
     density: Readonly<Record<"pines" | "farPines" | "broads" | "bushes" | "rocks" | "ferns" | "flowers" | "pebbles", number>>;
   };
-  /** Personajes: esqueleto, juego de accesorios, gorra del jugador y lo que una ficha puede pedir (cuerpos, ropa). */
+  /** Characters: skeleton, accessory set, player cap and what a sheet can ask for (bodies, clothing). */
   characters: {
     rig: CharacterRig;
     accessories: AccessorySetId;
@@ -133,19 +133,19 @@ export interface WorldLook {
     scarves: readonly Scarf[];
   };
   /**
-   * Pasto V6 del mundo abierto (open-world-3d T8, D-839): colores del atlas de matas (dibujado por código), colores de
-   * las hojas reales (sRGB 0..1; el sombreador los linealiza), el tinte de parches grandes (oscuro a cálido, con su
-   * ganancia), el tinte de la cama de pasto del suelo y un multiplicador de matas <= 1 (el tope del tier es del núcleo).
-   * Todo entra como uniforms o como textura (D-842): dos looks comparten los dos programas del pasto.
+   * V6 grass of the open world (open-world-3d T8, D-839): colors of the tuft atlas (drawn by code), colors of
+   * the real blades (sRGB 0..1; the shader linearizes them), the large patch tint (dark to warm, with its
+   * gain), the ground's grass-bed tint and a tuft multiplier <= 1 (the tier's cap is the core's).
+   * Everything comes in as uniforms or as a texture (D-842): two looks share the two grass programs.
    */
   grass: GrassLook;
-  /** Agua (tokens de la paleta): bandas, brillo y la bruma propia de su sombreador. */
+  /** Water (palette tokens): bands, shine and its shader's own haze. */
   water: { shallow: PaletteToken; deep: PaletteToken; glint: PaletteToken; fog: PaletteToken };
-  /** Camino (tokens): la superficie, el borde ruidoso y la piedra del empedrado. */
+  /** Path (tokens): the surface, the noisy edge and the cobblestone. */
   road: { surface: PaletteToken; border: PaletteToken; paving: PaletteToken };
 }
 
-/** El mundo abierto de la maqueta V6 tal como queda en 0034931 (cada valor es el de su constante de entonces). */
+/** The V6 diorama's open world as it stands at 0034931 (each value is that of its constant back then). */
 export const DEFAULT_LOOK: WorldLook = {
   id: "pradera",
   palette: PALETTE,
@@ -159,7 +159,7 @@ export const DEFAULT_LOOK: WorldLook = {
       opacity: 0.97,
     },
   },
-  // El horizonte de la cúpula ES la niebla y el fondo (AC38).
+  // The dome's horizon IS the fog and the background (AC38).
   fog: { color: PALETTE["cielo-horizonte"], range: { near: [45, 520], far: [250, 1500] } },
   background: PALETTE["cielo-horizonte"],
   light: {
@@ -191,7 +191,7 @@ export const DEFAULT_LOOK: WorldLook = {
     hats: HATS,
     scarves: SCARVES,
   },
-  // T8: los valores del pasto de la maqueta V6 (`world.js` grassAtlas, GRASS_VERT vTint, GRASS_FRAG y la cama del suelo).
+  // T8: the V6 diorama's grass values (`world.js` grassAtlas, GRASS_VERT vTint, GRASS_FRAG and the ground bed).
   grass: {
     atlas: { base: 0x1f4f1c, mid: [0x4c9a2c, 0x6aa832], tips: [0xa9d65a, 0xc4d95c, 0x8fcb4e, 0xd8dc6a], flowers: [0xf6f2e6, 0xf3d34a, 0xe98fb5], flowerStem: 0x3f8a2c },
     blade: { base: [0.122, 0.31, 0.11], mid: [[0.298, 0.604, 0.173], [0.416, 0.659, 0.196]], tip: [[0.56, 0.8, 0.31], [0.85, 0.86, 0.42]] },
@@ -203,7 +203,7 @@ export const DEFAULT_LOOK: WorldLook = {
   road: { surface: "camino", border: "tierra-borde", paving: "piedra" },
 };
 
-/** El look C de m7 de los dioramas planos (0034931): KayKit, y bruma de fondo y de niebla. */
+/** The m7 look C of the flat dioramas (0034931): KayKit, and background and fog haze. */
 export const PAINTED_LOOK: WorldLook = {
   ...DEFAULT_LOOK,
   id: "pintado",
@@ -215,20 +215,20 @@ export const PAINTED_LOOK: WorldLook = {
 export const WORLD_LOOKS: Readonly<Record<LookId, WorldLook>> = { pradera: DEFAULT_LOOK, pintado: PAINTED_LOOK };
 
 /**
- * La regla única de qué look toma un diorama hasta que el manifiesto nombre el suyo (LK3, enmienda del manager): con
- * relieve el mundo abierto (DEFAULT_LOOK), plano el pintado. Open-world-3d T9: vive acá (no en world/dioramas/look.ts,
- * que la llama) porque el minimapa de ui/ también pinta con el look del diorama y ui/ no importa world/ (R3).
+ * The single rule for which look a diorama takes until the manifest names its own (LK3, manager amendment): with
+ * relief the open world (DEFAULT_LOOK), flat the painted one. Open-world-3d T9: it lives here (not in world/dioramas/look.ts,
+ * which calls it) because the ui/ minimap also paints with the diorama's look and ui/ does not import world/ (R3).
  */
 export const lookForRelief = (relief: boolean): WorldLook => (relief ? DEFAULT_LOOK : PAINTED_LOOK);
 
-/** El hex de un token en la paleta del look. */
+/** The hex of a token in the look's palette. */
 export const lookHex = (look: Pick<WorldLook, "palette">, token: PaletteToken): string => look.palette[token];
 
-/** La especie de cada clase en el orden del look (pinos, latifoliadas o arbustos). */
+/** The species of each class in the look's order (pines, broadleaves or shrubs). */
 export const lookSpecies = (look: Pick<WorldLook, "vegetation">, kind: TreeSpecies["kind"]): TreeSpecies[] =>
   look.vegetation.species.filter((s) => s.kind === kind);
 
-/** Los .glb de la naturaleza que baja el mundo abierto con este look (todos los tiers: el tier cambia cuántos, no cuáles). */
+/** The .glb files of nature that the open world downloads with this look (all tiers: the tier changes how many, not which). */
 export const natureModelFiles = (look: WorldLook): string[] => [
   ...look.vegetation.species.flatMap((s) => [treeFile(s, false), treeFile(s, true)]),
   ...look.vegetation.rockScans.flatMap((r) => [rockFile(r.scan, false), rockFile(r.scan, true)]),
@@ -240,9 +240,9 @@ const perTier = (on: (t: WorldTier) => boolean): Record<WorldTier, number> =>
   tiers(...(WORLD_TIERS.map((t) => (on(t) ? 1 : 0)) as [number, number, number]));
 
 /**
- * El inventario de texturas del mundo abierto con este look (D-841; antes la constante OPEN_WORLD_TEXTURES): los mapas
- * del suelo de sus ranuras, el atlas de rocas, hoja y corteza de su vegetación y lo que se dibuja en tiempo de
- * ejecución. Medidas, formatos y conteos por tier son del núcleo (D-832, AC74); el look elige qué archivos.
+ * The open world's texture inventory with this look (D-841; formerly the OPEN_WORLD_TEXTURES constant): the
+ * ground maps of its slots, the rock, leaf and bark atlas of its vegetation and what is drawn at
+ * runtime. Measurements, formats and per-tier counts are the core's (D-832, AC74); the look chooses which files.
  */
 export function worldTextures(look: WorldLook): WorldTexture[] {
   const maps = [...new Set(Object.values(look.ground.maps))];
@@ -257,8 +257,8 @@ export function worldTextures(look: WorldLook): WorldTexture[] {
       format: "etc1s", candidates: ["uastc", "etc1s", "rgba8"], count: perTier((t) => OPEN_WORLD_DENSITY[t].groundNormals),
       file: groundTextureFile(m, "nor"), task: "T6", normal: true, v6Px: GROUND_NORMAL_V6_PX,
     })),
-    // T7: un atlas 2 × 2 de los 4 escaneos de roca (difuso en todo tier, normal en medium y high: un material por banda,
-    // AC71), hoja y corteza (PD-9). Archivos de scripts/assets/nature.ts.
+    // T7: a 2 × 2 atlas of the 4 rock scans (diffuse in every tier, normal in medium and high: one material per band,
+    // AC71), leaf and bark (PD-9). Files from scripts/assets/nature.ts.
     { id: "rocas/difuso", group: "rocas", width: 1024, height: 1024, mips: true, alpha: false, format: "etc1s", candidates: ["etc1s", "uastc"], count: all(1), file: tex.rockDiff, task: "T7" },
     { id: "rocas/normal", group: "rocas", width: 1024, height: 1024, mips: true, alpha: false, format: "etc1s", candidates: ["uastc", "etc1s"], count: tiers(0, 1, 1), file: tex.rockNor, task: "T7", normal: true },
     { id: "arboles/hoja", group: "árboles", width: 512, height: 512, mips: true, alpha: true, format: "etc1s", candidates: ["etc1s", "uastc", "rgba8"], count: all(1), file: tex.leaf, task: "T7" },
@@ -271,7 +271,7 @@ export function worldTextures(look: WorldLook): WorldTexture[] {
       id: "flores", group: "detalle", width: RUNTIME_TEXTURE_PX.flowerAtlas[0], height: RUNTIME_TEXTURE_PX.flowerAtlas[1], mips: true, alpha: true,
       format: "rgba8", candidates: ["rgba8"], count: all(1), task: "T7",
     },
-    // T8 (D-839): el atlas de matas se dibuja con los colores del look (`grass.atlas`); la medida es del núcleo.
+    // T8 (D-839): the tuft atlas is drawn with the look's colors (`grass.atlas`); the measurement is the core's.
     {
       id: "pasto/atlas", group: "pasto", width: RUNTIME_TEXTURE_PX.grassAtlas[0], height: RUNTIME_TEXTURE_PX.grassAtlas[1], mips: true, alpha: true,
       format: "rgba8", candidates: ["rgba8"], count: all(1), task: "T8",

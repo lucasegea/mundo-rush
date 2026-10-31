@@ -1,5 +1,5 @@
-// Chequeos cruzados (03 §6.1 validaciones 1, 2, 6; 04 F1.2: misión→NPC, escena→lugar, criterios→HAB-*,
-// efectos→SITIO-*/NPC-*, saberes→SAB-*, red alcanzable; 02 §2.7.1 y §6.6 #14).
+// Cross-checks (03 §6.1 validations 1, 2, 6; 04 F1.2: mission→NPC, scene→place, criteria→HAB-*,
+// effects→SITIO-*/NPC-*, knowledge items→SAB-*, reachable network; 02 §2.7.1 and §6.6 #14).
 import { esLineaLumi } from "../schemas/common.ts";
 import type { LineaGuionada } from "../schemas/common.ts";
 import type { Conjunto } from "./conjunto.ts";
@@ -43,7 +43,7 @@ export const chequearReferencias = (c: Conjunto, h: Hallazgo[]): void => {
   const lineas = (archivo: string, base: string, ls: readonly LineaGuionada[]) =>
     ls.forEach((l, i) => (esLineaLumi(l) ? plantilla(archivo, `${base}[${i}].plantilla`, l.plantilla) : npcConFicha(archivo, `${base}[${i}].quien`, l.quien)));
 
-  // Región: toda ficha de NPC está en el elenco declarado.
+  // Region: every NPC sheet is in the declared cast.
   for (const n of c.npcs) {
     if (!c.regiones.some((r) => r.data.elenco.includes(n.data.id))) err(n.archivo, "id", "referencia", `"${n.data.id}" no está en el elenco de ninguna región (content/world/places.yaml)`);
   }
@@ -93,7 +93,7 @@ export const chequearReferencias = (c: Conjunto, h: Hallazgo[]): void => {
       npcConFicha(archivo, `${b}.npc`, e.npc);
       lugar(archivo, `${b}.lugar`, e.lugar);
       const ficha = e.npc ? fichas.get(e.npc) : undefined;
-      // Menores en escena: solo lugares públicos (01 §2.17.1; la regla la dispara el campo es_menor).
+      // Minors in scene: public places only (01 §2.17.1; the rule is triggered by the es_menor field).
       if (ficha?.es_menor && lugares.get(e.lugar)?.publico === false) {
         err(archivo, `${b}.lugar`, "seguridad", `${e.npc} es menor: la escena tiene que ser en un lugar público`);
       }
@@ -167,7 +167,7 @@ export const chequearReferencias = (c: Conjunto, h: Hallazgo[]): void => {
   for (const { archivo, base, data: p } of c.pistas) { npcDelElenco(archivo, `${base}.npc`, p.npc); habilidad(archivo, `${base}.requiere`, p.requiere); }
   for (const { archivo, base, data: e } of c.glosario) e.usado_en.forEach((m, i) => mision(archivo, `${base}.usado_en[${i}]`, m));
 
-  // Dioramas (03 §6.4.3): anclas ↔ fichas, solo para dioramas que ya existen (F2/F3 los crean).
+  // Dioramas (03 §6.4.3): anchors ↔ sheets, only for dioramas that already exist (F2/F3 create them).
   for (const { archivo, data: d } of c.dioramas) {
     d.sitios.forEach((s, i) => sitio(archivo, `sitios[${i}].id`, s.id));
     (d.npcs ?? []).forEach((n, i) => npcConFicha(archivo, `npcs[${i}].id`, n.id));
@@ -180,7 +180,7 @@ export const chequearReferencias = (c: Conjunto, h: Hallazgo[]): void => {
   }
 };
 
-/** A4 (04 F1.2): desde el inicio, todo NPC con requiere_presentacion tiene un camino de presentaciones. */
+/** A4 (04 F1.2): from the start, every NPC with requiere_presentacion has a path of introductions. */
 export const chequearRed = (c: Conjunto, h: Hallazgo[]): void => {
   const alcanzados = new Set(c.npcs.filter((n) => !n.data.requiere_presentacion).map((n) => n.data.id));
   let cambio = true;
@@ -200,7 +200,7 @@ export const chequearRed = (c: Conjunto, h: Hallazgo[]): void => {
   }
 };
 
-/** Catálogo de Lumi (02 §2.7.1): para A0 y A1 hay una señal genérica (tipo any) por escalón 2-5. */
+/** Lumi catalog (02 §2.7.1): for A0 and A1 there is a generic signal (type any) per step 2-5. */
 export const chequearCatalogoLumi = (c: Conjunto, h: Hallazgo[]): void => {
   const archivo = c.plantillas[0]?.archivo;
   if (!archivo) return;
@@ -212,7 +212,7 @@ export const chequearCatalogoLumi = (c: Conjunto, h: Hallazgo[]): void => {
   }
 };
 
-/** Tarjetas de nivel para cada banda que usa una escena. */
+/** Level cards for each band a scene uses. */
 export const chequearNiveles = (c: Conjunto, h: Hallazgo[]): void => {
   const hay = new Set<string>(c.niveles.map((n) => n.data.banda));
   for (const { archivo, data: m } of c.misiones) {

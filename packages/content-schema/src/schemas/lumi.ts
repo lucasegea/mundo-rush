@@ -1,4 +1,4 @@
-// Plantilla de Lumi (02 §2.7.1). Lumi solo dice plantillas con id (ADR-008).
+// Lumi template (02 §2.7.1). Lumi only says templates with an id (ADR-008).
 import { z } from "zod";
 import { LumiId, MisionId, SaberId } from "../ids.ts";
 import { Banda, EstadoRevision } from "./common.ts";
@@ -11,7 +11,7 @@ export const FuncionLumi = z.enum([
   "saber", "saber_fuera", "pronunciacion_invitacion",
 ]);
 
-/** Slots permitidos (02 §2.6, §2.7.1): ningún hueco sale de texto libre de un modelo. */
+/** Allowed slots (02 §2.6, §2.7.1): no blank comes from free text of a model. */
 export const SLOTS_LUMI = [
   "forma_jugador", "forma_correcta", "foco_l2", "forma_abierta", "glosa_l1", "palabra_l2", "palabra_l1",
   "npc", "npc_presentador", "orientacion", "opcion_a", "opcion_b", "frase_modelo", "nombre_jugador",
@@ -21,7 +21,7 @@ export const SlotLumi = z.enum(SLOTS_LUMI);
 
 export const ModoFeedback = z.enum(["accompanied", "flagOnly", "moreHelp"]);
 
-/** Los huecos `{slot}` que aparecen en un texto, en orden y sin repetir. */
+/** The `{slot}` blanks that appear in a text, in order and without repeats. */
 export const slotsDelTexto = (texto: string): string[] =>
   [...new Set([...texto.matchAll(/\{([a-z_0-9]+)\}/g)].map((m) => m[1] ?? ""))];
 

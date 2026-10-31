@@ -1,5 +1,5 @@
-// F4.1 A6: el EvidenceStore de archivo sobrevive a reiniciar el servidor (directorio temporal), rechaza binarios
-// (D-108) y el progreso del prólogo se reconstruye desde la evidencia en una sesión nueva.
+// F4.1 A6: the file EvidenceStore survives a server restart (temp directory), rejects binaries
+// (D-108) and the prologue progress is rebuilt from the evidence in a new session.
 import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,13 +33,13 @@ describe("EvidenceStore de archivo", () => {
     expect(restarted.list("op-local").map((e) => e.id)).toEqual(["e1"]);
     restarted.append(ev("e3"));
     expect(createFileEvidenceStore(file).list("op-local").map((e) => e.id)).toEqual(["e1", "e3"]);
-    // JSONL con LF: una línea por evento.
+    // JSONL with LF: one line per event.
     expect(readFileSync(file, "utf8").split("\n").filter(Boolean)).toHaveLength(3);
   });
 
   test("una línea corrupta (escritura cortada) se salta y el resto se lee", () => {
     createFileEvidenceStore(file).append(ev("e1"));
-    appendFileSync(file, '{"id":"cut","accountId":"op-lo'); // cortada sin salto de línea
+    appendFileSync(file, '{"id":"cut","accountId":"op-lo'); // cut off with no line break
     createFileEvidenceStore(file).append(ev("e2"));
     expect(readEvidenceFile(file).map((e) => e.id)).toEqual(["e1", "e2"]);
   });
@@ -68,7 +68,7 @@ describe("EvidenceStore de archivo", () => {
     const before = harness({ rules: M01_RULES, evidence: createFileEvidenceStore(file) });
     await play(before, "NPC-INES", ["Hello! I'm Nico."]);
     expect(before.of("scene.end")[0]?.outcome).toBe("success");
-    // "Reinicio": store y sesión nuevos sobre el mismo archivo.
+    // "Restart": new store and session over the same file.
     const after = harness({ evidence: createFileEvidenceStore(file) });
     await after.session.receive({ type: "scene.start", npcId: "NPC-INES" });
     expect(after.of("scene.blocked")).toEqual([{ type: "scene.blocked", npcId: "NPC-INES", reason: "noScene" }]);

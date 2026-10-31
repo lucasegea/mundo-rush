@@ -1,11 +1,11 @@
-// Etapa LANG-FIT (stub honesto, book-mode slice-1).
+// LANG-FIT stage (honest stub, book-mode slice-1).
 //
-// Contrato real (futuro): ajusta el contenido al par de idiomas y al nivel MCER (glosario, andamiaje, bandas),
-// manteniendo el registro del libro (la ironía de Galeano). Es la capa_idioma del contrato.
+// Real contract (future): adjusts the content to the language pair and the CEFR level (glossary, scaffolding, bands),
+// keeping the book's register (Galeano's irony). It is the contract's capa_idioma.
 //
-// Slice-1: identidad. El intermedio ya viene en el par es-AR/en con su glosario draft (D-806: ese par está
-// baked en las rutas del compilador; un universo en otro par queda fuera de slice-1).
-// M3 SEAM: acá entra el ajuste de nivel y la generación de glosario/andamiaje.
+// Slice-1: identity. The intermediate already comes in the es-AR/en pair with its draft glossary (D-806: that pair is
+// baked into the compiler's routes; a universe in another pair is outside slice-1).
+// M3 SEAM: level adjustment and glossary/scaffolding generation go here.
 import type { Intermedio } from "../intermediate.ts";
 
 export const langFit = (intermedio: Intermedio): Intermedio => intermedio;

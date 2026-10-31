@@ -1,5 +1,5 @@
-// Lectura del contenido: clasifica cada archivo por su ruta canónica (03 §4.2.1), parsea el YAML,
-// valida con su esquema y arma el conjunto tipado. Los errores nombran archivo y clave.
+// Content reading: classifies each file by its canonical path (03 §4.2.1), parses the YAML,
+// validates with its schema and builds the typed set. Errors name the file and key.
 import { parseDocument } from "yaml";
 import type { z } from "zod";
 import { ArbolHabilidades, ArchivoGlosario, TarjetaNivel } from "../schemas/aprendizaje.ts";
@@ -23,7 +23,7 @@ import { clave } from "./tipos.ts";
 
 type Infer<S extends z.ZodType> = z.infer<S>;
 
-/** Contenido validado por esquema, listo para chequeos cruzados. */
+/** Content validated by schema, ready for cross-checks. */
 export interface Conjunto {
   misiones: Entrada<Infer<typeof Mision>>[];
   npcs: Entrada<Infer<typeof Npc>>[];
@@ -41,27 +41,27 @@ export interface Conjunto {
   lugares: Entrada<Lugar>[];
   niveles: Entrada<Infer<typeof TarjetaNivel>>[];
   dioramas: Entrada<Infer<typeof Diorama>>[];
-  /** Fichas de conversación por medidores (ADR-027), solo servidor. */
+  /** Meter-based conversation sheets (ADR-027), server only. */
   conversaciones: Entrada<Infer<typeof FichaConversacion>>[];
-  /** Cabeza del universo (book-mode slice-1, D-804). null en la campesino legacy (no tiene manifiesto). */
+  /** Head of the universe (book-mode slice-1, D-804). null in the legacy farmer universe (it has no manifest). */
   universo: Infer<typeof Universo> | null;
   bloqueos: Entrada<Infer<typeof ListaBloqueo>>[];
   temas: Infer<typeof TemasGlobales> | null;
-  /** Contención y línea segura (F4.2, D-112). */
+  /** Containment and safe line (F4.2, D-112). */
   contencion: Infer<typeof ArchivoContencion> | null;
   retirados: Entrada<Infer<typeof ArchivoRetirados>> | null;
   allowlist: Entrada<Infer<typeof ArchivoAllowlist>> | null;
-  /** Registro de licencias de assets (03 §6.4.2, plan estetica-c M2). */
+  /** Asset license registry (03 §6.4.2, plan estetica-c M2). */
   registroAssets: Entrada<Infer<typeof ArchivoRegistroAssets>> | null;
-  /** Créditos que genera la pantalla de créditos (03 §6.4.2). */
+  /** Credits generated for the credits screen (03 §6.4.2). */
   creditos: Entrada<Infer<typeof ArchivoCreditos>> | null;
-  /** Registro de código de terceros (tooling/vendor/, public/decoders/; open-world-3d T2(c), D-831). */
+  /** Third-party code registry (tooling/vendor/, public/decoders/; open-world-3d T2(c), D-831). */
   registroCodigo: Entrada<Infer<typeof ArchivoRegistroCodigo>> | null;
-  /** Overrides de licencia de npm para paquetes sin `license` en el lockfile (AC9). */
+  /** npm license overrides for packages without `license` in the lockfile (AC9). */
   overridesNpm: Entrada<Infer<typeof ArchivoOverridesNpm>> | null;
-  /** Textos planos que van solo al servidor (content/prompts/*.txt), por nombre de archivo sin extensión. */
+  /** Plain texts that go only to the server (content/prompts/*.txt), by file name without extension. */
   prompts: Record<string, string>;
-  /** Ids definidos por cada archivo (para la compilación incremental). */
+  /** Ids defined by each file (for incremental compilation). */
   idsPorArchivo: Map<string, string[]>;
 }
 
@@ -78,10 +78,10 @@ type Tipo =
   | "allowlist" | "prompt" | "conversacion" | "manifiesto" | "registro-assets" | "creditos" | "registro-codigo" | "overrides-npm"
   | "ignorado";
 
-/** Ruta canónica → tipo (03 §4.2.1). Lo que no matchea es un error: nada se ignora en silencio. */
+/** Canonical path → type (03 §4.2.1). Whatever does not match is an error: nothing is silently ignored. */
 const RUTAS: [RegExp, Tipo][] = [
-  // Cabeza del universo (D-804). El reader de build.ts normaliza content/universes/<id>/manifiesto.yaml
-  // a content/manifiesto.yaml; la campesino legacy no tiene manifiesto, así que esta fila nunca la toca.
+  // Universe head (D-804). build.ts's reader normalizes content/universes/<id>/manifiesto.yaml
+  // to content/manifiesto.yaml; the legacy farmer universe has no manifest, so this row never touches it.
   [/^content\/manifiesto\.yaml$/, "manifiesto"],
   [/^content\/missions\/[^/]+\.yaml$/, "mision"],
   [/^content\/npcs\/[^/]+\.yaml$/, "npc"],
@@ -108,7 +108,7 @@ const RUTAS: [RegExp, Tipo][] = [
   [/^content\/creditos\.yaml$/, "creditos"],
   [/^content\/code-registry\.yaml$/, "registro-codigo"],
   [/^content\/npm-licence-overrides\.yaml$/, "overrides-npm"],
-  // Fuera del compilador: prompt offline de Lumi (02 §2.6) y archivos versionados a mano (D-159).
+  // Outside the compiler: Lumi's offline prompt (02 §2.6) and hand-versioned files (D-159).
   [/^content\/authoring\//, "ignorado"],
   [/^content\/audio-lines\.manifest\.json$/, "ignorado"],
   [/^content\/README\.md$/, "ignorado"],
@@ -118,7 +118,7 @@ export const tipoDeRuta = (ruta: string): Tipo | null => RUTAS.find(([re]) => re
 
 const nombreBase = (ruta: string): string => ruta.slice(ruta.lastIndexOf("/") + 1).replace(/\.(yaml|txt)$/, "");
 
-/** Pasa los issues de zod a hallazgos; en uniones elige la rama con menos problemas (el mensaje útil). */
+/** Turns zod issues into findings; in unions it picks the branch with the fewest problems (the useful message). */
 const issuesAHallazgos = (archivo: string, base: readonly PropertyKey[], issues: readonly z.core.$ZodIssue[]): Hallazgo[] =>
   issues.flatMap((i) => {
     if (i.code === "invalid_union" && i.errors.length > 0) {
@@ -139,7 +139,7 @@ const parsearYaml = (f: ArchivoFuente, h: Hallazgo[]): unknown => {
   const doc = parseDocument(f.texto, { prettyErrors: false, uniqueKeys: true });
   if (doc.errors.length > 0) {
     for (const e of doc.errors) {
-      // Sin prettyErrors no hay linePos: la línea sale del offset (1-based).
+      // Without prettyErrors there is no linePos: the line comes from the offset (1-based).
       const linea = e.linePos?.[0]?.line ?? f.texto.slice(0, e.pos[0]).split("\n").length;
       h.push({ nivel: "error", archivo: f.ruta, clave: linea ? `línea ${linea}` : "", regla: "yaml", mensaje: e.message.split("\n")[0] ?? e.code });
     }
@@ -148,14 +148,14 @@ const parsearYaml = (f: ArchivoFuente, h: Hallazgo[]): unknown => {
   return doc.toJS();
 };
 
-/** Chequeo id ↔ nombre de archivo para los tipos de un ítem por archivo. */
+/** id ↔ file name check for the one-item-per-file types. */
 const idCoincide = (ruta: string, id: string, h: Hallazgo[], campo = "id"): void => {
   if (nombreBase(ruta) !== id) {
     h.push({ nivel: "error", archivo: ruta, clave: campo, regla: "archivo", mensaje: `el id "${id}" no coincide con el nombre del archivo "${nombreBase(ruta)}"` });
   }
 };
 
-/** Lee un archivo, lo valida y lo agrega al conjunto (con los ids que define). */
+/** Reads a file, validates it and adds it to the set (with the ids it defines). */
 export const agregarArchivo = (c: Conjunto, f: ArchivoFuente, h: Hallazgo[]): void => {
   const tipo = tipoDeRuta(f.ruta);
   if (tipo === null) {
@@ -292,7 +292,7 @@ export const agregarArchivo = (c: Conjunto, f: ArchivoFuente, h: Hallazgo[]): vo
   if (ids.length > 0) c.idsPorArchivo.set(f.ruta, ids);
 };
 
-/** Ids duplicados entre archivos o dentro de uno (03 §6.1 validación 1). */
+/** Duplicate ids across files or within one (03 §6.1 validation 1). */
 export const chequearDuplicados = (c: Conjunto, h: Hallazgo[]): void => {
   const visto = new Map<string, string>();
   for (const [archivo, ids] of c.idsPorArchivo) {

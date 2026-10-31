@@ -1,23 +1,23 @@
-// check:budgets (03 §2.7.3, F1.1b): mide la salida de `vite build` contra scripts/budgets/budgets.json.
-// Lee el manifiesto de Vite (build.manifest: true → dist/.vite/manifest.json): tamaño gzip por chunk
-// y grafo de imports ESTÁTICOS desde cada entrada HTML. Los imports dinámicos no cuentan en la carga
-// inicial (el chunk 3D se descarga en segundo plano).
+// check:budgets (03 §2.7.3, F1.1b): measures the `vite build` output against scripts/budgets/budgets.json.
+// Reads Vite's manifest (build.manifest: true → dist/.vite/manifest.json): gzip size per chunk
+// and the graph of STATIC imports from each HTML entry. Dynamic imports do not count in the initial
+// load (the 3D chunk is downloaded in the background).
 //
-// F2 A6: además lee dist/.vite/chunk-modules.json (lo escribe el plugin lg-chunk-modules de apps/web/vite.config.ts:
-// archivo de chunk → módulos que contiene) y falla si algún chunk del grafo estático de index.html trae módulos de
-// three o @react-three/*. La firma de texto de F1.3 queda como segunda red.
+// F2 A6: also reads dist/.vite/chunk-modules.json (written by the lg-chunk-modules plugin of apps/web/vite.config.ts:
+// chunk file → modules it contains) and fails if any chunk of index.html's static graph brings modules of
+// three or @react-three/*. The text signature of F1.3 stays as a second net.
 //
-// Plan estetica-c M2: el decodificador meshopt autoalojado (public/decoders/, 03 §4.2) se baja junto con el mundo 3D, así
-// que su gzip se suma al chunk 3D (los archivos de dist/decoders/ entran como extras de cada entrada del mundo).
+// Plan estetica-c M2: the self-hosted meshopt decoder (public/decoders/, 03 §4.2) is downloaded together with the 3D world, so
+// its gzip is added to the 3D chunk (the files of dist/decoders/ enter as extras of each world entry).
 //
-// Plan estetica-c M6 (03 §2.9, D-160): el postprocesado es un chunk aparte que `low` y `dialog-only` nunca descargan. Si
-// el manifiesto tiene el canvas del mundo, falla cuando Post no es una entrada dinámica propia o cuando el grafo estático
-// del canvas (o del shell) trae la entrada de Post o módulos de postprocessing / @react-three/postprocessing.
-// M6 SEAM: M7 exige que el chunk 3D no crezca respecto de M6; el número de referencia es el que imprime este chequeo al
-// cerrar M6 (está en el registro de construcción de M6).
+// Plan estetica-c M6 (03 §2.9, D-160): post-processing is a separate chunk that `low` and `dialog-only` never download. If
+// the manifest has the world canvas, it fails when Post is not its own dynamic entry or when the canvas's static graph
+// (or the shell's) brings Post's entry or postprocessing / @react-three/postprocessing modules.
+// M6 SEAM: M7 requires that the 3D chunk not grow compared with M6; the reference number is the one this check prints when
+// M6 closes (it is in M6's build record).
 //
-// Uso: node scripts/budgets/bundle-size.ts [--dist <dir>]   (por defecto apps/web/dist)
-// Sale con 1 si un presupuesto se pasa o si falta el manifiesto; con 0 si todo entra.
+// Usage: node scripts/budgets/bundle-size.ts [--dist <dir>]   (default apps/web/dist)
+// Exits with 1 if a budget is exceeded or the manifest is missing; with 0 if everything fits.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -41,7 +41,7 @@ export const BUDGET_KEYS = [
   "audio_lineas_por_mision_mb",
 ] as const satisfies readonly (keyof Budgets)[];
 
-/** Una entrada del manifiesto de Vite (solo los campos que usa el chequeo). */
+/** An entry of Vite's manifest (only the fields the check uses). */
 export interface ManifestChunk {
   file: string;
   src?: string;
@@ -72,17 +72,17 @@ export interface CheckReport {
   ok: boolean;
   results: BudgetResult[];
   skipped: string[];
-  /** Reglas que no son de tamaño (F1.3 A5): three dentro de la carga inicial del shell. */
+  /** Rules that are not about size (F1.3 A5): three inside the shell's initial load. */
   violations: string[];
 }
 
-/** Archivo del chunk → ids de los módulos que contiene (rutas relativas: desde node_modules/ o desde la app). */
+/** Chunk file → ids of the modules it contains (relative paths: from node_modules/ or from the app). */
 export type ChunkModules = Record<string, string[]>;
 
-/** Un módulo de three o de @react-three/* (03 §2.7.3: el shell carga sin three). */
+/** A module of three or of @react-three/* (03 §2.7.3: the shell loads without three). */
 export const THREE_MODULE = /(^|\/)node_modules\/(three|@react-three\/[^/]+)\//;
 
-/** Firma de three.js en un chunk compilado: sus mensajes "THREE.WebGLRenderer: …" sobreviven a la minificación. */
+/** Signature of three.js in a compiled chunk: its "THREE.WebGLRenderer: …" messages survive minification. */
 export const THREE_SIGNATURE = /["'`]THREE\.[A-Z]\w+/;
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
@@ -91,19 +91,19 @@ export const BUDGETS_PATH = join(SCRIPT_DIR, "budgets.json");
 export const DEFAULT_DIST = join(ROOT, "apps/web/dist");
 export const MANIFEST_RELATIVE = ".vite/manifest.json";
 export const CHUNK_MODULES_RELATIVE = ".vite/chunk-modules.json";
-/** Carpeta del dist con los decodificadores autoalojados (copia de apps/web/public/decoders/). */
+/** The dist folder with the self-hosted decoders (copy of apps/web/public/decoders/). */
 export const DECODERS_RELATIVE = "decoders";
 
 const SHELL_ENTRY = "index.html";
 const DOCENTE_ENTRY = "docente.html";
 const WORLD_PREFIX = "src/world/";
-/** El canvas del mundo y el postprocesado (plan estetica-c M6): Post se baja solo si el tier lo usa. */
+/** The world canvas and post-processing (plan estetica-c M6): Post is downloaded only if the tier uses it. */
 export const WORLD_CANVAS_ENTRY = "src/world/GameCanvas.tsx";
 export const POST_ENTRY = "src/world/post/Post.tsx";
-/** Un módulo del postprocesado (la librería y su envoltorio de R3F). */
+/** A post-processing module (the library and its R3F wrapper). */
 export const POST_MODULE = /(^|\/)node_modules\/(postprocessing|@react-three\/postprocessing)\//;
 
-/** Lee y valida budgets.json: exactamente las claves de 03 §2.7.3, todas números positivos. */
+/** Reads and validates budgets.json: exactly the keys of 03 §2.7.3, all positive numbers. */
 export function loadBudgets(path = BUDGETS_PATH): Budgets {
   const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
   const keys = Object.keys(raw).sort();
@@ -120,7 +120,7 @@ export function loadBudgets(path = BUDGETS_PATH): Budgets {
   return raw as unknown as Budgets;
 }
 
-/** Claves del manifiesto alcanzables desde `entry` por imports estáticos (incluida la entrada). */
+/** Manifest keys reachable from `entry` by static imports (including the entry). */
 export function staticClosure(manifest: Manifest, entry: string): string[] {
   const seen = new Set<string>();
   const visit = (key: string): void => {
@@ -134,7 +134,7 @@ export function staticClosure(manifest: Manifest, entry: string): string[] {
   return [...seen];
 }
 
-// KB = 1000 bytes, como los "kB" que imprime `vite build`: el número que ve el operador es el que se compara.
+// KB = 1000 bytes, like the "kB" that `vite build` prints: the number the operator sees is the one that is compared.
 const kb = (bytes: number): number => Math.round((bytes / 1000) * 100) / 100;
 
 function measure(
@@ -148,7 +148,7 @@ function measure(
     sizes.push({ key, file: chunk.file, gzipBytes: gzipSize(chunk.file) });
     for (const css of chunk.css ?? []) sizes.push({ key, file: css, gzipBytes: gzipSize(css) });
   }
-  // Un CSS compartido puede aparecer en dos chunks: se cuenta una vez.
+  // A shared CSS may appear in two chunks: it is counted once.
   const unique = new Map(sizes.map((s) => [s.file, s]));
   return [...unique.values()].sort((a, b) => b.gzipBytes - a.gzipBytes);
 }
@@ -159,8 +159,8 @@ function result(name: string, budgetKey: keyof Budgets, capKb: number, chunks: C
 }
 
 /**
- * Chequea el manifiesto contra los presupuestos de bundle. `gzipSize(file)` devuelve los bytes
- * gzip de un archivo del dist (inyectado: los tests pasan tamaños sin tocar disco).
+ * Checks the manifest against the bundle budgets. `gzipSize(file)` returns the gzip
+ * bytes of a dist file (injected: the tests pass sizes without touching disk).
  */
 export function checkBundle(
   manifest: Manifest,
@@ -168,7 +168,7 @@ export function checkBundle(
   gzipSize: (file: string) => number,
   fileText?: (file: string) => string,
   chunkModules?: ChunkModules,
-  /** Archivos del dist que se bajan con el mundo 3D sin ser chunks de Vite (el decodificador meshopt). */
+  /** Dist files downloaded with the 3D world that are not Vite chunks (the meshopt decoder). */
   worldExtras: readonly string[] = [],
 ): CheckReport {
   if (!manifest[SHELL_ENTRY]) {
@@ -181,7 +181,7 @@ export function checkBundle(
   results.push(result(`shell (${SHELL_ENTRY}, carga inicial)`, "shell_js_css_gzip_kb", budgets.shell_js_css_gzip_kb,
     measure(manifest, shellKeys, gzipSize)));
 
-  // 03 §2.7.3: el shell carga sin three. Con el texto de los chunks a mano, se busca su firma (F1.3 A5).
+  // 03 §2.7.3: the shell loads without three. With the chunks' text at hand, their signature is searched for (F1.3 A5).
   const violations: string[] = [];
   if (fileText) {
     for (const key of shellKeys) {
@@ -189,7 +189,7 @@ export function checkBundle(
       if (file.endsWith(".js") && THREE_SIGNATURE.test(fileText(file))) violations.push(`three en la carga inicial del shell: ${file} (${key})`);
     }
   }
-  // F2 A6: por módulos. Un chunk del grafo estático sin entrada en el mapa también falla (nada de falso verde).
+  // F2 A6: by modules. A chunk of the static graph with no entry in the map also fails (no false green).
   if (chunkModules) {
     for (const key of shellKeys) {
       const file = (manifest[key] as ManifestChunk).file;
@@ -231,11 +231,11 @@ export function checkBundle(
 }
 
 /**
- * Plan estetica-c M6: el postprocesado en su propio chunk. Con el canvas del mundo en el manifiesto, Post tiene que ser
- * una entrada dinámica y ni el grafo estático del canvas ni el del shell pueden traerla (ni a sus módulos): así `low` y
- * `dialog-only`, que montan el canvas sin Post, nunca la descargan. Sin nada de `src/world/` en el manifiesto (antes de
- * F2) no hay nada que chequear; con módulos del mundo y sin la clave del canvas, falla (nota 4 de QA en M6): un canvas
- * renombrado no puede dejar pasar el chequeo en vacío.
+ * Plan estetica-c M6: post-processing in its own chunk. With the world canvas in the manifest, Post has to be
+ * a dynamic entry and neither the canvas's static graph nor the shell's may bring it (or its modules): that way `low` and
+ * `dialog-only`, which mount the canvas without Post, never download it. With nothing from `src/world/` in the manifest (before
+ * F2) there is nothing to check; with world modules and without the canvas key, it fails (QA's note 4 in M6): a renamed
+ * canvas cannot let the check pass vacuously.
  */
 export function checkPostChunk(manifest: Manifest, shellKeys: readonly string[], chunkModules?: ChunkModules): string[] {
   if (!manifest[WORLD_CANVAS_ENTRY]) {
@@ -258,7 +258,7 @@ export function checkPostChunk(manifest: Manifest, shellKeys: readonly string[],
   return violations;
 }
 
-/** Texto del reporte. Si un presupuesto se pasa, nombra cada chunk de ese grafo con su tamaño. */
+/** Report text. If a budget is exceeded, it names each chunk of that graph with its size. */
 export function formatReport(report: CheckReport): string {
   const lines: string[] = [];
   for (const r of report.results) {
@@ -274,7 +274,7 @@ export function formatReport(report: CheckReport): string {
   return lines.join("\n");
 }
 
-/** Corre el chequeo sobre un dist real. Devuelve el código de salida. */
+/** Runs the check over a real dist. Returns the exit code. */
 export function run(distDir = DEFAULT_DIST, budgetsPath = BUDGETS_PATH, log: (line: string) => void = console.log): number {
   const manifestPath = join(distDir, MANIFEST_RELATIVE);
   if (!existsSync(manifestPath)) {

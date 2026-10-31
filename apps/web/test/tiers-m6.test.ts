@@ -1,11 +1,11 @@
-// Plan estetica-c M6 (03 §2.7.1, §2.7.4): tiers de calidad y presupuestos en PCs modestas, sin GPU (D-016).
-// - TIER_PARAMS (lo que llega a world/) coincide con los topes y la densidad de @lg/art; `low` sin sombra direccional,
-//   sin post y con la densidad reducida;
-// - el tope de cuadros: 30 con una escena de conversación arriba, el del tier fuera; el regulador simulado lo cumple y
-//   PerformanceMonitor no mide durante la charla;
-// - durante la charla solo se animan el jugador y el NPC de la escena;
-// - memoria de texturas por tier dentro de 24 / 48 / 96 MB;
-// - la muestra de renderer.info de la sonda del modo director.
+// Plan estetica-c M6 (03 §2.7.1, §2.7.4): quality tiers and budgets on modest PCs, without GPU (D-016).
+// - TIER_PARAMS (what reaches world/) matches @lg/art's caps and density; `low` without directional shadow,
+//   without post and with reduced density;
+// - the frame cap: 30 with a conversation scene up, the tier's one aside; the simulated governor meets it and
+//   PerformanceMonitor does not measure during the conversation;
+// - during the conversation only the player and the scene's NPC are animated;
+// - texture memory per tier within 24 / 48 / 96 MB;
+// - the director-mode probe's renderer.info sample.
 import { DENSITY, keepDetail, keptDetail, SHADOW_MAP_TIERS, TIER_BUDGETS, TIER_DENSITY, WORLD_TIERS } from "@lg/art";
 import { describe, expect, test } from "vitest";
 import { TIER_PARAMS } from "../src/services/quality";
@@ -131,7 +131,7 @@ describe("tope de cuadros (03 §2.7.4)", () => {
   });
 });
 
-// M7 (notas 1 y 2 de QA en M6): el bucle del canvas es una función pura que GameCanvas aplica tal cual.
+// M7 (QA's notes 1 and 2 on M6): the canvas loop is a pure function that GameCanvas applies as is.
 describe("canvasLoop: modo de R3F, regulador y PerformanceMonitor", () => {
   const inScene = { paused: false, conversationFps: CONVERSATION_MAX_FPS };
   const onMap = { paused: false, conversationFps: null };
@@ -167,8 +167,8 @@ describe("canvasLoop: modo de R3F, regulador y PerformanceMonitor", () => {
     expect(canvasLoop(paused, null)).toMatchObject({ frameloop: "demand", regulatorFps: null });
   });
 
-  // drei declina cuando más del 75 % de los promedios quedan debajo de `lower`, y su `refreshrate` es el máximo medido:
-  // con tope, lo medido ES el tope. Un canvas sano que corre justo al tope no puede declinar.
+  // drei declines when more than 75 % of the averages fall below `lower`, and its `refreshrate` is the maximum measured:
+  // with a cap, what is measured IS the cap. A healthy canvas running right at the cap cannot decline.
   test("low a 30 FPS: el monitor no toma su propio tope por una caída (bounds del tope, no los de drei)", () => {
     const loop = canvasLoop(onMap, TIER_PARAMS.low.targetFps);
     const [lower, upper] = loop.monitor?.bounds(30) ?? [Infinity, Infinity];
@@ -176,25 +176,25 @@ describe("canvasLoop: modo de R3F, regulador y PerformanceMonitor", () => {
     expect(28).toBeGreaterThanOrEqual(lower);
     expect(upper).toBe(30);
     expect(lower).toBe(20);
-    // dientes: con los bounds por defecto de drei, 30 medidos declinan.
+    // teeth: with drei's default bounds, 30 measured decline.
     expect(30).toBeLessThan(DREI_DEFAULT_BOUNDS(30)[0]);
   });
 
   test("con tope de 60 los bounds son los de drei a 60 Hz, aunque la pantalla sea de 144", () => {
     expect(monitorBounds(60)(60)).toEqual([40, 60]);
     expect(monitorBounds(60)(144)).toEqual([40, 60]);
-    // una PC que no llega al tope sigue declinando: los bounds no salen de lo medido.
+    // a PC that does not reach the cap still declines: the bounds do not come from what is measured.
     expect(monitorBounds(60)(25)[0]).toBeGreaterThan(25);
   });
 
   test("GameCanvas aplica canvasLoop tal cual (sin recalcular el modo, el regulador ni el monitor)", () => {
     const src = (import.meta.glob("../src/world/GameCanvas.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>)["../src/world/GameCanvas.tsx"] ?? "";
-    // Cambio registrado (open-world-3d T2(g), D-833): antes `canvasLoop(render, params.targetFps);`. La sonda corre sin
-    // tope solo bajo la doble llave de desarrollo; el tercer argumento es esa llave y nada más.
+    // Recorded change (open-world-3d T2(g), D-833): before, `canvasLoop(render, params.targetFps);`. The probe runs without
+    // a cap only under the development double key; the third argument is that key and nothing else.
     expect(src).toContain("const loop = canvasLoop(render, params.targetFps, PERF_PROBE);");
     expect(src).toContain('const PERF_PROBE = import.meta.env.DEV && import.meta.env.VITE_LG_PERF_PROBE === "1";');
-    // Cambio registrado (open-world-3d T10 (d), D-835): antes `frameloop={loop.frameloop}`. Mientras compileAsync compila
-    // la primera escena el frameloop queda en "never"; después, canvasLoop tal cual.
+    // Recorded change (open-world-3d T10 (d), D-835): before, `frameloop={loop.frameloop}`. While compileAsync compiles
+    // the first scene the frameloop stays at "never"; afterwards, canvasLoop as is.
     expect(src).toContain('frameloop={warming ? "never" : loop.frameloop}');
     expect(src).toContain("{loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}");
     expect(src).toContain("{loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} ");

@@ -1,19 +1,19 @@
-// `npm run walk:browser` (M6.4 T8, D-815): excepcion acotada a D-016/C11, RATIFICADA 2026-10-27 (con condicion: el
-// navegador siempre se cierra al terminar). Un solo script, a pedido, FUERA de `npm run verify`: levanta servidor y Vite
-// propios (LG_OPERATOR_MODE=1, LG_FAKE_MODELS=1, puertos libres en 127.0.0.1, almacenes en memoria), abre el Chromium ya
-// instalado (playwright-core, sin descargar nada) y camina el juego guardando capturas. Una caminata roja es un reporte,
-// no un build roto.
+// `npm run walk:browser` (M6.4 T8, D-815): narrow exception to D-016/C11, RATIFIED 2026-10-27 (on condition: the
+// browser is always closed at the end). A single script, on demand, OUTSIDE `npm run verify`: it starts its own server and Vite
+// (LG_OPERATOR_MODE=1, LG_FAKE_MODELS=1, free ports on 127.0.0.1, in-memory stores), opens the already-installed Chromium
+// (playwright-core, nothing downloaded) and walks the game saving screenshots. A red walk is a report,
+// not a broken build.
 //
-// Reglas duras de este archivo:
-//   - El navegador SIEMPRE se cierra al terminar: try/finally que cierra context y browser en exito, en falla y en error
-//     lanzado (y ante SIGINT/SIGTERM). `--fail-on-purpose` (o LG_WALK_FAIL=1) lanza un error a proposito despues de abrir
-//     el navegador para que QA compruebe que no queda ningun chromium vivo.
-//   - Solo se matan los PIDs que este script arranco (nunca por nombre de proceso).
-//   - "Caminar" usa las mismas acciones del store que el clic y el teclado (moveTo / interact) con el juego real corriendo;
-//     el store se alcanza importando los modulos del propio Vite (misma instancia que la app).
-//   - open-world-3d T2(f) (D-833, AC12): el GL sale de `LG_GL=gpu|igpu|swiftshader` (default `gpu`, la NVIDIA) por el
-//     lanzador compartido scripts/dev/gl-mode.ts, que verifica el renderer desenmascarado y falla si no es el del modo; un
-//     modo desconocido sale con 2 antes de abrir nada. El viewport es 1280x720 (el de la sonda y el mockup).
+// Hard rules of this file:
+//   - The browser is ALWAYS closed at the end: try/finally closing context and browser on success, on failure and on a thrown
+//     error (and on SIGINT/SIGTERM). `--fail-on-purpose` (or LG_WALK_FAIL=1) throws an error on purpose after opening
+//     the browser so QA can check that no chromium is left alive.
+//   - Only the PIDs this script started are killed (never by process name).
+//   - "Walking" uses the same store actions as click and keyboard (moveTo / interact) with the real game running;
+//     the store is reached by importing Vite's own modules (same instance as the app).
+//   - open-world-3d T2(f) (D-833, AC12): GL comes from `LG_GL=gpu|igpu|swiftshader` (default `gpu`, the NVIDIA) through the
+//     shared launcher scripts/dev/gl-mode.ts, which checks the unmasked renderer and fails if it is not the mode's; an unknown
+//     mode exits with 2 before opening anything. The viewport is 1280x720 (the probe's and the mockup's).
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -29,25 +29,25 @@ import { closeAllGlBrowsers, parseGlMode, withGlBrowser, type GlMode } from "./g
 import { angleDelta, beaconsOk, forwardOf, forwardWalkOk, onScreen, projectWithMatrices, rightOf, turnFollowsYaw, type BeaconSeen, type P2 } from "./third-person-walk.ts";
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
-export const SHOTS_DIR = join(REPO_ROOT, "_(documento interno)");
+export const SHOTS_DIR = join(REPO_ROOT, "(internal document)");
 export const UNIVERSE = "U-GALEANO";
 
 /**
- * Umbrales del analisis de pixeles (AC12/AC17): colores cuantizados distintos y tope de un solo color. Reajustados UNA
- * vez sobre el render de la GPU (open-world-3d T3, S-OW-18; antes 12 y 0,6, del render de tiles en SwiftShader): el
- * muelle en formato maqueta medido en LG_GL=gpu dio 126 colores y 60,9 % de pasto dominante, y la campesino 141 y 35 %.
- * Prueba roja (misma cuantización): un recorte de solo pasto de esa captura da 6 colores y 96,5 %, y un color liso 1 y
- * 100 %; los dos fallan.
+ * Pixel-analysis thresholds (AC12/AC17): distinct quantized colors and a cap on a single color. Readjusted ONCE
+ * on the GPU render (open-world-3d T3, S-OW-18; before, 12 and 0.6, from the tile render in SwiftShader): the
+ * dock in diorama format measured on LG_GL=gpu gave 126 colors and 60.9 % dominant grass, and the farmer map 141 and 35 %.
+ * Red test (same quantization): a grass-only crop of that capture gives 6 colors and 96.5 %, and a flat color 1 and
+ * 100 %; both fail.
  */
 export const MIN_DISTINCT_COLORS = 40;
 export const MAX_DOMINANT_SHARE = 0.75;
 
 export interface PixelStats { distinct: number; dominantShare: number }
 
-/** AC12/AC17 (AC16 de open-world-3d): el mapa renderizado no es uniforme. Pura, para probarla sin navegador. */
+/** AC12/AC17 (AC16 of open-world-3d): the rendered map is not uniform. Pure, so it can be tested without a browser. */
 export const isNonUniform = (s: PixelStats): boolean => s.distinct >= MIN_DISTINCT_COLORS && s.dominantShare <= MAX_DOMINANT_SHARE;
 
-/** Carpeta de Chromium: LG_CHROMIUM manda; si no, el `chromium-*` mas nuevo de la cache de Playwright. Nunca instala. */
+/** Chromium folder: LG_CHROMIUM wins; otherwise the newest `chromium-*` in the Playwright cache. Never installs. */
 export function findChromium(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string | null {
   const explicit = env["LG_CHROMIUM"];
   if (explicit) return existsSync(explicit) ? explicit : null;
@@ -64,7 +64,7 @@ export function findChromium(env: NodeJS.ProcessEnv = process.env, platform: Nod
   return null;
 }
 
-// ---------- procesos propios ----------
+// ---------- own processes ----------
 
 const freePort = (): Promise<number> => new Promise((ok, fail) => {
   const srv = createServer();
@@ -91,7 +91,7 @@ async function waitFor(what: string, test: () => Promise<boolean>, ms = 60_000):
   throw new Error(`timeout esperando ${what} (${ms} ms)`);
 }
 
-/** Mata SOLO el arbol de este PID (en Windows el hijo de node puede tener nietos). */
+/** Kills ONLY the tree of this PID (on Windows the node child may have grandchildren). */
 export function killTree(child: ChildProcess): void {
   if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return;
   if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
@@ -101,9 +101,9 @@ export function killTree(child: ChildProcess): void {
 export interface Stack { url: string; stop: () => void }
 
 /**
- * Servidor de escenas + Vite, con modo operador y modelos guionados, en puertos libres. `extraEnv` llega al servidor y a
- * Vite (la sonda de rendimiento pone ahi VITE_LG_PERF_PROBE=1). Con `previewDir` sirve ese build con `vite preview` (que
- * hereda el proxy de /scene) en lugar del servidor de desarrollo (la carga de `perf:probe --build`).
+ * Scene server + Vite, with operator mode and scripted models, on free ports. `extraEnv` reaches the server and
+ * Vite (the performance probe sets VITE_LG_PERF_PROBE=1 there). With `previewDir` it serves that build with `vite preview` (which
+ * inherits the /scene proxy) instead of the dev server (the load of `perf:probe --build`).
  */
 export async function startStack(universe: string | null, extraEnv: NodeJS.ProcessEnv = {}, opts: { previewDir?: string } = {}): Promise<Stack> {
   const build = spawnSync(process.execPath, [join(REPO_ROOT, "scripts/content/build.ts"), ...(universe ? [`--universe=${universe}`] : [])], { cwd: REPO_ROOT, stdio: "inherit" });
@@ -131,11 +131,11 @@ export async function startStack(universe: string | null, extraEnv: NodeJS.Proce
   return { url: `http://127.0.0.1:${webPort}`, stop };
 }
 
-// ---------- navegador ----------
+// ---------- browser ----------
 
 /**
- * El canvas del mundo 3D (la superficie `data-lg-world` de GameCanvas). Cambio registrado (open-world-3d T9): desde el
- * minimapa hay un segundo canvas (2D, en el shell, que va antes en el DOM), así que "el primer canvas" ya no es el mundo.
+ * The 3D world canvas (the `data-lg-world` surface of GameCanvas). Recorded change (open-world-3d T9): since the
+ * minimap there is a second canvas (2D, in the shell, which comes first in the DOM), so "the first canvas" is no longer the world.
  */
 export const WORLD_CANVAS = "[data-lg-world] canvas";
 
@@ -152,7 +152,7 @@ const shot = async (page: Page, name: string): Promise<string> => {
   return file;
 };
 
-/** Cuantiza el canvas del mapa (3 bits por canal) y mide colores distintos y el color dominante. */
+/** Quantizes the map canvas (3 bits per channel) and measures distinct colors and the dominant color. */
 async function canvasStats(page: Page): Promise<PixelStats> {
   const png = await page.locator(WORLD_CANVAS).screenshot();
   const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
@@ -174,7 +174,7 @@ async function canvasStats(page: Page): Promise<PixelStats> {
   })()`);
 }
 
-/** La captura de un elemento como RGBA (filas de arriba abajo), en pixeles CSS de su rectangulo. */
+/** The capture of an element as RGBA (rows top to bottom), in CSS pixels of its rectangle. */
 async function elementImage(page: Page, selector: string): Promise<Rgba> {
   const png = await page.locator(selector).screenshot();
   const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
@@ -194,27 +194,27 @@ async function elementImage(page: Page, selector: string): Promise<Rgba> {
   return { width: r.w, height: r.h, data: new Uint8Array(Buffer.from(r.b64, "base64")) };
 }
 
-/** La captura del canvas del mundo como RGBA. */
+/** The capture of the world canvas as RGBA. */
 const canvasImage = (page: Page): Promise<Rgba> => elementImage(page, WORLD_CANVAS);
 
 const WORLD_READY = `document.querySelector(${JSON.stringify(WORLD_CANVAS)}) !== null`;
 
-/** La marca del primer cuadro del mundo (@lg/core LOAD_MARKS.worldFirstFrame; browser-walk.test.ts fija que son iguales). */
+/** The mark of the world's first frame (@lg/core LOAD_MARKS.worldFirstFrame; browser-walk.test.ts pins that they are equal). */
 export const WORLD_FIRST_FRAME_MARK = "lg:world-first-frame";
 
-/** Menu: espera `#menu-world` habilitado y entra al mapa. */
+/** Menu: waits for `#menu-world` enabled and enters the map. */
 export async function enterWorld(page: Page): Promise<void> {
   await page.waitForSelector("#menu-world:not([aria-disabled='true'])", { timeout: 30_000 });
   await page.click("#menu-world");
   await page.waitForFunction(WORLD_READY, undefined, { timeout: 30_000 });
-  // waitGame: un predicado que devuelve la promesa de import() es truthy y no esperaba nada.
+  // waitGame: a predicate that returns the import() promise is truthy and waited for nothing.
   await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
-  // T10: el primer cuadro espera a compileAsync; se espera su marca (como la sonda) y después unos cuadros más.
+  // T10: the first frame waits for compileAsync; its mark is awaited (like the probe) and then a few more frames.
   await page.waitForFunction(`performance.getEntriesByName(${JSON.stringify(WORLD_FIRST_FRAME_MARK)}).length > 0`, undefined, { timeout: 60_000 });
-  await page.waitForTimeout(1500); // unos cuadros para que el render dibuje
+  await page.waitForTimeout(1500); // a few frames so the render draws
 }
 
-/** Camina hacia el NPC (la accion que dispara el clic sobre el) y espera el aviso "hablar con <nombre>". */
+/** Walks toward the NPC (the action the click on it triggers) and waits for the notice "talk to <name>". */
 async function walkToNpc(page: Page, npcId: string): Promise<string> {
   const t0 = Date.now();
   const name = await page.evaluate<string>(`(async () => {
@@ -224,14 +224,14 @@ async function walkToNpc(page: Page, npcId: string): Promise<string> {
     actions.interact(${JSON.stringify(npcId)});
     return info ? info.name : ${JSON.stringify(npcId)};
   })()`);
-  // El aviso puede seguir nombrando al NPC anterior hasta llegar: se espera al nombre correcto.
+  // The notice may keep naming the previous NPC until arrival: wait for the right name.
   await page.waitForFunction(`(document.querySelector("#world-talk")?.textContent || "").includes(${JSON.stringify(name)})`, undefined, { timeout: 90_000 })
     .catch(async () => { throw new Error(`el aviso de ${npcId} dice "${(await page.textContent("#world-talk").catch(() => null)) ?? "(sin boton)"}" y se esperaba "${name}"`); });
-  await recordVisit(page, npcId, Date.now() - t0); // AC52 (T8): solo mientras corre la recorrida desde la aparicion
+  await recordVisit(page, npcId, Date.now() - t0); // AC52 (T8): only while the run from the spawn is going
   return name;
 }
 
-/** Espera a que pueda escribir, o a que la escena haya terminado. Devuelve true si todavia se puede escribir. */
+/** Waits until it can type, or until the scene has ended. Returns true if it can still type. */
 async function nextHand(page: Page): Promise<boolean> {
   await page.waitForFunction(`(() => {
     const input = document.querySelector("#scene-input");
@@ -241,7 +241,7 @@ async function nextHand(page: Page): Promise<boolean> {
   return (await page.$("#scene-back")) === null;
 }
 
-/** Juega los turnos por texto; corta cuando la escena termina. */
+/** Plays the text turns; stops when the scene ends. */
 async function playTurns(page: Page, turns: readonly string[]): Promise<void> {
   for (const text of turns) {
     if (!(await nextHand(page))) return;
@@ -265,11 +265,11 @@ async function leaveScene(page: Page): Promise<void> {
 
 const hudText = async (page: Page): Promise<string> => (await page.textContent("[data-testid='dialogue-hud']")) ?? "";
 
-// ---------- tercera persona (open-world-3d M2: AC28, AC29, AC30) ----------
+// ---------- third person (open-world-3d M2: AC28, AC29, AC30) ----------
 
 interface CamState { pos: P2; yaw: number; t: number; dist: number; overview: boolean; preset: string; rigYaw: number; rigT: number; rigDist: number }
 
-/** Jugador y camara: lo pedido (store) y lo dibujado (CameraRig deja el yaw, el t y la distancia suavizados en cameraLook). */
+/** Player and camera: what was requested (store) and what was drawn (CameraRig leaves the smoothed yaw, t and distance in cameraLook). */
 const camState = (page: Page): Promise<CamState> => page.evaluate<CamState>(`(async () => {
   const { gameStore } = await import("/src/state/store.ts");
   const sel = await import("/src/state/selectors/index.ts");
@@ -282,7 +282,7 @@ const camState = (page: Page): Promise<CamState> => page.evaluate<CamState>(`(as
   };
 })()`);
 
-/** Matrices de la camara dibujada y el rectangulo del canvas, para proyectar puntos del mundo. */
+/** Matrices of the drawn camera and the canvas rectangle, to project world points. */
 const cameraMatrices = (page: Page): Promise<{ view: number[]; proj: number[]; rect: { x: number; y: number; w: number; h: number } }> => page.evaluate(`(async () => {
   const { cameraLook } = await import("/src/world/runtime.ts");
   const c = cameraLook.camera;
@@ -291,8 +291,8 @@ const cameraMatrices = (page: Page): Promise<{ view: number[]; proj: number[]; r
 })()`);
 
 /**
- * Un punto del suelo a pixeles de la pagina (null si queda fuera de pantalla). Cambio registrado (open-world-3d T6): el
- * suelo ya no esta en y = 0; la altura sale de `worldGround.heightAt` (el mismo `heightAt` del terreno dibujado).
+ * A ground point to page pixels (null if off screen). Recorded change (open-world-3d T6): the
+ * ground is no longer at y = 0; the height comes from `worldGround.heightAt` (the same `heightAt` as the drawn terrain).
  */
 async function groundToScreen(page: Page, p: P2): Promise<{ x: number; y: number } | null> {
   const m = await cameraMatrices(page);
@@ -302,9 +302,9 @@ async function groundToScreen(page: Page, p: P2): Promise<{ x: number; y: number
   return { x: m.rect.x + ((ndc[0] + 1) / 2) * m.rect.w, y: m.rect.y + ((1 - ndc[1]) / 2) * m.rect.h };
 }
 
-/** Arrastre con el boton principal alrededor del centro del canvas, solo para girar la camara (AC28 usa dragOverGround). */
+/** Drag with the main button around the canvas center, only to rotate the camera (AC28 uses dragOverGround). */
 async function drag(page: Page, dx: number, dy = 0): Promise<void> {
-  // Arrastres largos en tramos de 400 px, para no salir del viewport de 1280 px.
+  // Long drags in 400 px stretches, so as not to leave the 1280 px viewport.
   const parts = Math.max(1, Math.ceil(Math.abs(dx) / 400));
   for (let i = 0; i < parts; i++) {
     const x = 640 - dx / parts / 2;
@@ -316,17 +316,17 @@ async function drag(page: Page, dx: number, dy = 0): Promise<void> {
   }
 }
 
-/** Intencion del jugador en el store: el tipo, los puntos que le quedan y la velocidad. */
+/** Player intent in the store: the type, the points left and the speed. */
 const intentNow = (page: Page): Promise<{ kind: string; left: P2[]; v: P2 }> => page.evaluate(`import("/src/state/store.ts").then((m) => {
   const p = m.gameStore.getState().player;
   return { kind: p.intent.kind, left: p.intent.kind === "path" ? p.intent.waypoints.map((w) => ({ x: w.x, z: w.z })) : [], v: { x: p.velocity.x, z: p.velocity.z } };
 })`);
 
 /**
- * AC28 (c): un arrastre de `dx` px que empieza y se suelta sobre pixeles proyectados desde puntos del suelo a ~3 m
- * delante del jugador (misma profundidad, a izquierda y derecha), asi el raycast del suelo recibe el soltar y es el
- * descarte de arrastres (isDragClick) el que evita la caminata. Despues prueba que el pixel de soltar cae en el suelo:
- * un clic de 2 px ahi produce moveTo (camino), que se cancela enseguida. null si no hay suelo en pantalla.
+ * AC28 (c): a drag of `dx` px that starts and is released over pixels projected from ground points ~3 m
+ * in front of the player (same depth, left and right), so the ground raycast receives the release and it is the
+ * drag discard (isDragClick) that prevents the walk. Then it proves the release pixel lands on the ground:
+ * a 2 px click there produces moveTo (a path), which is cancelled right away. null if there is no ground on screen.
  */
 async function dragOverGround(page: Page, dx: number): Promise<{ moved: number; yawChange: number; intentAfterDrag: string; proofClick: string } | null> {
   const before = await camState(page);
@@ -337,7 +337,7 @@ async function dragOverGround(page: Page, dx: number): Promise<{ moved: number; 
   const c = await groundToScreen(page, ahead);
   const c1 = await groundToScreen(page, side(1));
   if (!c || !c1) return null;
-  const halfM = dx / 2 / Math.max(1, Math.hypot(c1.x - c.x, c1.y - c.y)); // metros de costado para dx/2 px
+  const halfM = dx / 2 / Math.max(1, Math.hypot(c1.x - c.x, c1.y - c.y)); // meters sideways for dx/2 px
   const from = await groundToScreen(page, side(-halfM));
   const to = await groundToScreen(page, side(halfM));
   if (!from || !to) return null;
@@ -348,7 +348,7 @@ async function dragOverGround(page: Page, dx: number): Promise<{ moved: number; 
   await page.waitForTimeout(300);
   const after = await camState(page);
   const intentAfterDrag = (await intentNow(page)).kind;
-  // Prueba de suelo: el mismo pixel de soltar, como clic de 2 px, camina (moveTo); se cancela y se espera quietud.
+  // Ground test: the same release pixel, as a 2 px click, walks (moveTo); it is cancelled and stillness is awaited.
   await page.mouse.move(to.x, to.y);
   await page.mouse.down();
   await page.mouse.move(to.x + 2, to.y);
@@ -371,20 +371,20 @@ const hold = async (page: Page, code: string, ms: number): Promise<void> => {
 };
 
 /**
- * Espera una condicion sobre el estado del juego. El predicado de `waitForFunction` tiene que ser sincrono: una promesa
- * (`import(...).then(...)`) es un valor truthy y la espera pasaria de inmediato. Por eso el store queda primero en
- * `window.__lgWalkStore` y `cond` es una expresion sobre `s` (el estado actual).
+ * Waits for a condition on the game state. The `waitForFunction` predicate has to be synchronous: a promise
+ * (`import(...).then(...)`) is a truthy value and the wait would pass immediately. That is why the store is first left in
+ * `window.__lgWalkStore` and `cond` is an expression over `s` (the current state).
  */
 async function waitGame(page: Page, cond: string, timeout: number): Promise<void> {
   await page.evaluate(`import("/src/state/store.ts").then((m) => { window.__lgWalkStore = m.gameStore; })`);
   await page.waitForFunction(`(() => { const s = window.__lgWalkStore.getState(); return Boolean(${cond}); })()`, undefined, { timeout });
 }
 
-/** Espera a que el jugador quede quieto (velocidad del store en cero). */
+/** Waits for the player to stand still (store speed at zero). */
 const settle = (page: Page, ms = 600): Promise<void> =>
   waitGame(page, "Math.hypot(s.player.velocity.x, s.player.velocity.z) < 1e-3", 10_000).then(() => page.waitForTimeout(ms));
 
-/** La fila del canvas (de arriba) donde cae el horizonte: un punto a 5 km por delante, a la altura de la camara. */
+/** The canvas row (from the top) where the horizon falls: a point 5 km ahead, at camera height. */
 const horizonRow = (page: Page): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
   const c = cameraLook.camera;
   const pos = c.getWorldPosition(c.position.clone());
@@ -396,7 +396,7 @@ const horizonRow = (page: Page): Promise<number> => page.evaluate<number>(`impor
   return ((1 - p.y) / 2) * r.height;
 })`);
 
-/** La primera fila del canvas que no tapa el HUD en la columna del centro (la barra del título va encima). */
+/** The first canvas row not covered by the HUD in the center column (the title bar sits on top). */
 const worldTop = (page: Page): Promise<number> => page.evaluate<number>(`(() => {
   const c = document.querySelector(${JSON.stringify(WORLD_CANVAS)});
   const r = c.getBoundingClientRect();
@@ -405,7 +405,7 @@ const worldTop = (page: Page): Promise<number> => page.evaluate<number>(`(() => 
   return 0;
 })()`);
 
-/** Los pixeles del canvas que ningun elemento del HUD tapa (elementFromPoint es el canvas), cada 2 px. */
+/** The canvas pixels that no HUD element covers (elementFromPoint is the canvas), every 2 px. */
 async function worldVisible(page: Page, w: number, h: number): Promise<Uint8Array> {
   const b64 = await page.evaluate<string>(`(() => {
     const c = document.querySelector(${JSON.stringify(WORLD_CANVAS)});
@@ -422,7 +422,7 @@ async function worldVisible(page: Page, w: number, h: number): Promise<Uint8Arra
   return new Uint8Array(Buffer.from(b64, "base64"));
 }
 
-/** Muestra el terreno (todo objeto llamado "terreno" de la escena dibujada) o lo esconde. */
+/** Shows the terrain (every object named "terreno" in the drawn scene) or hides it. */
 const setTerrainVisible = (page: Page, on: boolean): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
   let root = cameraLook.camera;
   while (root && root.parent) root = root.parent;
@@ -432,8 +432,8 @@ const setTerrainVisible = (page: Page, on: boolean): Promise<number> => page.eva
 })`);
 
 /**
- * La máscara del cielo de la captura `img` (open-world-3d M3, AC39): se dibuja el mismo cuadro con solo el cielo (todo
- * lo demás escondido, menos el grupo "cielo") y es cielo lo que no cambió (diffMask en 0), como la doble captura de AC41.
+ * The sky mask of capture `img` (open-world-3d M3, AC39): the same frame is drawn with only the sky (everything
+ * else hidden, except the "cielo" group) and the sky is what did not change (diffMask at 0), like the double capture of AC41.
  */
 async function skyMask(page: Page, img: Rgba): Promise<Uint8Array> {
   const toggle = (only: boolean): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
@@ -455,13 +455,13 @@ async function skyMask(page: Page, img: Rgba): Promise<Uint8Array> {
 }
 
 /**
- * Open-world-3d T7b (LK6): el id del look del diorama montado. AC39 y AC41 son reglas de DEFAULT_LOOK (no del motor):
- * corren solo si el muelle se dibuja con DEFAULT_LOOK, y si no, fallan diciendo con qué look se dibujó.
+ * Open-world-3d T7b (LK6): the id of the mounted diorama's look. AC39 and AC41 are DEFAULT_LOOK rules (not the engine's):
+ * they run only if the dock is drawn with DEFAULT_LOOK, and otherwise they fail saying which look it was drawn with.
  */
 const activeLookId = (page: Page): Promise<string | null> =>
   page.evaluate<string | null>(`import("/src/world/runtime.ts").then(({ activeLook }) => activeLook.id)`);
 
-/** Las dos capturas del mismo cuadro, con y sin terreno (como las de tools/defects.cjs), y la mascara del terreno. */
+/** The two captures of the same frame, with and without terrain (like those of tools/defects.cjs), and the terrain mask. */
 
 async function withAndWithoutTerrain(page: Page): Promise<{ img: Rgba; mask: Uint8Array }> {
   const img = await canvasImage(page);
@@ -474,10 +474,10 @@ async function withAndWithoutTerrain(page: Page): Promise<{ img: Rgba; mask: Uin
 }
 
 /**
- * AC41 (open-world-3d T6): en medium con movimiento reducido, el mapa entero (t = 1) y la vista t = 0,55, cada una dos
- * veces (con y sin terreno). (1) Amarillo entre los pixeles de terreno a t = 1 a lo sumo 0,35. (2) A t = 0,55, el
- * amarillo del anillo justo fuera del borde de la cama de pasto (radio del pasto de medium) menos el del anillo justo
- * dentro, a lo sumo 0,15. Deja tier, movimiento reducido y zoom como estaban.
+ * AC41 (open-world-3d T6): on medium with reduced motion, the whole map (t = 1) and the t = 0.55 view, each twice
+ * (with and without terrain). (1) Yellow among the terrain pixels at t = 1 at most 0.35. (2) At t = 0.55, the
+ * yellow of the ring just outside the edge of the grass bed (medium's grass radius) minus that of the ring just
+ * inside, at most 0.15. Leaves tier, reduced motion and zoom as they were.
  */
 async function walkGround(page: Page): Promise<void> {
   const before = await page.evaluate<{ tier: string; reduce: boolean }>(`import("/src/state/store.ts").then((m) => {
@@ -489,7 +489,7 @@ async function walkGround(page: Page): Promise<void> {
   await act(`actions.setTierChoice("medium"); actions.setReduceMotion(true)`);
   await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
   await act("actions.zoomTo(1)");
-  await page.waitForTimeout(4000); // la escena de medium, sus mapas y el zoom suavizado
+  await page.waitForTimeout(4000); // the medium scene, its maps and the smoothed zoom
   const full = await withAndWithoutTerrain(page);
   await shot(page, "ac41-mapa-completo");
   const y1 = yellowShare(full.img, maskPixels(full.mask));
@@ -499,10 +499,10 @@ async function walkGround(page: Page): Promise<void> {
   await page.waitForTimeout(2500);
   const mid = await withAndWithoutTerrain(page);
   await shot(page, "ac41-t055");
-  // Cambio registrado (open-world-3d T8, re-sello de AC41): antes los anillos iban alrededor del jugador con el radio de
-  // medium (24 m) y la cama apagada (`uGrassBed.w` = 0, paso ~0). Con el pasto de T8 la cama es la dibujada: su centro va
-  // delante del jugador y su radio se achica con el zoom (a t = 0,55, unos 13 m), así que los anillos van alrededor de
-  // ESE disco (runtime `grassBedView`, el `grassBed` del suelo). Umbrales sin cambio.
+  // Recorded change (open-world-3d T8, AC41 re-seal): before, the rings went around the player with medium's radius (24 m) and
+  // the bed off (`uGrassBed.w` = 0, step ~0). With T8's grass the bed is the drawn one: its center goes
+  // in front of the player and its radius shrinks with zoom (at t = 0.55, about 13 m), so the rings go around
+  // THAT disc (runtime `grassBedView`, the ground's `grassBed`). Thresholds unchanged.
   const bed = await page.evaluate<{ x: number; z: number; radius: number; on: number }>(`import("/src/world/runtime.ts").then(({ grassBedView }) => ({ ...grassBedView }))`);
   const R = bed.radius;
   const ring = (lo: number, hi: number): P2[] => {
@@ -547,8 +547,8 @@ async function walkGround(page: Page): Promise<void> {
 }
 
 async function walkThirdPerson(page: Page): Promise<void> {
-  // AC28 (c): tres arrastres de 120 px soltados sobre el suelo: miran (el yaw cambia) y no caminan. El total deja la
-  // camara mirando al este, por el camino del muelle (yaw 270), para que W tenga campo libre.
+  // AC28 (c): three 120 px drags released over the ground: they look (the yaw changes) and do not walk. The total leaves the
+  // camera facing east, along the dock path (yaw 270), so W has a clear field.
   await shot(page, "ac28-antes");
   const start = await camState(page);
   const drags = [];
@@ -559,7 +559,7 @@ async function walkThirdPerson(page: Page): Promise<void> {
     .map((d, i) => (d ? `#${i + 1} se movio ${d.moved.toFixed(3)} m, giro ${d.yawChange.toFixed(1)}, intencion ${d.intentAfterDrag}, clic de 2 px en el pixel de soltar -> ${d.proofClick}` : `#${i + 1} sin suelo en pantalla`))
     .join("; ")}`);
 
-  // AC28 (a): W 1.000 ms avanza 3 a 4,5 m hacia donde mira la camara.
+  // AC28 (a): W for 1,000 ms advances 3 to 4.5 m where the camera looks.
   const w0 = await camState(page);
   await hold(page, "KeyW", 1000);
   await settle(page);
@@ -567,7 +567,7 @@ async function walkThirdPerson(page: Page): Promise<void> {
   const fwd = forwardWalkOk(w0.pos, w1.pos, w0.yaw);
   check("AC28-W", fwd.ok, `W 1 s: ${fwd.along.toFixed(2)} m adelante (3 a 4,5), ${fwd.side.toFixed(2)} m de costado, yaw ${w0.yaw.toFixed(1)}`);
 
-  // AC28 (b): Q 500 ms y despues W: la marcha giro lo mismo que el yaw (10 grados de tolerancia).
+  // AC28 (b): Q 500 ms and then W: the march turned the same as the yaw (10 degrees tolerance).
   await hold(page, "KeyQ", 500);
   await page.waitForTimeout(200);
   const q0 = await camState(page);
@@ -578,12 +578,12 @@ async function walkThirdPerson(page: Page): Promise<void> {
   check("AC28-Q", turn.ok, `Q giro el yaw ${angleDelta(w0.yaw, q0.yaw).toFixed(1)} grados y la marcha ${turn.rotated.toFixed(1)}`);
   await shot(page, "ac28-despues");
 
-  // AC29 (a): clic corto sobre un punto del suelo a 8 m al este: llega a menos de 0,5 m. Cambio registrado
-  // (open-world-3d T6): antes el punto iba a z 11,5 (al norte del camino del muelle chico, lejos del rayo a NPC-MITAYO);
-  // en el mapa grande la aparicion esta en (-48, 30) y Mitayo a 45 m, asi que el punto es el de 8 m al este del jugador.
+  // AC29 (a): short click on a ground point 8 m to the east: arrives within 0.5 m. Recorded change
+  // (open-world-3d T6): before, the point went to z 11.5 (north of the small dock's path, far from the ray to NPC-MITAYO);
+  // on the big map the spawn is at (-48, 30) and Mitayo 45 m away, so the point is the one 8 m east of the player.
   const here = (await camState(page)).pos;
   const goal = { x: here.x + 8, z: here.z };
-  const goalYaw = 270; // mirar al este para que el punto este en pantalla
+  const goalYaw = 270; // face east so the point is on screen
   await drag(page, angleDelta(goalYaw, (await camState(page)).yaw) / 0.25);
   await page.waitForTimeout(800);
   const px = await groundToScreen(page, goal);
@@ -601,15 +601,15 @@ async function walkThirdPerson(page: Page): Promise<void> {
   }
   if (reached) await settle(page, 200);
   const atGoal = (await camState(page)).pos;
-  reached = reached && Math.hypot(atGoal.x - goal.x, atGoal.z - goal.z) < 0.5; // donde se detuvo, no solo al pasar
-  // Si falla, lo necesario para reproducirlo en una prueba unitaria: salida, intencion, puntos que quedan, velocidad.
+  reached = reached && Math.hypot(atGoal.x - goal.x, atGoal.z - goal.z) < 0.5; // where it stopped, not just on passing
+  // If it fails, what is needed to reproduce it in a unit test: output, intent, points left, speed.
   const why = reached ? null : await intentNow(page);
   const fmt = (p: P2): string => `(${p.x.toFixed(3)}, ${p.z.toFixed(3)})`;
   check("AC29-clic", reached, `clic en (${goal.x.toFixed(1)}, ${goal.z.toFixed(1)}) a ${Math.hypot(goal.x - here.x, goal.z - here.z).toFixed(1)} m; destino del store ${target}; quedo en (${atGoal.x.toFixed(2)}, ${atGoal.z.toFixed(2)}), a ${Math.hypot(atGoal.x - goal.x, atGoal.z - goal.z).toFixed(2)} m${why
     ? `; salida ${fmt(here)}, intencion ${why.kind}, quedan ${why.left.length} puntos [${why.left.map(fmt).join(" ")}], velocidad ${fmt(why.v)}`
     : ""}`);
 
-  // AC29 (b): hablar con NPC-MITAYO pasa a dialogueFrame y al cerrar vuelve a thirdPerson con el mismo yaw (1 grado) y t (0,01).
+  // AC29 (b): talking to NPC-MITAYO moves to dialogueFrame and on closing returns to thirdPerson with the same yaw (1 degree) and t (0.01).
   await walkToNpc(page, "NPC-MITAYO");
   await settle(page, 300);
   const pre = await camState(page);
@@ -619,22 +619,22 @@ async function walkThirdPerson(page: Page): Promise<void> {
   const during = await camState(page);
   await shot(page, "ac29-charla");
   await leaveScene(page);
-  await page.waitForTimeout(2500); // la transicion de vuelta (3/s) y el zoom suavizado
+  await page.waitForTimeout(2500); // the transition back (3/s) and the smoothed zoom
   const post = await camState(page);
   const sameYaw = Math.abs(angleDelta(pre.yaw, post.yaw)) <= 1 && Math.abs(angleDelta(pre.yaw, post.rigYaw)) <= 1;
   const sameT = Math.abs(pre.t - post.t) <= 0.01 && Math.abs(pre.rigT - post.rigT) <= 0.01;
   check("AC29-charla", during.preset === "dialogueFrame" && post.preset === "thirdPerson" && sameYaw && sameT,
     `durante ${during.preset}, despues ${post.preset}; yaw ${pre.yaw.toFixed(2)} -> ${post.yaw.toFixed(2)} (dibujado ${post.rigYaw.toFixed(2)}), t ${pre.t.toFixed(3)} -> ${post.t.toFixed(3)} (dibujado ${pre.rigT.toFixed(3)} -> ${post.rigT.toFixed(3)})`);
 
-  // AC30: V lleva al mapa entero; el jugador y las balizas de los tres NPCs se proyectan dentro de la pantalla; la captura
-  // pasa la regla de pixeles; la segunda V vuelve a la distancia de antes (2 %).
+  // AC30: V goes to the whole map; the player and the beacons of the three NPCs project inside the screen; the capture
+  // passes the pixel rule; the second V returns to the previous distance (2 %).
   const v0 = await camState(page);
   await page.keyboard.press("KeyV");
   await page.waitForTimeout(2500);
   const full = await camState(page);
   const m = await cameraMatrices(page);
-  // Las balizas mismas (sprites con userData.beacon en la escena dibujada), no las posiciones de los NPCs: una baliza
-  // oculta o transparente tiene que fallar. La camara de drei cuelga de la escena; se sube hasta la raiz.
+  // The beacons themselves (sprites with userData.beacon in the drawn scene), not the NPCs' positions: a hidden
+  // or transparent beacon has to fail. The drei camera hangs from the scene; climb up to the root.
   const npcIds = await page.evaluate<string[]>(`import("/src/state/store.ts").then((m) => (m.gameStore.getState().world.diorama?.npcs ?? []).map((n) => n.id))`);
   const sprites = await page.evaluate<{ id: string; visible: boolean; opacity: number; p: [number, number, number] }[]>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
     let root = cameraLook.camera;
@@ -661,11 +661,11 @@ async function walkThirdPerson(page: Page): Promise<void> {
     `distancia ${v0.rigDist.toFixed(2)} -> ${full.rigDist.toFixed(1)} -> ${back.rigDist.toFixed(2)} m`);
 }
 
-// ---------- naturaleza y personajes del mundo abierto (open-world-3d T7: AC45, AC47) ----------
+// ---------- nature and characters of the open world (open-world-3d T7: AC45, AC47) ----------
 
 /**
- * Los triángulos de los árboles en la vista de ahora, por renderer.info: se esconde todo lo que no es un nivel de árbol
- * (`<especie>:completo|liviano|impostor`), se dibuja un cuadro con el renderer del canvas y se vuelve a mostrar.
+ * The triangles of the trees in the current view, by renderer.info: everything that is not a tree tier is hidden
+ * (`<species>:completo|liviano|impostor`), one frame is drawn with the canvas renderer and everything is shown again.
  */
 const treeTriangles = (page: Page): Promise<{ triangles: number; calls: number; meshes: number }> => page.evaluate(`import("/src/world/runtime.ts").then(({ cameraLook, worldRenderer }) => {
   const cam = cameraLook.camera;
@@ -692,16 +692,16 @@ const treeTriangles = (page: Page): Promise<{ triangles: number; calls: number; 
   return out;
 })`);
 
-/** Gira la vista `deg` grados (la accion semantica "look" de R10, 0,25 grados por px) y espera que la camara llegue. */
+/** Turns the view `deg` degrees (the semantic "look" action of R10, 0.25 degrees per px) and waits for the camera to arrive. */
 async function turnBy(page: Page, deg: number): Promise<void> {
   await page.evaluate(`import("/src/state/actions.ts").then(({ actions }) => actions.dispatch({ type: "look", dx: ${-deg / 0.25}, dy: 0 }))`);
   await page.waitForTimeout(1500);
 }
 
 /**
- * AC45 (Walk): en la aparicion, de cara al bosque se dibujan mas triangulos de arbol que de espaldas (renderer.info). El
- * bosque es el mas denso de cuatro rumbos a 90 grados; de espaldas, el opuesto. AC47 (Walk): el jugador y los NPCs del
- * mundo abierto son el personaje de Quaternius (huesos `Head`), el jugador con su gorra.
+ * AC45 (Walk): at the spawn, facing the forest more tree triangles are drawn than facing away (renderer.info). The
+ * forest is the densest of four headings at 90 degrees; facing away, the opposite one. AC47 (Walk): the player and the open-world
+ * NPCs are the Quaternius character (`Head` bones), the player with their cap.
  */
 const AWAY_MAX_SHARE = 0.6;
 
@@ -722,8 +722,8 @@ async function walkForest(page: Page): Promise<void> {
   }
   const forest = views.reduce((a, b) => (b.triangles > a.triangles ? b : a));
   const away = views[(views.indexOf(forest) + 2) % 4] as (typeof views)[number];
-  // AC45 ("facing away draws fewer tree triangles"), fix 1 de QA: "menos" con dientes. Medido 0,38 (8.070 / 21.056);
-  // sin la prueba del frustum la proporción sube a 0,94, así que el tope 0,6 separa los dos casos.
+  // AC45 ("facing away draws fewer tree triangles"), QA's fix 1: "fewer" with teeth. Measured 0.38 (8,070 / 21,056);
+  // without the frustum test the ratio rises to 0.94, so the 0.6 cap separates the two cases.
   check("AC45-walk", forest.triangles > 0 && away.triangles <= AWAY_MAX_SHARE * forest.triangles,
     `triangulos de arbol por rumbo: ${views.map((v) => `${v.yaw.toFixed(0)}°: ${v.triangles} (${v.calls} llamadas)`).join(", ")}; bosque ${forest.triangles}, de espaldas ${away.triangles} (proporción ${(away.triangles / Math.max(1, forest.triangles)).toFixed(2)}, tope ${AWAY_MAX_SHARE})`);
 
@@ -746,12 +746,12 @@ async function walkForest(page: Page): Promise<void> {
     `cuerpos de Quaternius ${rigs.quaternius} (jugador y 3 NPCs), de KayKit ${rigs.kaykit}, accesorios de cabeza visibles ${rigs.caps}`);
 }
 
-// ---------- pasto y copas (open-world-3d T8: AC51) ----------
+// ---------- grass and crowns (open-world-3d T8: AC51) ----------
 
 /**
- * Dibuja el cuadro dos veces en la misma tarea con el renderer del canvas (como tools/defects.cjs): con todo, y con lo
- * que cumple `hide` (un predicado JS sobre `o`) escondido; lee las dos con readPixels antes de ceder el hilo (sin
- * preserveDrawingBuffer) y las devuelve de arriba abajo. Nada se anima entre una y otra.
+ * Draws the frame twice in the same task with the canvas renderer (like tools/defects.cjs): with everything, and with what
+ * satisfies `hide` (a JS predicate over `o`) hidden; reads both with readPixels before yielding the thread (without
+ * preserveDrawingBuffer) and returns them top to bottom. Nothing animates between one and the other.
  */
 async function renderTwice(page: Page, hide: string): Promise<{ a: Rgba; b: Rgba; hidden: number }> {
   const r = await page.evaluate<{ w: number; h: number; a: string; b: string; hidden: number }>(`import("/src/world/runtime.ts").then(({ cameraLook, worldRenderer }) => {
@@ -783,11 +783,11 @@ async function renderTwice(page: Page, hide: string): Promise<{ a: Rgba; b: Rgba
 }
 
 const IS_GRASS = "(o) => o.isInstancedMesh && /^pasto:/.test(o.name)";
-/** Un árbol (mockup `treeMeshes`): un nivel de árbol dibujado cuya geometría pasa de 4 m (los arbustos no cuentan). */
+/** A tree (mockup `treeMeshes`): a drawn tree tier whose geometry exceeds 4 m (shrubs do not count). */
 const IS_TREE = "(o) => o.isInstancedMesh && /:(completo|liviano|impostor)$/.test(o.name) && o.count > 0 && o.visible"
   + " && ((o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox)).max.y > 4)";
 
-/** Los árboles dibujados proyectados (mockup `trees`): centro de copa al 60 % del alto y radio de 0,3 del alto, en px. */
+/** The drawn trees projected (mockup `trees`): crown center at 60 % of the height and radius 0.3 of the height, in px. */
 const projectedTrees = (page: Page): Promise<ProjectedTree[]> => page.evaluate<ProjectedTree[]>(`import("/src/world/runtime.ts").then(({ cameraLook, worldRenderer }) => {
   const cam = cameraLook.camera;
   const ctx = worldRenderer.gl.getContext();
@@ -815,33 +815,33 @@ const projectedTrees = (page: Page): Promise<ProjectedTree[]> => page.evaluate<P
   return out;
 })`);
 
-/** La inclinación efectiva de la cámara dibujada: la elevación de la cámara sobre el pivote (el `pitchEff` del mockup). */
+/** The effective camera pitch drawn: the camera elevation above the pivot (the mockup's `pitchEff`). */
 const cameraPitch = (page: Page): Promise<number> => page.evaluate<number>(`import("/src/world/runtime.ts").then(({ cameraLook }) => {
   const c = cameraLook.camera.getWorldPosition(cameraLook.camera.position.clone());
   const d = Math.hypot(c.x - cameraLook.x, c.y - cameraLook.y, c.z - cameraLook.z);
   return Math.asin(Math.max(-1, Math.min(1, (c.y - cameraLook.y) / d))) * 180 / Math.PI;
 })`);
 
-/** Poses del pasto del mockup (tools/test.cjs GRASS_POSES): [t de zoom, inclinación del jugador] dan 30, 45 y 57°. */
+/** Grass poses of the mockup (tools/test.cjs GRASS_POSES): [zoom t, player pitch] give 30, 45 and 57°. */
 export const AC51_GRASS_POSES = [[0.18, 30, 30], [0.3, 45, 45], [0.42, 55, 57]] as const;
 /**
- * La inclinación de las copas: la por defecto de la tercera persona (@lg/core THIRD_PERSON.defaultPitchDeg; la Walk corre
- * en Node sin build y @lg/core no se importa acá: browser-walk.test.ts fija que son iguales).
+ * The crown pitch: the third-person default (@lg/core THIRD_PERSON.defaultPitchDeg; the Walk runs
+ * in Node without a build and @lg/core is not imported here: browser-walk.test.ts pins that they are equal).
  */
 export const AC51_TREE_PITCH = 17;
-/** Zooms de las copas (tools/test.cjs TREE_ZOOMS). */
+/** Crown zooms (tools/test.cjs TREE_ZOOMS). */
 export const AC51_TREE_ZOOMS = [0.65, 0.72, 0.8, 0.9, 1] as const;
 /**
- * Desde qué zoom las copas cuentan para AC51 (D-844). Abajo es el defecto conocido K-1: a zoom medio el impostor muestra
- * tronco y tarjetas laterales bajo la copa. Se sigue midiendo e imprimiendo; al arreglar K-1, bajar esto a 0.65.
+ * From which zoom the crowns count for AC51 (D-844). Below it is the known defect K-1: at medium zoom the impostor shows
+ * trunk and side cards under the crown. It is still measured and printed; on fixing K-1, lower this to 0.65.
  */
 export const AC51_CROWN_GATE_FROM = 0.8;
 
 /**
- * AC51 (LK6: regla de DEFAULT_LOOK): en medium con movimiento reducido, las tres capturas de defectos del mockup en la
- * aparición. Pasto a 30, 45 y 57°: tiras <= 0,12 con cobertura >= 0,03 y amarillo junto al pasto <= 0,4. Copas medidas a t 0,65
- * a 1, con gate desde AC51_CROWN_GATE_FROM (D-844, K-1): mediana de solidez >= 0,82, y a 0,9 y 1 al menos 20 árboles medidos y percentil 20 >= 0,7. Deja tier, movimiento
- * reducido, inclinación y zoom como estaban.
+ * AC51 (LK6: DEFAULT_LOOK rule): on medium with reduced motion, the three defect captures of the mockup at the
+ * spawn. Grass at 30, 45 and 57°: strips <= 0.12 with coverage >= 0.03 and yellow next to the grass <= 0.4. Crowns measured at t 0.65
+ * to 1, gated from AC51_CROWN_GATE_FROM (D-844, K-1): median solidity >= 0.82, and at 0.9 and 1 at least 20 trees measured and 20th percentile >= 0.7. Leaves tier, reduced
+ * motion, pitch and zoom as they were.
  */
 async function walkDefects(page: Page): Promise<void> {
   const before = await page.evaluate<{ tier: string; reduce: boolean; pitch: number }>(`import("/src/state/store.ts").then((m) => {
@@ -853,12 +853,12 @@ async function walkDefects(page: Page): Promise<void> {
   const pose = async (t: number, pitch: number): Promise<number> => {
     await page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => { const s = gameStore.getState(); gameStore.setState({ ui: { ...s.ui, camera: { ...s.ui.camera, pitchDeg: ${pitch} } } }); })`);
     await act(`actions.zoomTo(${t})`);
-    await page.waitForTimeout(1500); // movimiento reducido: la cámara corta; el pasto recorre y sube al asentarse
+    await page.waitForTimeout(1500); // reduced motion: the camera cuts; the grass sweeps and rises on settling
     return cameraPitch(page);
   };
   await act(`actions.setTierChoice("medium"); actions.setReduceMotion(true)`);
   await waitGame(page, `s.world.dioramaStatus === "ready"`, 30_000);
-  await page.waitForTimeout(4000); // la escena de medium y sus mapas
+  await page.waitForTimeout(4000); // the medium scene and its maps
   const look = await activeLookId(page);
   const isDefault = look === DEFAULT_LOOK.id;
   const grass: { pitch: number; coverage: number; strips: number; yellow: number; hidden: number }[] = [];
@@ -869,8 +869,8 @@ async function walkDefects(page: Page): Promise<void> {
     grass.push({ pitch, ...grassDefects(two.a, two.b, vis), hidden: two.hidden });
     await shot(page, `ac51-pasto-${p}`);
   }
-  // Las copas se miden de cara al bosque: de 8 rumbos (cada 45°) en la aparición, el que tiene más árboles en pantalla a
-  // t 0,9 (la muestra más grande; la elección mira cuántos, nunca la solidez). La maqueta medía en su aparición.
+  // The crowns are measured facing the forest: of 8 headings (every 45°) at the spawn, the one with the most trees on screen at
+  // t 0.9 (the largest sample; the choice looks at how many, never at solidity). The mockup measured at its spawn.
   const setYaw = (y: number): Promise<void> => page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => { const s = gameStore.getState(); gameStore.setState({ ui: { ...s.ui, camera: { ...s.ui.camera, yawDeg: ${y} } } }); })`);
   const yaw0 = (await camState(page)).yaw;
   let forest = { yaw: yaw0, n: -1 };
@@ -907,14 +907,14 @@ async function walkDefects(page: Page): Promise<void> {
   await page.waitForTimeout(3000);
 }
 
-// ---------- la cadena del mapa grande corriendo (open-world-3d T8: AC52, la puerta de M3) ----------
+// ---------- the big map's chain running (open-world-3d T8: AC52, the M3 gate) ----------
 
-/** La recorrida de AC52: desde la aparición, corriendo, el tiempo y la captura al llegar a cada NPC por primera vez. */
+/** The AC52 run: from the spawn, running, the time and capture on reaching each NPC for the first time. */
 const tour: { start: number | null; walkingMs: number; visits: Map<string, { atMs: number; walkMs: number; running: boolean; img: Rgba }> } = {
   start: null, walkingMs: 0, visits: new Map(),
 };
 
-/** Vuelve a la aparición guardada al entrar (como la pose `spawn` de la sonda) y corre (la acción `run` de Shift, R10). */
+/** Returns to the spawn saved on entry (like the probe's `spawn` pose) and runs (the Shift `run` action, R10). */
 async function startTour(page: Page): Promise<void> {
   await page.evaluate(`(async () => {
     const { gameStore } = await import("/src/state/store.ts");
@@ -930,7 +930,7 @@ async function startTour(page: Page): Promise<void> {
   tour.visits.clear();
 }
 
-/** Al llegar a un NPC (camino de walkToNpc): si la recorrida corre y es la primera vez, tiempo y captura. */
+/** On reaching an NPC (walkToNpc path): if the run is going and it is the first time, time and capture. */
 async function recordVisit(page: Page, npcId: string, walkMs: number): Promise<void> {
   if (tour.start === null) return;
   tour.walkingMs += walkMs;
@@ -941,7 +941,7 @@ async function recordVisit(page: Page, npcId: string, walkMs: number): Promise<v
   tour.visits.set(npcId, { atMs: Date.now() - tour.start, walkMs: tour.walkingMs, running, img: await canvasImage(page) });
 }
 
-/** AC52: la cadena terminó con la línea de cierre, tres NPCs visitados corriendo y tres vistas distintas de a pares. */
+/** AC52: the chain ended with the closing line, three NPCs visited running and three distinct views pairwise. */
 function checkTour(closingLine: boolean): void {
   const v = [...tour.visits.entries()];
   const distinct = pairwiseDistinct(v.map(([, x]) => x.img));
@@ -951,7 +951,7 @@ function checkTour(closingLine: boolean): void {
   tour.start = null;
 }
 
-// ---------- las dos caminatas ----------
+// ---------- the two walks ----------
 
 async function walkUniverse(page: Page, url: string): Promise<void> {
   await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
@@ -960,8 +960,8 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   const stats = await canvasStats(page);
   await shot(page, "ac12-muelle");
   check("AC12", isNonUniform(stats), `colores ${stats.distinct} (min ${MIN_DISTINCT_COLORS}), dominante ${(stats.dominantShare * 100).toFixed(1)}% (max ${MAX_DOMINANT_SHARE * 100}%)`);
-  // AC39 (open-world-3d T6): la misma vista por defecto, recien entrado: cielo con gradiente, azul arriba, pasto abajo.
-  // LK6 (T7b): es una regla de DEFAULT_LOOK; corre contra ese look explícito.
+  // AC39 (open-world-3d T6): the same default view, just entered: gradient sky, blue on top, grass below.
+  // LK6 (T7b): it is a DEFAULT_LOOK rule; runs against that explicit look.
   const skyImg = await canvasImage(page);
   const sky = skyCheck(skyImg, await horizonRow(page), await worldTop(page), await worldVisible(page, skyImg.width, skyImg.height), await skyMask(page, skyImg));
   const skyLook = await activeLookId(page);
@@ -970,7 +970,7 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   await walkGround(page);
   await walkDefects(page);
   await walkThirdPerson(page);
-  // AC52 (T8, la puerta de M3): la cadena de AC16 desde la aparicion, corriendo, con el clic sobre cada NPC.
+  // AC52 (T8, the M3 gate): the AC16 chain from the spawn, running, with the click on each NPC.
   await startTour(page);
 
   const mitayo = await talkTo(page, "NPC-MITAYO");
@@ -1012,15 +1012,15 @@ async function walkUniverse(page: Page, url: string): Promise<void> {
   checkTour(text.includes("The milk was never ours"));
 }
 
-/** Guarda la aparicion (posicion y celda) al entrar, para que AC52 arranque de ahi. */
+/** Saves the spawn (position and cell) on entry, so AC52 starts from there. */
 const saveSpawn = (page: Page): Promise<void> => page.evaluate(`import("/src/state/store.ts").then(({ gameStore }) => {
   const s = gameStore.getState();
   globalThis.__lgWalkSpawn = { position: s.player.position, cell: s.player.cell };
 })`);
 
 /**
- * `LG_WALK_ONLY=defects` (open-world-3d T8): solo entrar al muelle y las capturas de AC51, para las pruebas rojas por
- * mutacion (cada una es una corrida corta en vez de la caminata entera). La caminata normal no lo usa.
+ * `LG_WALK_ONLY=defects` (open-world-3d T8): only enter the dock and the AC51 captures, for the red tests by
+ * mutation (each one a short run instead of the whole walk). The normal walk does not use it.
  */
 async function walkDefectsOnly(page: Page, url: string): Promise<void> {
   await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
@@ -1028,7 +1028,7 @@ async function walkDefectsOnly(page: Page, url: string): Promise<void> {
   await walkDefects(page);
 }
 
-/** Los turnos que llenan la conversación de FACTOR con los modelos guionados (AC16; los reusa AC57). */
+/** The turns that fill FACTOR's conversation with the scripted models (AC16; AC57 reuses them). */
 const FACTOR_TURNS = [
   "Hello! What do you keep in those ledgers?",
   "I'm Nico. Does the silver really stay in Spain?",
@@ -1038,22 +1038,22 @@ const FACTOR_TURNS = [
   "Thanks.",
 ] as const;
 
-// ---------- minimapa (open-world-3d T9, AC55 en píxeles reales y AC57) ----------
+// ---------- minimap (open-world-3d T9, AC55 in real pixels and AC57) ----------
 
-/** Un píxel del punto de NPC pendiente: el rojo de @lg/art `MINIMAP_NPC_RED` (#FF5448) con margen de suavizado. */
+/** A pixel of the pending NPC dot: the red of @lg/art `MINIMAP_NPC_RED` (#FF5448) with a smoothing margin. */
 export const isMinimapRed = (r: number, g: number, b: number): boolean => r >= 200 && g <= 130 && b <= 130 && r - g >= 100;
-/** Un grupo de menos píxeles rojos que esto es borde suavizado, no un punto. */
+/** A group of fewer red pixels than this is a smoothed edge, not a dot. */
 export const MIN_RED_CLUSTER_PX = 6;
-/** AC55: a lo sumo 24 px del borde derecho e inferior; lado de 160 px (escritorio) y 112 px (teléfono). */
+/** AC55: at most 24 px from the right and bottom edge; side of 160 px (desktop) and 112 px (phone). */
 export const MINIMAP_MAX_INSET_PX = 24;
 export const MINIMAP_SIDE_PX = { desktop: 160, phone: 112 } as const;
 /**
- * El lado esperado con el tamaño de texto del juego: el minimapa va en rem como el resto del HUD (160 y 112 px son con
- * texto al 100 %, raíz de 16 px; por defecto el juego usa 125 %, así que mide 200 y 140).
+ * The expected side at the game's text size: the minimap is in rem like the rest of the HUD (160 and 112 px are with
+ * text at 100 %, 16 px root; by default the game uses 125 %, so it measures 200 and 140).
  */
 export const minimapSideFor = (basePx: number, rootFontPx: number): number => basePx * rootFontPx / 16;
 
-/** Grupos de píxeles rojos conectados (vecinos de 4) de al menos `minPx`: los puntos y flechas rojas del minimapa. */
+/** Connected red pixel groups (4-neighbors) of at least `minPx`: the minimap's red dots and arrows. */
 export function redClusters(img: Rgba, minPx: number = MIN_RED_CLUSTER_PX): number {
   const { width: w, height: h, data } = img;
   const red = new Uint8Array(w * h);
@@ -1080,7 +1080,7 @@ export function redClusters(img: Rgba, minPx: number = MIN_RED_CLUSTER_PX): numb
 
 interface MinimapSeen { present: boolean; dots: number; red: number; box: { x: number; y: number; width: number; height: number } | null }
 
-/** El minimapa como lo ve el jugador: si está, cuántos anillos `data-npc-id` tiene, cuántos grupos rojos y su caja. */
+/** The minimap as the player sees it: whether it is there, how many `data-npc-id` rings it has, how many red groups and its box. */
 async function minimapSeen(page: Page): Promise<MinimapSeen> {
   const map = page.locator("[data-testid='minimap-map']");
   if ((await map.count()) === 0) return { present: false, dots: 0, red: 0, box: null };
@@ -1088,7 +1088,7 @@ async function minimapSeen(page: Page): Promise<MinimapSeen> {
   return { present: true, dots, red: redClusters(await elementImage(page, "[data-testid='minimap-map']")), box: await map.boundingBox() };
 }
 
-/** AC55 en píxeles: el lado y la distancia a los bordes derecho e inferior en este viewport. */
+/** AC55 in pixels: the side and the distance to the right and bottom edges in this viewport. */
 async function minimapPlacement(page: Page, label: string, side: number): Promise<void> {
   await page.waitForSelector("[data-testid='minimap-map']", { timeout: 10_000 });
   await page.waitForTimeout(300);
@@ -1104,10 +1104,10 @@ async function minimapPlacement(page: Page, label: string, side: number): Promis
 }
 
 /**
- * `LG_WALK_ONLY=minimap` (open-world-3d T9): el lugar del minimapa a 1280x720 y 375x667 (AC55) y AC57: al aparecer 3
- * puntos rojos; tras terminar MITAYO, CERRO y FACTOR, 2, 1 y 0 (anillos del DOM y grupos rojos de píxeles); oculto con el
- * panel de diálogo abierto y de vuelta con el mismo ancho y alto. Cuatro capturas. Corrida parcial (sin campesino ni el
- * resto de la caminata): sale con 1 por diseño, como `defects`.
+ * `LG_WALK_ONLY=minimap` (open-world-3d T9): the minimap's place at 1280x720 and 375x667 (AC55) and AC57: on spawning 3
+ * red dots; after finishing MITAYO, CERRO and FACTOR, 2, 1 and 0 (DOM rings and red pixel groups); hidden with the
+ * dialogue panel open and back with the same width and height. Four captures. Partial run (without the farmer map nor the
+ * rest of the walk): exits with 1 by design, like `defects`.
  */
 async function walkMinimapOnly(page: Page, url: string): Promise<void> {
   await page.goto(`${url}/?universe=${UNIVERSE}&voz=0`);
@@ -1133,7 +1133,7 @@ async function walkMinimapOnly(page: Page, url: string): Promise<void> {
     const outcome = await page.evaluate<string | null>(`import("/src/state/store.ts").then((m) => m.gameStore.getState().dialogue.outcome)`);
     await leaveScene(page);
     await page.waitForSelector("[data-testid='minimap-map']", { timeout: 10_000 });
-    await page.waitForTimeout(400); // unos redibujos de 100 ms
+    await page.waitForTimeout(400); // a few 100 ms redraws
     const after = await minimapSeen(page);
     await shot(page, `ac57-minimapa-${left}`);
     const sameSize = after.box !== null && start.box !== null && after.box.width === start.box.width && after.box.height === start.box.height;
@@ -1152,14 +1152,14 @@ async function walkCampesino(page: Page, url: string): Promise<void> {
 }
 
 /**
- * Abre el navegador del modo de GL para una caminata (scripts/dev/gl-mode.ts: el finally de `withGlBrowser` lo cierra
- * pase lo que pase, tambien con `--fail-on-purpose`). Un renderer que no es el del modo es una falla de la corrida.
+ * Opens the browser of the GL mode for a walk (scripts/dev/gl-mode.ts: the finally of `withGlBrowser` closes it
+ * no matter what, also with `--fail-on-purpose`). A renderer that is not the mode's is a failure of the run.
  */
 async function withBrowser(exe: string, mode: GlMode, run: (page: Page) => Promise<void>, failOnPurpose: boolean): Promise<void> {
   await withGlBrowser(exe, { mode, headless: process.env["LG_WALK_HEADED"] !== "1", failOnPurpose }, async (page, info) => {
     check("GL", true, `modo ${info.mode}${info.adapterLuidFallback ? " (respaldo --use-adapter-luid)" : ""}, renderer ${info.renderer}`);
     const errors: string[] = [];
-    // El 404 de /favicon.ico lo pide el propio navegador (la app no declara icono): ruido de Chromium, no un error del juego.
+    // The 404 for /favicon.ico is requested by the browser itself (the app declares no icon): Chromium noise, not a game error.
     page.on("console", (m) => { if (m.type() === "error" && !m.location().url.endsWith("/favicon.ico")) errors.push(`${m.text()} (${m.location().url})`); });
     if (process.env["LG_WALK_DEBUG"] === "1") {
       page.on("websocket", (ws) => {
@@ -1198,7 +1198,7 @@ async function main(): Promise<void> {
   }
   console.log(`[walk] chromium ${exe}`);
   mkdirSync(SHOTS_DIR, { recursive: true });
-  rmSync(join(SHOTS_DIR, "fallo.png"), { force: true }); // la captura de una falla vieja no debe confundir a esta corrida
+  rmSync(join(SHOTS_DIR, "fallo.png"), { force: true }); // the capture of an old failure must not confuse this run
   let stack: Stack | null = null;
   const onSignal = (): void => {
     void closeAllGlBrowsers().finally(() => { stack?.stop(); process.exit(130); });

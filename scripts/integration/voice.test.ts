@@ -1,9 +1,9 @@
-// F5.2 de punta a punta SIN navegador, sin micrófono y sin API paga (D-016, D-027): el cliente real de la web (store,
-// acciones, servicio de escena con el servicio de audio, conector del navegador con el WebSocket de Node) contra el
-// servidor real (HTTP + WebSocket, modo operador) cuyo adaptador Gemini Live habla con el servidor Live FALSO de los
-// tests. Solo el motor de audio es falso (sin Web Audio). Un turno hablado completo: el audio del jugador viaja en
-// frames binarios hasta Live, la transcripción vuelve al HUD, la voz del NPC llega al motor y los ganchos de
-// conversación ven los dos turnos.
+// F5.2 end to end WITHOUT a browser, without a microphone and without a paid API (D-016, D-027): the real web client (store,
+// actions, scene service with the audio service, browser connector with Node's WebSocket) against the
+// real server (HTTP + WebSocket, operator mode) whose Gemini Live adapter talks to the FAKE Live server of the
+// tests. Only the audio engine is fake (no Web Audio). A full spoken turn: the player's audio travels in
+// binary frames to Live, the transcription returns to the HUD, the NPC's voice reaches the engine and the
+// conversation hooks see both turns.
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { createGameServer, textProvidersFromEnv, type GameServer } from "../../apps/server/src/app.ts";
@@ -88,11 +88,11 @@ test("un turno hablado de punta a punta: mic → servidor → Live (falso) → t
   await until((s) => s.dialogue.history.some((l) => l.speaker === "player" && l.text === "Hello, I'm Nico."), "la transcripción final en el historial");
   await until((s) => s.dialogue.outcome !== null, "fin de la escena");
   expect(gameStore.getState().dialogue.outcome).toBe("success");
-  // La voz del NPC (PCM16 del Live falso) llegó al motor del cliente.
+  // The NPC's voice (PCM16 from the fake Live) reached the client's engine.
   expect(engines.last?.played.map((p) => [...p])).toEqual([[100, -100, 200, -200]]);
   expect(gameStore.getState().dialogue.history.some((l) => l.kind === "reply" && l.text === "Nice to meet you, Nico!")).toBe(true);
 
-  // Live recibió activityStart, los 3 bloques de 640 muestras (16 kHz) tal cual los capturó el cliente, y activityEnd.
+  // Live received activityStart, the 3 blocks of 640 samples (16 kHz) exactly as the client captured them, and activityEnd.
   const conn = fake.connections[0];
   if (!conn) throw new Error("Live no recibió conexión");
   const rt = receivedOf(conn, "realtimeInput");
@@ -105,7 +105,7 @@ test("un turno hablado de punta a punta: mic → servidor → Live (falso) → t
   expect(first.readInt16LE(0)).toBe(1000);
   expect(rt[rt.length - 1]).toEqual({ activityEnd: {} });
 
-  // Ganchos: parciales del jugador, su final y la línea del NPC, todos del turno 1, en voz.
+  // Hooks: the player's partials, its final and the NPC's line, all of turn 1, in voice.
   expect(turns.filter((t) => t.final).map((t) => [t.speaker, t.text])).toEqual([["player", "Hello, I'm Nico."], ["npc", "Nice to meet you, Nico!"]]);
   expect(turns.some((t) => !t.final && t.speaker === "player")).toBe(true);
   expect(turns.every((t) => t.modality === "voice" && t.turnIndex === 1)).toBe(true);

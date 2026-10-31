@@ -1,10 +1,10 @@
-// Etapa EXTRACT (stub honesto, book-mode slice-1).
+// EXTRACT stage (honest stub, book-mode slice-1).
 //
-// Contrato real (futuro): del libro segmentado saca el backbone (árbol de tesis/trama), las figuras
-// (portadores del argumento, con partial_view) y los ejes del mundo (Stages 1-2 de la interpretación).
+// Real contract (future): from the segmented book, extracts the backbone (thesis/plot tree), the figures
+// (carriers of the argument, with partial_view) and the world axes (Stages 1-2 of the interpretation).
 //
-// Slice-1: identidad. El intermedio ya trae esa lectura hecha a mano; EXTRACT no agrega ni quita nada.
-// M3 SEAM: acá entra el analizador temático y el extractor de figuras reales.
+// Slice-1: identity. The intermediate already brings that hand-made reading; EXTRACT adds and removes nothing.
+// M3 SEAM: the thematic analyzer and the real figure extractor go here.
 import type { Intermedio } from "../intermediate.ts";
 
 export const extract = (intermedio: Intermedio): Intermedio => intermedio;

@@ -1,15 +1,15 @@
-// Slice `session` (03 §3.3): fase de la app, cuenta, conexión, experimentos, presupuesto de voz, idiomas.
-// F1.3 usa la fase; el resto arranca en su estado inicial (cuenta y voz llegan con F4/F5).
+// Slice `session` (03 §3.3): app phase, account, connection, experiments, voice budget, languages.
+// F1.3 uses the phase; the rest starts in its initial state (account and voice arrive with F4/F5).
 import type { AppPhase } from "@lg/core";
 
 export interface SessionState {
   phase: AppPhase;
-  /** Cuenta seudónima (03 §3.3; modo operador `op-local`, D-158). null hasta F4.1. */
+  /** Pseudonymous account (03 §3.3; operator mode `op-local`, D-158). null until F4.1. */
   account: { id: string; role: "player" | "operator"; ageBand: string | null; classId: string | null } | null;
   connection: "offline" | "connecting" | "online";
-  /** Brazos de experimento asignados. */
+  /** Assigned experiment arms. */
   experimentArms: Record<string, string>;
-  /** Minutos de voz que quedan; null = sin dato todavía. */
+  /** Voice minutes left; null = no data yet. */
   voiceMinutesLeft: number | null;
   uiLanguage: "es-AR";
   languagePair: { l1: "es-AR"; l2: "en" };

@@ -1,8 +1,8 @@
-// VAD por energía y nivel del micrófono, puros (F5.2, 04 F5.2: umbral configurable, 3 s por defecto). El turno lo
-// cierra el jugador ("Terminé" o soltar el botón: nadie lo interrumpe); el VAD solo dice si hubo voz en el turno y
-// cuándo hay silencio largo, y el nivel alimenta el medidor de chequeo del micrófono.
+// Energy-based VAD and microphone level, pure (F5.2, 04 F5.2: configurable threshold, 3 s by default). The player
+// closes the turn ("Done" or releasing the button: nobody interrupts them); the VAD only says whether there was speech in the turn and
+// when there is a long silence, and the level feeds the microphone-check meter.
 
-/** Energía RMS de un bloque (float [-1, 1]). */
+/** RMS energy of a block (float [-1, 1]). */
 export function rms(frame: Float32Array): number {
   if (frame.length === 0) return 0;
   let sum = 0;
@@ -13,10 +13,10 @@ export function rms(frame: Float32Array): number {
   return Math.sqrt(sum / frame.length);
 }
 
-/** Piso del medidor: -60 dBFS = 0, 0 dBFS = 1. */
+/** Meter floor: -60 dBFS = 0, 0 dBFS = 1. */
 const FLOOR_DB = -60;
 
-/** RMS → nivel 0..1 en escala de dB (lo que el oído espera ver en un medidor). */
+/** RMS → 0..1 level on a dB scale (what the ear expects to see on a meter). */
 export function levelFromRms(value: number): number {
   if (!(value > 0)) return 0;
   const db = 20 * Math.log10(value);
@@ -24,18 +24,18 @@ export function levelFromRms(value: number): number {
 }
 
 export interface VadConfig {
-  /** RMS a partir del cual un bloque cuenta como voz. */
+  /** RMS above which a block counts as speech. */
   threshold: number;
-  /** Voz sostenida que hace falta para declarar que el jugador habla (filtra golpes y clics). */
+  /** Sustained speech needed to declare that the player is talking (filters out bumps and clicks). */
   speechMs: number;
-  /** Silencio después de hablar que dispara `silence` (03: 3 s configurable). */
+  /** Silence after speaking that triggers `silence` (03: 3 s configurable). */
   silenceMs: number;
 }
 
 export const DEFAULT_VAD: VadConfig = { threshold: 0.015, speechMs: 120, silenceMs: 3000 };
 
 export interface VadState {
-  /** Hubo voz en este turno (al menos `speechMs` seguidos). */
+  /** There was speech in this turn (at least `speechMs` in a row). */
   heardSpeech: boolean;
   speaking: boolean;
   speechRunMs: number;
@@ -46,7 +46,7 @@ export const initialVad = (): VadState => ({ heardSpeech: false, speaking: false
 
 export type VadEvent = "speechStart" | "silence" | null;
 
-/** Un paso del VAD con la energía de un bloque de `frameMs`. `silence` sale una vez por pausa larga. */
+/** One VAD step with the energy of a `frameMs` block. `silence` fires once per long pause. */
 export function vadStep(state: VadState, energy: number, frameMs: number, cfg: VadConfig = DEFAULT_VAD): { state: VadState; event: VadEvent } {
   if (energy >= cfg.threshold) {
     const speechRunMs = state.speechRunMs + frameMs;

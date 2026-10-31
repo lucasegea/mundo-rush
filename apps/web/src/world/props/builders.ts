@@ -1,11 +1,11 @@
-// world/props/builders.ts — constructores de props redondeados por código (plan estetica-c M1 ítem 10): uno por tipo
-// de asset `codigo/*`, cada uno devuelve UNA geometría (piezas pintadas por vértice y fusionadas) con la base en y = 0,
-// centrada en x, z y del tamaño del `tam` del layout. Un asset `codigo/*` sin constructor falla claro (A6). Regla de
-// la biblia como test (A5): ningún par de triángulos vecinos forma un ángulo diedro de 80° o más. Plan estetica-c M5:
-// `tinte` (un token de la paleta) reemplaza el color principal de cada constructor (CODE_PROP_MAIN_TOKEN de @lg/art);
-// la lista de constructores es la de @lg/art (CODE_PROP_ASSETS), que también lee validate:content. Plan estetica-c M6:
-// cada constructor tiene una versión reducida para `low` (menos segmentos, una esfera menos en la copa), con la misma
-// silueta y la misma regla del bisel; sus triángulos están en la tabla de @lg/art (REDUCED_PROP_TRIANGLES).
+// world/props/builders.ts — code-built rounded prop builders (plan estetica-c M1 item 10): one per type
+// of `codigo/*` asset, each returns ONE geometry (pieces painted per vertex and merged) with the base at y = 0,
+// centered in x, z and of the layout `tam` size. A `codigo/*` asset without a builder fails clearly (A6). Rule from
+// the bible as a test (A5): no pair of neighboring triangles forms a dihedral angle of 80° or more. Plan estetica-c M5:
+// `tinte` (a palette token) replaces each builder main color (CODE_PROP_MAIN_TOKEN from @lg/art);
+// the builder list is @lg/art (CODE_PROP_ASSETS), which validate:content also reads. Plan estetica-c M6:
+// each builder has a reduced version for `low` (fewer segments, one sphere fewer in the canopy), with the same
+// silhouette and the same bevel rule; their triangles are in the @lg/art table (REDUCED_PROP_TRIANGLES).
 import type { BufferGeometry } from "three";
 import { CODE_PROP_MAIN_TOKEN, type CodePropAsset, type SceneDensity } from "@lg/art";
 import { rng } from "../materials/rng";
@@ -22,18 +22,18 @@ export interface PropSize {
 export type PropBuilder = (size: PropSize, seed: number, tint: Paint | undefined, lod: SceneDensity) => BufferGeometry;
 
 /**
- * Segmentos por densidad. En la reducida nada baja de 5 lados alrededor (un prisma de 4 lados tiene aristas de 90°: la
- * regla del bisel lo rechaza) y los biseles quedan de un solo corte a 45°.
+ * Segments per density. In the reduced one nothing drops below 5 sides around (a 4-sided prism has 90° edges: the
+ * bevel rule rejects it) and the bevels stay single-cut at 45°.
  */
 const SEG = {
   full: { box: 2, bevel: 3, curve: 5, capRadial: 6, rail: 5, canopy: 5, trunk: 7, pine: 9, pineTrunk: 6 },
   reduced: { box: 1, bevel: 1, curve: 3, capRadial: 5, rail: 5, canopy: 4, trunk: 5, pine: 6, pineTrunk: 5 },
 } as const satisfies Record<SceneDensity, Record<string, number>>;
 
-/** La caja biselada con los segmentos de la densidad. */
+/** The beveled box with the density segments. */
 const boxOf = (lod: SceneDensity) => (w: number, h: number, d: number, r: number): BufferGeometry => roundedBox(w, h, d, r, SEG[lod].box);
 
-/** Techo a dos aguas redondeado: perfil triangular con todas las esquinas blandas, extruido a lo largo de x. */
+/** Rounded gable roof: triangular profile with all corners soft, extruded along x. */
 function gableRoof(width: number, depth: number, rise: number, eave: number, color: Paint, seed: number, lod: SceneDensity): BufferGeometry {
   const hw = depth / 2 + eave;
   const shape = roundedShape([[-hw, 0], [hw, 0], [0, rise]], 0.32);
@@ -97,9 +97,9 @@ function cerco({ w, h, d }: PropSize, seed: number, tint: Paint = CODE_PROP_MAIN
   return alongX ? g.rotateY(Math.PI / 2) : g;
 }
 
-/** Alto de referencia de los árboles: la instancia se escala a `tam.y / alto`. */
+/** Reference height of the trees: the instance is scaled to `tam.y / height`. */
 export const TREE_HEIGHT = { "codigo/arbol": 4.5, "codigo/pino": 4.6 } as const;
-/** Radio de la copa (para el test de oclusión de la cámara de charla), a escala 1. */
+/** Canopy radius (for the chat camera occlusion test), at scale 1. */
 export const TREE_CANOPY_RADIUS = { "codigo/arbol": 1.9, "codigo/pino": 1.3 } as const;
 
 function arbol(_size: PropSize, seed: number, tint: Paint = CODE_PROP_MAIN_TOKEN["codigo/arbol"], lod: SceneDensity = "full"): BufferGeometry {
@@ -138,8 +138,8 @@ export const PROP_BUILDERS: Readonly<Record<CodePropAsset, PropBuilder>> = {
 export const isTreeAsset = (asset: string): asset is keyof typeof TREE_HEIGHT => asset in TREE_HEIGHT;
 
 /**
- * Geometría del prop; un asset sin constructor falla con un mensaje que lo nombra (A6). `tint` reemplaza el color
- * principal; `lod` elige la geometría completa o la reducida de `low` (plan estetica-c M6).
+ * Prop geometry; an asset without a builder fails with a message that names it (A6). `tint` replaces the main
+ * color; `lod` picks the full geometry or the reduced one of `low` (plan estetica-c M6).
  */
 export function buildProp(asset: string, size: PropSize, seed = 0, tint?: Paint, lod: SceneDensity = "full"): BufferGeometry {
   const builder = (PROP_BUILDERS as Readonly<Record<string, PropBuilder | undefined>>)[asset];

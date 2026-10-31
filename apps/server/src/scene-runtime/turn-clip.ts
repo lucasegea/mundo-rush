@@ -1,23 +1,23 @@
-// TurnClip (D-095, D-108, P0 §4.3 regla 3): el audio del jugador de UN turno, PCM16 a 16 kHz, armado por scene-runtime
-// con sus propios `sendAudio`. Vive solo en memoria: scene-runtime es su único dueño, lo entrega de solo lectura al
-// observador (y en FP a la pronunciación) y lo libera al terminar o a los 10 s, lo que pase primero. Nunca va a disco
-// (los almacenes rechazan binarios) y ningún adaptador lo guarda.
+// TurnClip (D-095, D-108, P0 §4.3 rule 3): the player's audio for ONE turn, PCM16 at 16 kHz, built by scene-runtime
+// from its own `sendAudio`. Lives in memory only: scene-runtime is its sole owner, hands it read-only to the
+// observer (and in FP to pronunciation) and releases it on finish or after 10 s, whichever comes first. It never goes to disk
+// (the stores reject binaries) and no adapter keeps it.
 
 export const CLIP_SAMPLE_RATE = 16000;
 
-/** Vista de solo lectura que recibe el observador. Después de liberar, `pcm16()` falla. */
+/** Read-only view that the observer receives. After release, `pcm16()` fails. */
 export interface TurnClipView {
   readonly turnId: string;
   readonly sampleRate: typeof CLIP_SAMPLE_RATE;
   readonly released: boolean;
-  /** Muestras del turno (una copia). */
+  /** Samples of the turn (a copy). */
   pcm16(): Int16Array;
   readonly sampleCount: number;
 }
 
 export interface TurnClip extends TurnClipView {
   append(chunk: Int16Array): void;
-  /** Borra las muestras (las pone en cero) y suelta las referencias. Idempotente. */
+  /** Clears the samples (sets them to zero) and drops the references. Idempotent. */
   release(): void;
 }
 
@@ -43,7 +43,7 @@ export function createTurnClip(turnId: string): TurnClip {
     },
     append(chunk) {
       if (released) return;
-      // Copia propia: el clip no comparte memoria con quien mandó el audio.
+      // Own copy: the clip shares no memory with whoever sent the audio.
       chunks.push(Int16Array.from(chunk));
       count += chunk.length;
     },
@@ -67,7 +67,7 @@ export function createTurnClip(turnId: string): TurnClip {
   };
 }
 
-/** Solo lectura: lo que se le pasa al observador no puede agregar ni liberar. */
+/** Read-only: what is passed to the observer can neither append nor release. */
 export const readOnly = (clip: TurnClip): TurnClipView => ({
   turnId: clip.turnId,
   sampleRate: clip.sampleRate,

@@ -1,4 +1,4 @@
-// La CLI corre la cadena entera (INGEST→EXTRACT→DESIGN→LANG-FIT→EMIT) y sus guardas de argumentos.
+// The CLI runs the whole chain (INGEST→EXTRACT→DESIGN→LANG-FIT→EMIT) and its argument guards.
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -48,7 +48,7 @@ describe("intermedio: guarda de forma (INGEST stub)", () => {
     const dir = mkdtempSync(join(tmpdir(), "ba-shape-"));
     const ruta = join(dir, "roto.yaml");
     try {
-      writeFileSync(ruta, "npsc: []\n"); // typo de "npcs"
+      writeFileSync(ruta, "npsc: []\n"); // typo of "npcs"
       expect(() => parsearIntermedio("npsc: []\n")).toThrow(ErrorIntermedio);
     } finally {
       rmSync(dir, { recursive: true, force: true });

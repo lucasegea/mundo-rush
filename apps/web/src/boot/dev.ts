@@ -1,14 +1,14 @@
-// Gancho de desarrollo (03 §6.5.1, ADR-026). El modo director se carga con `import()` SOLO bajo la doble llave
-// `import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1"`. En `vite build` `import.meta.env.DEV` es false:
-// la rama se elimina y sus chunks no se emiten (check:dev-only lo comprueba sobre el dist, con y sin la variable).
-// Plan estetica-c M3 (D-030): con `?retratos` en la url, además, el panel de retratos (dev/portraits/) con el estudio
-// de world/portraits/ inyectado (dev/ no conoce three ni world/; boot es la raíz de composición). Plan estetica-c M6: el
-// lector de los contadores del renderer (world/budget/renderStats) se inyecta igual en el modo director.
+// Development hook (03 §6.5.1, ADR-026). Director mode is loaded with `import()` ONLY under the double key
+// `import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1"`. In `vite build` `import.meta.env.DEV` is false:
+// the branch is eliminated and its chunks are not emitted (check:dev-only verifies this on the dist, with and without the variable).
+// Plan estetica-c M3 (D-030): with `?retratos` in the url, additionally, the portrait panel (dev/portraits/) with the studio
+// from world/portraits/ injected (dev/ knows neither three nor world/; boot is the composition root). Plan estetica-c M6: the
+// reader of the renderer counters (world/budget/renderStats) is injected the same way in director mode.
 import type { GameActions } from "../state/actions";
 import type { GameStore } from "../state/store";
 import type { FetchJson } from "../services/content";
 
-/** Lo mínimo de `import.meta.hot` que usa el modo director. */
+/** The minimum of `import.meta.hot` that director mode uses. */
 export interface DevHot {
   send(event: string, data?: unknown): void;
   on(event: string, cb: (data: unknown) => void): void;
@@ -20,17 +20,17 @@ export interface DevHookDeps {
   actions: GameActions;
   baseUrl: string;
   fetchJson?: FetchJson;
-  /** Para tests; por defecto `import.meta.hot` del servidor de desarrollo. */
+  /** For tests; by default `import.meta.hot` of the dev server. */
   hot?: DevHot;
-  /** Recibe `pagehide` para cerrar la sesión del diario (la app pasa window). */
+  /** Receives `pagehide` to close the journal session (the app passes window). */
   pageEvents?: EventTarget;
-  /** Query de la url (por defecto la de la página): `?retratos` monta el panel de retratos. */
+  /** Url query (by default the page's): `?retratos` mounts the portrait panel. */
   search?: string;
-  /** Dónde montar el panel de retratos (por defecto document.body). */
+  /** Where to mount the portrait panel (by default document.body). */
   portraitsMount?: HTMLElement;
 }
 
-/** Arranca el modo director si corresponde. Devuelve con qué detenerlo, o null si no arrancó. */
+/** Starts director mode if applicable. Returns what stops it, or null if it did not start. */
 export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null> {
   if (!import.meta.env.DEV) return null;
   if (import.meta.env.VITE_LG_DIRECTOR !== "1") return null;
@@ -40,8 +40,8 @@ export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null
     import("../dev/director"),
     import("../services/content/hotReload"),
   ]);
-  // Plan estetica-c M6: los contadores del renderer los lee la sonda de world/ (boot es la raíz de composición; dev/ no
-  // conoce world/). El módulo es de solo-desarrollo y GameCanvas monta la sonda bajo la misma doble llave.
+  // Plan estetica-c M6: the renderer counters are read by world/'s probe (boot is the composition root; dev/ does not
+  // know world/). The module is development-only and GameCanvas mounts the probe under the same double key.
   const { readRenderStats } = await import("../world/budget/renderStats");
   const stopDirector = startDirector({ hot, store: deps.store, render: readRenderStats, ...(deps.pageEvents ? { pageEvents: deps.pageEvents } : {}) });
   const stopReload = startContentHotReload({
@@ -51,15 +51,15 @@ export async function runDevHook(deps: DevHookDeps): Promise<(() => void) | null
   const search = deps.search ?? globalThis.location?.search ?? "";
   const mount = deps.portraitsMount ?? globalThis.document?.body;
   if (new URLSearchParams(search).has("retratos") && mount) {
-    // Open-world-3d T7b: el look de los retratos llega con import() como el estudio (fuera de la carga inicial del build).
+    // Open-world-3d T7b: the portraits' look arrives with import() like the studio (outside the build's initial load).
     const [{ startPortraitPanel }, studio, { PAINTED_LOOK }] = await Promise.all([import("../dev/portraits"), import("../world/portraits/studio"), import("@lg/art")]);
-    // Plan estetica-c M5: las apariencias vienen del catálogo de contenido (boot ya lo cargó antes de este gancho).
+    // Plan estetica-c M5: the appearances come from the content catalog (boot already loaded it before this hook).
     const looks = new Map(deps.store.getState().world.npcs.flatMap((n) => (n.look ? [[n.id, n.look] as const] : [])));
     stopPortraits = startPortraitPanel({
       ids: studio.portraitIds(looks),
       render: (id) => {
         const look = looks.get(id);
-        // Open-world-3d T7b: los retratos son del look C pintado (KayKit, cabeza por código), con su luz y su fondo.
+        // Open-world-3d T7b: the portraits are the painted look C (KayKit, head from code), with their light and background.
         return look ? studio.renderPortrait(id, look, PAINTED_LOOK) : Promise.reject(new Error(`retrato ${id}: sin apariencia en el catálogo`));
       },
       mount,

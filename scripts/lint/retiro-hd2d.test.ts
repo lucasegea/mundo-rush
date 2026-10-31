@@ -1,12 +1,12 @@
-// Plan estetica-c M7 (D-207): test de árbol del retiro de HD-2D. Recorre el código real de apps/ y packages/ (fuentes y
-// tests, sin node_modules, dist ni public) y exige:
-// - que los módulos borrados (tiles por chunk, arte pixel, hojas de sprites y billboards, cajas de F2) no existan ni los
-//   importe nadie, y que los nombres retirados (escala entera de píxel, snap, frustum ortográfico, pitch de topdown e
-//   iso, capas de tiles) no aparezcan;
-// - que no haya `NearestFilter` en el código del producto salvo en la rampa toon (world/materials/toon.ts);
-// - que no haya `OrthographicCamera` (ni la prop `orthographic` de <Canvas>) en ningún archivo de apps/ ni packages/,
-//   retratos y modo director incluidos.
-// Cada regla tiene dientes sobre texto sintético, y el recorrido prueba que midió algo (lección F1.1b: 0 de 0 no es verde).
+// Plan estetica-c M7 (D-207): tree test for the HD-2D retirement. Walks the real code of apps/ and packages/ (sources and
+// tests, without node_modules, dist or public) and requires:
+// - that the deleted modules (per-chunk tiles, pixel art, sprite sheets and billboards, F2 boxes) do not exist nor does
+//   anyone import them, and that the retired names (integer pixel scale, snap, orthographic frustum, topdown and
+//   iso pitch, tile layers) do not appear;
+// - that there is no `NearestFilter` in product code except in the toon ramp (world/materials/toon.ts);
+// - that there is no `OrthographicCamera` (nor the `orthographic` prop of <Canvas>) in any file of apps/ or packages/,
+//   portraits and director mode included.
+// Each rule has teeth on synthetic text, and the walk proves it measured something (F1.1b lesson: 0 of 0 is not green).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,10 +17,10 @@ const SCANNED_ROOTS = ["apps", "packages"];
 const SKIP_DIRS = new Set(["node_modules", "dist", "public", "coverage", ".vitest", "generated"]);
 const SOURCE_EXT = /\.(ts|tsx|js|mjs|cjs)$/;
 
-/** El único archivo del producto que puede usar NearestFilter: la rampa de 4 bandas del toon (plan estetica-c M1 ítem 6). */
+/** The only product file that may use NearestFilter: the toon 4-band ramp (plan estetica-c M1 item 6). */
 export const NEAREST_ALLOWED = "apps/web/src/world/materials/toon.ts";
 
-/** Módulos de HD-2D borrados en M7: ningún import puede apuntarles. */
+/** HD-2D modules deleted in M7: no import may point at them. */
 export const RETIRED_MODULES = [
   "apps/web/src/world/tiles",
   "apps/web/src/world/art",
@@ -28,10 +28,10 @@ export const RETIRED_MODULES = [
   "apps/web/src/world/props/Boxes.tsx",
 ] as const;
 
-/** Especificadores de import que apuntan a un módulo retirado (relativos o por alias). */
+/** Import specifiers that point at a retired module (relative or by alias). */
 const RETIRED_IMPORT = /from\s+["'](?:[^"']*\/)?(?:world\/tiles|tiles\/(?:atlas|buildTileChunk|TileLayers)|art\/(?:pixels|texture)|sprites\/(?:sheet|orientation|Billboard)|props\/Boxes)(?:\.tsx?)?["']/;
 
-/** Nombres retirados: si aparecen, quedó código o un test de HD-2D. */
+/** Retired names: if they appear, HD-2D code or a test was left behind. */
 export const RETIRED_NAMES = [
   "zoomPixelScales", "zoomViewWidth", "snapToPixelGrid", "orthoFrustum", "TARGET_TILES_WIDE", "TILE_PX",
   "TOPDOWN_PITCH_DEG", "ISO_PITCH_DEG", "parseTileRows", "TileLayerData", "buildTileChunk", "TileLayers", "Billboard",
@@ -40,16 +40,16 @@ export const RETIRED_NAMES = [
 const retiredNameRe = new RegExp(`\\b(${RETIRED_NAMES.join("|")})\\b`, "g");
 
 const ORTHO = /OrthographicCamera|\borthographic\b/;
-// Cambio registrado (open-world-3d T7, AC44): las dos cámaras ortográficas del horneado de impostores (de costado y desde
-// arriba, a una textura, nunca a la pantalla) viven en world/camera/bakeCamera.ts por R11. Es la única excepción.
+// Recorded change (open-world-3d T7, AC44): the two orthographic cameras of the impostor bake (from the side and from
+// above, to a texture, never to the screen) live in world/camera/bakeCamera.ts by R11. It is the only exception.
 const ORTHO_ALLOWED = new Set(["apps/web/src/world/camera/bakeCamera.ts"]);
 const NEAREST = /\bNearestFilter\b/;
 /**
- * Tests que nombran los presets viejos a propósito: un ajuste guardado con un preset ortográfico cae al default (A11) y
- * el registro de R11 ya no los tiene (A4 de F2, reescrito en M7). Solo esos dos nombres, solo en esos tests.
+ * Tests that name the old presets on purpose: a saved setting with an orthographic preset falls back to the default (A11) and
+ * R11's registry no longer has them (F2's A4, rewritten in M7). Only those two names, only in those tests.
  */
-// Cambio registrado (open-world-3d T5, AC27): se suma apps/web/test/third-person.test.tsx, que carga un ajuste guardado
-// `topdownOrtho` para probar que cae a `thirdPerson` (PD-5). Antes eran solo los dos tests de arriba.
+// Recorded change (open-world-3d T5, AC27): apps/web/test/third-person.test.tsx is added, which loads a saved setting
+// `topdownOrtho` to prove it falls back to `thirdPerson` (PD-5). Before, it was only the two tests above.
 const OLD_PRESET_ALLOWED = new Set(["packages/core/test/estetica-c.test.ts", "apps/web/test/world-pure.test.ts", "apps/web/test/third-person.test.tsx"]);
 const OLD_PRESETS = new Set(["topdownOrtho", "isoOrtho"]);
 
@@ -66,7 +66,7 @@ export interface TreeViolation {
 
 const isProductSource = (path: string): boolean => /^(apps\/[^/]+|packages\/[^/]+)\/src\//.test(path);
 
-/** Las violaciones de un conjunto de archivos (puro: los dientes lo prueban con texto sintético). */
+/** The violations of a set of files (pure: the teeth test it with synthetic text). */
 export function scanTree(files: readonly TreeFile[]): TreeViolation[] {
   const out: TreeViolation[] = [];
   for (const { path, text } of files) {
@@ -108,7 +108,7 @@ describe("plan estetica-c M7: el árbol no tiene código de HD-2D", () => {
     ]) {
       expect(files.some((f) => f.path === marker), marker).toBe(true);
     }
-    // La excepción existe de verdad: la rampa toon usa NearestFilter (si no, la regla podría pasar por la razón equivocada).
+    // The exception really exists: the toon ramp uses NearestFilter (otherwise the rule could pass for the wrong reason).
     expect(NEAREST.test(files.find((f) => f.path === NEAREST_ALLOWED)?.text ?? "")).toBe(true);
   });
 
@@ -137,7 +137,7 @@ describe("dientes del test de árbol (texto sintético)", () => {
     expect(one("apps/web/src/world/camera/rig.ts", "export function snapToPixelGrid() {}")).toContain("nombre-retirado");
     expect(one("packages/core/src/camera/camera.ts", 'export const CAMERA_PRESET_IDS = ["topdownOrtho"] as const;')).toContain("nombre-retirado");
     expect(one("packages/core/test/estetica-c.test.ts", 'test.each(["topdownOrtho", "isoOrtho"])')).toEqual([]);
-    // la excepción es solo para los dos presets: otro nombre retirado en el mismo test falla igual.
+    // the exception is only for the two presets: another retired name in the same test fails all the same.
     expect(one("packages/core/test/estetica-c.test.ts", 'test.each(["topdownOrtho"]); orthoFrustum(1, 1);')).toEqual(["nombre-retirado"]);
     expect(one("apps/web/src/world/x.ts", "const myTILE_PXs = 1;")).toEqual([]);
   });
@@ -155,7 +155,7 @@ describe("dientes del test de árbol (texto sintético)", () => {
     }
     expect(one("apps/web/src/world/GameCanvas.tsx", "<Canvas orthographic frameloop=\"always\" />")).toEqual(["ortografica"]);
     expect(one("apps/web/src/world/camera/CameraRig.tsx", "<PerspectiveCamera makeDefault />")).toEqual([]);
-    // T7: solo el horneado de impostores, solo en su archivo.
+    // T7: only the impostor bake, only in its file.
     expect(one("apps/web/src/world/camera/bakeCamera.ts", 'import { OrthographicCamera } from "three";')).toEqual([]);
     expect(one("apps/web/src/world/nature/impostor.ts", 'import { OrthographicCamera } from "three";')).toEqual(["ortografica"]);
   });

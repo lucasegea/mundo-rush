@@ -1,7 +1,7 @@
-// A2 (ADR-027): motor de medidores de conversación. Reglas del informe de investigación 2.4-2.5: las preguntas de seguimiento
-// valen más que una pregunta nueva, regla de reciprocidad (preguntas seguidas sin contar nada frenan el medidor),
-// repetir no suma, los hechos se abren por nivel, L1 y seguridad no suman, el objetivo se abre al llenarse el rapport
-// y el éxito lo marca el código. Puro: sin reloj ni azar.
+// A2 (ADR-027): conversation meters engine. Rules from the the research 2.4-2.5 report: follow-up questions
+// are worth more than a new question, reciprocity rule (consecutive questions without sharing anything slow the meter),
+// repeating adds nothing, facts open by tier, L1 and safety add nothing, the goal opens when rapport fills
+// and the code marks success. Pure: no clock or randomness.
 import { describe, expect, test } from "vitest";
 import {
   applyExchange, createEncounter, EncounterDefError, encounterComplete, encounterHelp, encounterView, initialEncounterState,
@@ -89,7 +89,7 @@ describe("rapport: cómo se llena", () => {
   test("una pregunta repetida (o una lista) anula los puntos de pregunta del mismo intercambio", () => {
     expect(points(run([L({ acts: ["personal_question", "repeated_question"] })]).state)).toBe(0);
     expect(points(run([L({ acts: ["follow_up_question", "repeated_question"] })]).state)).toBe(0);
-    // Lo demás del intercambio sigue contando: un hecho nuevo suma lo suyo.
+    // The rest of the exchange still counts: a new fact adds its own share.
     expect(points(run([L({ acts: ["personal_question", "repeated_question"], npcFacts: ["name"] })]).state)).toBe(2);
   });
 
@@ -102,7 +102,7 @@ describe("rapport: cómo se llena", () => {
     expect(qs.events).toContain("stalled");
     const before = points(qs.state);
     const third = applyExchange(DEF, qs.state, L({ acts: ["follow_up_question"], npcFacts: ["barn"] }));
-    expect(points(third.state)).toBe(before); // frenado: no suma (aunque el hecho queda aprendido)
+    expect(points(third.state)).toBe(before); // slowed: adds nothing (even though the fact is learned)
     expect(third.state.factsLearned).toContain("barn");
     const share = applyExchange(DEF, third.state, L({ acts: ["self_disclosure"], playerFacts: ["crew"] }));
     expect(share.state.stalled).toBe(false);
@@ -169,7 +169,7 @@ describe("niveles de hechos", () => {
   });
 });
 
-/** Un camino que llena el rapport: 3+ hechos en 2 niveles, 2 datos compartidos, 12+ puntos. */
+/** A path that fills rapport: 3+ facts in 2 tiers, 2 shared details, 12+ points. */
 const FILL_RAPPORT: readonly ExchangeLabels[] = [
   L({ acts: ["greeting", "personal_question"], npcFacts: ["name"] }),
   L({ acts: ["self_disclosure"], playerFacts: ["name"], npcFacts: ["corn"] }),
@@ -217,7 +217,7 @@ describe("fases", () => {
     expect(done.events.map((e) => e.type)).toEqual(["stepDone", "points", "phaseChanged", "complete"]);
     expect(encounterComplete(DEF, done.state)).toBe(true);
     expect(encounterView(DEF, done.state).activeMeter).toBeNull();
-    // Terminado, nada cambia.
+    // Once finished, nothing changes.
     expect(applyExchange(DEF, done.state, L({ acts: ["polite_request"] })).state).toBe(done.state);
     expect(encounterHelp(DEF, done.state)).toEqual({ level: 0, hint: null, phrases: [] });
   });

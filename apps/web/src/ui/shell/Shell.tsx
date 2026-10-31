@@ -1,5 +1,5 @@
-// Shell DOM (03 §2.6, R14): muestra el panel de arriba de la pila o, si no hay, la vista de la fase con la
-// barra superior. Una cosa por vez: lo de atrás no recibe foco. La región aria-live está siempre montada.
+// DOM shell (03 §2.6, R14): shows the top panel of the stack or, if there is none, the phase's view with the
+// top bar. One thing at a time: what is behind does not receive focus. The aria-live region is always mounted.
 import type { AppPhase } from "@lg/core";
 import { t } from "../../i18n";
 import { actions } from "../../state/actions";
@@ -40,12 +40,12 @@ export function Shell() {
   let content;
   if (panel?.kind === "mainMenu") content = <MainMenu />;
   else if (panel?.kind === "settings") content = <SettingsPanel />;
-  // F4.2: el MISMO HUD de diálogo sobre el canvas del mapa o en solo-diálogo (A3); solo cambia el marco.
+  // F4.2: the SAME dialogue HUD over the map canvas or in dialog-only (A3); only the frame changes.
   else if (panel?.kind === "scene") content = <DialogueHud surface={view.phase === "world" ? "canvas" : "dialogOnly"} />;
   else content = <PhaseView phase={view.phase} />;
 
-  // En el mapa sin paneles (o con el HUD de diálogo), el shell queda transparente encima del canvas y deja pasar el
-  // puntero (solo sus controles lo reciben). Los demás paneles tapan el mapa (el canvas pasa a frameloop "demand").
+  // On the map with no panels (or with the dialogue HUD), the shell stays transparent over the canvas and lets the
+  // pointer through (only its controls receive it). The other panels cover the map (the canvas switches to frameloop "demand").
   const overMap = view.phase === "world" && (panel === null || panel.kind === "scene");
   return (
     <div className={overMap ? "pointer-events-none relative z-10 min-h-dvh text-ink" : "relative z-10 min-h-dvh bg-paper text-ink"}>

@@ -1,5 +1,5 @@
-# Saber del prólogo (02 §1.5, §4.4 M0.1, §8). estado sin_verificar: solo el operador lo cambia (D-195).
-# linea_sin_dato y explicacion_es: redactadas por F1.2 desde 02 (la línea sin el hecho; la explicación desde los HV).
+# Prologue knowledge item (02 §1.5, §4.4 M0.1, §8). estado sin_verificar: only the operator changes it (D-195).
+# linea_sin_dato and explicacion_es: written by F1.2 from 02 (the line without the fact; the explanation from the HV).
 id: SAB-AVIONETA
 titulo_corto: { es-AR: "Aviones que aplican sobre los cultivos" }
 linea_en: "That plane? It sprays the fields."

@@ -1,23 +1,23 @@
-// dev/portraits/ — panel de retratos del modo director (plan estetica-c M3, D-030; revisión de arquitectura 2026-10-12). Solo lo carga
-// boot/dev.ts con import() bajo la doble llave y `?retratos`. No conoce three ni world/ (ADR-026): recibe la función que
-// renderiza un retrato. El operador aprieta "Renderizar", mira cada busto y baja los PNG para commitearlos en
-// apps/web/public/portraits/ con su fila en el registro (DEFERRED-OPERATOR; hasta entonces el retrato es el SVG de F1.3).
+// dev/portraits/ — director-mode portrait panel (plan estetica-c M3, D-030; architecture review 2026-10-12). Only boot/dev.ts loads it
+// with import() under the double key and `?retratos`. It knows neither three nor world/ (ADR-026): it receives the function that
+// renders a portrait. The operator presses "Renderizar", looks at each bust and downloads the PNGs to commit them in
+// apps/web/public/portraits/ with their row in the registry (DEFERRED-OPERATOR; until then the portrait is the F1.3 SVG).
 
 export interface PortraitPanelDeps {
   ids: readonly string[];
   render: (id: string) => Promise<Blob>;
   mount: HTMLElement;
-  /** Para tests; por defecto URL.createObjectURL / revokeObjectURL. */
+  /** For tests; by default URL.createObjectURL / revokeObjectURL. */
   urls?: { create(b: Blob): string; revoke(u: string): void };
 }
 
-/** Monta el panel. Devuelve con qué desmontarlo (libera las url de los PNG). */
+/** Mounts the panel. Returns what unmounts it (releases the PNG urls). */
 export function startPortraitPanel(deps: PortraitPanelDeps): () => void {
   const urls = deps.urls ?? { create: (b: Blob) => URL.createObjectURL(b), revoke: (u: string) => URL.revokeObjectURL(u) };
   const doc = deps.mount.ownerDocument;
   const made: string[] = [];
   const panel = doc.createElement("section");
-  // El marcador de solo-desarrollo: check:dev-only falla si este panel llega a un build.
+  // The development-only marker: check:dev-only fails if this panel ends up in a build.
   panel.setAttribute("data-lg-portraits", "__lg_director:panel-retratos");
   panel.setAttribute("aria-label", "Retratos de solo-diálogo");
   panel.style.cssText = "position:fixed;right:8px;top:8px;z-index:9999;max-height:90vh;overflow:auto;background:#fffaf0;color:#2b2622;padding:8px;border-radius:8px;font:12px sans-serif";

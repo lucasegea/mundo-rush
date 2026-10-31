@@ -1,16 +1,16 @@
-// Red de presentaciones y misterio de los sobres (02 §1.6, §1.7, §6.2.5, §6.2.8; D-168, D-172).
+// Introduction network and envelope mystery (02 §1.6, §1.7, §6.2.5, §6.2.8; D-168, D-172).
 import { z } from "zod";
 import { HabilidadId, LugarId, MisionId, NpcId, PistaId, PresentacionId, SobreId } from "../ids.ts";
 import { Banda, EstadoRevision } from "./common.ts";
 
-/** Arista de la red: `presentado_por` presenta a `npc` (02 §6.2.8). */
+/** Network edge: `presentado_por` introduces `npc` (02 §6.2.8). */
 export const Presentacion = z.strictObject({
   id: PresentacionId,
   npc: NpcId,
   presentado_por: NpcId,
   mision: MisionId,
   linea_presentador_en: z.string().min(1),
-  /** Primera línea del presentado que reconoce al presentador (G9); null si su escena es de una fase posterior. */
+  /** First line of the introduced one that recognizes the introducer (G9); null if their scene is from a later phase. */
   linea_reconocimiento_en: z.string().min(1).nullable(),
   caminos_alternativos: z.array(PresentacionId),
   bicho_de_luz: z.boolean(),
@@ -21,7 +21,7 @@ export const ArchivoPresentaciones = z.strictObject({
   presentaciones: z.array(Presentacion).min(1),
 });
 
-/** Sobre de semillas (02 §1.6.3, §6.2.5). Texto [GUIONADA]. */
+/** Seed envelope (02 §1.6.3, §6.2.5). [GUIONADA] text. */
 export const Sobre = z.strictObject({
   id: SobreId,
   aparece: z.strictObject({
@@ -39,7 +39,7 @@ export const Sobre = z.strictObject({
 });
 export type Sobre = z.infer<typeof Sobre>;
 
-/** Pista fija por NPC (02 §1.6.3): la IA usa solo esto. npc null = "Otros". */
+/** Fixed hint per NPC (02 §1.6.3): the AI uses only this. npc null = "Otros". */
 export const Pista = z.strictObject({
   id: PistaId,
   npc: NpcId.nullable(),
@@ -50,7 +50,7 @@ export const Pista = z.strictObject({
   acotacion: z.string().min(1).nullable(),
   requiere: HabilidadId.nullable(),
   abre: z.string().min(1),
-  /** Nunca se inyecta al NPC antes del capítulo 4 ni llega al cliente. */
+  /** Never injected into the NPC before chapter 4 nor does it reach the client. */
   verdad_oculta: z.string().min(1).nullable(),
   estado: EstadoRevision,
 });

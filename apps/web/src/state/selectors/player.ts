@@ -1,5 +1,5 @@
-// Selectores del slice `player` (R7): la UI lee la celda (baja frecuencia); world/ lee la pose lógica de forma
-// transitoria dentro de useFrame (readGame) e interpola entre `previous` y `position` en refs.
+// Selectors of the `player` slice (R7): the UI reads the cell (low frequency); world/ reads the logical pose
+// transiently inside useFrame (readGame) and interpolates between `previous` and `position` in refs.
 import { SIM_DT } from "@lg/core";
 import type { GameState } from "../store";
 
@@ -12,13 +12,13 @@ export interface PlayerPose {
   prevZ: number;
   vx: number;
   vz: number;
-  /** Cambia en cada paso de simulación que movió algo. */
+  /** Changes on every simulation step that moved something. */
   tick: number;
-  /** Duración de un paso fijo (s): world/ interpola de previous a position en ese tiempo. */
+  /** Duration of a fixed step (s): world/ interpolates from previous to position over that time. */
   stepSec: number;
 }
 
-/** Pose lógica del jugador (sin memorizar: se lee por cuadro con readGame, nunca con un hook). */
+/** The player's logical pose (not memoized: read per frame with readGame, never with a hook). */
 export const selectPlayerPose = (s: GameState): PlayerPose | null => {
   const p = s.player.position;
   if (!p) return null;

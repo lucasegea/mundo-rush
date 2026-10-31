@@ -1,4 +1,4 @@
-# Temas globales vedados (02 §3.2 regla S1; 01 §2.17.1). Ninguna escena los declara en temas_permitidos (03 §6.1 #6).
+# Forbidden global topics (02 §3.2 rule S1; 01 §2.17.1). No scene declares them in temas_permitidos (03 §6.1 #6).
 fuente: "02 §3.2 S1; 01 §2.17.1"
 vedados:
   - violence

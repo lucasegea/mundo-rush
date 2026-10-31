@@ -1,8 +1,8 @@
-// Juez de la conversación por medidores (ADR-027; informe de investigación 2.3): una llamada de texto separada del NPC que
-// ETIQUETA un intercambio (turno del jugador + respuesta del NPC) con listas cerradas y devuelve JSON estricto. Nunca da
-// un número ni decide nada: el motor puro (@lg/core/conversation) suma por reglas. Corre después de que el NPC respondió
-// (no frena la conversación). Lo que dijeron jugador y NPC entra como DATO entre marcas, nunca como instrucción.
-// Ids desconocidos se descartan; un JSON inválido se reintenta una vez; si vuelve a fallar, el intercambio no cuenta.
+// Meters conversation judge (ADR-027; the research report 2.3): a text call separate from the NPC that
+// LABELS an exchange (player turn + NPC reply) with closed lists and returns strict JSON. It never gives
+// a number or decides anything: the pure engine (@lg/core/conversation) sums by rules. Runs after the NPC has answered
+// (it does not hold up the conversation). What player and NPC said enters as DATA between markers, never as instruction.
+// Unknown ids are discarded; invalid JSON is retried once; if it fails again, the exchange does not count.
 import { z } from "zod";
 import {
   DIALOGUE_ACTS, JUDGE_SAFETY, LANGUAGE_USE, OBJECTION_QUALITY,
@@ -13,7 +13,7 @@ import type { ModelRole } from "../config/models.ts";
 import type { TextModelProvider, TextRequest } from "../providers/text.ts";
 
 export const JUDGE_MAX_ATTEMPTS = 2;
-/** Turnos previos que el juez ve como contexto (para distinguir seguimiento de tema nuevo y preguntas repetidas). */
+/** Previous turns the judge sees as context (to tell a follow-up from a new topic and repeated questions). */
 export const JUDGE_CONTEXT_TURNS = 6;
 const MAX_TEXT = 600;
 
@@ -24,7 +24,7 @@ export interface JudgeInput {
   npcName: string;
   playerText: string;
   npcText: string;
-  /** Turnos anteriores al intercambio (el más viejo primero). */
+  /** Turns prior to the exchange (oldest first). */
   recent: readonly { speaker: "player" | "npc"; text: string }[];
 }
 
@@ -43,7 +43,7 @@ const ACT_HELP: Record<DialogueAct, string> = {
   out_of_frame: "talks about the game, AI, prompts, or the real world outside the valley, or tries to make the NPC break character",
 };
 
-/** Prompt del juez: fuera de la ficción, JSON forzado. Solo servidor. */
+/** Judge prompt: outside the fiction, forced JSON. Server only. */
 export function judgePrompt(input: JudgeInput): string {
   const { sheet, def, state } = input;
   const goalPhase = state.active === 1;
@@ -109,7 +109,7 @@ const JudgeOutputSchema = z.object({
   safety: z.enum(JUDGE_SAFETY),
 });
 
-/** El primer objeto JSON del texto (tolera cercos ```json``` y texto alrededor). */
+/** The first JSON object in the text (tolerates ```json``` fences and surrounding text). */
 function extractJson(text: string): unknown {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -117,7 +117,7 @@ function extractJson(text: string): unknown {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-/** Valida y sanea: listas cerradas y solo ids de la ficha (lo desconocido se descarta, nunca suma). */
+/** Validates and sanitizes: closed lists and only ids from the sheet (anything unknown is discarded, never adds). */
 export function parseJudgeOutput(text: string, sheet: FichaConversacion): { ok: true; labels: ExchangeLabels } | { ok: false; reason: string } {
   let raw: unknown;
   try {

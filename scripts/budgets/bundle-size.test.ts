@@ -1,4 +1,4 @@
-// Tests de check:budgets (F1.1b A1, A2) y del centinela check:dev-only.
+// Tests of check:budgets (F1.1b A1, A2) and of the check:dev-only sentinel.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -23,7 +23,7 @@ import {
 } from "./bundle-size";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const KB = 1000; // como bundle-size.ts y los "kB" de vite build
+const KB = 1000; // like bundle-size.ts and the "kB" of vite build
 
 // ---------- A1: budgets.json = 03 §2.7.3 ----------
 describe("A1 budgets.json coincide con 03 §2.7.3", () => {
@@ -41,7 +41,7 @@ describe("A1 budgets.json coincide con 03 §2.7.3", () => {
     expect(Object.keys(budgets)).not.toContain("chunk_post_gzip_kb");
   });
 
-  // Lee el documento: si alguien cambia la tabla y no el JSON (o al revés), esto falla.
+  // Reads the document: if someone changes the table and not the JSON (or the other way around), this fails.
   const doc = readFileSync(join(ROOT, "docs/03-architecture.md"), "utf8");
   const start = doc.indexOf("#### 2.7.3 Bundle and download");
   const section = doc.slice(start, doc.indexOf("#### 2.7.4", start));
@@ -85,10 +85,10 @@ describe("A1 budgets.json coincide con 03 §2.7.3", () => {
   });
 });
 
-// ---------- A2: el chequeo lee el manifiesto ----------
+// ---------- A2: the check reads the manifest ----------
 const BUDGETS = loadBudgets();
 
-// Manifiesto con la forma de Vite: entrada index.html, un vendor estático, CSS y el mundo dinámico.
+// Manifest with Vite's shape: index.html entry, a static vendor, CSS and the dynamic world.
 const manifest = (vendorFile: string): Manifest => ({
   "index.html": {
     file: "assets/index-a1.js",
@@ -107,7 +107,7 @@ const manifest = (vendorFile: string): Manifest => ({
     dynamicImports: ["src/world/post/Post.tsx"],
   },
   "_three-e5.js": { file: "assets/three-e5.js" },
-  // Plan estetica-c M6: el postprocesado en su propio chunk (lo baja solo el tier que lo usa).
+  // Plan estetica-c M6: post-processing in its own chunk (downloaded only by the tier that uses it).
   "src/world/post/Post.tsx": {
     file: "assets/Post-g7.js",
     src: "src/world/post/Post.tsx",
@@ -210,7 +210,7 @@ describe("A2 check:budgets sobre el manifiesto de Vite", () => {
   });
 });
 
-// ---------- F2 A6: three/@react-three por módulos, no por texto ----------
+// ---------- F2 A6: three/@react-three by modules, not by text ----------
 describe("F2 A6 check:budgets con el mapa chunk → módulos", () => {
   const OWN = ["apps/web/src/main.tsx", "apps/web/src/App.tsx"];
   const clean: ChunkModules = {
@@ -265,8 +265,8 @@ describe("F2 A6 check:budgets con el mapa chunk → módulos", () => {
   });
 });
 
-// ---------- A2 de punta a punta: archivos reales, gzip real ----------
-// ---------- plan estetica-c M6: el postprocesado en su propio chunk (03 §2.9, D-160) ----------
+// ---------- A2 end to end: real files, real gzip ----------
+// ---------- plan estetica-c M6: post-processing in its own chunk (03 §2.9, D-160) ----------
 describe("estetica-c M6: low y dialog-only no descargan el postprocesado", () => {
   const modules: ChunkModules = {
     "assets/index-a1.js": ["apps/web/src/main.tsx"],
@@ -333,7 +333,7 @@ describe("A2 run() sobre un dist de fixture en disco", () => {
   const dir = mkdtempSync(join(tmpdir(), "lg-dist-"));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  // Bytes pseudoaleatorios (LCG con semilla): no se comprimen, el gzip queda ≈ al tamaño.
+  // Pseudo-random bytes (seeded LCG): they do not compress, the gzip stays ≈ the size.
   const noise = (bytes: number): Buffer => {
     const buf = Buffer.alloc(bytes);
     let s = 12345;
@@ -390,7 +390,7 @@ describe("A2 run() sobre un dist de fixture en disco", () => {
   });
 });
 
-// ---------- Cableado: verify corre check:budgets después del build; check:dev-only (FD0) dentro ----------
+// ---------- Wiring: verify runs check:budgets after the build; check:dev-only (FD0) inside ----------
 describe("scripts raíz", () => {
   const scripts = (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
 

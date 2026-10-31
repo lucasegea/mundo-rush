@@ -1,6 +1,6 @@
-// Open-world-3d T10-code (T10 (b), D-846): los factores de medición de desarrollo. Un registro (una entrada por factor),
-// un lector puro de la query (desconocido se ignora, fuera de desarrollo no hay factores), los aplicadores a las perillas
-// que ya existían, la escena armada con las perillas, y GameCanvas leyéndolo solo bajo `import.meta.env.DEV`.
+// Open-world-3d T10-code (T10 (b), D-846): the development measurement factors. A registry (one entry per factor),
+// a pure query reader (unknown ones are ignored, outside development there are no factors), the appliers to the knobs
+// that already existed, the scene built with the knobs, and GameCanvas reading it only under `import.meta.env.DEV`.
 import { DEFAULT_LOOK, OPEN_WORLD_DENSITY } from "@lg/art";
 import { prepareDiorama, type DioramaLayout } from "@lg/core";
 import { Material } from "three";
@@ -77,7 +77,7 @@ describe("la escena con las perillas (muelle, medium)", () => {
   const muelle = prepareDiorama(layouts.find((d) => d.id === "muelle") as DioramaLayout);
 
   test("sin pasto, suelo sin normales y solo impostores; sin perillas, lo del tier", () => {
-    // Los uniforms de la naturaleza entran por onBeforeCompile: se lo llama con un sombreador de mentira y se lee uLod.
+    // The nature uniforms enter through onBeforeCompile: it is called with a fake shader and uLod is read.
     const lodOf = (s: ReturnType<typeof buildDioramaScene>): number[] => {
       let lod: number[] = [];
       s.nature?.group.traverse((o) => {
@@ -112,7 +112,7 @@ describe("GameCanvas: los factores solo en desarrollo", () => {
     expect(gameCanvasSource).toContain('const FACTORS = import.meta.env.DEV ? parseDevFactors(globalThis.location?.search ?? "", true) : null;');
     expect(gameCanvasSource).toContain("const params = FACTORS ? tierWithFactors(tierParams[render.tier], FACTORS.effect) : tierParams[render.tier];");
     expect(gameCanvasSource).toContain("gl={{ antialias: FACTORS?.effect.antialias ?? false }}");
-    // Ningún otro llamado a los aplicadores fuera de esa rama.
+    // No other call to the appliers outside that branch.
     expect(gameCanvasSource.match(/parseDevFactors\(/g)).toHaveLength(1);
   });
 });

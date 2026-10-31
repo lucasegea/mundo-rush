@@ -1,10 +1,10 @@
-// Tipos del sistema de conversación por medidores (ADR-027; informe de investigación 2.3-2.5). Todo es dato: el encuentro se
-// define con medidores en orden (fase = medidor activo), cada uno de un tipo con su "puntuador" en engine.ts. El juez
-// (un LLM, en el servidor) solo ETIQUETA cada intercambio con estas listas cerradas; el código suma.
-// Importa con extensión .ts y sin nada de fuera de la carpeta: el servidor lo corre con type stripping por la subruta
-// `@lg/core/conversation` (igual que scene/).
+// Types of the meters-based conversation system (ADR-027; the research report 2.3-2.5). Everything is data: the encounter is
+// defined with meters in order (phase = active meter), each of a type with its "scorer" in engine.ts. The judge
+// (an LLM, on the server) only LABELS each exchange with these closed lists; the code adds up.
+// Imports with the .ts extension and nothing from outside the folder: the server runs it with type stripping through the subpath
+// `@lg/core/conversation` (same as scene/).
 
-/** Actos de diálogo del jugador (lista cerrada del juez). */
+/** Player dialogue acts (the judge's closed list). */
 export const DIALOGUE_ACTS = [
   "greeting", "personal_question", "follow_up_question", "repeated_question", "self_disclosure", "answers_question",
   "empathy_reaction", "states_errand", "polite_request", "gives_reason", "off_topic", "out_of_frame",
@@ -14,30 +14,30 @@ export type DialogueAct = (typeof DIALOGUE_ACTS)[number];
 export const LANGUAGE_USE = ["L2", "L1", "mixed"] as const;
 export type LanguageUse = (typeof LANGUAGE_USE)[number];
 
-/** Banderas de seguridad del juez: nunca suman; `real_personal_data` avisa que se cuente lo del PERSONAJE. */
+/** Judge safety flags: they never add up; `real_personal_data` signals to tell things about the CHARACTER. */
 export const JUDGE_SAFETY = ["none", "real_personal_data", "inappropriate", "breaking_attempt"] as const;
 export type JudgeSafety = (typeof JUDGE_SAFETY)[number];
 
 export const OBJECTION_QUALITY = ["no", "partial", "yes"] as const;
 export type ObjectionQuality = (typeof OBJECTION_QUALITY)[number];
 
-/** Etiquetas de UN intercambio (turno del jugador + respuesta del NPC), ya saneadas por el servidor. */
+/** Labels of ONE exchange (player turn + NPC reply), already sanitized by the server. */
 export interface ExchangeLabels {
   readonly language: LanguageUse;
-  /** 0: no se entiende; 1: con esfuerzo; 2: claro. */
+  /** 0: not understood; 1: with effort; 2: clear. */
   readonly comprehensible: 0 | 1 | 2;
   readonly acts: readonly DialogueAct[];
-  /** Hechos de la ficha del NPC que el NPC reveló en su respuesta. */
+  /** Facts from the NPC's sheet that the NPC revealed in its reply. */
   readonly npcFacts: readonly string[];
-  /** Datos del personaje del jugador que el jugador compartió. */
+  /** Details of the player's character that the player shared. */
   readonly playerFacts: readonly string[];
   readonly objections: readonly { readonly id: string; readonly quality: ObjectionQuality }[];
   readonly safety: JudgeSafety;
 }
 
 /**
- * Tipos de medidor. `rapport` (conocerse) y `request`/`persuasion` (objetivo por pasos y objeciones) tienen puntuador;
- * `negotiation` está reservado en el esquema y todavía no tiene puntuador (createEncounter lo rechaza claro).
+ * Meter types. `rapport` (getting to know each other) and `request`/`persuasion` (step-based goal and objections) have a scorer;
+ * `negotiation` is reserved in the schema and does not have a scorer yet (createEncounter rejects it clearly).
  */
 export const METER_KINDS = ["rapport", "request", "persuasion", "negotiation"] as const;
 export type MeterKind = (typeof METER_KINDS)[number];
@@ -47,7 +47,7 @@ export type Tier = 1 | 2 | 3;
 export interface FactDef {
   readonly id: string;
   readonly tier: Tier;
-  /** Lo que el HUD muestra en "Lo que sabés de…" (es-AR). */
+  /** What the HUD shows in "Lo que sabés de…" (es-AR). */
   readonly label: string;
 }
 
@@ -56,25 +56,25 @@ export interface PlayerSlotDef {
   readonly label: string;
 }
 
-/** Reglas del medidor de rapport (puntos iniciales del informe 2.5.B; se calibran en playtest). */
+/** Rapport meter rules (initial points from report 2.5.B; calibrated in playtest). */
 export interface RapportRules {
   readonly target: number;
-  /** Puntos por hecho nuevo del NPC según su nivel (1, 2, 3). */
+  /** Points per new NPC fact according to its tier (1, 2, 3). */
   readonly factPoints: readonly [number, number, number];
   readonly followUp: number;
   readonly newQuestion: number;
   readonly disclosure: number;
-  /** Bono si el jugador cuenta algo propio justo después de que el NPC reveló algo. */
+  /** Bonus if the player shares something of their own right after the NPC revealed something. */
   readonly reciprocityBonus: number;
   readonly empathy: number;
-  /** Preguntas seguidas sin contar nada propio antes de que el medidor se frene. */
+  /** Consecutive questions without sharing anything of their own before the meter slows. */
   readonly maxQuestionsWithoutSharing: number;
   readonly maxPointsPerTurn: number;
-  /** Para llenarse además de los puntos: hechos aprendidos, datos compartidos y niveles tocados. */
+  /** To fill, besides the points: facts learned, details shared and tiers touched. */
   readonly minFacts: number;
   readonly minShares: number;
   readonly minTiers: number;
-  /** Apertura de niveles: hechos aprendidos del nivel anterior y datos compartidos. */
+  /** Tier opening: facts learned from the previous tier and details shared. */
   readonly unlock: { readonly tier2: UnlockRule; readonly tier3: UnlockRule };
 }
 
@@ -83,7 +83,7 @@ export interface UnlockRule {
   readonly shares: number;
 }
 
-/** Paso del medidor de objetivo: lo cumple un acto del jugador o una objeción del NPC resuelta. */
+/** Goal meter step: fulfilled by a player act or a resolved NPC objection. */
 export interface GoalStepDef {
   readonly id: string;
   readonly label: string;
@@ -112,7 +112,7 @@ export interface GoalMeterDef {
 export type MeterDef = RapportMeterDef | GoalMeterDef;
 
 export interface HelpDef {
-  /** Pista del compañero y frases sugeridas para conocerse, por nivel abierto. */
+  /** Companion hint and suggested phrases for getting to know each other, per open tier. */
   readonly rapport: { readonly hint: string; readonly phrasesByTier: Readonly<Record<Tier, readonly string[]>> };
   readonly reciprocity: { readonly hint: string; readonly phrases: readonly string[] };
   readonly earlyErrand: { readonly hint: string };
@@ -120,16 +120,16 @@ export interface HelpDef {
   readonly realData: { readonly hint: string };
 }
 
-/** Un encuentro: el NPC, lo que se puede averiguar de él, lo que el jugador puede contar y los medidores en orden. */
+/** An encounter: the NPC, what can be found out about them, what the player can tell and the meters in order. */
 export interface EncounterDef {
   readonly id: string;
   readonly npcId: string;
   readonly facts: readonly FactDef[];
   readonly playerSlots: readonly PlayerSlotDef[];
-  /** En orden: el primero arranca activo; al llenarse, se abre el siguiente. */
+  /** In order: the first starts active; when it fills, the next one opens. */
   readonly meters: readonly MeterDef[];
   readonly help: HelpDef;
-  /** Turnos sin progreso para el escalón 1 (pista) y el 2 (frases sugeridas) de la escalera de ayuda. */
+  /** Turns without progress for step 1 (hint) and step 2 (suggested phrases) of the help ladder. */
   readonly helpAfterTurns: readonly [number, number];
 }
 
@@ -139,11 +139,11 @@ export type EncounterNotice = "early_errand" | "real_data" | "l1" | null;
 export interface MeterState {
   readonly points: number;
   readonly full: boolean;
-  /** Medidor de objetivo: estado de cada paso. */
+  /** Goal meter: state of each step. */
   readonly steps: Readonly<Record<string, ObjectionQuality>>;
 }
 
-/** Qué medir (informe 2.5.F), por encuentro. */
+/** What to measure (report 2.5.F), per encounter. */
 export interface EncounterStats {
   readonly exchanges: number;
   readonly l2Turns: number;
@@ -156,17 +156,17 @@ export interface EncounterStats {
 }
 
 export interface EncounterState {
-  /** Índice del medidor activo; = meters.length cuando el encuentro terminó. */
+  /** Index of the active meter; = meters.length when the encounter finished. */
   readonly active: number;
   readonly meters: readonly MeterState[];
   readonly factsLearned: readonly string[];
   readonly playerShared: readonly string[];
   readonly unlockedTier: Tier;
-  /** Turnos seguidos con pregunta y sin contar nada propio. */
+  /** Consecutive turns with a question and without sharing anything of their own. */
   readonly questionStreak: number;
-  /** Regla de reciprocidad activa: el medidor no suma hasta que el jugador comparta algo. */
+  /** Reciprocity rule active: the meter does not add up until the player shares something. */
   readonly stalled: boolean;
-  /** El NPC reveló un hecho en el último intercambio (para el bono de reciprocidad). */
+  /** The NPC revealed a fact in the last exchange (for the reciprocity bonus). */
   readonly npcJustRevealed: boolean;
   readonly quietTurns: number;
   readonly help: ConversationHelpLevel;

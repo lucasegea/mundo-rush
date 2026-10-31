@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Open-world-3d M2 (T4, T5; D-820, PD-5): mirada y movimiento relativos a la cámara (AC17-AC21), la tercera persona pura
-// (AC22-AC24), el zoom continuo hasta el mapa entero (AC26) y los presets (AC27), con el store y los traductores reales.
+// Open-world-3d M2 (T4, T5; D-820, PD-5): camera-relative look and movement (AC17-AC21), pure third person
+// (AC22-AC24), continuous zoom up to the whole map (AC26) and the presets (AC27), with the real store and translators.
 import {
   CAMERA_PRESET_IDS, CAMERA_PRESETS, KEY_LOOK_PX_PER_STEP, LOOK_DRAG_PX as CORE_LOOK_DRAG_PX, screenDirToWorld, SIM_DT, THIRD_PERSON,
   zoomDistanceAt as coreZoomDistanceAt, zoomTAt as coreZoomTAt, type DioramaLayout, type SemanticAction,
@@ -23,7 +23,7 @@ import { compiledUniverseClientContent } from "./helpers";
 
 const FIELD: DioramaLayout = { id: "campo", bounds: { minX: -70, maxX: 70, minZ: -50, maxZ: 50 }, spawn: [0, 0, 0] };
 
-/** Un store con un campo abierto de 140 × 100 m cargado y el mapa jugándose. */
+/** A store with an open 140 × 100 m field loaded and the map being played. */
 function mapStore() {
   const store = createGameStore();
   const actions = createActions(store);
@@ -80,7 +80,7 @@ describe("AC18 W camina hacia donde mira la cámara (yaw vivo, no el del preset)
     const v = store.getState().player.velocity;
     expect(Math.hypot(v.x, v.z)).toBeCloseTo(3.5, 6);
     actions.dispatch({ type: "move", dir: { x: 0, y: 1 } });
-    actions.dispatch({ type: "look", dx: -360, dy: 0 }); // 90° a la izquierda
+    actions.dispatch({ type: "look", dx: -360, dy: 0 }); // 90° to the left
     steps(actions, 1);
     const turned = store.getState().player.velocity;
     const w = screenDirToWorld({ x: 0, y: 1 }, store.getState().ui.camera.yawDeg);
@@ -90,7 +90,7 @@ describe("AC18 W camina hacia donde mira la cámara (yaw vivo, no el del preset)
 
 describe("AC21 Shift corre a 5,5 m/s (por el store)", () => {
   test("10 s con run: 55 ± 3 m; sin run: 35 ± 2 m", () => {
-    // Yaw 90: adelante es -x, el lado largo del campo (70 m desde el spawn).
+    // Yaw 90: forward is -x, the long side of the field (70 m from the spawn).
     const yaw90 = (m: ReturnType<typeof mapStore>) => m.store.setState((s) => ({ ui: { ...s.ui, camera: { ...s.ui.camera, yawDeg: 90 } } }));
     const run = mapStore();
     yaw90(run);
@@ -208,7 +208,7 @@ describe("AC20 el clic del suelo descarta los arrastres de mirada", () => {
   });
 });
 
-/** El centro de la cabeza del personaje sobre el suelo (chibiModel). */
+/** The center of the character's head above the ground (chibiModel). */
 const HEAD_Y = CHIBI_HEAD_TOP - HEAD_RADIUS;
 
 describe("AC22 solveThirdPerson: detrás del rumbo, a 6 sin 17° sobre el pivote, la cabeza abajo del centro", () => {
@@ -219,7 +219,7 @@ describe("AC22 solveThirdPerson: detrás del rumbo, a 6 sin 17° sobre el pivote
     const t = zoomTAt(THIRD_PERSON_VIEW.defaultDistance, fit);
     const pose = zoomPose(t, fit, THIRD_PERSON.defaultPitchDeg);
     const shot = solveThirdPerson({ target, yawDeg: 0, pitchDeg: 17, lookPitchDeg: pose.lookPitchDeg * (17 / pose.pitchDeg), distance: 6 });
-    // yaw 0: adelante es -z, así que la cámara queda del lado +z del jugador.
+    // yaw 0: forward is -z, so the camera ends up on the player's +z side.
     expect(shot.position[2]).toBeGreaterThan(target[2]);
     expect(Math.abs(shot.position[0] - target[0])).toBeLessThan(1e-9);
     expect(shot.position[1] - target[1]).toBeCloseTo(6 * Math.sin((17 * Math.PI) / 180), 2);
@@ -233,7 +233,7 @@ describe("AC22 solveThirdPerson: detrás del rumbo, a 6 sin 17° sobre el pivote
   });
 });
 
-/** ¿Algún punto del segmento cruza el obstáculo? (muestreo fino, 1 cm) */
+/** Does any point of the segment cross the obstacle? (fine sampling, 1 cm) */
 const segmentHits = (a: readonly number[], b: readonly number[], o: Obstacle): boolean => {
   for (let i = 0; i <= 2000; i++) {
     const t = i / 2000;
@@ -290,7 +290,7 @@ describe("AC26 fitDistance y zoomPose (140 × 100 m)", () => {
       expect(Math.abs(p?.[1] ?? 9)).toBeLessThanOrEqual(1);
     }
     expect(ndc.some((p) => Math.max(Math.abs(p?.[0] ?? 0), Math.abs(p?.[1] ?? 0)) >= 0.9)).toBe(true);
-    // t = 0: 2,5 m; monótona; pasos iguales de t dan razones iguales (1 %); inclinación monótona de la del jugador a 82.
+    // t = 0: 2.5 m; monotonic; equal steps of t give equal ratios (1 %); tilt monotonic from the player's to 82.
     expect(zoomPose(0, fit, 17).distance).toBeCloseTo(2.5, 9);
     expect(zoomPose(0, fit, 17).pitchDeg).toBe(17);
     let prev = zoomPose(0, fit, 17);
@@ -305,8 +305,8 @@ describe("AC26 fitDistance y zoomPose (140 × 100 m)", () => {
     }
     for (const r of ratios) expect(Math.abs(r / (ratios[0] as number) - 1)).toBeLessThanOrEqual(0.01);
   });
-  // Cambio registrado (open-world-3d T7b, D-839): la niebla salió de la pose (su rango es del look); la regla es la misma
-  // y ahora vale para cada look del catálogo y cada escala de niebla de tier (0,85 / 1 / 1,15).
+  // Recorded change (open-world-3d T7b, D-839): the fog left the pose (its range belongs to the look); the rule is the same
+  // and now holds for every catalog look and every tier fog scale (0.85 / 1 / 1.15).
   test("la niebla nunca pasa el plano lejano, en ningún t, tier ni look", () => {
     for (const look of Object.values(WORLD_LOOKS)) for (const fogScale of [0.85, 1, 1.15]) for (let i = 0; i <= 100; i++) {
       const p = zoomPose(i / 100, 150, 30);
@@ -356,7 +356,7 @@ describe("V: el mapa entero y de vuelta (PD-5)", () => {
     actions.dispatch({ type: "toggleOverview" });
     expect(cam().overview).toBe(false);
     expect(Math.abs(cam().zoomDistance / before - 1)).toBeLessThanOrEqual(0.02);
-    // Fuera del mapa entero, un fit menor acota la distancia pedida (alejar de más no acumula pasos invisibles).
+    // Outside the whole map, a smaller fit bounds the requested distance (zooming out too far does not accumulate invisible steps).
     actions.zoomTo(0.99);
     actions.cameraFitted(50);
     expect(cam().zoomDistance).toBe(50);
@@ -386,16 +386,16 @@ describe("AC27 presets: sin ajuste o retirado → thirdPerson en el t por defect
 });
 
 describe("AC25 recentrado por el store (yaw 90° fuera de la marcha, 3 s)", () => {
-  /** Simula 3 s con la tecla dada y la cámara 90° fuera de la marcha; devuelve el yaw de cada paso. */
+  /** Simulates 3 s with the given key and the camera 90° off the heading; returns the yaw of each step. */
   const run = (dir: { x: number; y: number }, reduceMotion: boolean) => {
     const { store, actions } = mapStore();
     actions.cameraFitted(140);
-    // El ajuste va directo al store: setReduceMotion pasa por changeSettings, que sin bootCompleted (tier sugerido)
-    // baja la fase a solo-diálogo y el mapa deja de simular (la prueba quedaba vacía).
+    // The setting goes straight to the store: setReduceMotion goes through changeSettings, which without bootCompleted (suggested tier)
+    // drops the phase to dialog-only and the map stops simulating (the test was left empty).
     if (reduceMotion) store.setState((s) => ({ settings: { ...s.settings, accessibility: { ...s.settings.accessibility, reduceMotion: true } } }));
     actions.dispatch({ type: "move", dir });
-    // W apunta la marcha a yaw 0; la cámara se corre a 90° sin «mirar» (no reinicia el reloj de la mirada).
-    // Con D la marcha ya queda 90° fuera del yaw 0 de la cámara.
+    // W points the heading at yaw 0; the camera is shifted 90° without «look» (it does not reset the look clock).
+    // With D the heading is already 90° off the camera's yaw 0.
     const yaw0 = dir.x === 0 ? 90 : 0;
     store.setState((s) => ({ ui: { ...s.ui, camera: { ...s.ui.camera, yawDeg: yaw0, sinceLookS: 0 } } }));
     const from = store.getState().player.position ?? { x: Number.NaN, z: Number.NaN };
@@ -404,7 +404,7 @@ describe("AC25 recentrado por el store (yaw 90° fuera de la marcha, 3 s)", () =
       actions.simulationStep();
       trace.push({ t: i * SIM_DT, yaw: store.getState().ui.camera.yawDeg });
     }
-    // Sin caminata la prueba no prueba nada: en 3 s el jugador tiene que haber avanzado más de 5 m.
+    // Without walking the test proves nothing: in 3 s the player must have advanced more than 5 m.
     const at = store.getState().player.position ?? from;
     expect(Math.hypot(at.x - from.x, at.z - from.z)).toBeGreaterThan(5);
     expect(store.getState().settings.accessibility.reduceMotion).toBe(reduceMotion);
@@ -433,9 +433,9 @@ describe("AC25 recentrado por el store (yaw 90° fuera de la marcha, 3 s)", () =
 });
 
 describe("AC29 el clic del muelle de U-GALEANO llega (la caminata se quedaba a 3 m)", () => {
-  // Caminata GPU de QA, M2 iteración 0: 2 de 5 veces el destino del store fue (15,35; 11,50) y el jugador quedó
-  // en (12,29; 11,28). Desde esta salida el camino tiene un punto intermedio en (12,75; 11,75) que el paso cruzaba
-  // ida y vuelta sin llegar a 0,05 m (controller.ts). El mismo clic, desde la misma zona, por el store real.
+  // QA's GPU walk, M2 iteration 0: 2 out of 5 times the store's destination was (15.35; 11.50) and the player ended
+  // at (12.29; 11.28). Since this fix the path has an intermediate point at (12.75; 11.75) that the step crossed
+  // back and forth without getting within 0.05 m (controller.ts). The same click, from the same zone, through the real store.
   test.each([[8.04, 8.25], [7.86, 8.5], [7.95, 8.4]])("moveTo(15,35; 11,50) desde (%f, %f)", (x, z) => {
     const layouts = compiledUniverseClientContent("U-GALEANO")["dioramas.json"] as DioramaLayout[];
     const muelle = layouts.find((d) => d.id === "muelle");

@@ -1,26 +1,26 @@
-// Acomodo del jugador al empezar una charla desde el mapa (plan estetica-c M1 ítem 4, revisión de arquitectura 2026-10-12): el jugador
-// queda a 2,6 m del NPC, de su lado, en un lugar caminable y con línea libre desde donde está (el segmento no cruza
-// nada bloqueado: sin esto podría "saltar" un cerco). Así el plano de a dos de la cámara no se tapa. Puro.
+// Player positioning when starting a chat from the map (plan estetica-c M1 item 4, architecture review 2026-10-12): the player
+// ends up 2.6 m from the NPC, on their side, at a walkable spot and with a free line from where they are (the segment does not cross
+// anything blocked: without this they could "jump" a fence). That way the camera's two-shot is not blocked. Pure.
 import { circleBlocked } from "./collision";
 import type { Point, WalkGrid } from "./grid";
 
 export const STANDOFF_DISTANCE = 2.6;
-/** Rango de respaldo si no hay lugar a 2,6 m. */
+/** Fallback range if there is no room at 2.6 m. */
 export const STANDOFF_MIN = 1.8;
 export const STANDOFF_MAX = 3.2;
-/** Radio del cuerpo que tiene que entrar en el punto elegido (el de DEFAULT_MOVEMENT). */
+/** Radius of the body that has to fit at the chosen point (that of DEFAULT_MOVEMENT). */
 const BODY_RADIUS = 0.24;
-/** Desvíos de ángulo probados alrededor del lado del jugador, del más chico al más grande (nunca pasa al otro lado). */
+/** Angle deviations tried around the player's side, from smallest to largest (never crosses to the other side). */
 const ANGLE_OFFSETS_DEG = [0, 10, -10, 20, -20, 30, -30, 45, -45, 60, -60, 75, -75, 90, -90];
 
-/** Distancias candidatas: 2,6 primero y después las más cercanas a 2,6 dentro de [1,8, 3,2], de a 0,1 m. */
+/** Candidate distances: 2.6 first and then the ones closest to 2.6 within [1.8, 3.2], in steps of 0.1 m. */
 function distances(preferred: number): number[] {
   const out: number[] = [];
   for (let d = STANDOFF_MIN; d <= STANDOFF_MAX + 1e-9; d += 0.1) out.push(Math.round(d * 10) / 10);
   return out.sort((a, b) => Math.abs(a - preferred) - Math.abs(b - preferred) || a - b);
 }
 
-/** ¿Se puede ir en línea recta de `a` a `b` sin que el cuerpo toque una celda bloqueada? */
+/** Can you go in a straight line from `a` to `b` without the body touching a blocked cell? */
 export function clearLine(g: WalkGrid, a: Point, b: Point, radius = BODY_RADIUS): boolean {
   const len = Math.hypot(b.x - a.x, b.z - a.z);
   const steps = Math.max(1, Math.ceil(len / (g.cellSize / 8)));
@@ -32,14 +32,14 @@ export function clearLine(g: WalkGrid, a: Point, b: Point, radius = BODY_RADIUS)
 }
 
 /**
- * Dónde se para el jugador para hablar con el NPC: a `distance` m, del lado desde el que llegó, en un punto donde
- * el cuerpo entra y con línea libre desde la posición actual. Si no hay ninguno a 2,6 m, el más cercano a 2,6 entre
- * 1,8 y 3,2 m; si no hay ninguno, la posición actual.
+ * Where the player stands to talk to the NPC: at `distance` m, on the side they arrived from, at a point where
+ * the body fits and with a free line from the current position. If there is none at 2.6 m, the nearest to 2.6 between
+ * 1.8 and 3.2 m; if there is none, the current position.
  */
 export function standoffPoint(player: Point, npc: Point, g: WalkGrid, distance = STANDOFF_DISTANCE): Point {
   const dx = player.x - npc.x;
   const dz = player.z - npc.z;
-  // Encima del NPC (dato raro): se toma +z como "su lado".
+  // On top of the NPC (odd data): +z is taken as "their side".
   const base = Math.hypot(dx, dz) > 1e-9 ? Math.atan2(dz, dx) : Math.PI / 2;
   for (const d of distances(distance)) {
     for (const off of ANGLE_OFFSETS_DEG) {

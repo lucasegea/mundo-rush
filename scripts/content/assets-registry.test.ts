@@ -1,6 +1,6 @@
-// Plan estetica-c M2 (03 §6.4.2, D-153): teeth del registro de licencias en validate:content. Un .glb servido sin
-// registro, una licencia no comercial, una atribución obligatoria ausente de los créditos y un `modelo/*` de diorama sin
-// registro hacen fallar la compilación; el contenido real con los archivos reales compila.
+// Plan estetica-c M2 (03 §6.4.2, D-153): teeth of the license registry in validate:content. A served .glb without a
+// record, a non-commercial license, a required attribution missing from the credits and a diorama `modelo/*` without a
+// record make the compilation fail; the real content with the real files compiles.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -63,8 +63,8 @@ describe("teeth del registro (validate:content falla)", () => {
     conError(errores(REAL, [...PUBLICOS, "apps/web/public/audio/sfx/x.ogg"]), "apps/web/public/audio/sfx/x.ogg", "sin registro");
   });
 
-  // M3, nota N1 de QA en M2: lista cerrada. Cada grafía de "uso personal" y "no comercial" (con y sin tilde, en
-  // cualquier caja) falla, igual que una licencia desconocida.
+  // M3, QA's note N1 in M2: closed list. Each spelling of "personal use" and "non-commercial" (with and without accent, in
+  // any case) fails, as does an unknown license.
   const RECHAZADAS = [
     "sólo uso personal", "solo uso personal", "SÓLO USO PERSONAL", "Solo Uso Personal", "sólo_uso_personal", "uso personal",
     "Uso Personal", "USO PERSONAL", "no comercial", "No Comercial", "NO COMERCIAL", "no-comercial", "nó comercial",
@@ -78,8 +78,8 @@ describe("teeth del registro (validate:content falla)", () => {
     }
   });
 
-  // Cambio registrado (open-world-3d T2(c), D-831): la aserción vieja era toEqual(["CC0-1.0", "CC-BY-4.0"]); la lista
-  // cerrada pasa a la política D1 de libre uso. Las grafías rechazadas de abajo siguen rechazadas, sin excepción.
+  // Recorded change (open-world-3d T2(c), D-831): the old assertion was toEqual(["CC0-1.0", "CC-BY-4.0"]); the closed
+  // list becomes the D1 free-use policy. The rejected spellings below stay rejected, without exception.
   test("la lista cerrada D1 (con su grafía normalizada)", () => {
     expect(LICENCIAS_PERMITIDAS).toEqual([
       "CC0-1.0", "CC-BY-3.0", "CC-BY-4.0", "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "0BSD", "Zlib", "OFL-1.1",
@@ -91,7 +91,7 @@ describe("teeth del registro (validate:content falla)", () => {
   test("un pack usado con licencia fuera de la lista falla; uno descartado puede nombrarla (es el registro de la evaluación)", () => {
     const pack = "    licencia: CC0-1.0\n    url: https://quaternius.com/packs/farmbuildings.html";
     conError(errores(mut(REG, pack, "    licencia: sólo uso personal\n    url: https://quaternius.com/packs/farmbuildings.html")), REG, "fuera de la lista permitida");
-    expect(errores(REAL).map(formatearHallazgo)).toEqual([]); // mixamo (descartado) no es CC0 y el registro real compila
+    expect(errores(REAL).map(formatearHallazgo)).toEqual([]); // mixamo (discarded) is not CC0 and the real registry compiles
   });
 
   test("CC-BY-4.0 exige atribucion_requerida: true", () => {
@@ -102,7 +102,7 @@ describe("teeth del registro (validate:content falla)", () => {
   test("un registro con atribución obligatoria ausente de los créditos", () => {
     const viejo = "    atribucion_requerida: false\n    bisel: aceptado\n    bisel_razon: >-\n      Low-poly";
     conError(errores(mut(REG, viejo, viejo.replace("false", "true"))), REG, "no aparece en content/creditos.yaml");
-    // con su entrada en los créditos, pasa
+    // with its entry in the credits, passes
     const conCredito = mut(REG, viejo, viejo.replace("false", "true")).map((a) => (a.ruta === "content/creditos.yaml"
       ? { ruta: a.ruta, texto: a.texto.replace("atribuciones: []", "atribuciones:\n  - { pack: quaternius-farm-buildings, texto: Modelos de Quaternius }") }
       : a));
@@ -129,7 +129,7 @@ describe("teeth del registro (validate:content falla)", () => {
     temporales.push(dir);
     cpSync(join(ROOT, "content"), join(dir, "content"), { recursive: true });
     cpSync(join(ROOT, "apps/web/public/models"), join(dir, "apps/web/public/models"), { recursive: true });
-    // Open-world-3d T6: los .ktx2 del suelo también son servidos con fila en el registro.
+    // Open-world-3d T6: the ground's .ktx2 files are also served with a row in the registry.
     cpSync(join(ROOT, "apps/web/public/textures"), join(dir, "apps/web/public/textures"), { recursive: true });
     const log: string[] = [];
     expect(construir({ root: dir, modo: "dev", log: (x) => log.push(x) })).toBe(0);

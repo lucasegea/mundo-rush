@@ -1,25 +1,25 @@
-// world/GameCanvas.tsx — raíz del canvas (chunk diferido, 03 §4.2, §2.7.3): App.tsx lo importa con import() solo
-// en la fase `world`, así three nunca entra a la carga inicial. Disciplina de R3F (03 §2.3): el componente solo
-// re-renderiza cuando cambian el diorama, los parámetros de render, la charla o el NPC resaltado; lo que cambia por
-// cuadro vive en useFrame. Tiers (R12): los parámetros llegan de services/quality (TIER_PARAMS) por props desde la raíz
-// de composición. Look C (D-207, plan estetica-c M1): bruma de fondo y niebla, ACES con exposición 1,05, sombras por tier.
-// Desde D-208 la distancia del paso de zoom llega del selector y de ella dependen recorte, niebla, sombra, tilt-shift y
-// etiquetas (la niebla arranca con los valores de la propuesta y Lighting la ajusta cada cuadro).
-// Plan estetica-c M6 (03 §2.7.1, §2.7.4): la escena se arma con la densidad del tier (`low` reducida); el canvas tiene
-// tope de cuadros (30 con una escena de conversación arriba, el `targetFps` del tier fuera de ella); durante la charla se
-// congela lo no esencial (agua, NPCs de fondo) y PerformanceMonitor no mide. En desarrollo con el modo director, una
-// sonda deja los contadores de renderer.info para la instantánea (en build no existe).
-// Open-world-3d T6 (D-819, D-823): un diorama con relieve se arma con el tier del mundo abierto (OPEN_WORLD_DENSITY:
-// paso del terreno, baldosas, nubes, niebla); su fondo y su niebla son el horizonte de la cúpula (world/sky) y la niebla
-// sale de `fogFor(scale, t)`. El tilt-shift queda fuera de `thirdPerson` (Post).
-// Open-world-3d T7b (D-839, D-840): el look del diorama se resuelve una vez al cargarlo (`lookForDiorama`) y de él salen
-// fondo, niebla, tono, luz, la escena entera y los personajes; el relieve decide solo la forma del terreno.
-// Open-world-3d T10 (d, D-835): con la escena lista, el frameloop queda retenido ("never") hasta que compileAsync compiló
-// sus programas (ShaderWarmup); el primer cuadro dibujado marca `lg:world-first-frame` (FirstFrameMark). T10 (b): en
-// desarrollo, los factores de medición de la query (`?factor=...`, world/budget/devFactors.ts) mueven las perillas del
-// tier, del composer, del contexto y de la escena; en `vite build` la rama no existe (check:dev-only).
-// T10-integrate: lo que llega después de la primera escena (naturaleza, cuerpos, pasadas del post) se precompila al llegar,
-// sin retener el frameloop (world/budget/WorldLoad.tsx), para el destino de `worldFrame.post`.
+// world/GameCanvas.tsx — canvas root (deferred chunk, 03 §4.2, §2.7.3): App.tsx imports it with import() only
+// in the `world` phase, so three never enters the initial load. R3F discipline (03 §2.3): the component only
+// re-renders when the diorama, the render parameters, the chat or the highlighted NPC change; what changes per
+// frame lives in useFrame. Tiers (R12): the parameters arrive from services/quality (TIER_PARAMS) via props from the composition
+// root. Look C (D-207, plan estetica-c M1): background haze and fog, ACES with exposure 1.05, shadows per tier.
+// Since D-208 the zoom step's distance arrives from the selector and clipping, fog, shadow, tilt-shift and
+// labels depend on it (the fog starts with the proposal's values and Lighting adjusts it each frame).
+// Plan estetica-c M6 (03 §2.7.1, §2.7.4): the scene is built with the tier's density (`low` reduced); the canvas has a
+// frame cap (30 with a conversation scene on top, the tier's `targetFps` outside it); during the chat the
+// non-essential (water, background NPCs) is frozen and PerformanceMonitor does not measure. In development with director mode, a
+// probe leaves the renderer.info counters for the snapshot (it does not exist in the build).
+// Open-world-3d T6 (D-819, D-823): a diorama with relief is built with the open-world tier (OPEN_WORLD_DENSITY:
+// terrain step, tiles, clouds, fog); its background and fog are the dome's horizon (world/sky) and the fog
+// comes from `fogFor(scale, t)`. The tilt-shift stays off in `thirdPerson` (Post).
+// Open-world-3d T7b (D-839, D-840): the diorama's look is resolved once on loading it (`lookForDiorama`) and from it come
+// background, fog, tone, light, the whole scene and the characters; the relief decides only the terrain's shape.
+// Open-world-3d T10 (d, D-835): with the scene ready, the frameloop is held ("never") until compileAsync has compiled
+// its programs (ShaderWarmup); the first drawn frame marks `lg:world-first-frame` (FirstFrameMark). T10 (b): in
+// development, the measurement factors of the query (`?factor=...`, world/budget/devFactors.ts) move the knobs of the
+// tier, the composer, the context and the scene; in `vite build` the branch does not exist (check:dev-only).
+// T10-integrate: what arrives after the first scene (nature, bodies, post passes) is precompiled on arrival,
+// without holding the frameloop (world/budget/WorldLoad.tsx), for the destination of `worldFrame.post`.
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -47,42 +47,42 @@ import { postLevel, type PostLevel } from "./post/level";
 import { tiltShiftOn } from "./post/tiltShift";
 import { fogFor } from "./sky/palette";
 
-// El postprocesado va en su propio chunk: `low` y `dialog-only` nunca lo descargan (03 §2.9, D-160).
+// The postprocessing goes in its own chunk: `low` and `dialog-only` never download it (03 §2.9, D-160).
 const Post = lazy(() => import("./post/Post"));
-// Contadores de renderer.info para la instantánea del modo director (M6): solo bajo la doble llave del modo director; en
-// `vite build` la condición es falsa, el import() se elimina y el módulo no se emite (check:dev-only).
+// renderer.info counters for the director-mode snapshot (M6): only under the director mode's double key; in
+// `vite build` the condition is false, the import() is eliminated and the module is not emitted (check:dev-only).
 const RenderStatsProbe = import.meta.env.DEV && import.meta.env.VITE_LG_DIRECTOR === "1" ? lazy(() => import("./budget/renderStats")) : null;
-// Sonda de rendimiento (open-world-3d T2(g), D-833): bajo su propia doble llave, que solo pone scripts/dev/perf-probe.ts
-// en su Vite. Con ella el canvas corre sin tope (frameloop "always", sin FrameRegulator) y el gancho deja los tiempos y
-// los contadores en globalThis. En `vite build` la condición es falsa y nada de esto se emite (check:dev-only).
+// Performance probe (open-world-3d T2(g), D-833): under its own double key, which only scripts/dev/perf-probe.ts sets
+// in its Vite. With it the canvas runs uncapped (frameloop "always", no FrameRegulator) and the hook leaves the times and
+// the counters in globalThis. In `vite build` the condition is false and none of this is emitted (check:dev-only).
 const PERF_PROBE = import.meta.env.DEV && import.meta.env.VITE_LG_PERF_PROBE === "1";
 const PerfProbe = PERF_PROBE ? lazy(() => import("./budget/perfProbe")) : null;
-// Factores de medición (open-world-3d T10 (b), D-846): solo en desarrollo; en `vite build` es null, cada uso de abajo
-// queda en su rama muerta y el registro no se emite (check:dev-only busca DEV_FACTORS_ATTR en el dist).
+// Measurement factors (open-world-3d T10 (b), D-846): development only; in `vite build` it is null, each use below
+// stays in its dead branch and the registry is not emitted (check:dev-only looks for DEV_FACTORS_ATTR in the dist).
 const FACTORS = import.meta.env.DEV ? parseDevFactors(globalThis.location?.search ?? "", true) : null;
 const SCENE_KNOBS = FACTORS ? sceneWithFactors(FACTORS.effect) : undefined;
 const COMPOSER = FACTORS ? composerWithFactors(FACTORS.effect) : undefined;
 const DEV_SURFACE = FACTORS ? { [DEV_FACTORS_ATTR]: FACTORS.names.join(",") } : {};
 
-/** Lo que el mapa necesita de cada tier (la forma de TIER_PARAMS de services/quality, sin importarlo). */
+/** What the map needs from each tier (the shape of services/quality's TIER_PARAMS, without importing it). */
 export interface WorldTierParams {
   maxDpr: number | null;
   post: PostLevel;
   shadows: ShadowMode;
-  /** Tope de personajes animados a la vez (plan estetica-c M3); los demás quedan congelados. */
+  /** Cap of simultaneously animated characters (plan estetica-c M3); the rest stay frozen. */
   maxAnimatedCharacters: number;
-  /** FPS objetivo del tier: también su tope de cuadros fuera de la charla (plan estetica-c M6). */
+  /** The tier's target FPS: also its frame cap outside the chat (plan estetica-c M6). */
   targetFps: number | null;
-  /** Densidad de la escena (plan estetica-c M6): la reducida en `low`. */
+  /** Scene density (plan estetica-c M6): the reduced one on `low`. */
   density: SceneDensity;
 }
 
-/** Atributo del contenedor: services/input solo hace zoom con la rueda (y mira con el arrastre) sobre el mapa. */
+/** Container attribute: services/input only zooms with the wheel (and looks with the drag) over the map. */
 const WORLD_SURFACE = { "data-lg-world": "" };
-/** Distancia del mapa entero de referencia para lo que depende del zoom en React (post); la cámara usa la viva. */
+/** Reference whole-map distance for what depends on zoom in React (post); the camera uses the live one. */
 const VIEW_FIT_REFERENCE = 150;
 
-/** El tier del mundo abierto de un tier seleccionable (`dialog-only` no dibuja el mapa: cae en `low`). */
+/** The open-world tier of a selectable tier (`dialog-only` does not draw the map: falls to `low`). */
 export const worldTierOf = (tier: string): WorldTier => ((WORLD_TIERS as readonly string[]).includes(tier) ? (tier as WorldTier) : "low");
 
 export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record<SelectableTier, WorldTierParams>> }) {
@@ -95,8 +95,8 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const params = FACTORS ? tierWithFactors(tierParams[render.tier], FACTORS.effect) : tierParams[render.tier];
   const density = params.density;
   const post = postLevel(render.post, params.post);
-  // T10-integrate: la precompilación compila para el destino de este tier (render target con post, pantalla sin él).
-  // Es un valor derivado de las props, asignado antes de que el Canvas monte a sus hijos.
+  // T10-integrate: precompilation compiles for this tier's destination (render target with post, screen without it).
+  // It is a value derived from the props, assigned before the Canvas mounts its children.
   worldFrame.post = post !== "none";
   const cut = render.cameraMotion === "cut";
   const loop = canvasLoop(render, params.targetFps, PERF_PROBE);
@@ -104,7 +104,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
   const animatedOnly = useMemo(() => sceneAnimated(inScene, [PLAYER_LOOK_ID, conversation?.npcId ?? null]), [inScene, conversation?.npcId]);
   const worldTier = worldTierOf(render.tier);
   const openWorld = map.diorama?.ground.terrain.relief === true;
-  // La escala de la niebla es del tier (núcleo): la del mundo abierto con relieve, la de DENSITY sin él.
+  // The fog scale belongs to the tier (core): the open world's with relief, DENSITY's without it.
   const fogScale = openWorld ? OPEN_WORLD_DENSITY[worldTier].fogScale : DENSITY[density].fogScale;
   const look = useMemo(() => lookForDiorama(map.diorama), [map.diorama]);
   useEffect(() => {
@@ -114,18 +114,18 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
     };
   }, [map.diorama, look]);
   const fog = fogFor(look.fog.range, fogScale, render.zoomBand);
-  // Distancia pedida de la cámara (open-world-3d T5): la del plano de a dos durante la charla; en el mapa, una referencia
-  // del t de zoom cuantizado (post y etiquetas). La exacta la lleva CameraRig por cuadro.
+  // Requested camera distance (open-world-3d T5): the two-person shot's during the chat; on the map, a reference
+  // from the quantized zoom t (post and labels). The exact one is carried by CameraRig per frame.
   const viewDistance = render.preset === "dialogueFrame" ? TWO_SHOT.distance : zoomDistanceAt(render.zoomBand, VIEW_FIT_REFERENCE);
   const scene = useMemo(() => (map.diorama ? buildDioramaScene(map.diorama, density, worldTier, look, SCENE_KNOBS) : null), [map.diorama, density, worldTier, look]);
-  // T10 (d): una sola vez por canvas, la primera escena se compila antes de dibujarse (los cambios de tier, no).
+  // T10 (d): once per canvas, the first scene is compiled before being drawn (tier changes do not).
   const [warm, setWarm] = useState(false);
   const onWarm = useCallback(() => setWarm(true), []);
   const warming = scene !== null && !warm;
-  // La escena se libera en Diorama (dentro del Canvas), no acá: ver el comentario de su efecto.
+  // The scene is freed in Diorama (inside the Canvas), not here: see the comment of its effect.
 
   return (
-    // touch-action: none (D-820): un arrastre táctil mira en vez de desplazar la página (Pointer Events, sin pointer lock).
+    // touch-action: none (D-820): a touch drag looks instead of scrolling the page (Pointer Events, no pointer lock).
     <div {...WORLD_SURFACE} {...DEV_SURFACE} className="fixed inset-0 z-0" style={{ touchAction: "none" }} aria-hidden="true">
       <Canvas
         frameloop={warming ? "never" : loop.frameloop}
@@ -135,7 +135,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         onCreated={({ gl }) => {
           gl.toneMapping = ACESFilmicToneMapping;
           gl.toneMappingExposure = look.light.exposure;
-          // Pérdida de contexto (frecuente en GPUs débiles, §2.7.2.4): a solo-diálogo sin perder la escena.
+          // Context loss (common on weak GPUs, §2.7.2.4): to dialog-only without losing the scene.
           gl.domElement.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
             bridge.contextLost();
@@ -145,8 +145,8 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
         <color attach="background" args={[look.background]} />
         <fog attach="fog" args={[look.fog.color, fog.near, fog.far]} />
         {loop.regulatorFps !== null ? <FrameRegulator maxFps={loop.regulatorFps} /> : null}
-        {/* Fuera de la charla mide y puede bajar el tier; durante la charla se desmonta (al volver arranca de cero). Los
-            bounds salen del tope de cuadros, así el tope propio no se lee como caída (canvasLoop en frameRate.ts). */}
+        {/* Outside the chat it measures and may lower the tier; during the chat it is unmounted (on return it starts from zero). The
+            bounds come from the frame cap, so the cap itself is not read as a drop (canvasLoop in frameRate.ts). */}
         {loop.monitor ? <PerformanceMonitor bounds={loop.monitor.bounds} onDecline={() => bridge.performanceDeclined()} /> : null}
         <Lighting shadows={params.shadows} look={look} fogScale={fogScale} />
         {map.diorama && scene ? (
@@ -167,8 +167,8 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             requestIds={requestIds}
           />
         ) : null}
-        {/* Player antes que CameraRig: en cada cuadro la cámara sigue la posición ya dibujada. */}
-        {/* Open-world-3d T7b (D-840): el jugador con los personajes del look (Quaternius en DEFAULT_LOOK, AC47). */}
+        {/* Player before CameraRig: each frame the camera follows the already-drawn position. */}
+        {/* Open-world-3d T7b (D-840): the player with the look's characters (Quaternius in DEFAULT_LOOK, AC47). */}
         {map.diorama ? <Player conversation={conversation} cut={cut} scene={activity.player} lod={DENSITY[density].lod} cast={look.characters} /> : null}
         <CameraRig
           preset={render.preset}
@@ -183,7 +183,7 @@ export default function GameCanvas({ tierParams }: { tierParams: Readonly<Record
             <Post level={post} viewScale={viewScale(viewDistance)} tiltShift={tiltShiftOn(render.preset)} composer={COMPOSER} precompile={precompilePasses} />
           </Suspense>
         ) : null}
-        {/* T10 (d): después de todo lo montado, así compileAsync ve la escena del diorama, el jugador y la luz. */}
+        {/* T10 (d): after everything mounted, so compileAsync sees the diorama's scene, the player and the light. */}
         {warming ? <ShaderWarmup onReady={onWarm} /> : null}
         {scene && warm ? <FirstFrameMark /> : null}
         {RenderStatsProbe ? (

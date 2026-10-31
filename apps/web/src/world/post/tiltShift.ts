@@ -1,20 +1,20 @@
-// world/post/tiltShift.ts — el tilt-shift del tier alto según la distancia de la cámara (D-208), puro. La línea de foco
-// es horizontal y pasa por el centro de la pantalla, que es donde la cámara pone al jugador (y en la charla, el punto
-// entre los dos): el desenfoque crece arriba y abajo, como pide la propuesta C §5. Hasta la distancia de referencia
-// (30 m) valen los números de M1; más lejos el desenfoque baja y la franja nítida se abre, para que alejarse muestre
-// el mapa en vez de taparlo.
+// world/post/tiltShift.ts — the high tier tilt-shift according to the camera distance (D-208), pure. The focus line
+// is horizontal and passes through the screen center, which is where the camera puts the player (and in the chat, the point
+// between the two): the blur grows above and below, as proposal C §5 asks. Up to the reference distance
+// (30 m) M1's numbers hold; farther the blur drops and the sharp band opens, so moving away shows
+// the map instead of covering it.
 
 export interface TiltShiftParams {
   blur: number;
   taper: number;
-  /** Extremos de la línea de foco en coordenadas de pantalla (0 a 1). */
+  /** Ends of the focus line in screen coordinates (0 to 1). */
   start: [number, number];
   end: [number, number];
 }
 
 export const TILT_SHIFT_BASE = { blur: 0.25, taper: 0.6 } as const;
 
-/** `scale` es `viewScale(distance)` de world/camera/rig.ts (1 hasta 30 m, lineal después). */
+/** `scale` is `viewScale(distance)` from world/camera/rig.ts (1 up to 30 m, linear after). */
 export function tiltShiftFor(scale: number): TiltShiftParams {
   const k = Math.max(1, scale);
   return {
@@ -25,5 +25,5 @@ export function tiltShiftFor(scale: number): TiltShiftParams {
   };
 }
 
-/** Open-world-3d T6 (D-823): el tilt-shift va en la vista de conjunto y el plano de a dos, nunca en `thirdPerson`. */
+/** Open-world-3d T6 (D-823): the tilt-shift goes in the overview and the two-person shot, never in `thirdPerson`. */
 export const tiltShiftOn = (preset: string): boolean => preset !== "thirdPerson";

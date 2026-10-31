@@ -1,5 +1,5 @@
-// FD0 A3, A4 y el cliente del modo director: selectDirectorSnapshot sobre estados de store de fixture, emisores con
-// reloj falso, eventos del diario y la doble llave de boot/dev.ts. Sin navegador ni servidor (D-016).
+// FD0 A3, A4 and the director-mode client: selectDirectorSnapshot over fixture store states, emitters with a
+// fake clock, journal events and boot/dev.ts's double key. No browser or server (D-016).
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   DIALOGUE_CAP, DirectorSnapshotSchema, JournalEventSchema, PATH_CAP, SNAPSHOT_EVENT, type DirectorSnapshot,
@@ -19,7 +19,7 @@ const AT = "2026-10-07T12:00:00.000Z";
 const META = { sessionId: "20261007-120000-abcd", at: AT };
 const LAYOUT = pickDiorama(compiledClientContent()["dioramas.json"], "test") as DioramaLayout;
 
-/** Un store con el mapa de prueba cargado y el jugador en el spawn. */
+/** A store with the test map loaded and the player at the spawn. */
 const mapStore = (): { store: GameStore; actions: ReturnType<typeof createActions> } => {
   const store = createGameStore();
   const actions = createActions(store);
@@ -34,7 +34,7 @@ const withScene = (s: GameState, npcId: string, lines: string[] = []): GameState
   dialogue: { ...s.dialogue, subtitles: { final: lines, partial: null } },
 });
 
-/** Reloj falso: `advance(ms)` corre los timers vencidos en orden. */
+/** Fake clock: `advance(ms)` runs the expired timers in order. */
 const fakeClock = () => {
   let now = 0;
   let timers: { at: number; fn: () => void; id: number }[] = [];
@@ -90,7 +90,7 @@ describe("A3: selectDirectorSnapshot sobre estados de fixture", () => {
     expect(snap.dialogue.map((d) => d.text)).toEqual(["Morning!", "Hi, Nell."]);
     expect(snap.dialogue[0]).toEqual({ turnId: "NPC-NELL#0", speaker: "NPC-NELL", text: "Morning!", at: AT });
     expect(DirectorSnapshotSchema.safeParse(snap).success).toBe(true);
-    // Al cerrar la escena, scene vuelve a null pero el historial queda.
+    // When the scene closes, scene goes back to null but the history remains.
     const closed = { ...s, ui: { ...s.ui, panels: [] } };
     const after = selectDirectorSnapshot(closed, advanceHistory(h, closed, AT), META);
     expect(after.scene).toBeNull();
@@ -102,7 +102,7 @@ describe("A3: selectDirectorSnapshot sobre estados de fixture", () => {
     const { store } = mapStore();
     const base = store.getState();
     let h: DirectorHistory = emptyHistory();
-    // Moverse dentro del mismo tile no agrega nada y devuelve el mismo historial.
+    // Moving within the same tile adds nothing and returns the same history.
     h = advanceHistory(h, at(base, 1.1, 1.1), AT);
     const same = advanceHistory(h, at(base, 1.9, 1.4), AT);
     expect(same).toBe(h);

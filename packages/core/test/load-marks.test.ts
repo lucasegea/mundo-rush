@@ -1,5 +1,5 @@
-// Open-world-3d T10 (d), AC63: las marcas de carga. Una vez cada una por página, y la del primer cuadro solo después de
-// la de entrada; sin `performance`, nada.
+// Open-world-3d T10 (d), AC63: the load marks. Each one once per page, and the first-frame one only after
+// the entry one; without `performance`, nothing.
 import { describe, expect, test } from "vitest";
 import { LOAD_MARKS, markWorldEnter, markWorldFirstFrame, type MarkSink } from "../src";
 

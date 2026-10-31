@@ -1,8 +1,8 @@
-// world/actors/characterAssets.ts — carga de los cuerpos y del archivo de clips del pipeline (plan estetica-c M3), con el
-// mismo decodificador meshopt autoalojado y la misma convención de url que los modelos de M2 (props/gltf.ts). Cada
-// archivo se baja una vez; un fallo se puede reintentar al volver a montar. Mientras no llegan (o si fallan), el
-// personaje se ve con el cuerpo de cápsulas de reserva. Plan estetica-c M6: en la densidad reducida de `low` el cuerpo es
-// el simplificado del pipeline (`cuerpo-<id>-bajo`, mismo esqueleto y mismos clips).
+// world/actors/characterAssets.ts — loading of the pipeline's bodies and clip file (plan estetica-c M3), with the
+// same self-hosted meshopt decoder and the same url convention as the M2 models (props/gltf.ts). Each
+// file downloads once; a failure can be retried on remount. While they have not arrived (or if they fail), the
+// character shows with the fallback capsule body. Plan estetica-c M6: at the reduced density of `low` the body is
+// the pipeline's simplified one (`cuerpo-<id>-bajo`, same skeleton and same clips).
 import type { AnimationClip, Object3D } from "three";
 import type { SceneDensity } from "@lg/art";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -15,7 +15,7 @@ export interface CharacterAssets {
   clips: readonly AnimationClip[];
 }
 
-/** Parsea un .glb de personaje sin red (lo usan los tests y el cargador). */
+/** Parses a character .glb without network (used by the tests and the loader). */
 export async function parseCharacterGlb(data: ArrayBuffer, meshopt: MeshoptDecoderModule): Promise<{ scene: Object3D; clips: AnimationClip[] }> {
   const gltf = await new GLTFLoader().setMeshoptDecoder(meshopt).parseAsync(data, "");
   return { scene: gltf.scene, clips: gltf.animations };
@@ -38,8 +38,8 @@ function load(asset: string): Promise<{ scene: Object3D; clips: AnimationClip[] 
 }
 
 /**
- * El cuerpo base y los clips compartidos (la escena del cuerpo se clona por personaje en skinned.ts). Open-world-3d T7:
- * del esqueleto `rig` (KayKit en los dioramas planos, Quaternius en el mundo abierto).
+ * The base body and the shared clips (the body scene is cloned per character in skinned.ts). Open-world-3d T7:
+ * of the `rig` skeleton (KayKit in the flat dioramas, Quaternius in the open world).
  */
 export async function loadCharacterAssets(body: BodyId, lod: SceneDensity = "full", rig: RigSpec = KAYKIT_RIG): Promise<CharacterAssets> {
   const [b, c] = await Promise.all([load(rig.bodyAsset(body, lod)), load(rig.clipsAsset)]);

@@ -1,7 +1,7 @@
-// world/labels/labelSprite.ts — el chip de nombre como Sprite de three (revisión de arquitectura 2026-10-12, §10 pregunta 5): textura por
-// CanvasTexture dibujada a 2x con la pila de fuentes del sistema (nada de fuentes bajadas de afuera ni DOM por cuadro),
-// material de la clase `etiqueta` con `sizeAttenuation: false` y `depthTest: false`. Sin canvas 2D (tests), la textura
-// queda en blanco y el resto igual.
+// world/labels/labelSprite.ts — the name chip as a three Sprite (architecture review 2026-10-12, §10 question 5): texture via
+// CanvasTexture drawn at 2x with the system font stack (no fonts downloaded from outside nor DOM per frame),
+// material of class `etiqueta` with `sizeAttenuation: false` and `depthTest: false`. Without a 2D canvas (tests), the texture
+// stays blank and the rest is the same.
 import { CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, Sprite, type Texture } from "three";
 import { labelMaterial } from "../materials/registry";
 import { THIRD_PERSON_VIEW } from "../camera/zoom";
@@ -53,7 +53,7 @@ function canvas2d(): { canvas: HTMLCanvasElement; ctx: Ctx } | null {
   }
 }
 
-/** Textura del chip y sus medidas. */
+/** Chip texture and its measurements. */
 export function labelTexture(name: string, highlighted: boolean): { texture: Texture; layout: LabelLayout } {
   const c = canvas2d();
   if (!c) {
@@ -72,12 +72,12 @@ export function labelTexture(name: string, highlighted: boolean): { texture: Tex
   return { texture, layout };
 }
 
-/** El Sprite de la etiqueta, anclado por abajo al centro y siempre encima (renderOrder alto). */
+/** The label Sprite, anchored at the bottom center and always on top (high renderOrder). */
 export function createNameLabel(name: string, highlighted: boolean): Sprite {
   const { texture, layout } = labelTexture(name, highlighted);
   const sprite = new Sprite(labelMaterial(texture));
   sprite.center.set(0.5, 0);
-  // Open-world-3d T5: el chip mide lo mismo en pantalla con el lente de la tercera persona (antes, el de perspective3D).
+  // Open-world-3d T5: the chip measures the same on screen with the third-person lens (before, perspective3D's).
   const [sx, sy] = labelScale(layout, THIRD_PERSON_VIEW.fovDeg);
   sprite.scale.set(sx, sy, 1);
   sprite.renderOrder = 10;

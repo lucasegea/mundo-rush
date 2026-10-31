@@ -1,19 +1,19 @@
-// scripts/assets/refetch.ts: prueba de procedencia por red (open-world-3d T2(e), D-830, D-831, AC11). Puerto de
-// tools/fetch-sources.py y tools/derive-assets.mjs del mockup V6. Para cada fila de content/assets-registry.yaml y de
-// content/code-registry.yaml: baja el original a una carpeta de scratch VACÍA, verifica su sha256 contra el registro,
-// rehace el archivo versionado (derived: el mismo pipeline de optimize.ts; refetched: los bytes tal cual; código
-// editado: el upstream con su `<archivo>.patch` aplicado) y lo compara byte a byte con lo versionado. No ejecuta nada
-// de lo que baja. Va por red, así que está fuera de `verify`.
+// scripts/assets/refetch.ts: network provenance proof (open-world-3d T2(e), D-830, D-831, AC11). Port of
+// tools/fetch-sources.py and tools/derive-assets.mjs of the mockup V6. For each row of content/assets-registry.yaml and of
+// content/code-registry.yaml: downloads the original into an EMPTY scratch folder, checks its sha256 against the registry,
+// rebuilds the versioned file (derived: the same optimize.ts pipeline; refetched: the bytes as they are; edited
+// code: the upstream with its `<file>.patch` applied) and compares it byte by byte with the versioned one. It does not run anything
+// it downloads. It goes over the network, so it is outside `verify`.
 //
-//   node scripts/assets/refetch.ts [--out <carpeta vacía>]
+//   node scripts/assets/refetch.ts [--out <empty folder>]
 //
-// Una línea por fila (la cuenta de líneas es la de filas de los dos registros):
-//   MATCH            el archivo rehecho es idéntico byte a byte al versionado
-//   DIFF             el archivo rehecho difiere (falla)
-//   SOURCE-MISMATCH  el original bajado no tiene el sha256 del registro (falla)
-//   ENCODER-MISMATCH el codificador local no es la versión fijada; se informa aparte, NUNCA cuenta como MATCH
-//   ERROR            no se pudo bajar o rehacer (falla)
-// Sale con 0 si toda fila es MATCH o ENCODER-MISMATCH.
+// One line per row (the line count is that of the rows of the two registries):
+//   MATCH            the rebuilt file is byte-for-byte identical to the versioned one
+//   DIFF             the rebuilt file differs (fails)
+//   SOURCE-MISMATCH  the downloaded original does not have the registry's sha256 (fails)
+//   ENCODER-MISMATCH the local encoder is not the pinned version; reported separately, NEVER counts as MATCH
+//   ERROR            could not download or rebuild (fails)
+// Exits with 0 if every row is MATCH or ENCODER-MISMATCH.
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -37,7 +37,7 @@ export interface Linea {
   detalle: string;
 }
 
-/** Baja una URL a bytes (inyectable para los tests, sin red). */
+/** Downloads a URL to bytes (injectable for tests, no network). */
 export type Bajar = (url: string) => Promise<Uint8Array>;
 
 export const bajarHttp: Bajar = async (url) => {
@@ -49,8 +49,8 @@ export const bajarHttp: Bajar = async (url) => {
 const sha = (b: Uint8Array): string => createHash("sha256").update(b).digest("hex");
 
 /**
- * La URL del archivo original de una fila. GitHub `/blob/` → `/raw/` (el mismo commit o rama); una página de modelo de
- * poly.pizza → el único `static.poly.pizza/<uuid>.glb` que nombra su HTML (se lee como texto, no se ejecuta).
+ * The URL of a row's original file. GitHub `/blob/` → `/raw/` (the same commit or branch); a poly.pizza model
+ * page → the only `static.poly.pizza/<uuid>.glb` its HTML names (read as text, not executed).
  */
 export const urlDescarga = async (url: string, bajar: Bajar): Promise<string> => {
   const gh = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/blob\/(.+)$/.exec(url);
@@ -64,7 +64,7 @@ export const urlDescarga = async (url: string, bajar: Bajar): Promise<string> =>
   return url;
 };
 
-/** Escribe bytes en la carpeta de scratch, en la ruta del archivo versionado. */
+/** Writes bytes into the scratch folder, at the versioned file's path. */
 const guardar = (scratch: string, rel: string, bytes: Uint8Array): string => {
   const abs = join(scratch, rel);
   mkdirSync(dirname(abs), { recursive: true });
@@ -78,7 +78,7 @@ const comparar = (root: string, archivo: string, rehecho: Uint8Array, extra = ""
   return { estado: ok ? "MATCH" : "DIFF", archivo, detalle: `${sha(rehecho)}${ok ? "" : ` != ${sha(versionado)}`}${extra}` };
 };
 
-/** Una fila de asset: bajar, verificar el original, rehacer, comparar. */
+/** An asset row: download, verify the original, rebuild, compare. */
 export const refetchAsset = async (fila: RegistroAsset, pack: PackAssets | undefined, scratch: string, bajar: Bajar, root = ROOT): Promise<Linea> => {
   const archivo = fila.archivo;
   try {
@@ -93,8 +93,8 @@ export const refetchAsset = async (fila: RegistroAsset, pack: PackAssets | undef
       return { estado: "SOURCE-MISMATCH", archivo, detalle: `${url}: sha256 ${sha(original)} != registro ${fila.sha256_original}` };
     }
     if (archivo.endsWith(".ktx2")) {
-      // Open-world-3d T6 (PD-4, D-832): se re-codifica con el basisu fijado (scripts/assets/ktx2.ts) y se compara byte a
-      // byte. Si el codificador local no es el fijado, la línea es ENCODER-MISMATCH (nunca MATCH, nunca una falla falsa).
+      // Open-world-3d T6 (PD-4, D-832): re-encoded with the pinned basisu (scripts/assets/ktx2.ts) and compared byte by
+      // byte. If the local encoder is not the pinned one, the line is ENCODER-MISMATCH (never MATCH, never a false failure).
       const kind = mapKindOf(archivo);
       if (!kind) return { estado: "ERROR", archivo, detalle: "un .ktx2 que no es -diff ni -nor: ktx2.ts no sabe codificarlo" };
       let encoder: Uint8Array;
@@ -117,8 +117,8 @@ export const refetchAsset = async (fila: RegistroAsset, pack: PackAssets | undef
 };
 
 /**
- * Open-world-3d T7: una fila generated se rehace corriendo su generador (bake-trees.ts, sin red) si el script es el que
- * dice la fila (sha256), y se compara byte a byte.
+ * Open-world-3d T7: a generated row is rebuilt by running its generator (bake-trees.ts, no network) if the script is the one
+ * the row says (sha256), and compared byte by byte.
  */
 let horneados: Promise<{ file: string; glb: Uint8Array }[]> | null = null;
 const rehornear = async (fila: RegistroAsset, scratch: string, root: string): Promise<Linea> => {
@@ -135,8 +135,8 @@ const rehornear = async (fila: RegistroAsset, scratch: string, root: string): Pr
 };
 
 /**
- * Open-world-3d T7: un archivo de scripts/assets/nature.ts. Baja cada original de la fila (`url_origen` y
- * `fuentes_extra`) al caché de la carpeta de scratch, verifica su sha256 y deriva con esos bytes.
+ * Open-world-3d T7: a file of scripts/assets/nature.ts. Downloads each original of the row (`url_origen` and
+ * `fuentes_extra`) into the scratch folder's cache, checks its sha256 and derives with those bytes.
  */
 const refetchNature = async (fila: RegistroAsset, job: NonNullable<ReturnType<typeof natureJob>>, scratch: string, bajar: Bajar, root: string): Promise<Linea> => {
   const archivo = fila.archivo;
@@ -160,14 +160,14 @@ const refetchNature = async (fila: RegistroAsset, job: NonNullable<ReturnType<ty
   return comparar(root, archivo, bytes, ` (scripts/assets/nature.ts, ${job.sources.length} original(es))`);
 };
 
-/** Aplica `parche` (rutas relativas a la raíz del repo, formato `git diff`) sobre la copia de scratch. */
+/** Applies `parche` (paths relative to the repo root, `git diff` format) over the scratch copy. */
 const aplicarParche = (scratch: string, parcheAbs: string): void => {
-  // Sin core.autocrlf: con `true` (la máquina del operador) git apply escribe CRLF y los bytes no coinciden (T7, medido).
+  // Without core.autocrlf: with `true` (the operator's machine) git apply writes CRLF and the bytes do not match (T7, measured).
   const r = spawnSync("git", ["-c", "core.autocrlf=false", "apply", "--whitespace=nowarn", parcheAbs], { cwd: scratch, encoding: "utf8" });
   if (r.status !== 0) throw new Error(`git apply ${parcheAbs}: ${r.stderr.trim()}`);
 };
 
-/** Una fila de código: bajar el upstream, verificar su hash, aplicar el parche si está editado, comparar. */
+/** A code row: download the upstream, check its hash, apply the patch if edited, compare. */
 export const refetchCodigo = async (fila: RegistroCodigo, scratch: string, bajar: Bajar, root = ROOT): Promise<Linea> => {
   const archivo = fila.archivo;
   try {

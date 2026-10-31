@@ -1,4 +1,4 @@
-// Dobles y utilidades de los tests de apps/web (F1.3). Sin navegador real (D-016): jsdom donde hace falta DOM.
+// Doubles and utilities for the apps/web tests (F1.3). No real browser (D-016): jsdom where a DOM is needed.
 import { parseApariencia, type CharacterLook } from "@lg/art";
 import { compilarContenido, formatearHallazgo, type ArchivoFuente } from "@lg/content-schema";
 import { boot, type BootDeps } from "../src/boot";
@@ -9,7 +9,7 @@ import { actions } from "../src/state/actions";
 import { fallbackLook, PLAYER_LOOK, PLAYER_LOOK_ID } from "../src/world/actors/looks";
 import { gameStore, initialGameState } from "../src/state/store";
 
-/** Vuelve el store único a su estado inicial (la UI lee el store único, como en la app). */
+/** Resets the single store to its initial state (the UI reads the single store, as in the app). */
 export const resetStore = (): void => gameStore.setState(initialGameState(), true);
 
 export const memoryPlatform = (initial: Record<string, string> = {}): Pick<Platform, "storage"> & { data: Map<string, string> } => {
@@ -24,21 +24,21 @@ export const memoryPlatform = (initial: Record<string, string> = {}): Pick<Platf
   };
 };
 
-/** Navegador simulado: con o sin WebGL2, con memoria y núcleos dados. */
+/** Simulated browser: with or without WebGL2, with given memory and cores. */
 export const fakeQualityEnv = ({ webgl2, memory = 8, cores = 8 }: { webgl2: boolean; memory?: number; cores?: number }): QualityEnv => ({
   createCanvas: () => ({ getContext: () => (webgl2 ? {} : null) }),
   deviceMemory: memory,
   hardwareConcurrency: cores,
 });
 
-// El contenido REAL de content/ compilado en memoria con el compilador de F1.2 (lo mismo que escribe
-// validate:content en apps/web/public/content/, que está fuera de git y puede no existir todavía).
+// The REAL content/ compiled in memory with F1.2's compiler (the same that validate:content writes
+// to apps/web/public/content/, which is outside git and may not exist yet).
 const RAW = import.meta.glob("../../../content/**/*.{yaml,txt}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 /**
- * El resultado entero del compilador sobre el contenido real de la campesino (conjunto validado incluido), en modo dev.
- * Igual que el reader legacy de scripts/content/build.ts (D-805): la campesino NO desciende a content/universes/;
- * esos árboles son otros universos y sus rutas no son canónicas de la campesino (colarlos rompería la compilación).
+ * The compiler's whole result over the farmer's real content (validated set included), in dev mode.
+ * Same as the legacy reader of scripts/content/build.ts (D-805): the farmer does NOT descend into content/universes/;
+ * those trees are other universes and their paths are not canonical for the farmer (letting them in would break compilation).
  */
 export function compiledContent(): ReturnType<typeof compilarContenido> {
   const files: ArchivoFuente[] = Object.entries(RAW)
@@ -53,14 +53,14 @@ export function compiledClientContent(): Record<string, unknown> {
   return r.salida.cliente;
 }
 
-// Universos namespaceados (book-mode slice-1): content/universes/<id>/** compilado en memoria. Cada ruta se normaliza
-// a su canónica `content/<subpath>` (igual que el reader de scripts/content/build.ts, D-804) para que el compilador
-// —los mismos 23 regexes de RUTAS— la clasifique sin cambios. Es la salida del cliente que escribe build:content
-// --universe=<id> en apps/web/public/content/<id>/ (fuera de git, puede no existir aún).
+// Namespaced universes (book-mode slice-1): content/universes/<id>/** compiled in memory. Each path is normalized
+// to its canonical `content/<subpath>` (same as the reader of scripts/content/build.ts, D-804) so the compiler
+// —the same 23 RUTAS regexes— classifies it unchanged. It is the client output that build:content --universe=<id>
+// writes to apps/web/public/content/<id>/ (outside git, may not exist yet).
 const RAW_UNIVERSES = import.meta.glob("../../../content/universes/**/*.{yaml,txt}", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
-// open-world-3d T3: como el reader de build.ts, un universo compila junto con el registro global de assets y créditos
-// (sus NPCs usan los cuerpos de content/assets-registry.yaml).
+// open-world-3d T3: like build.ts's reader, a universe compiles together with the global assets and credits registry
+// (its NPCs use the bodies of content/assets-registry.yaml).
 const RAW_GLOBAL_REGISTRY = import.meta.glob(["../../../content/assets-registry.yaml", "../../../content/creditos.yaml"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 export function compiledUniverseClientContent(universe: string): Record<string, unknown> {
@@ -76,7 +76,7 @@ export function compiledUniverseClientContent(universe: string): Record<string, 
   return r.salida.cliente;
 }
 
-/** fetch simulado que sirve la salida compilada del cliente bajo /content/. */
+/** Simulated fetch that serves the client's compiled output under /content/. */
 export const fetchFromContent = (files: Record<string, unknown>): FetchJson => (url) => {
   const name = url.slice(url.lastIndexOf("/") + 1);
   return name in files ? Promise.resolve(files[name]) : Promise.reject(new Error(`404 ${url}`));
@@ -87,15 +87,15 @@ export interface BootOptions {
   platform?: Pick<Platform, "storage">;
   fetchJson?: FetchJson;
   prefersReducedMotion?: boolean;
-  /** F2: input y lazo de simulación (sin esto, boot no escucha teclas ni corre pasos). */
+  /** F2: input and simulation loop (without this, boot neither listens to keys nor runs steps). */
   world?: NonNullable<BootDeps["world"]>;
-  /** F4.2: servidor de escenas (falso en los tests del HUD). */
+  /** F4.2: scene server (fake in the HUD tests). */
   scene?: NonNullable<BootDeps["scene"]>;
-  /** book-mode slice-1 (S4/D-806): universo a jugar; unset ⇒ U-CAMPESINO (el árbol legacy). */
+  /** book-mode slice-1 (S4/D-806): universe to play; unset ⇒ U-CAMPESINO (the legacy tree). */
   universeId?: string;
 }
 
-/** Arranca la app con el store y las acciones reales y un navegador simulado. */
+/** Starts the app with the real store and actions and a simulated browser. */
 export const bootApp = (o: BootOptions) =>
   boot({
     store: gameStore,
@@ -112,8 +112,8 @@ export const bootApp = (o: BootOptions) =>
 
 let looksCache: Readonly<Record<string, CharacterLook>> | null = null;
 /**
- * Plan estetica-c M5: las apariencias del contenido real (bloque `apariencia` de cada ficha, vía npcs.json compilado)
- * más la del jugador (PLAYER_LOOK, en código hasta que haya archivo de contenido del jugador).
+ * Plan estetica-c M5: the real content's appearances (each sheet's `apariencia` block, via compiled npcs.json)
+ * plus the player's (PLAYER_LOOK, in code until there is a player content file).
  */
 export function contentLooks(): Readonly<Record<string, CharacterLook>> {
   if (looksCache) return looksCache;
@@ -128,5 +128,5 @@ export function contentLooks(): Readonly<Record<string, CharacterLook>> {
   return out;
 }
 
-/** La apariencia de `id` como la dibuja el juego: la del contenido, o la de reserva. */
+/** The appearance of `id` as the game draws it: the content's, or the fallback one. */
 export const lookOf = (id: string): CharacterLook => contentLooks()[id] ?? fallbackLook(id);

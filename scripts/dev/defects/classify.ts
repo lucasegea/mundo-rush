@@ -1,13 +1,13 @@
-// scripts/dev/defects/classify.ts: los clasificadores de píxeles de la Walk, puros (sin navegador), para probarlos con
-// imágenes sintéticas. Port de `tools/defects.cjs` del mockup V6 (hsv, clase de tono, máscara de diferencia de dos
-// render) y, desde open-world-3d T8 (AC50, AC51), las tiras de tarjetas, el amarillo junto al pasto y la solidez de copas. Desde T6 lo usan AC39 (el
-// cielo de la vista por defecto) y AC41 (el suelo: amarillo en el mapa entero y el anillo del borde de la cama de pasto).
-// Las imágenes son RGBA de arriba abajo (las de getImageData de una captura), no las de readPixels del mockup.
+// scripts/dev/defects/classify.ts: the Walk's pixel classifiers, pure (no browser), to test them with
+// synthetic images. Port of the mockup V6's `tools/defects.cjs` (hsv, hue class, difference mask of two
+// renders) and, since open-world-3d T8 (AC50, AC51), card strips, yellow next to grass and crown solidity. Since T6 AC39 (the
+// default view's sky) and AC41 (the ground: yellow on the whole map and the grass bed's edge ring) use it.
+// The images are RGBA top to bottom (those of a capture's getImageData), not the mockup's readPixels ones.
 
-/** Una imagen RGBA, filas de arriba abajo. */
+/** An RGBA image, rows top to bottom. */
 export interface Rgba { width: number; height: number; data: Uint8Array | Uint8ClampedArray }
 
-/** HSV con el tono en grados [0, 360), la saturación y el valor en [0, 1] (el `hsv` de defects.cjs). */
+/** HSV with hue in degrees [0, 360), saturation and value in [0, 1] (defects.cjs's `hsv`). */
 export function hsv(r: number, g: number, b: number): [number, number, number] {
   const mx = Math.max(r, g, b);
   const mn = Math.min(r, g, b);
@@ -16,14 +16,14 @@ export function hsv(r: number, g: number, b: number): [number, number, number] {
   return [(h * 60 + 360) % 360, (mx - mn) / mx, mx / 255];
 }
 
-/** 0 no cuenta (tierra, gris, sombra honda), 1 amarillo (tono 40 a 72), 2 verde (72 a 170): el `hueClass` del mockup. */
+/** 0 does not count (dirt, gray, deep shadow), 1 yellow (hue 40 to 72), 2 green (72 to 170): the mockup's `hueClass`. */
 export function hueClass(r: number, g: number, b: number): 0 | 1 | 2 {
   const [h, s, v] = hsv(r, g, b);
   if (s < 0.25 || v < 0.15 || h < 40 || h >= 170) return 0;
   return h < 72 ? 1 : 2;
 }
 
-/** Máscara de lo que cambió entre dos render (suma de |dR|+|dG|+|dB| mayor que 24, el umbral del mockup). */
+/** Mask of what changed between two renders (sum of |dR|+|dG|+|dB| greater than 24, the mockup's threshold). */
 export function diffMask(a: Rgba, b: Rgba): Uint8Array {
   if (a.width !== b.width || a.height !== b.height) throw new Error("diffMask: imágenes de distinto tamaño");
   const m = new Uint8Array(a.width * a.height);
@@ -34,7 +34,7 @@ export function diffMask(a: Rgba, b: Rgba): Uint8Array {
   return m;
 }
 
-/** La parte amarilla de amarillo más verde entre los píxeles elegidos (índices de píxel); null si ninguno cuenta. */
+/** The yellow share of yellow plus green among the chosen pixels (pixel indices); null if none counts. */
 export function yellowShare(img: Rgba, pixels: Iterable<number>): { share: number | null; yellow: number; green: number } {
   let yellow = 0;
   let green = 0;
@@ -46,27 +46,27 @@ export function yellowShare(img: Rgba, pixels: Iterable<number>): { share: numbe
   return { share: yellow + green > 0 ? yellow / (yellow + green) : null, yellow, green };
 }
 
-/** Los índices de los píxeles en 1 de una máscara. */
+/** The indices of the pixels set to 1 in a mask. */
 export function* maskPixels(mask: Uint8Array): Generator<number> {
   for (let i = 0; i < mask.length; i++) if (mask[i]) yield i;
 }
 
 /**
- * Umbrales de AC41, fijados una vez (open-world-3d T6): amarillo entre los píxeles de terreno del mapa entero (t = 1) a
- * lo sumo 0,35; a t = 0,55, el amarillo de un anillo justo fuera del borde de la cama de pasto menos el de uno justo
- * dentro, a lo sumo 0,15. Los anillos van de 0,8 a 0,95 y de 1,05 a 1,2 radios del disco de pasto.
+ * AC41 thresholds, fixed once (open-world-3d T6): yellow among the terrain pixels of the whole map (t = 1) at
+ * most 0.35; at t = 0.55, the yellow of a ring just outside the edge of the grass bed minus that of one just
+ * inside, at most 0.15. The rings go from 0.8 to 0.95 and from 1.05 to 1.2 radii of the grass disc.
  */
 export const AC41 = { maxYellowFull: 0.35, maxRingStep: 0.15, inner: [0.8, 0.95], outer: [1.05, 1.2] } as const;
 
 /**
- * AC39, fijado una vez (T6): la banda de arriba (10 % de las filas del mundo) es más oscura que la del horizonte del
- * cielo (5 % de las filas, sobre la silueta) en 12 % o más de la luminancia del horizonte; verde abajo 40 % o más.
+ * AC39, fixed once (T6): the top band (10 % of the world's rows) is darker than the sky's horizon band (5 % of the
+ * rows, above the silhouette) by 12 % or more of the horizon's luminance; green below 40 % or more.
  */
 export const AC39 = { topRows: 0.1, horizonRows: 0.05, minLumaStep: 0.12, minGreenLower: 0.4 } as const;
 
 const luma = (r: number, g: number, b: number): number => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-/** La parte de píxeles verdes dominantes (G mayor que R y que B) en las filas [y0, y1); con `visible`, entre esos. */
+/** The share of dominant green pixels (G greater than R and B) in rows [y0, y1); with `visible`, among those. */
 export function greenDominantShare(img: Rgba, y0: number, y1: number, visible?: Uint8Array): number {
   const a = Math.max(0, Math.floor(y0));
   const z = Math.min(img.height, Math.ceil(y1));
@@ -87,17 +87,17 @@ export function greenDominantShare(img: Rgba, y0: number, y1: number, visible?: 
 export interface SkyCheck { ok: boolean; lumaStep: number; topBlue: boolean; greenLower: number; detail: string }
 
 /**
- * AC39: el 10 % de filas de arriba es más oscuro que la banda del horizonte del cielo en 12 % o más de la luminancia del
- * horizonte (paso CON signo: un cielo plano o invertido falla), la banda de arriba es azul dominante y la mitad de abajo
- * tiene 40 % o más de píxeles verdes dominantes. Las dos bandas miran solo píxeles de cielo: `sky` es la máscara del
- * cielo (1 donde la captura completa es igual a la del cielo solo, como la doble captura de AC41); sin `sky`, es cielo
- * todo lo que está sobre `horizonY`. La banda del horizonte es, en cada columna, las `horizonRows` filas de cielo justo
- * encima del píxel de cielo más bajo (sobre la silueta de las lomas): las lomas nunca entran en ella. `y0` es la primera
- * fila del mundo (la barra del título tapa las de arriba del canvas) y `visible` los píxeles que ningún panel del HUD
- * tapa: lo que cuenta es la vista del mundo, no el HUD.
+ * AC39: the top 10 % of rows is darker than the sky's horizon band by 12 % or more of the horizon's luminance
+ * (SIGNED step: a flat or inverted sky fails), the top band is dominant blue and the bottom half
+ * has 40 % or more dominant green pixels. Both bands look only at sky pixels: `sky` is the sky mask
+ * (1 where the full capture equals the sky-only one, like AC41's double capture); without `sky`, everything above
+ * `horizonY` is sky. The horizon band is, in each column, the `horizonRows` sky rows just
+ * above the lowest sky pixel (above the hills' silhouette): the hills never enter it. `y0` is the first
+ * row of the world (the title bar covers the top ones of the canvas) and `visible` the pixels that no HUD panel
+ * covers: what counts is the world view, not the HUD.
  *
- * Cambio registrado (open-world-3d M3, QA AC39): antes el paso era |arriba - horizonte| y la banda del horizonte
- * tomaba las filas sobre `horizonY` con lomas incluidas; un cielo plano (cénit = bruma = horizonte) pasaba con 12,4 %.
+ * Recorded change (open-world-3d M3, QA AC39): before, the step was |top - horizon| and the horizon band
+ * took the rows above `horizonY` with hills included; a flat sky (zenith = haze = horizon) passed with 12.4 %.
  */
 export function skyCheck(img: Rgba, horizonY: number, y0 = 0, visible?: Uint8Array, sky?: Uint8Array): SkyCheck {
   const w = img.width;
@@ -146,16 +146,16 @@ export function skyCheck(img: Rgba, horizonY: number, y0 = 0, visible?: Uint8Arr
   };
 }
 
-// ---------- open-world-3d T8 (AC50, AC51): tiras de tarjetas, amarillo junto al pasto y solidez de copas ----------
-// Port de `tools/defects.cjs` del mockup V6 (vuelta 5). Las máscaras son 0/1 de arriba abajo (fila y, índice y·w + x),
-// no las de readPixels del mockup (de abajo arriba); el resto es el mismo cálculo.
+// ---------- open-world-3d T8 (AC50, AC51): card strips, yellow next to grass and crown solidity ----------
+// Port of the mockup V6's `tools/defects.cjs` (round 5). The masks are 0/1 top to bottom (row y, index y·w + x),
+// not the mockup's readPixels ones (bottom to top); the rest is the same computation.
 
-/** Umbrales de AC51, los del mockup: tiras, cobertura mínima, amarillo junto al pasto y solidez de copa. */
+/** AC51 thresholds, the mockup's: strips, minimum coverage, yellow next to grass and crown solidity. */
 export const AC51 = { maxStrips: 0.12, minCoverage: 0.03, maxYellow: 0.4, crown: 0.82, crownP20: 0.7, minTrees: 20 } as const;
 
 type Pt = readonly [number, number];
 
-/** Área de la cápsula convexa (cadena monótona) de puntos de píxel, más medio píxel por vértice y 1 (la del mockup). */
+/** Area of the convex hull (monotone chain) of pixel points, plus half a pixel per vertex and 1 (the mockup's). */
 export function hullArea(input: readonly Pt[]): number {
   if (input.length < 3) return input.length;
   const pts = [...input].sort((p, q) => p[0] - q[0] || p[1] - q[1]);
@@ -181,7 +181,7 @@ export function hullArea(input: readonly Pt[]): number {
   return Math.abs(a) / 2 + hull.length / 2 + 1;
 }
 
-/** Área y solidez (área / cápsula convexa) de la mancha 4-conexa más grande dentro de un disco de la máscara. */
+/** Area and solidity (area / convex hull) of the largest 4-connected blob inside a disc of the mask. */
 export function blobSolidity(mask: Uint8Array, w: number, h: number, cx: number, cy: number, r: number): { area: number; solidity: number } {
   const side = 2 * r + 1;
   const seen = new Uint8Array(side * side);
@@ -212,7 +212,7 @@ export function blobSolidity(mask: Uint8Array, w: number, h: number, cx: number,
   return { area: best.length, solidity: best.length ? best.length / hullArea(best) : 0 };
 }
 
-/** Erosión con una cruz de brazo `r` (la morfología del mockup), sin tocar el borde de `r` px. */
+/** Erosion with a cross of arm `r` (the mockup's morphology), not touching the `r` px border. */
 export function erode(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
   const o = new Uint8Array(m.length);
   for (let y = r; y < h - r; y++) {
@@ -225,7 +225,7 @@ export function erode(m: Uint8Array, w: number, h: number, r: number): Uint8Arra
   return o;
 }
 
-/** Dilatación con la misma cruz. */
+/** Dilation with the same cross. */
 export function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {
   const o = new Uint8Array(m.length);
   for (let y = r; y < h - r; y++) {
@@ -241,9 +241,9 @@ export function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Arr
 }
 
 /**
- * Tiras de tarjetas: se abre la máscara (se van las hojas finas y las puntas; queda la banda densa del pie de una
- * tarjeta de canto) y se mide la parte de lo que queda en manchas de al menos 30 px con una elongación (raíz del
- * cociente de los autovalores de la covarianza) de 3,5 o más.
+ * Card strips: the mask is opened (thin leaves and tips go; the dense band at the foot of an edge-on
+ * card remains) and the share of what remains in blobs of at least 30 px with an elongation (square root of the
+ * ratio of the covariance eigenvalues) of 3.5 or more is measured.
  */
 export function stripFraction(mask: Uint8Array, w: number, h: number): number {
   const op = dilate(erode(mask, w, h, 2), w, h, 2);
@@ -292,8 +292,8 @@ export function stripFraction(mask: Uint8Array, w: number, h: number): number {
 }
 
 /**
- * El suelo entre el pasto: en la captura SIN pasto, los píxeles a 10 px o menos de un píxel de pasto que no están bajo
- * uno, amarillo sobre amarillo más verde. `visible` deja fuera lo que tapa el HUD.
+ * The ground between the grass: in the capture WITHOUT grass, the pixels 10 px or less from a grass pixel that are not under
+ * one, yellow over yellow plus green. `visible` leaves out what the HUD covers.
  */
 export function yellowNearGrass(mask: Uint8Array, noGrass: Rgba, visible?: Uint8Array): number {
   const { width: w, height: h } = noGrass;
@@ -309,7 +309,7 @@ export function yellowNearGrass(mask: Uint8Array, noGrass: Rgba, visible?: Uint8
   return yel + grn ? Number((yel / (yel + grn)).toFixed(3)) : 0;
 }
 
-/** El pasto en el 60 % de abajo del cuadro (la pradera alrededor del jugador): cobertura, tiras y amarillo cercano. */
+/** The grass in the bottom 60 % of the frame (the meadow around the player): coverage, strips and nearby yellow. */
 export function grassDefects(withGrass: Rgba, noGrass: Rgba, visible?: Uint8Array): { coverage: number; strips: number; yellow: number } {
   const { width: w, height: h } = withGrass;
   const full = diffMask(withGrass, noGrass);
@@ -322,12 +322,12 @@ export function grassDefects(withGrass: Rgba, noGrass: Rgba, visible?: Uint8Arra
   return { coverage: Number((n / ((h - y0) * w)).toFixed(3)), strips: stripFraction(mask, w, h), yellow: yellowNearGrass(mask, noGrass, visible) };
 }
 
-/** Un árbol proyectado: centro de copa en píxeles (de arriba abajo), profundidad NDC y radio en píxeles. */
+/** A projected tree: crown center in pixels (top to bottom), NDC depth and radius in pixels. */
 export interface ProjectedTree { x: number; y: number; z: number; r: number }
 
 /**
- * Copas (mockup `trees`): de cada árbol cuya copa no toca la de un vecino en pantalla, la solidez de la mancha dentro de
- * un disco de 1,15 radios alrededor del centro proyectado; mediana y percentil 20 de las que miden más de 12 px.
+ * Crowns (mockup `trees`): of each tree whose crown does not touch a neighbor's on screen, the blob solidity inside
+ * a disc of 1.15 radii around the projected center; median and 20th percentile of those measuring more than 12 px.
  */
 export function crownSolidity(mask: Uint8Array, w: number, h: number, items: readonly ProjectedTree[]): { trees: number; measured: number; median: number; p20: number } {
   const iso = items.filter((t) => t.z < 1 && t.x > 2 * t.r && t.y > 2 * t.r && t.x + 2 * t.r < w && t.y + 2 * t.r < h
@@ -338,9 +338,9 @@ export function crownSolidity(mask: Uint8Array, w: number, h: number, items: rea
 }
 
 /**
- * Los controles negativos del mockup sobre máscaras sintéticas (AC50): un disco rasgado es una copa y una X no; un campo
- * de matas (pie redondo, hojas finas) no son tiras y uno de tiras densas sí; un verde de pradera es verde y un mostaza
- * amarillo. No dependen de la escena.
+ * The mockup's negative controls on synthetic masks (AC50): a torn disc is a crown and an X is not; a field
+ * of tufts (round foot, thin leaves) is not strips and one of dense strips is; a meadow green is green and a mustard is
+ * yellow. They do not depend on the scene.
  */
 export function syntheticControls(): { disc: number; x: number; strips: number; tufts: number; meadow: 0 | 1 | 2; mustard: 0 | 1 | 2 } {
   const w = 400;
@@ -383,18 +383,18 @@ export function syntheticControls(): { disc: number; x: number; strips: number; 
   };
 }
 
-// ---------- open-world-3d T8 (AC52): las capturas en los tres NPCs no son la misma vista ----------
+// ---------- open-world-3d T8 (AC52): the captures at the three NPCs are not the same view ----------
 
 /**
- * Umbral de AC52, fijado una vez sobre el render de la GPU (T8): las capturas al llegar a cada NPC difieren de a pares
- * por más de `minDistance` bits del hash de diferencia de 64 bits. Una misma vista da 0; dos vistas del mismo prado con
- * otro encuadre, más de 10 (medido en el informe de la Walk).
+ * AC52 threshold, fixed once on the GPU render (T8): the captures on reaching each NPC differ pairwise
+ * by more than `minDistance` bits of the 64-bit difference hash. The same view gives 0; two views of the same meadow with
+ * another framing, more than 10 (measured in the Walk report).
  */
 export const AC52 = { minDistance: 10 } as const;
 
 /**
- * Hash perceptual de diferencia (dHash, 64 bits): la imagen en gris promediada a 9 × 8 celdas, un bit por par de celdas
- * vecinas en cada fila (1 si la de la izquierda es más clara). `visible` (opcional) deja fuera lo que tapa el HUD.
+ * Perceptual difference hash (dHash, 64 bits): the gray image averaged to 9 × 8 cells, one bit per pair of
+ * neighboring cells in each row (1 if the left one is lighter). `visible` (optional) leaves out what the HUD covers.
  */
 export function differenceHash(img: Rgba, visible?: Uint8Array): bigint {
   const cols = 9;
@@ -424,7 +424,7 @@ export function differenceHash(img: Rgba, visible?: Uint8Array): bigint {
   return hash;
 }
 
-/** Bits distintos entre dos hashes. */
+/** Differing bits between two hashes. */
 export function hashDistance(a: bigint, b: bigint): number {
   let d = a ^ b;
   let n = 0;
@@ -435,7 +435,7 @@ export function hashDistance(a: bigint, b: bigint): number {
   return n;
 }
 
-/** AC52: la distancia de cada par de capturas y si todas pasan el umbral. */
+/** AC52: the distance of each pair of captures and whether all pass the threshold. */
 export function pairwiseDistinct(images: readonly Rgba[], visible?: Uint8Array): { ok: boolean; distances: number[] } {
   const hashes = images.map((im) => differenceHash(im, visible));
   const distances: number[] = [];

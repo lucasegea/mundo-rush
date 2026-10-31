@@ -1,9 +1,9 @@
-// Open-world-3d T7b (LK1, D-838..D-842): el look del mundo. DEFAULT_LOOK es el mundo abierto tal como se dibuja en 0034931:
-// cada campo está fijado acá al valor LITERAL que tenía su constante global en ese commit (PALETTE, SKY_TOKENS y FOG_RANGE
-// de world/sky/palette.ts, SUN/HEMI/TONE de world/lighting/params.ts, las luces del horneado de world/nature/impostor.ts,
-// GROUND_MAPS y GRASS_GRADE de world/terrain/groundMaterial.ts, TREE_SPECIES, TREE_LEAF_GAIN, TREE_BARK_COLOR, ROCK_SCANS,
-// NATURE_TEXTURES y NATURE_COLORS de vegetation.ts, CAP_COLOR y los cuerpos de looks.ts, el atlas de nubes de
-// world/sky/sky.ts). Si un valor cambia, cambia lo que se ve: este test lo frena.
+// Open-world-3d T7b (LK1, D-838..D-842): the world look. DEFAULT_LOOK is the open world as drawn at 0034931:
+// each field is pinned here to the LITERAL value its global constant had in that commit (PALETTE, SKY_TOKENS and FOG_RANGE
+// of world/sky/palette.ts, SUN/HEMI/TONE of world/lighting/params.ts, the impostor-baking lights of world/nature/impostor.ts,
+// GROUND_MAPS and GRASS_GRADE of world/terrain/groundMaterial.ts, TREE_SPECIES, TREE_LEAF_GAIN, TREE_BARK_COLOR, ROCK_SCANS,
+// NATURE_TEXTURES and NATURE_COLORS of vegetation.ts, CAP_COLOR and the bodies of looks.ts, the cloud atlas of
+// world/sky/sky.ts). If a value changes, what you see changes: this test stops it.
 import { describe, expect, test } from "vitest";
 import {
   ACCESSORY_SETS, BODY_IDS, CHARACTER_RIGS, DEFAULT_LOOK, GROUND_MAPS, GROUND_SLOTS, HATS, LOOK_IDS, OPEN_WORLD_DENSITY, PAINTED_LOOK,
@@ -72,10 +72,10 @@ describe("LK1: DEFAULT_LOOK fija cada valor de 0034931", () => {
       { name: "bushA", file: "bush-a", kind: "bush", height: 1.15, low: 0x4a8a35, high: 0x9ccb55, tintSeed: 21 },
       { name: "bushB", file: "bush-b", kind: "bush", height: 1.0, low: 0x558f38, high: 0xa8d25a, tintSeed: 22 },
     ]);
-    expect(v.species).toBe(TREE_SPECIES); // el horneado (scripts/assets/bake-trees.ts) lee la misma lista
+    expect(v.species).toBe(TREE_SPECIES); // the baking (scripts/assets/bake-trees.ts) reads the same list
     expect(v.leafGain).toBe(3.4);
     expect(v.barkColor).toBe(0xcdbba4);
-    // `meshes` es nuevo en T7b: era el literal `r.scan === "rock_moss_set_01" ? 6 : 1` de world/nature/buildNature.ts.
+    // `meshes` is new in T7b: it was the literal `r.scan === "rock_moss_set_01" ? 6 : 1` of world/nature/buildNature.ts.
     expect(v.rockScans).toEqual([
       { scan: "rock_07", kind: "small", near: 900, far: 200, meshes: 1 },
       { scan: "rock_09", kind: "small", near: 900, far: 200, meshes: 1 },
@@ -103,7 +103,7 @@ describe("LK1: DEFAULT_LOOK fija cada valor de 0034931", () => {
   });
 
   test("pasto (T8, D-839): los valores de la maqueta V6 (world.js grassAtlas, GRASS_VERT, GRASS_FRAG y la cama del suelo)", () => {
-    // El pasto no existía en 0034931: estos son los literales de la maqueta V6 que T8 sacó de world/ (D-838).
+    // Grass did not exist at 0034931: these are the V6 diorama literals that T8 took out of world/ (D-838).
     expect(DEFAULT_LOOK.grass).toEqual({
       atlas: { base: 0x1f4f1c, mid: [0x4c9a2c, 0x6aa832], tips: [0xa9d65a, 0xc4d95c, 0x8fcb4e, 0xd8dc6a], flowers: [0xf6f2e6, 0xf3d34a, 0xe98fb5], flowerStem: 0x3f8a2c },
       blade: { base: [0.122, 0.31, 0.11], mid: [[0.298, 0.604, 0.173], [0.416, 0.659, 0.196]], tip: [[0.56, 0.8, 0.31], [0.85, 0.86, 0.42]] },
@@ -111,7 +111,7 @@ describe("LK1: DEFAULT_LOOK fija cada valor de 0034931", () => {
       bed: [0.56, 1.08, 0.3],
       density: 1,
     });
-    expect(PAINTED_LOOK.grass).toBe(DEFAULT_LOOK.grass); // el pintado lo hereda
+    expect(PAINTED_LOOK.grass).toBe(DEFAULT_LOOK.grass); // the painted one inherits it
   });
 
   test("personajes, agua y camino", () => {
@@ -187,8 +187,8 @@ describe("el catálogo WORLD_LOOKS", () => {
       expect(takeVegetation(sc, bounds, tier, DEFAULT_LOOK.vegetation.density)).toEqual(base);
       const half = takeVegetation(sc, bounds, tier, { pines: 0.5, broads: 0.5, rocks: 0.5, flowers: 0.5, bushes: 2 });
       expect(half.flowers.length).toBe(Math.floor(OPEN_WORLD_DENSITY[tier].trees.flowers * 0.5));
-      expect(half.bushes.length).toBe(base.bushes.length); // > 1 no agranda: el tope del tier es del núcleo
-      expect(half.broads.filter((s) => s.x === 0).length).toBe(5); // lo de adentro siempre queda (AC46)
+      expect(half.bushes.length).toBe(base.bushes.length); // > 1 does not enlarge: the tier's cap is the core's
+      expect(half.broads.filter((s) => s.x === 0).length).toBe(5); // what is inside always stays (AC46)
     }
   });
 });

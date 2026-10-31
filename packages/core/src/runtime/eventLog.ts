@@ -1,14 +1,14 @@
-// EventLog<T>: registro append-only de eventos tipados, con replay (plegado) determinístico.
-// Es la base de "progreso como plegado de eventos" (ADR-004): el estado se deriva de los
-// eventos, nunca se edita. El tiempo sale del Clock inyectado (R4).
+// EventLog<T>: append-only log of typed events, with deterministic replay (folding).
+// It is the basis of "progress as a fold of events" (ADR-004): state is derived from the
+// events, never edited. Time comes from the injected Clock (R4).
 import type { Clock } from "./clock";
 
-/** Todo evento tiene un discriminante `type`. */
+/** Every event has a `type` discriminant. */
 export interface TypedEvent {
   readonly type: string;
 }
 
-/** Un evento ya registrado: número de secuencia (desde 1), instante y el evento congelado. */
+/** An already recorded event: sequence number (from 1), instant and the frozen event. */
 export interface LoggedEvent<E extends TypedEvent> {
   readonly seq: number;
   readonly at: number;
@@ -17,21 +17,21 @@ export interface LoggedEvent<E extends TypedEvent> {
 
 export type Reducer<E extends TypedEvent, S> = (state: S, event: E, entry: LoggedEvent<E>) => S;
 
-/** Un manejador por tipo de evento; los tipos sin manejador dejan el estado igual. */
+/** One handler per event type; types without a handler leave the state unchanged. */
 export type Handlers<E extends TypedEvent, S> = {
   readonly [K in E["type"]]?: (state: S, event: Extract<E, { readonly type: K }>, entry: LoggedEvent<E>) => S;
 };
 
 export interface EventLog<E extends TypedEvent> {
-  /** Agrega un evento al final. Devuelve el registro creado. */
+  /** Appends an event at the end. Returns the created record. */
   append(event: E): LoggedEvent<E>;
-  /** Cantidad de eventos registrados. */
+  /** Number of recorded events. */
   readonly size: number;
-  /** Todos los registros, en orden (copia: mutarla no toca el log). */
+  /** All records, in order (a copy: mutating it does not touch the log). */
   entries(): readonly LoggedEvent<E>[];
-  /** Los registros con seq mayor que `seq`. */
+  /** The records with seq greater than `seq`. */
   since(seq: number): readonly LoggedEvent<E>[];
-  /** Pliega todos los eventos, en orden, desde `initial`. */
+  /** Folds all events, in order, from `initial`. */
   replay<S>(reducer: Reducer<E, S>, initial: S): S;
 }
 
@@ -57,8 +57,8 @@ function assertEvent(event: TypedEvent, where: string): void {
 }
 
 /**
- * Crea un log vacío o lo retoma desde registros guardados (`restored`), que tienen que tener
- * seq 1..n sin huecos e instantes finitos; si no, lanza EventLogError.
+ * Creates an empty log or resumes it from saved records (`restored`), which must have
+ * seq 1..n with no gaps and finite instants; otherwise it throws EventLogError.
  */
 export function createEventLog<E extends TypedEvent>(
   clock: Clock,
@@ -90,7 +90,7 @@ export function createEventLog<E extends TypedEvent>(
   };
 }
 
-/** Arma un Reducer a partir de un manejador por tipo de evento. */
+/** Builds a Reducer from one handler per event type. */
 export function reducerFrom<E extends TypedEvent, S>(handlers: Handlers<E, S>): Reducer<E, S> {
   return (state, event, entry) => {
     const handler = (handlers as Record<string, Reducer<E, S> | undefined>)[event.type];

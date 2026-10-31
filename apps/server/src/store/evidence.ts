@@ -1,7 +1,7 @@
-// EvidenceStore (D-157, ADR-004 enmendado por P0): log de evidencia append-only del operador. Interfaz + adaptador en
-// memoria (tests) + adaptador de archivo JSONL (apps/server/data/evidence.jsonl, gitignored). Este módulo es uno de los
-// dos lugares de apps/server que escriben a disco (lint, D-108) y rechaza cualquier dato binario: el servidor nunca
-// guarda audio.
+// EvidenceStore (D-157, ADR-004 amended by P0): the operator's append-only evidence log. Interface + in-memory
+// adapter (tests) + JSONL file adapter (apps/server/data/evidence.jsonl, gitignored). This module is one of the
+// two places in apps/server that write to disk (lint, D-108) and it rejects any binary data: the server never
+// stores audio.
 import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ export const DEFAULT_EVIDENCE_PATH = fileURLToPath(new URL("../../data/evidence.
 
 export interface EvidenceStore {
   append(event: EvidenceEvent): void;
-  /** Eventos de la cuenta, en el orden en que se agregaron. */
+  /** The account's events, in the order they were appended. */
   list(accountId: string): EvidenceEvent[];
 }
 
@@ -22,7 +22,7 @@ export class BinaryDataError extends Error {
   }
 }
 
-/** Recorre el valor y falla ante Buffer, ArrayBuffer o vistas tipadas (D-108). */
+/** Walks the value and fails on Buffer, ArrayBuffer or typed views (D-108). */
 export function assertNoBinary(value: unknown, path = ""): void {
   if (value instanceof ArrayBuffer || ArrayBuffer.isView(value) || (typeof Blob !== "undefined" && value instanceof Blob)) {
     throw new BinaryDataError(path);
@@ -33,7 +33,7 @@ export function assertNoBinary(value: unknown, path = ""): void {
   }
 }
 
-/** Valida antes de guardar: sin binarios y con la forma del esquema (un campo de más no entra). */
+/** Validates before saving: no binaries and with the schema's shape (an extra field doesn't get in). */
 function checked(event: EvidenceEvent): EvidenceEvent {
   assertNoBinary(event);
   return EvidenceEventSchema.parse(event);
@@ -49,7 +49,7 @@ export function createMemoryEvidenceStore(): EvidenceStore {
   };
 }
 
-/** Lee el JSONL saltando líneas corruptas (p. ej. una escritura cortada por un apagón). */
+/** Reads the JSONL skipping corrupt lines (e.g. a write cut off by a power loss). */
 export function readEvidenceFile(path: string): EvidenceEvent[] {
   if (!existsSync(path)) return [];
   const out: EvidenceEvent[] = [];
@@ -59,13 +59,13 @@ export function readEvidenceFile(path: string): EvidenceEvent[] {
       const parsed = EvidenceEventSchema.safeParse(JSON.parse(line));
       if (parsed.success) out.push(parsed.data);
     } catch {
-      // línea corrupta: se ignora
+      // corrupt line: ignored
     }
   }
   return out;
 }
 
-/** true si el archivo no existe, está vacío o su último byte es "
+/** true if the file does not exist, is empty or its last byte is "
 ". */
 function endsWithNewline(path: string): boolean {
   let fd: number;
@@ -85,17 +85,17 @@ function endsWithNewline(path: string): boolean {
   }
 }
 
-/** Adaptador de archivo: una línea JSON por evento, solo agregar. Lo escrito sobrevive a reiniciar el servidor. */
+/** File adapter: one JSON line per event, append only. What was written survives a server restart. */
 export function createFileEvidenceStore(path: string = DEFAULT_EVIDENCE_PATH): EvidenceStore {
   let cache: EvidenceEvent[] | null = null;
   const all = (): EvidenceEvent[] => (cache ??= readEvidenceFile(path));
   return {
     append(event) {
       const ok = checked(event);
-      const events = all(); // se lee antes de escribir: si no, el evento nuevo quedaría dos veces en la caché
+      const events = all(); // read before writing: otherwise the new event would end up twice in the cache
       mkdirSync(dirname(path), { recursive: true });
-      // Si una escritura anterior quedó cortada sin salto de línea, el evento nuevo se pegaría a ella y se
-      // perdería al leer: se cierra la línea rota primero.
+      // If a previous write was cut off with no line break, the new event would stick to it and be
+      // lost on reading: the broken line is closed first.
       const sep = endsWithNewline(path) ? "" : "\n";
       appendFileSync(path, `${sep}${JSON.stringify(ok)}\n`, "utf8");
       events.push(ok);

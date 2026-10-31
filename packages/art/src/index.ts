@@ -1,28 +1,28 @@
-// @lg/art: dato y geometría de arte del look C (D-207), en TS puro: sin three, sin react, sin globals del DOM
-// (bloque de pureza en eslint.config.js, como R4). Plan estetica-c M2, revisión de arquitectura 2026-10-12 §10 pregunta 3: lo importan
-// world/ (en runtime: es dato de arte, no lógica de juego), scripts/assets/, scripts/a11y/contrast.ts y, en M5,
-// packages/content-schema (para validar `tinte`). Marcador de zona: el fixture de límites comprueba que este archivo existe.
+// @lg/art: art data and geometry of look C (D-207), in pure TS: no three, no react, no DOM globals
+// (purity block in eslint.config.js, like R4). Plan estetica-c M2, architecture review 2026-10-12 §10 question 3: imported by
+// world/ (at runtime: it is art data, not game logic), scripts/assets/, scripts/a11y/contrast.ts and, in M5,
+// packages/content-schema (to validate `tinte`). Zone marker: the bounds fixture checks that this file exists.
 export const PACKAGE_NAME = "@lg/art";
 
 export * from "./palette.ts";
 export * from "./paint.ts";
 export * from "./bevel.ts";
 export * from "./tolerance.ts";
-// Plan estetica-c M5: vocabulario de apariencia, forma del terreno y costos de dibujo (estimador de validate:content).
+// Plan estetica-c M5: appearance vocabulary, terrain shape and draw costs (validate:content estimator).
 export * from "./looks.ts";
 export * from "./terrain.ts";
 export * from "./costs.ts";
 export * from "./shapes.ts";
-// Plan estetica-c M6: la densidad de la escena por tier (cómo entra `low` en su presupuesto).
+// Plan estetica-c M6: scene density per tier (how `low` fits in its budget).
 export * from "./density.ts";
-// Open-world-3d T6 (D-819): el relieve interior del mundo abierto.
+// Open-world-3d T6 (D-819): the open world's interior relief.
 export * from "./relief.ts";
-// Open-world-3d T6 (D-832): el inventario de texturas del mundo abierto y la cuenta de bytes (KTX2 por cabecera).
+// Open-world-3d T6 (D-832): the open world's texture inventory and byte count (KTX2 by header).
 export * from "./textures.ts";
-// Open-world-3d T6 (D-823): las medidas del cielo (cúpula y nubes) que dibuja world/sky y cuenta el estimador.
+// Open-world-3d T6 (D-823): the sky measurements (dome and clouds) that world/sky draws and the estimator counts.
 export * from "./sky.ts";
 export * from "./vegetation.ts";
-// Open-world-3d T7b (D-838..D-842): el look del mundo (DEFAULT_LOOK y el catálogo WORLD_LOOKS), que world/ recibe como parámetro.
+// Open-world-3d T7b (D-838..D-842): the world look (DEFAULT_LOOK and the WORLD_LOOKS catalog), which world/ receives as a parameter.
 export * from "./worldLook.ts";
-// Open-world-3d T9 (D-839): los colores del minimapa (fondo, camino y agua del look; punto y contorno de interfaz).
+// Open-world-3d T9 (D-839): the minimap colors (background, path and water from the look; UI dot and outline).
 export * from "./minimap.ts";

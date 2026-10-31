@@ -1,15 +1,15 @@
-// Misión y escenas (02 §4.3, §6.2.2, §6.2.3; 01 §2.5.3; 03 §6.1, §6.4.8).
+// Mission and scenes (02 §4.3, §6.2.2, §6.2.3; 01 §2.5.3; 03 §6.1, §6.4.8).
 import { z } from "zod";
 import {
   ConversacionId, EscenaId, HabilidadId, HechoId, idOf, LugarId, LumiId, MisionId, NpcId, SaberId, SitioId,
 } from "../ids.ts";
 import { Banda, EstadoRevision, LineaGuionada, oNoAplica, RamaPocion, TextoL1 } from "./common.ts";
 
-/** Estados visibles de una fundación (02 §1.8 regla 3, D-169). */
+/** Visible states of a foundation (02 §1.8 rule 3, D-169). */
 export const EstadoFundacion = z.enum(["idea", "en_marcha", "fundado", "crece"]);
 export type EstadoFundacion = z.infer<typeof EstadoFundacion>;
 
-/** Efecto que el núcleo aplica al cerrar la escena (03 §6.4.8, D-169, D-194). */
+/** Effect the core applies when closing the scene (03 §6.4.8, D-169, D-194). */
 export const Efecto = z.union([
   z.strictObject({ fundacion: SitioId, estado: EstadoFundacion }),
   z.strictObject({ intro: NpcId }),
@@ -20,7 +20,7 @@ export type Efecto = z.infer<typeof Efecto>;
 /** Sonidos objetivo E1-E14 (01 §2.4.7). */
 export const Sonido = z.string().regex(/^E(?:[1-9]|1[0-4])$/, { message: "sonido fuera de E1-E14" });
 
-/** Momento guionado de pronunciación (02 §6.2.3; lo usa FP). Nunca obligatorio. */
+/** Scripted pronunciation moment (02 §6.2.3; used by FP). Never mandatory. */
 export const MomentoPronunciacion = z.strictObject({
   momento_id: idOf("pronunciacion"),
   tipo: z.enum(["repetir", "leer", "frase_clave", "par_minimo"]),
@@ -38,12 +38,12 @@ export const MomentoPronunciacion = z.strictObject({
   message: "par solo (y siempre) en momentos par_minimo", path: ["par"],
 });
 
-/** Rama del esqueleto de diálogo: condición del jugador → respuesta del NPC. */
+/** Branch of the dialogue skeleton: player condition → NPC reply. */
 export const Rama = z.strictObject({
   si: z.string().min(1),
   quien: NpcId.nullable(),
   npc: z.string().min(1).nullable(),
-  /** guionada = texto fijo; ejemplo_ia = muestra de estilo para el modelo (02 §0.4). */
+  /** guionada = fixed text; ejemplo_ia = style sample for the model (02 §0.4). */
   tipo: z.enum(["guionada", "ejemplo_ia"]),
   lumi: LumiId.optional(),
   nota: z.string().min(1).optional(),
@@ -53,13 +53,13 @@ export const CriterioExito = z.strictObject({
   id: z.string().regex(/^C\d+$/),
   texto: z.string().min(1),
   opcional: z.boolean().default(false),
-  /** Habilidad que este criterio demuestra, si aplica (referencia a HAB-*). */
+  /** Skill this criterion demonstrates, if applicable (reference to HAB-*). */
   habilidad: HabilidadId.optional(),
 });
 
 export const Escena = z.strictObject({
   escena_id: EscenaId,
-  /** null solo en escenas de Lumi sin NPC en tiempo real (02 §4.3, M0.2). */
+  /** null only in Lumi scenes without a real-time NPC (02 §4.3, M0.2). */
   npc: NpcId.nullable(),
   lugar: LugarId,
   hora: z.enum(["amanecer", "manana", "tarde", "atardecer", "noche"]),
@@ -72,7 +72,7 @@ export const Escena = z.strictObject({
   hechos_escena: z.array(SaberId),
   apertura_guionada: oNoAplica(z.array(LineaGuionada).min(1)),
   ramas: oNoAplica(z.array(Rama).min(1)),
-  /** Líneas [GUIONADA] de una escena sin NPC conversando (excepción de 02 §4.3). */
+  /** [GUIONADA] lines of a scene without an NPC conversing (exception of 02 §4.3). */
   lineas_guionadas: z.array(LineaGuionada).optional(),
   criterios_exito: z.array(CriterioExito).min(1),
   errores_de_objetivo: z.array(z.string().min(1)),
@@ -87,17 +87,17 @@ export const Escena = z.strictObject({
   resumen_para_siguiente: z.string().min(1),
   temas_permitidos: z.array(z.string().min(1)).min(1),
   temas_vedados_extra: z.array(z.string().min(1)),
-  /** Escena en modo escritura: única excepción del apelativo "Dear" como encabezado de carta. */
+  /** Writing-mode scene: the only exception to the "Dear" form of address as a letter header. */
   modo_escritura: z.boolean().default(false),
-  /** Cantidades de objetos permitidas por el lint de cifras (02 §6.6 #15), p. ej. "3 bags of seeds". */
+  /** Object quantities allowed by the figures lint (02 §6.6 #15), e.g. "3 bags of seeds". */
   cifras_permitidas: z.array(z.string().min(1)).default([]),
   pronunciacion: z.array(MomentoPronunciacion).default([]),
   /**
-   * ADR-027: escena de conversación libre por medidores. La cierra el sistema de conversación (una acción del juego
-   * cuando se llena el último medidor), no los criterios del observador; sin éxito no se da por cumplida.
+   * ADR-027: free-conversation scene by meters. It is closed by the conversation system (a game action
+   * when the last meter fills), not by the observer's criteria; without success it is not considered completed.
    */
   conversacion: ConversacionId.optional(),
-  /** Topes propios de la escena en segundos (si no, los de models.yaml): una conversación libre necesita más aire. */
+  /** The scene's own caps in seconds (otherwise, those of models.yaml): a free conversation needs more room. */
   topes: z.strictObject({ suave_s: z.number().int().positive(), duro_s: z.number().int().positive() })
     .refine((t) => t.suave_s < t.duro_s, { message: "suave_s tiene que ser menor que duro_s" }).optional(),
 });
@@ -120,7 +120,7 @@ export const Mision = z.strictObject({
     "persuasion", "mediacion", "social_con_meta", "exploracion",
   ]),
   can_do: TextoL1,
-  /** Misiones, habilidades (HAB-*) o presentaciones (`intro:NPC-*`). */
+  /** Missions, skills (HAB-*) or introductions (`intro:NPC-*`). */
   requiere: z.array(z.string().regex(/^(?:M\d+\.\d+|HAB-[A-Z]+-(?:\d+|[A-Z]+)|intro:NPC-[A-Z]+)$/, {
     message: "requiere admite M<c>.<n>, HAB-* o intro:NPC-*",
   })),

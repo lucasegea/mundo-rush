@@ -1,24 +1,24 @@
-// Servidor de escenas falso para los tests del HUD (F4.2): un SceneConnector en memoria. El test empuja mensajes del
-// protocolo como si vinieran del servidor y lee lo que el cliente mandó. Sin red (D-016, D-027).
+// Fake scene server for the HUD tests (F4.2): an in-memory SceneConnector. The test pushes protocol messages as
+// if they came from the server and reads what the client sent. No network (D-016, D-027).
 import type { ClientMessage, ServerMessage } from "@lg/protocol";
 import type { SceneConnector, SceneHandlers } from "../src/services/scene/connector";
 
 export interface FakeSceneServer {
   connector: SceneConnector;
-  /** Mensajes del cliente, ya parseados, en orden. */
+  /** Client messages, already parsed, in order. */
   sent: ClientMessage[];
-  /** F5.2: frames binarios del cliente (voz del jugador), en orden. */
+  /** F5.2: binary frames from the client (player voice), in order. */
   binary: ArrayBuffer[];
-  /** Conexiones abiertas en total y cuántas se cerraron. */
+  /** Connections opened in total and how many were closed. */
   readonly opened: number;
   readonly closed: number;
-  /** Manda un mensaje del servidor a la última conexión. */
+  /** Sends a server message to the latest connection. */
   push(msg: ServerMessage | string): void;
-  /** F5.2: manda un frame binario (voz del NPC) a la última conexión. */
+  /** F5.2: sends a binary frame (NPC voice) to the latest connection. */
   pushBinary(bytes: ArrayBuffer): void;
-  /** El servidor cierra la conexión. */
+  /** The server closes the connection. */
   drop(): void;
-  /** Espera a que haya `n` conexiones abiertas. */
+  /** Waits until `n` connections are open. */
   waitOpen(n?: number): Promise<void>;
 }
 
@@ -65,7 +65,7 @@ export function fakeSceneServer(opts: { fail?: boolean } = {}): FakeSceneServer 
   return server;
 }
 
-/** Mensajes típicos del comienzo de M0.1 con Inés, hasta su turno. */
+/** Typical messages from the start of M0.1 with Inés, up to her turn. */
 export const openingFor = (npcId: string | null, missionId = "M0.1", sceneId = "M0.1-E1"): ServerMessage[] => [
   { type: "scene.opened", sceneRunId: "run-1", missionId, sceneId, npcId, modality: "text" },
   { type: "scene.state", state: "pretask", sub: null, modality: "text", turnIndex: 0, softCapReached: false },

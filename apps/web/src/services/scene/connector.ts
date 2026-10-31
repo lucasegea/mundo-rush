@@ -1,41 +1,41 @@
-// Conector del servidor de escenas (F4.2): POST /scene-token (D-158) + WebSocket. Va en un archivo aparte, sin zod ni
-// @lg/protocol, porque lo importa la raíz de composición (main.tsx) y entra al chunk inicial; el resto del servicio de
-// escena se carga diferido. Las rutas son las de @lg/protocol (un test lo comprueba).
+// Scene server connector (F4.2): POST /scene-token (D-158) + WebSocket. It lives in a separate file, without zod or
+// @lg/protocol, because the composition root (main.tsx) imports it and it enters the initial chunk; the rest of the
+// scene service is loaded deferred. The routes are those of @lg/protocol (a test checks it).
 
-/** Mismas rutas que SCENE_TOKEN_PATH / SCENE_WS_PATH de @lg/protocol. */
+/** Same routes as SCENE_TOKEN_PATH / SCENE_WS_PATH from @lg/protocol. */
 export const SCENE_TOKEN_PATH = "/scene-token";
 export const SCENE_WS_PATH = "/scene";
 
-/** Una conexión abierta con el servidor de escenas. */
+/** An open connection to the scene server. */
 export interface SceneSocket {
   send(text: string): void;
-  /** F5.2: frame binario (voz del jugador, PCM16 16 kHz; ADR-017). */
+  /** F5.2: binary frame (player voice, PCM16 16 kHz; ADR-017). */
   sendBinary(bytes: ArrayBuffer): void;
   close(): void;
 }
 
 export interface SceneHandlers {
   onMessage(text: string): void;
-  /** F5.2: frame binario del servidor (voz del NPC, PCM16 24 kHz). */
+  /** F5.2: binary frame from the server (NPC voice, PCM16 24 kHz). */
   onBinary?(bytes: ArrayBuffer): void;
   onClose(): void;
 }
 
-/** Abre una conexión de escena (en la app: token + WebSocket; en tests: un servidor falso o el real). */
+/** Opens a scene connection (in the app: token + WebSocket; in tests: a fake server or the real one). */
 export interface SceneConnector {
   open(handlers: SceneHandlers): Promise<SceneSocket>;
 }
 
 export interface BrowserConnectorOptions {
-  /** Origen HTTP del servidor (en la app, el mismo de la página: Vite hace de proxy, 03 §7.8 connect-src propio). */
+  /** HTTP origin of the server (in the app, the same as the page: Vite acts as proxy, 03 §7.8 own connect-src). */
   httpBase: string;
-  /** Origen WS (ws:// o wss://). */
+  /** WS origin (ws:// or wss://). */
   wsBase: string;
   fetchImpl?: typeof fetch;
   WebSocketImpl?: typeof WebSocket;
 }
 
-/** Conector real: POST /scene-token (modo operador, D-158) y WebSocket al `wsPath` que devuelve. */
+/** Real connector: POST /scene-token (operator mode, D-158) and WebSocket to the `wsPath` it returns. */
 export function browserSceneConnector(o: BrowserConnectorOptions): SceneConnector {
   const fetchImpl = o.fetchImpl ?? fetch;
   const WS = o.WebSocketImpl ?? WebSocket;
@@ -47,7 +47,7 @@ export function browserSceneConnector(o: BrowserConnectorOptions): SceneConnecto
       const wsPath = (body.data as { wsPath?: unknown } | undefined)?.wsPath;
       if (typeof wsPath !== "string" || !wsPath.startsWith(SCENE_WS_PATH)) throw new Error("scene-token: respuesta sin wsPath");
       const ws = new WS(`${o.wsBase}${wsPath}`);
-      ws.binaryType = "arraybuffer"; // la voz del NPC llega como ArrayBuffer (no Blob)
+      ws.binaryType = "arraybuffer"; // the NPC voice arrives as an ArrayBuffer (not a Blob)
       await new Promise<void>((resolve, reject) => {
         ws.onopen = () => resolve();
         ws.onerror = () => reject(new Error("WebSocket de escena: no se pudo abrir"));

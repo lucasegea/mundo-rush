@@ -1,10 +1,10 @@
-// Etapa DESIGN (stub honesto, book-mode slice-1).
+// DESIGN stage (honest stub, book-mode slice-1).
 //
-// Contrato real (futuro): diseña el mundo, el spine, las quests, la progresión y las conversaciones
-// estratégicas (deducciones a partir de los huecos entre figuras) — Stages 3-7 de la interpretación.
+// Real contract (future): designs the world, the spine, the quests, the progression and the strategic
+// conversations (deductions from the gaps between figures) — Stages 3-7 of the interpretation.
 //
-// Slice-1: identidad. El intermedio hecho a mano ya trae regiones/dioramas/misiones/conversaciones.
-// M3 SEAM: acá entra el diseñador de spine/quests/deducciones.
+// Slice-1: identity. The hand-made intermediate already brings regions/dioramas/missions/conversations.
+// M3 SEAM: the spine/quests/deductions designer goes here.
 import type { Intermedio } from "../intermediate.ts";
 
 export const design = (intermedio: Intermedio): Intermedio => intermedio;

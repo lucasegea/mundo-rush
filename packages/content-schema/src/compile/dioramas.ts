@@ -1,11 +1,11 @@
-// Chequeos de los dioramas en el formato de la maqueta (plan estetica-c M5, D-207). Puro, como el resto del compilador:
-// - cada prop es un constructor por código conocido (`codigo/*`, lista de @lg/art) o un `modelo/*` del registro (ese
-//   cruce lo hace assets.ts); `tinte` solo en props por código; todo prop por código lleva `tam`;
-// - cada NPC puesto en un diorama tiene `apariencia` en su ficha;
-// - el estimador de presupuesto corre para cada diorama en cada tier con mundo (plan estetica-c M6: `low`, `medium` y
-//   `high`, cada uno con su densidad de @lg/art) y falla si se pasa de los topes de ese tier en 03 §2.7.1.
-// El estimador suma con la tabla de costos de @lg/art; apps/web/test/maqueta.test.ts prueba que da EXACTAMENTE lo
-// mismo que world/budget/estimate.ts sobre el grafo de three que arma world/ en cada densidad (lo estimado es lo dibujado).
+// Checks of dioramas in the painted diorama format (plan estetica-c M5, D-207). Pure, like the rest of the compiler:
+// - each prop is a known code constructor (`codigo/*`, list from @lg/art) or a `modelo/*` from the registry (that
+//   cross-check is done by assets.ts); `tinte` only on code props; every code prop carries `tam`;
+// - each NPC placed in a diorama has `apariencia` in its sheet;
+// - the budget estimator runs for each diorama in each tier with a world (plan estetica-c M6: `low`, `medium` and
+//   `high`, each with its @lg/art density) and fails if it exceeds that tier's caps in 03 §2.7.1.
+// The estimator adds up with the @lg/art cost table; apps/web/test/maqueta.test.ts tests that it gives EXACTLY the
+// same as world/budget/estimate.ts over the three graph that world/ builds at each density (what is estimated is what is drawn).
 import {
   addEstimates, BLOB_TRIANGLES, bodyAsset, codePropTriangles, DENSITY, DETAIL_TRIANGLES, headTriangles, isCodeProp,
   isTreeProp, keptDetail, lookFromApariencia, OPEN_WORLD_DENSITY, pavingStoneCount, skyEstimate, PLAYER_LOOK, SPRITE_TRIANGLES, ACTOR_DRAW_CALLS, TERRAIN_APRON, TERRAIN_SKIRT,
@@ -19,11 +19,11 @@ import type { Conjunto } from "./conjunto.ts";
 import type { Hallazgo } from "./tipos.ts";
 
 const PREFIJO_CODIGO = "codigo/";
-/** La parte del estimado que no está en el grafo de la escena: la pasada del mapa de sombra de `high`. */
+/** The part of the estimate that is not in the scene graph: the `high` shadow map pass. */
 export const PARTE_SOMBRA = "pasada de sombra";
 const RUTA_REGISTRO = "content/assets-registry.yaml";
 
-/** Un prop del layout desplegado: una entrada por instancia. */
+/** A layout prop, expanded: one entry per instance. */
 export interface InstanciaDesplegada {
   asset: string;
   pos: readonly [number, number, number];
@@ -32,7 +32,7 @@ export interface InstanciaDesplegada {
   tinte: string | null;
 }
 
-/** Los props del layout con sus `instancias` desplegadas (la misma regla que prepareDiorama del núcleo). */
+/** The layout's props with their `instancias` expanded (the same rule as the core's prepareDiorama). */
 export function desplegarProps(d: Pick<Diorama, "props">): InstanciaDesplegada[] {
   return (d.props ?? []).flatMap((p) => {
     const lista = p.instancias ?? [{ pos: p.pos as [number, number, number], rotY: p.rotY, tam: undefined }];
@@ -41,23 +41,23 @@ export function desplegarProps(d: Pick<Diorama, "props">): InstanciaDesplegada[]
 }
 
 export interface ContextoPresupuesto {
-  /** Filas del registro de assets por id (`<pack>/<pieza>`). */
+  /** Asset registry rows by id (`<pack>/<pieza>`). */
   registro: ReadonlyMap<string, RegistroAsset>;
-  /** Apariencia de cada NPC (undefined si su ficha no la trae). */
+  /** Each NPC's appearance (undefined if its sheet does not carry one). */
   apariencias: ReadonlyMap<string, Apariencia | undefined>;
 }
 
 export interface EstimadoDiorama {
   total: BudgetEstimate;
-  /** Por parte, para el mensaje de error y el log de la corrida. */
+  /** By part, for the error message and the run log. */
   partes: Record<string, BudgetEstimate>;
-  /** Lo que no se pudo contar (modelo sin triángulos medidos, NPC sin apariencia): el estimado es parcial. */
+  /** What could not be counted (model without measured triangles, NPC without appearance): the estimate is partial. */
   faltan: string[];
 }
 
 /**
- * Instancias de detalle por tipo, como las siembra world/terrain/ (zonas del formato de la maqueta) y las
- * deja la densidad (M6: en la reducida queda una de cada tres flores, matas y piedritas; el empedrado queda entero).
+ * Detail instances by type, as world/terrain/ plants them (zones of the painted diorama format) and as
+ * the density leaves them (M6: at reduced density one of every three flowers, tufts and pebbles remains; the cobblestones stay whole).
  */
 function detalleDe(d: Diorama, densidad: SceneDensity): Record<keyof typeof DETAIL_TRIANGLES, number> {
   const out = { flores: 0, matas: 0, piedritas: 0, empedrado: 0 };
@@ -69,13 +69,13 @@ function detalleDe(d: Diorama, densidad: SceneDensity): Record<keyof typeof DETA
 const tieneAgua = (d: Diorama): boolean => (d.agua?.length ?? 0) > 0 || (d.rio?.length ?? 0) > 0;
 
 /**
- * Estimado estático de llamadas y triángulos del diorama en un tier (por defecto `medium`), con su densidad y con todo a
- * la vista: es la vista lejana del zoom más lejano (160 m, D-208), donde el diorama entero y la falda entran en pantalla
- * y nada se recorta por frustum. Cuenta terreno, agua, props por código (los iguales instanciados: una llamada por tipo,
- * tamaño y tinte), árboles del layout y pinos del borde, detalle, modelos del pipeline, el jugador y cada NPC (cuerpo con
- * esqueleto y cabeza), una etiqueta y una burbuja de pedido por NPC (cota de arriba) y las sombras blob. En `high` suma la
- * pasada del mapa de sombra (los cuerpos otra vez, parte "pasada de sombra"); no cuenta las pasadas de post (pantalla
- * completa, las mide renderer.info en la instantánea del modo director).
+ * Static estimate of calls and triangles of the diorama in a tier (`medium` by default), with its density and with everything
+ * in view: it is the far view of the farthest zoom (160 m, D-208), where the whole diorama and the skirt fit on screen
+ * and nothing is culled by frustum. It counts terrain, water, code props (identical instanced ones: one call per type,
+ * size and tint), layout trees and edge pines, detail, pipeline models, the player and each NPC (skeletal body and
+ * head), a label and an order bubble per NPC (upper bound) and the blob shadows. At `high` it adds the
+ * shadow map pass (the bodies again, "shadow pass" part); it does not count the post passes (full
+ * screen, measured by renderer.info in the director-mode snapshot).
  */
 export function estimarPresupuestoDiorama(d: Diorama, ctx: ContextoPresupuesto, tier: WorldTier = "medium"): EstimadoDiorama {
   const partes: Record<string, BudgetEstimate> = {};
@@ -85,11 +85,11 @@ export function estimarPresupuestoDiorama(d: Diorama, ctx: ContextoPresupuesto, 
 
   const extension = d.terreno?.extension ?? TERRAIN_SKIRT;
   if (d.terreno?.relieve === true) {
-    // Open-world-3d T6 (D-819, D-823): el terreno del mundo abierto va en baldosas (una llamada cada una, todas a la vista
-    // en el mapa entero) con el paso del tier; la cúpula y las nubes (no en `low`) son parte del diorama.
+    // Open-world-3d T6 (D-819, D-823): the open world's terrain goes in tiles (one call each, all in view
+    // at the whole map) with the tier's step; the dome and clouds (not at `low`) are part of the diorama.
     const ow = OPEN_WORLD_DENSITY[tier];
     sumar("terreno", { drawCalls: ow.terrainTiles[0] * ow.terrainTiles[1], triangles: terrainTriangles(d.bounds, extension, ow.terrain) });
-    // Open-world-3d M3 (AC35): el delantal alrededor de la extensión, una llamada más con el material del suelo.
+    // Open-world-3d M3 (AC35): the apron around the extent, one more call with the ground material.
     sumar("terreno", { drawCalls: TERRAIN_APRON.drawCalls, triangles: TERRAIN_APRON.triangles });
     sumar("cielo", skyEstimate(tier));
   } else {
@@ -107,7 +107,7 @@ export function estimarPresupuestoDiorama(d: Diorama, ctx: ContextoPresupuesto, 
       else sumar("modelos", { drawCalls: fila.primitivas, triangles: fila.triangulos });
       continue;
     }
-    if (!p.tam || !isCodeProp(p.asset)) continue; // lo informa chequearDioramas
+    if (!p.tam || !isCodeProp(p.asset)) continue; // reported by chequearDioramas
     if (isTreeProp(p.asset)) {
       const k = `${p.asset}|${p.tinte ?? ""}`;
       arboles.set(k, (arboles.get(k) ?? 0) + 1);
@@ -188,7 +188,7 @@ export const chequearDioramas = (c: Conjunto, h: Hallazgo[]): void => {
       }
       for (const f of e.faltan) faltan.add(f);
     }
-    // Un NPC sin apariencia ya tiene su error arriba (con el índice); acá van los que solo ve el estimador.
+    // An NPC without appearance already has its error above (with the index); here go the ones only the estimator sees.
     for (const f of [...faltan].filter((x) => !x.endsWith(" sin apariencia"))) err(archivo, "", `presupuesto sin estimar: ${f}`);
   }
 };

@@ -1,24 +1,24 @@
-# content/assets-registry.yaml: registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2, D-207;
-# política de licencias D1 del plan open-world-3d, D-209 y D-831).
-# Todo archivo servido en apps/web/public/{models,textures,audio,sprites} tiene una fila en `assets`; validate:content
-# falla si falta, si la licencia no está en la lista cerrada D1, si una fila con atribucion_requerida no está en
-# content/creditos.yaml, o si una licencia de software no trae su archivo_licencia. Lista cerrada D1: CC0-1.0,
-# CC-BY-3.0 y CC-BY-4.0 (con atribución en los créditos), MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD,
-# Zlib y OFL-1.1 (las de software, con su texto versionado en el repo). Falla cerrada todo lo demás en cualquier
-# grafía: no comercial, sin derivadas, compartir igual (CC-BY-SA), GPL/LGPL/AGPL, "uso personal", licencia
-# desconocida y procedencia sin probar. Cada fila servida lleva `sha256` (bytes servidos) y `procedencia`
-# (refetched, derived, generated o edited), que scripts/content/provenance.test.ts recalcula; las filas generadas
-# (árboles de ez-tree, MIT) llevan `generador` en lugar de url_origen, fecha_descarga y sha256_original.
-# `npm run assets:refetch` vuelve a bajar y derivar cada fila y compara bytes. Nada derivado de juegos comerciales
-# ajenos entra (sin extracción, ripeo, ingeniería inversa ni emuladores): lo prueba la lista negra de AC10
-# (scripts/content/denylist.test.ts). Las licencias de npm se verifican aparte, con content/npm-licence-overrides.yaml.
-# `packs` cierra las tareas de verificación V1 a V5 de M2 (usado, descartado con la razón,
-# diferido al operador o pendiente para un hito posterior). Fuente de todas las verificaciones: investigación de assets
-# del 2026-10-13 (documento interno), con fuente y fecha de acceso por pack.
-# `pintura` es la tabla del pack de material de origen a token de la paleta (@lg/art) que usa scripts/assets/optimize.ts.
-# El decodificador meshopt de apps/web/public/decoders/ es código (MIT): su fila está en content/code-registry.yaml (D-831).
+# content/assets-registry.yaml: asset license registry (03 §6.4.2, D-153; plan estetica-c M2, D-207;
+# D1 license policy of the open-world-3d plan, D-209 and D-831).
+# Every file served from apps/web/public/{models,textures,audio,sprites} has a row in `assets`; validate:content
+# fails if it is missing, if the license is not in the closed D1 list, if a row with atribucion_requerida is not in
+# content/creditos.yaml, or if a software license lacks its archivo_licencia. Closed D1 list: CC0-1.0,
+# CC-BY-3.0 and CC-BY-4.0 (with attribution in the credits), MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD,
+# Zlib and OFL-1.1 (the software ones, with their text versioned in the repo). Everything else fails closed under any
+# spelling: non-commercial, no-derivatives, share-alike (CC-BY-SA), GPL/LGPL/AGPL, "personal use", unknown license
+# and unproven provenance. Each served row carries `sha256` (served bytes) and `procedencia`
+# (refetched, derived, generated or edited), which scripts/content/provenance.test.ts recomputes; generated rows
+# (ez-tree trees, MIT) carry `generador` instead of url_origen, fecha_descarga and sha256_original.
+# `npm run assets:refetch` downloads and derives every row again and compares bytes. Nothing derived from third-party
+# commercial games gets in (no extraction, ripping, reverse engineering or emulators): the AC10 denylist proves it
+# (scripts/content/denylist.test.ts). npm licenses are verified separately, with content/npm-licence-overrides.yaml.
+# `packs` closes the V1 to V5 verification tasks of M2 (used, discarded with the reason,
+# deferred to the operator or pending for a later milestone). Source of all verifications: the reference research's research
+# of 2026-10-13 (internal document), with source and access date per pack.
+# `pintura` is the table from the pack's source material to a palette token (@lg/art) used by scripts/assets/optimize.ts.
+# The meshopt decoder in apps/web/public/decoders/ is code (MIT): its row is in content/code-registry.yaml (D-831).
 packs:
-  # ---------- usados en M2 ----------
+  # ---------- used in M2 ----------
   - id: quaternius-farm-buildings
     nombre: Quaternius Farm Buildings Pack (2018), GLB sueltos en poly.pizza
     autor: Quaternius
@@ -33,7 +33,7 @@ packs:
       el 2021-08-15: Barn, BigBarn, SmallBarn, OpenBarn, Silo, Silo_House, TowerWindmill, ChickenCoop, Fence x2); Well,
       WaterTower y Windmill solo están en FBX/OBJ en el Drive del pack, así que el pozo y el tanque de M2 quedan para
       cuando el pipeline lea FBX o el operador los exporte. Low-poly de aristas duras: cada pieza va con bisel registrado.
-    fuente_investigacion: investigación 2026-10-13, V3 (Quaternius Farm Buildings Pack) y tabla de descargas
+    fuente_investigacion: research 2026-10-13, V3 (Quaternius Farm Buildings Pack) y tabla de descargas
     pintura:
       White: muro
       LightRed: techo
@@ -41,7 +41,7 @@ packs:
       Brown: madera
       RoofBlack: tinta-suave
       Grey: piedra
-  # ---------- usados en M3 (personajes) ----------
+  # ---------- used in M3 (characters) ----------
   - id: kaykit-adventurers-1
     nombre: KayKit Character Pack Adventurers 1.0 (GitHub)
     autor: Kay Lousberg
@@ -52,12 +52,12 @@ packs:
     estado: usado
     razon: >-
       Cuerpos base chibi con esqueleto (Rig_Medium de la 1.0: root, hips, spine, chest, head, brazos y piernas con
-      controles IK, sin cuello ni dedos) y 76 clips embebidos. Es el esqueleto de destino de M3 (investigación, V1 y V4). La 1.0
+      controles IK, sin cuello ni dedos) y 76 clips embebidos. Es el esqueleto de destino de M3 (research, V1 y V4). La 1.0
       está en GitHub y se baja por script sin login; LICENSE.txt del repo: CC0, crédito no obligatorio. Se usan tres
       cuerpos (Mage, Rogue y Barbarian, sin cabeza ni armas) repintados a la paleta y los clips de un solo archivo
       (Knight), que comparte el esqueleto. La 2.0 de itch.io queda diferida (fila kaykit-adventurers).
-    fuente_investigacion: investigación 2026-10-13, V1 (KayKit, descarga por script de GitHub) y V4 (esqueleto de destino)
-  # open-world-3d M3 (T7, AC47, D3): el personaje de la maqueta V6, para el jugador y los NPCs del mundo abierto.
+    fuente_investigacion: research 2026-10-13, V1 (KayKit, descarga por script de GitHub) y V4 (esqueleto de destino)
+  # open-world-3d M3 (T7, AC47, D3): the V6 mockup character, for the player and the open-world NPCs.
   - id: quaternius-character-animated
     nombre: Quaternius Character Animated (poly.pizza)
     autor: Quaternius
@@ -72,7 +72,7 @@ packs:
       página enlaza. Colores por material, sin texturas. Lo usan el jugador y los NPCs del mundo abierto (relieve); los
       dioramas planos (campesino) siguen con los cuerpos de KayKit.
     fuente_investigacion: maqueta V6 (assets/LICENSES.json) y operador 2026-10-28 (D3)
-  # ---------- descartados ----------
+  # ---------- discarded ----------
   - id: quaternius-medieval-village-megakit
     nombre: Quaternius Medieval Village MegaKit (Standard)
     autor: Quaternius
@@ -84,7 +84,7 @@ packs:
     razon: >-
       Texturas PBR de trim sheet (BaseColor, Normal, ORM) que el pipeline sin texturas pierde, y estética medieval
       europea que no es el rural moderno de la biblia. Sin granero ni pozo.
-    fuente_investigacion: investigación 2026-10-13, V3 (Medieval Village MegaKit)
+    fuente_investigacion: research 2026-10-13, V3 (Medieval Village MegaKit)
   - id: quaternius-stylized-nature-megakit
     nombre: Quaternius Stylized Nature MegaKit (Standard)
     autor: Quaternius
@@ -97,7 +97,7 @@ packs:
       Todo texturizado y los árboles y arbustos usan hojas como tarjetas con máscara alfa (alphaMode MASK): al quitar la
       textura quedan cuadrados verdes. Árboles y pinos ya son por código (M1); piedras y troncos se reconsideran solo si
       el operador quiere esas formas.
-    fuente_investigacion: investigación 2026-10-13, V3 (Stylized Nature MegaKit)
+    fuente_investigacion: research 2026-10-13, V3 (Stylized Nature MegaKit)
   - id: mixamo
     nombre: Mixamo (Adobe)
     autor: Adobe
@@ -110,8 +110,8 @@ packs:
       Adobe prohíbe redistribuir los archivos crudos de personaje y animación, y en un juego web el GLB queda
       descargable desde el navegador; además pide cuenta Adobe (no se baja por script). Quaternius UAL 1 y 2 (CC0)
       cubren lo mismo.
-    fuente_investigacion: investigación 2026-10-13, V4 (Mixamo, FAQ citado desde Adobe Community)
-  # ---------- diferidos al operador (login, compra o descarga por navegador) ----------
+    fuente_investigacion: research 2026-10-13, V4 (Mixamo, FAQ citado desde Adobe Community)
+  # ---------- deferred to the operator (login, purchase or browser download) ----------
   - id: kaykit-adventurers
     nombre: KayKit Character Pack Adventurers 2.0 (Free)
     autor: Kay Lousberg
@@ -124,7 +124,7 @@ packs:
       Cuerpos base chibi para M3 (esqueleto de destino recomendado Rig_Medium). La 2.0 solo está en itch.io (botón de
       "name your own price", no scriptable): la baja el operador. La 1.0 de GitHub se puede bajar por script pero no
       está verificado que sus huesos coincidan con Rig_Medium 2.0. Ropa de fantasía: se repinta y se viste con accesorios.
-    fuente_investigacion: investigación 2026-10-13, V1
+    fuente_investigacion: research 2026-10-13, V1
   - id: kaykit-character-animations
     nombre: KayKit Character Animations (Free)
     autor: Kay Lousberg
@@ -136,7 +136,7 @@ packs:
     razon: >-
       Más de 150 clips CC0 para Rig_Medium (sentarse, interactuar, levantar, herramientas). Solo en itch.io: la baja el
       operador para M3. Faltan hablar, asentir, negar, cargar caminando y dar (se resuelven por código o desde UAL).
-    fuente_investigacion: investigación 2026-10-13, V1
+    fuente_investigacion: research 2026-10-13, V1
   - id: kaykit-series-6
     nombre: KayKit Mystery Monthly Series 6 (The Farmers)
     autor: Kay Lousberg
@@ -148,7 +148,7 @@ packs:
     razon: >-
       Los únicos granjeros de KayKit (dos personajes, mismo rig). Pregunta para el operador: si paga 19,99 USD; la
       licencia de uso sigue siendo CC0.
-    fuente_investigacion: investigación 2026-10-13, V1 y preguntas para el operador
+    fuente_investigacion: research 2026-10-13, V1 y preguntas para el operador
   - id: quaternius-ual-1
     nombre: Quaternius Universal Animation Library 1 (Standard)
     autor: Quaternius
@@ -160,7 +160,7 @@ packs:
     razon: >-
       Clips para retargetear en M3 (Idle_Talking_Loop, Sitting_Talking_Loop). El espejo de OpenGameArt trae huesos
       Rigify viejos; la versión actual con huesos renombrados está solo en itch.io: la baja el operador.
-    fuente_investigacion: investigación 2026-10-13, V4
+    fuente_investigacion: research 2026-10-13, V4
   - id: synty-polygon
     nombre: Synty POLYGON Farm, POLYGON Nature y Sidekick
     autor: Synty Studios
@@ -173,8 +173,8 @@ packs:
       No hace falta ahora: los packs CC0 alcanzan para M2 y M3. Queda como pregunta para el operador (Farm 49,99 USD,
       6 granjeros con rig y sin animaciones; zona gris del GLB descargable frente a la cláusula de source files; estilo
       facetado con texturas de atlas). Nada se compra sin su decisión.
-    fuente_investigacion: investigación 2026-10-13, V5
-  # ---------- pendientes (se bajan por script cuando un hito los use) ----------
+    fuente_investigacion: research 2026-10-13, V5
+  # ---------- pending (downloaded by script when a milestone uses them) ----------
   - id: quaternius-ultimate-animated-animals
     nombre: Quaternius Ultimate Animated Animal Pack
     autor: Quaternius
@@ -187,7 +187,7 @@ packs:
       Caballo, vaca, burro y alpaca con esqueleto y 13 clips, sin texturas (color por material). No hay gallina ni
       cabra: la gallina se decide entre una de poly.pizza y una por código, y la cabra de Clover (D-174) es una
       pregunta para el operador (por código o cambio de especie). Va con M3 y M5.
-    fuente_investigacion: investigación 2026-10-13, V2
+    fuente_investigacion: research 2026-10-13, V2
   - id: quaternius-farm-animal-pack
     nombre: Quaternius Farm Animal Pack (2018)
     autor: Quaternius
@@ -197,7 +197,7 @@ packs:
     verificacion: [V2]
     estado: pendiente
     razon: Única fuente de oveja y cerdo de Quaternius; solo FBX, OBJ y Blend (sin glTF). Clips no verificados.
-    fuente_investigacion: investigación 2026-10-13, V2
+    fuente_investigacion: research 2026-10-13, V2
   - id: quaternius-ual-2
     nombre: Quaternius Universal Animation Library 2 (Standard)
     autor: Quaternius
@@ -209,7 +209,7 @@ packs:
     razon: >-
       Hablar, sí, no, cargar caminando, cosechar, sembrar y regar para retargetear a Rig_Medium en M3. Esqueleto
       estilo UE Mannequin, proporciones realistas. El espejo de OpenGameArt se baja por script.
-    fuente_investigacion: investigación 2026-10-13, V4
+    fuente_investigacion: research 2026-10-13, V4
   - id: kenney-nature-kit
     nombre: Kenney Nature Kit
     autor: Kenney
@@ -221,7 +221,7 @@ packs:
     razon: >-
       Cultivos con surcos, rocas, cercos y troncos sin texturas; el más fácil de repintar. Low-poly facetado: cada
       pieza pasa por la regla del bisel. Para M5.
-    fuente_investigacion: investigación 2026-10-13, V3
+    fuente_investigacion: research 2026-10-13, V3
   - id: kenney-fantasy-town-kit
     nombre: Kenney Fantasy Town Kit 2.0
     autor: Kenney
@@ -233,7 +233,7 @@ packs:
     razon: >-
       Carro (cart, cart-high). Usa una textura colormap de paleta: el pipeline tiene que muestrear el color por UV antes
       de descartarla (hoy asigna por nombre de material, y Kenney trae un solo material). M2 SEAM para M5.
-    fuente_investigacion: investigación 2026-10-13, V3
+    fuente_investigacion: research 2026-10-13, V3
   - id: kenney-survival-kit
     nombre: Kenney Survival Kit 2.0
     autor: Kenney
@@ -243,7 +243,7 @@ packs:
     verificacion: [V3]
     estado: pendiente
     razon: Barriles, baldes, cajas y herramientas con colormap de paleta. Sin granero, pozo, buzón, carro ni tanque.
-    fuente_investigacion: investigación 2026-10-13, V3
+    fuente_investigacion: research 2026-10-13, V3
   - id: kenney-car-kit
     nombre: Kenney Car Kit
     autor: Kenney
@@ -253,7 +253,7 @@ packs:
     verificacion: [V3]
     estado: pendiente
     razon: Tractor y camioneta, con colormap de paleta (mismo seam de muestreo por UV que Fantasy Town).
-    fuente_investigacion: investigación 2026-10-13, V3
+    fuente_investigacion: research 2026-10-13, V3
   - id: kenney-city-kits
     nombre: Kenney City Kit (Suburban, Industrial y Roads)
     autor: Kenney
@@ -265,8 +265,8 @@ packs:
     razon: >-
       Casas suburbanas, tanque de agua (water-tower, detail-tank) y postes y carteles para armar la parada de colectivo.
       Buzón y parada no están en ningún pack: se hacen por código.
-    fuente_investigacion: investigación 2026-10-13, V3
-  # ---------- open-world-3d M3 (T6): mapas fotográficos del suelo, servidos como .ktx2 (D-832, PD-4) ----------
+    fuente_investigacion: research 2026-10-13, V3
+  # ---------- open-world-3d M3 (T6): photographic ground maps, served as .ktx2 (D-832, PD-4) ----------
   - id: polyhaven
     nombre: Poly Haven, texturas de suelo y roca (JPG 1k)
     autor: Poly Haven (un autor por mapa en cada fila)
@@ -282,9 +282,9 @@ packs:
       fijado; la tabla del paso 0 (npm run assets:texture-table) eligió ETC1S 1024 los difusos y ETC1S 512 los normales
       (corte PD-4 paso 2).
     fuente_investigacion: open-world-3d T6 2026-10-29, licencia D1 (polyhaven.com/license y api.polyhaven.com/info)
-    # Open-world-3d T7: también los modelos del mockup V6 (hoja y corteza del jacarandá, cuatro escaneos de roca): los PNG
-    # 1k y el glTF 1k con su .bin, en assets-src/polyhaven/models/, derivados por scripts/assets/nature.ts.
-  # ---------- open-world-3d M3 (T7): árboles horneados con ez-tree (PD-3, D-830, D-831) ----------
+    # Open-world-3d T7: also the V6 mockup models (jacaranda leaf and bark, four rock scans): the 1k PNGs
+    # and the 1k glTF with its .bin, in assets-src/polyhaven/models/, derived by scripts/assets/nature.ts.
+  # ---------- open-world-3d M3 (T7): trees baked with ez-tree (PD-3, D-830, D-831) ----------
   - id: ez-tree
     nombre: Árboles horneados con ez-tree 1.1.0 (tooling/vendor/ez-tree, filas de código en content/code-registry.yaml)
     autor: Daniel Greenheck (ez-tree); los presets y el horneado, learning-game
@@ -300,7 +300,7 @@ packs:
 assets:
   - id: quaternius-farm-buildings/gallinero
     archivo: apps/web/public/models/quaternius-farm-buildings/gallinero.glb
-    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    # Plan estetica-c M5: measured on the served .glb (check:budgets compares against them; validate:content estimates with them).
     triangulos: 948
     primitivas: 1
     fuente: assets-src/quaternius-farm-buildings/ChickenCoop/ChickenCoop.glb
@@ -310,7 +310,7 @@ assets:
     url_origen: https://poly.pizza/m/DM0F8siLam
     fecha_descarga: 2026-10-13
     sha256_original: "138f37ba14648259e8fa841d3501ebc05ad7b997babadc6cd5572785de9e158a"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "25ca613e5aca92b33af7e58cef676ac90b7eaeb5494a0285631bf872eadcac1a"
     procedencia: derived
     modificaciones: >-
@@ -324,7 +324,7 @@ assets:
     notas: Original ChickenCoop.glb de static.poly.pizza (948 triángulos, 5 materiales de color plano, sin texturas).
   - id: quaternius-farm-buildings/cerco
     archivo: apps/web/public/models/quaternius-farm-buildings/cerco.glb
-    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    # Plan estetica-c M5: measured on the served .glb (check:budgets compares against them; validate:content estimates with them).
     triangulos: 188
     primitivas: 1
     fuente: assets-src/quaternius-farm-buildings/Fence/Fence.glb
@@ -334,7 +334,7 @@ assets:
     url_origen: https://poly.pizza/m/e02PFKKhbr
     fecha_descarga: 2026-10-13
     sha256_original: "0c35f9fb6b9ff69501463834e3f6cf7d565979aa4caae19445344d87400c70c8"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "c540a9de6d5e1a53f2236e81c83abfdb481bc73c9632352f58097554670b00c8"
     procedencia: derived
     modificaciones: >-
@@ -348,10 +348,10 @@ assets:
       Original Fence.glb de static.poly.pizza (188 triángulos, 1 material, 5,9 m de largo). Reemplaza al silo
       (Silo, 5GhLrv5Ce3, 1592 triángulos) que se probó primero: con el silo el diorama de prueba estimaba 50.676
       triángulos en medium, por encima del tope de 50k (03 §2.7.1).
-  # ---------- personajes (plan estetica-c M3) ----------
+  # ---------- characters (plan estetica-c M3) ----------
   - id: kaykit-adventurers-1/cuerpo-saco
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco.glb
-    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    # Plan estetica-c M5: measured on the served .glb (check:budgets compares against them; validate:content estimates with them).
     triangulos: 3002
     primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
@@ -361,7 +361,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb
     fecha_descarga: 2026-10-13
     sha256_original: "cf898585da33fab50c724d31605fb931eb2912e6d2280092141e98ca81ad507d"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "de41474938de782219db0a4cb3811964106ed579e323c3bc9dea4d340cd2f277"
     procedencia: derived
     modificaciones: >-
@@ -388,7 +388,7 @@ assets:
         - { ropa: remera }
   - id: kaykit-adventurers-1/cuerpo-tunica
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica.glb
-    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    # Plan estetica-c M5: measured on the served .glb (check:budgets compares against them; validate:content estimates with them).
     triangulos: 3148
     primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
@@ -398,7 +398,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb
     fecha_descarga: 2026-10-13
     sha256_original: "e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "8ce7024e7a01352b5e0c6a151583df26e77838c24811cec7cf2d5facf265ac61"
     procedencia: derived
     modificaciones: >-
@@ -424,7 +424,7 @@ assets:
         - { ropa: remera }
   - id: kaykit-adventurers-1/cuerpo-ancho
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho.glb
-    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    # Plan estetica-c M5: measured on the served .glb (check:budgets compares against them; validate:content estimates with them).
     triangulos: 3012
     primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
@@ -434,7 +434,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb
     fecha_descarga: 2026-10-13
     sha256_original: "cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "f4262dd8122d5d8f50dd3e98459efe27c24c84bce5a770a707354b573b614679"
     procedencia: derived
     modificaciones: >-
@@ -458,7 +458,7 @@ assets:
         - { ropa: remera }
   - id: kaykit-adventurers-1/cuerpo-saco-bajo
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-saco-bajo.glb
-    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    # Plan estetica-c M6: the body of the reduced density of `low` (measured on the served .glb).
     triangulos: 1200
     primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Mage/Mage.glb
@@ -468,7 +468,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb
     fecha_descarga: 2026-10-13
     sha256_original: "cf898585da33fab50c724d31605fb931eb2912e6d2280092141e98ca81ad507d"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "72f5189b3a5a770ed5576794770e2f2c331b1fd41a76e7bc9b388a0ddebde005"
     procedencia: derived
     modificaciones: >-
@@ -486,7 +486,7 @@ assets:
       simplificar: 0.4
   - id: kaykit-adventurers-1/cuerpo-tunica-bajo
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-tunica-bajo.glb
-    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    # Plan estetica-c M6: the body of the reduced density of `low` (measured on the served .glb).
     triangulos: 1258
     primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Rogue/Rogue.glb
@@ -496,7 +496,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb
     fecha_descarga: 2026-10-13
     sha256_original: "e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "ce7535606c438acc0839765a3fe3289ad28eb0ae2eea61e69ca44e60fa32a787"
     procedencia: derived
     modificaciones: >-
@@ -514,7 +514,7 @@ assets:
       simplificar: 0.4
   - id: kaykit-adventurers-1/cuerpo-ancho-bajo
     archivo: apps/web/public/models/kaykit-adventurers-1/cuerpo-ancho-bajo.glb
-    # Plan estetica-c M6: el cuerpo de la densidad reducida de `low` (medidos sobre el .glb servido).
+    # Plan estetica-c M6: the body of the reduced density of `low` (measured on the served .glb).
     triangulos: 1204
     primitivas: 1
     fuente: assets-src/kaykit-adventurers-1/Barbarian/Barbarian.glb
@@ -524,7 +524,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb
     fecha_descarga: 2026-10-13
     sha256_original: "cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "c8d5fe89d7ac8b8732de88715c549a94c8be9d1ab6ecd0442781d50d789aa4a8"
     procedencia: derived
     modificaciones: >-
@@ -542,7 +542,7 @@ assets:
       simplificar: 0.4
   - id: kaykit-adventurers-1/animaciones
     archivo: apps/web/public/models/kaykit-adventurers-1/animaciones.glb
-    # Plan estetica-c M5: medidos sobre el .glb servido (check:budgets los compara; validate:content estima con ellos).
+    # Plan estetica-c M5: measured on the served .glb (check:budgets compares against them; validate:content estimates with them).
     triangulos: 0
     primitivas: 0
     fuente: assets-src/kaykit-adventurers-1/Knight/Knight.glb
@@ -552,7 +552,7 @@ assets:
     url_origen: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/blob/main/addons/kaykit_character_pack_adventures/Characters/gltf/Knight.glb
     fecha_descarga: 2026-10-13
     sha256_original: "60428e3abc09ba83e595d256e3af8c5c976b46cdae599f0802fc82b4a3445168"
-    # open-world-3d T2(c), D-831: sha256 de los bytes servidos (los recalcula scripts/content/provenance.test.ts).
+    # open-world-3d T2(c), D-831: sha256 of the served bytes (scripts/content/provenance.test.ts recomputes them).
     sha256: "848864b0b199256cd797b409a78805a0842c16de20ae38d9ff9d71491f42be0a"
     procedencia: derived
     modificaciones: >-
@@ -563,7 +563,7 @@ assets:
     personaje:
       tipo: animaciones
       clips: [Idle, Walking_A, Running_A, Sit_Chair_Idle, Interact, PickUp]
-  # ---------- open-world-3d M3 (T7, AC47): el personaje de Quaternius (mundo abierto) ----------
+  # ---------- open-world-3d M3 (T7, AC47): the Quaternius character (open world) ----------
   - id: quaternius-character-animated/cuerpo
     archivo: apps/web/public/models/quaternius-character-animated/cuerpo.glb
     triangulos: 3264
@@ -650,7 +650,7 @@ assets:
     personaje:
       tipo: animaciones
       clips: [Idle, Walk, Run, PickUp]
-  # ---------- open-world-3d M3 (T6): suelo .ktx2 (scripts/assets/ktx2.ts, D-832) ----------
+  # ---------- open-world-3d M3 (T6): .ktx2 ground (scripts/assets/ktx2.ts, D-832) ----------
   - id: polyhaven/leafy-grass-diff
     archivo: apps/web/public/textures/leafy-grass-diff.ktx2
     fuente: assets-src/polyhaven/leafy_grass_diff_1k.jpg
@@ -801,7 +801,7 @@ assets:
       scripts/assets/ktx2.ts: basisu 2.50.0 (basisu_st.wasm por node:wasi, un hilo, sha256 b42d951b) con
       -ktx2 -mipmap -normal_map -q 160 -resample 512 512; normal (convención OpenGL) reducido a 512x512, ETC1S con mips.
     atribucion_requerida: false
-  # ---------- open-world-3d M3 (T7): árboles horneados (scripts/assets/bake-trees.ts, ez-tree vendorizado, D-830) ----------
+  # ---------- open-world-3d M3 (T7): baked trees (scripts/assets/bake-trees.ts, vendored ez-tree, D-830) ----------
   - id: ez-tree/pine-a
     archivo: apps/web/public/models/generated/trees/pine-a.glb
     pack: ez-tree
@@ -815,7 +815,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: pineA
       semilla: 101
     atribucion_requerida: false
@@ -834,7 +834,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: pineA (liviano)
       semilla: 101
     atribucion_requerida: false
@@ -853,7 +853,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: pineB
       semilla: 202
     atribucion_requerida: false
@@ -872,7 +872,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: pineB (liviano)
       semilla: 202
     atribucion_requerida: false
@@ -891,7 +891,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: pineC
       semilla: 303
     atribucion_requerida: false
@@ -910,7 +910,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: pineC (liviano)
       semilla: 303
     atribucion_requerida: false
@@ -929,7 +929,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: oak
       semilla: 404
     atribucion_requerida: false
@@ -948,7 +948,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: oak (liviano)
       semilla: 404
     atribucion_requerida: false
@@ -967,7 +967,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: aspen
       semilla: 505
     atribucion_requerida: false
@@ -986,7 +986,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: aspen (liviano)
       semilla: 505
     atribucion_requerida: false
@@ -1005,7 +1005,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: bushA
       semilla: 606
     atribucion_requerida: false
@@ -1024,7 +1024,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: bushA (liviano)
       semilla: 606
     atribucion_requerida: false
@@ -1043,7 +1043,7 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: bushB
       semilla: 707
     atribucion_requerida: false
@@ -1062,13 +1062,13 @@ assets:
     archivo_licencia: tooling/vendor/ez-tree/LICENSE
     generador:
       archivo: scripts/assets/bake-trees.ts
-      sha256: "82d40dd6d70f46117d3756f62b78f5a549f5bb8fb97e699d65b21756271f8b07"
+      sha256: "9c24aa1b7d0f9c93121f05a74ed81d163391b4a0d10df32bb506f80062d9479c"
       preset: bushB (liviano)
       semilla: 707
     atribucion_requerida: false
     triangulos: 164
     primitivas: 1
-  # ---------- open-world-3d M3 (T7): hoja, corteza y rocas de Poly Haven (scripts/assets/nature.ts, D-829, D-832) ----------
+  # ---------- open-world-3d M3 (T7): Poly Haven leaf, bark and rocks (scripts/assets/nature.ts, D-829, D-832) ----------
   - id: polyhaven/hoja-diff
     archivo: apps/web/public/textures/hoja-diff.ktx2
     fuente: assets-src/polyhaven/models/jacaranda_tree_leaves_diff_1k.png
@@ -1291,4 +1291,4 @@ assets:
     atribucion_requerida: false
     triangulos: 420
     primitivas: 1
-  # ---------- fin T7 ----------
+  # ---------- end T7 ----------

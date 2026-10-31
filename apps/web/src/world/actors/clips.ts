@@ -1,18 +1,18 @@
-// world/actors/clips.ts — el manifiesto de animaciones de los personajes (plan estetica-c M3, propuesta C §3). Puro (sin
-// three). Esqueleto de destino: KayKit Rig_Medium 1.0 (el de los cuerpos y el archivo de clips del pipeline, decisión del
-// manager 2026-10-13). Cada clip del set mínimo es o un clip de archivo (KayKit, servido en `animaciones.glb`) o un gesto
-// procedural (gestures.ts) sobre huesos con nombre; un test lee el archivo servido y los esqueletos de los tres cuerpos y
-// falla si un clip falta o si un hueso no existe.
-// M3 SEAM: los clips retargeteados de Quaternius UAL 2 (o de KayKit Character Animations 2.0, diferido al operador)
-// entran cambiando una fila de procedural a archivo, previa validación de huesos en scripts/assets/.
+// world/actors/clips.ts — the characters' animation manifest (plan estetica-c M3, proposal C §3). Pure (no
+// three). Target skeleton: KayKit Rig_Medium 1.0 (the one from the pipeline's bodies and clip file, manager decision
+// 2026-10-13). Each clip in the minimal set is either a file clip (KayKit, served in `animaciones.glb`) or a procedural
+// gesture (gestures.ts) on named bones; a test reads the served file and the skeletons of the three bodies and
+// fails if a clip is missing or a bone does not exist.
+// M3 SEAM: the retargeted clips from Quaternius UAL 2 (or KayKit Character Animations 2.0, deferred to the operator)
+// come in by changing a row from procedural to file, after bone validation in scripts/assets/.
 import { GESTURES, type ProceduralGesture } from "./gestures";
 
-/** Archivo de clips del pipeline (`modelo/` + esto = el asset servido). */
+/** Pipeline clip file (`modelo/` + this = the served asset). */
 export const CLIPS_ASSET = "kaykit-adventurers-1/animaciones";
-/** Cuerpo base `id` → asset servido (en @lg/art desde M5: el estimador de validate:content lo usa igual). */
+/** Base body `id` → served asset (in @lg/art since M5: the validate:content estimator uses it just the same). */
 export { bodyAsset } from "@lg/art";
 
-/** Las 41 articulaciones de Rig_Medium 1.0 (nombres del glTF). */
+/** The 41 joints of Rig_Medium 1.0 (glTF names). */
 export const RIG_BONES = [
   "root", "hips", "spine", "chest", "head",
   "upperarm.l", "lowerarm.l", "wrist.l", "hand.l", "handslot.l",
@@ -24,7 +24,7 @@ export const RIG_BONES = [
   "elbowIK.l", "handIK.l", "elbowIK.r", "handIK.r",
 ] as const;
 
-/** El set mínimo de la propuesta C §3 (más `escuchar`, el estado "turno del jugador" de la escena). */
+/** The minimal set from proposal C §3 (plus `escuchar`, the scene's "player's turn" state). */
 export const MIN_CLIP_SET = [
   "idle", "caminar", "trotar", "hablar", "escuchar", "saludar", "asentir", "negar", "pensar", "sorprenderse", "sentarse", "cargar", "dar",
 ] as const;
@@ -38,8 +38,8 @@ const file = (clip: string, loop = true): ClipSource => ({ kind: "archivo", asse
 const procedural = (gesture: ProceduralGesture): ClipSource => ({ kind: "procedural", gesture, bones: GESTURES[gesture].bones });
 
 /**
- * De dónde sale cada clip. Los de KayKit se usan donde existen (idle con respiración, caminar con rebote, trote, sentarse
- * y dar algo); asentir y negar van sobre el hueso de la cabeza; lo demás son gestos aditivos de brazos y cabeza.
+ * Where each clip comes from. KayKit's are used where they exist (idle with breathing, walk with bounce, trot, sit
+ * and give something); nod and shake go on the head bone; the rest are additive arm and head gestures.
  */
 export const CLIP_MANIFEST: Readonly<Record<ClipId, ClipSource>> = {
   idle: file("Idle"),
@@ -57,5 +57,5 @@ export const CLIP_MANIFEST: Readonly<Record<ClipId, ClipSource>> = {
   cargar: procedural("cargar"),
 };
 
-/** Nombres de los clips que se leen del archivo. */
+/** Names of the clips read from the file. */
 export const FILE_CLIPS: readonly string[] = [...new Set(Object.values(CLIP_MANIFEST).flatMap((s) => (s.kind === "archivo" ? [s.clip] : [])))];

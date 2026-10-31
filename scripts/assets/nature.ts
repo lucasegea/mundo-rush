@@ -1,20 +1,20 @@
-// scripts/assets/nature.ts: los mapas y las rocas del mundo abierto que no son el suelo (open-world-3d T7, D-829, PD-9,
-// D-832). Todo sale de originales CC0 de Poly Haven bajados a assets-src/polyhaven/models/ (gitignored) y verificados por
-// sha256, con el mismo basisu fijado de ktx2.ts y el pipeline de glTF de optimize.ts (gltf-transform y meshoptimizer, ya
-// dependencias); nada nuevo se instala. Lo derivado se versiona y content/assets-registry.yaml tiene una fila por archivo.
+// scripts/assets/nature.ts: the open world's maps and rocks that are not the ground (open-world-3d T7, D-829, PD-9,
+// D-832). Everything comes from CC0 Poly Haven originals downloaded into assets-src/polyhaven/models/ (gitignored) and verified by
+// sha256, with the same pinned basisu of ktx2.ts and the glTF pipeline of optimize.ts (gltf-transform and meshoptimizer, already
+// dependencies); nothing new is installed. The derived files are versioned and content/assets-registry.yaml has one row per file.
 //
-//   · hoja (`hoja-diff.ktx2`, 512, ETC1S con alfa): el recorte del mockup V6 de la hoja de jacarandá (680 × 370 desde
-//     x 330), alfa = (max(r, g, b) − 22) · 10 (el fondo del original es negro) y "contain" en 512 × 512
-//   · corteza (`corteza-diff.ktx2`, 512): el tronco del jacarandá reducido a la mitad (el "cover" del mockup en un cuadrado)
-//   · rocas (`rocas-diff.ktx2` y `rocas-nor.ktx2`, 1024): un atlas de 2 × 2 con los cuatro escaneos a 512 (ROCK_SCANS de
-//     @lg/art en orden: arriba a la izquierda rock_07, a la derecha rock_09, abajo rock_moss_set_01 y rock_face_01). Un
-//     solo material por banda para todas las rocas (AC71: toon como mucho 4), la UV de cada roca va a su cuarto
-//   · rocas (`models/polyhaven/<escaneo>.glb` y `-lejos.glb`): el glTF 1k sin materiales ni texturas, weld, meshopt
-//     simplify al objetivo del mockup (cerca y lejos), cada malla centrada con la base en y = 0 y el lado horizontal mayor
-//     de 1 m (world/ la escala), COLOR_0 blanco, UV al cuarto del atlas, meshopt (las reglas de optimize.ts, D-829)
+//   · leaf (`hoja-diff.ktx2`, 512, ETC1S with alpha): the mockup V6's crop of the jacaranda leaf (680 × 370 from
+//     x 330), alpha = (max(r, g, b) − 22) · 10 (the original's background is black) and "contain" in 512 × 512
+//   · bark (`corteza-diff.ktx2`, 512): the jacaranda trunk halved (the mockup's "cover" in a square)
+//   · rocks (`rocas-diff.ktx2` and `rocas-nor.ktx2`, 1024): a 2 × 2 atlas with the four scans at 512 (ROCK_SCANS from
+//     @lg/art in order: top left rock_07, right rock_09, bottom rock_moss_set_01 and rock_face_01). A single
+//     material per band for all rocks (AC71: toon at most 4), each rock's UV goes to its quarter
+//   · rocks (`models/polyhaven/<scan>.glb` and `-lejos.glb`): the 1k glTF without materials or textures, weld, meshopt
+//     simplify to the mockup's target (near and far), each mesh centered with the base at y = 0 and the larger horizontal side
+//     of 1 m (world/ scales it), white COLOR_0, UV to the atlas quarter, meshopt (optimize.ts's rules, D-829)
 //
-//   node scripts/assets/nature.ts           baja lo que falta, deriva y escribe lo que cambió
-//   node scripts/assets/nature.ts --check   deriva todo en memoria y compara con lo versionado (sale 1 si difiere)
+//   node scripts/assets/nature.ts           downloads what is missing, derives and writes what changed
+//   node scripts/assets/nature.ts --check   derives everything in memory and compares with the versioned files (exits 1 if it differs)
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -31,7 +31,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const PH = "https://dl.polyhaven.org/file/ph-assets/Models";
 export const NATURE_CACHE = "assets-src/polyhaven/models";
 
-/** Un original: url y el nombre en el caché. */
+/** An original: url and the name in the cache. */
 export interface Original {
   url: string;
   file: string;
@@ -41,20 +41,20 @@ export const LEAF_SOURCE = png("jacaranda_tree", "leaves_diff");
 export const BARK_SOURCE = png("jacaranda_tree", "trunk_diff");
 export const rockMap = (scan: RockScan, kind: MapKind): Original => png(scan, kind === "diff" ? "diff" : "nor_gl");
 export const rockGltf = (scan: RockScan): Original => ({ url: `${PH}/gltf/1k/${scan}/${scan}_1k.gltf`, file: `${scan}_1k.gltf` });
-/** Poly Haven sirve el .bin de cualquier resolución desde la carpeta 8k (su API lo da así en `include`). */
+/** Poly Haven serves the .bin of any resolution from the 8k folder (its API gives it that way in `include`). */
 export const rockBin = (scan: RockScan): Original => ({ url: `${PH}/gltf/8k/${scan}/${scan}.bin`, file: `${scan}.bin` });
 
 export const LEAF_FILE = NATURE_TEXTURES.leaf;
 export const BARK_FILE = NATURE_TEXTURES.bark;
 export const rockAtlasFile = (kind: MapKind): string => (kind === "diff" ? NATURE_TEXTURES.rockDiff : NATURE_TEXTURES.rockNor);
-/** Lado de la hoja, de la corteza y de cada cuarto del atlas de rocas. */
+/** Side of the leaf, the bark and each quarter of the rock atlas. */
 export const NATURE_PX = { leaf: 512, bark: 512, rockCell: 512 } as const;
-/** Recorte de la hoja en el original de 1024 (mockup `derive-assets.mjs`). */
+/** Crop of the leaf in the 1024 original (mockup `derive-assets.mjs`). */
 export const LEAF_CROP = { left: 330, top: 0, width: 680, height: 370 } as const;
 
 export const sha256 = (b: Uint8Array): string => createHash("sha256").update(b).digest("hex");
 
-/** Reducción por área (promedio ponderado por cobertura): determinística y sin dependencias. */
+/** Area reduction (coverage-weighted average): deterministic and dependency-free. */
 export function resizeArea(src: Imagen, w: number, h: number, crop = { left: 0, top: 0, width: src.ancho, height: src.alto }): Imagen {
   const out = new Uint8Array(w * h * 4);
   const sx = crop.width / w;
@@ -83,7 +83,7 @@ export function resizeArea(src: Imagen, w: number, h: number, crop = { left: 0, 
   return { ancho: w, alto: h, rgba: out };
 }
 
-/** La hoja: recorte, alfa por luminancia del fondo negro, "contain" en un cuadrado transparente (mockup V6). */
+/** The leaf: crop, alpha by luminance of the black background, "contain" in a transparent square (mockup V6). */
 export function deriveLeaf(source: Uint8Array): Uint8Array {
   const img = decodificarPng(source);
   const keyed = new Uint8Array(img.rgba);
@@ -103,15 +103,15 @@ export function deriveLeaf(source: Uint8Array): Uint8Array {
   return codificarPng({ ancho: S, alto: S, rgba: out });
 }
 
-/** La corteza: el tronco a 512 (el original es cuadrado: el "cover" del mockup es reducir). */
+/** The bark: the trunk at 512 (the original is square: the mockup's "cover" is a downscale). */
 export function deriveBark(source: Uint8Array): Uint8Array {
   return codificarPng(resizeArea(decodificarPng(source), NATURE_PX.bark, NATURE_PX.bark));
 }
 
-/** Cuarto del atlas de cada escaneo (columna, fila; fila 0 arriba = v de glTF en [0, 0,5)). */
+/** architecture review quarter of each scan (column, row; row 0 on top = glTF v in [0, 0.5)). */
 export const rockCell = (i: number): [number, number] => [i % 2, Math.floor(i / 2)];
 
-/** El atlas de 2 × 2 de los cuatro escaneos (difusos o normales) en el orden de ROCK_SCANS. */
+/** The 2 × 2 atlas of the four scans (diffuse or normals) in ROCK_SCANS order. */
 export function deriveRockAtlas(sources: readonly Uint8Array[]): Uint8Array {
   const C = NATURE_PX.rockCell;
   const S = C * 2;
@@ -124,7 +124,7 @@ export function deriveRockAtlas(sources: readonly Uint8Array[]): Uint8Array {
   return codificarPng({ ancho: S, alto: S, rgba: out });
 }
 
-/** El glTF 1k de Poly Haven sin imágenes, texturas ni materiales (no se bajan: el atlas va aparte). */
+/** Poly Haven's 1k glTF without images, textures or materials (not downloaded: the atlas is separate). */
 function geometryOnly(gltf: Uint8Array): JSONDocument["json"] {
   const j = JSON.parse(new TextDecoder().decode(gltf)) as JSONDocument["json"];
   delete j.images;
@@ -141,7 +141,7 @@ export interface RockGlb {
   meshes: number;
 }
 
-/** Un escaneo como .glb del pipeline (ver el encabezado). `index` es su lugar en ROCK_SCANS (el cuarto del atlas). */
+/** A scan as a pipeline .glb (see the header). `index` is its place in ROCK_SCANS (the atlas quarter). */
 export async function deriveRock(gltf: Uint8Array, bin: Uint8Array, index: number, target: number): Promise<RockGlb> {
   const io = await crearIO();
   const json = geometryOnly(gltf);
@@ -149,7 +149,7 @@ export async function deriveRock(gltf: Uint8Array, bin: Uint8Array, index: numbe
   const doc: Document = await io.readJSON({ json, resources: { [uri]: new Uint8Array(bin) } });
   const root = doc.getRoot();
   await doc.transform(flatten());
-  // Las transformaciones de los nodos a los vértices (cada malla de un set queda en su lugar del set y se recentra sola).
+  // The nodes' transforms into the vertices (each mesh of a set stays in its place in the set and recenters itself).
   for (const node of root.listNodes()) {
     const mesh = node.getMesh();
     if (!mesh) continue;
@@ -200,7 +200,7 @@ export async function deriveRock(gltf: Uint8Array, bin: Uint8Array, index: numbe
   return { glb, triangles: tris(), meshes: root.listMeshes().length };
 }
 
-/** Un original del caché o bajado (sin verificar: el sha256 lo compara el registro, en refetch y en el test). */
+/** An original from the cache or downloaded (unverified: the sha256 is compared by the registry, in refetch and in the test). */
 export async function loadOriginal(o: Original, root = ROOT): Promise<Uint8Array> {
   const abs = join(root, NATURE_CACHE, o.file);
   if (!existsSync(abs)) {
@@ -216,7 +216,7 @@ export interface Derived {
   primitives?: number;
 }
 
-/** Un archivo de este script: sus originales y cómo derivarlo (refetch.ts rehace uno solo con los originales bajados). */
+/** A file of this script: its originals and how to derive it (refetch.ts rebuilds one alone with the downloaded originals). */
 export interface NatureJob {
   file: string;
   sources: Original[];
@@ -229,7 +229,7 @@ const ktx2Job = (file: string, sources: Original[], kind: MapKind, px: number, d
   make: async (root, enc) => ({ bytes: await encodeKtx2(derive(await Promise.all(sources.map((s) => loadOriginal(s, root)))), kind, enc, px, { ext: "png", targetPx: px }) }),
 });
 
-/** Todo lo de este script, en el orden de las filas del registro. */
+/** Everything in this script, in the order of the registry rows. */
 export const NATURE_JOBS: readonly NatureJob[] = [
   ktx2Job(LEAF_FILE, [LEAF_SOURCE], "diff", NATURE_PX.leaf, ([s]) => deriveLeaf(s as Uint8Array)),
   ktx2Job(BARK_FILE, [BARK_SOURCE], "diff", NATURE_PX.bark, ([s]) => deriveBark(s as Uint8Array)),

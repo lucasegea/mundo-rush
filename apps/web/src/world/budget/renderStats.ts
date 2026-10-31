@@ -1,39 +1,39 @@
-// world/budget/renderStats.ts — contadores reales del renderer para la instantánea del modo director (plan estetica-c
-// M6): llamadas, triángulos, texturas y geometrías de `renderer.info`, y los FPS medidos, para que el operador midan
-// sin navegador automatizado (D-016). SOLO DESARROLLO: GameCanvas lo carga con import() bajo la doble llave del modo
-// director (`import.meta.env.DEV && VITE_LG_DIRECTOR === "1"`) y boot/dev.ts lee la última muestra; en `vite build` la
-// rama se elimina y este módulo no se emite (check:dev-only falla si su marcador aparece en un dist).
+// world/budget/renderStats.ts — real renderer counters for the director-mode snapshot (plan estetica-c
+// M6): calls, triangles, textures and geometries from `renderer.info`, and the measured FPS, so the operator and the assistant can measure
+// without an automated browser (D-016). DEVELOPMENT ONLY: GameCanvas loads it with import() under the director mode's
+// double key (`import.meta.env.DEV && VITE_LG_DIRECTOR === "1"`) and boot/dev.ts reads the last sample; in `vite build` the
+// branch is eliminated and this module is not emitted (check:dev-only fails if its marker appears in a dist).
 //
-// Un cuadro puede tener varias pasadas (sombra de `high`, EffectComposer): con `autoReset` apagado, `info.render` suma
-// todas las del cuadro; la sonda lee el cuadro anterior entero al empezar el siguiente y recién ahí pone en cero.
+// A frame can have several passes (`high` shadow, EffectComposer): with `autoReset` off, `info.render` adds up
+// all those of the frame; the probe reads the whole previous frame when the next one starts and only then zeroes it.
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 
-/** Marcador de solo-desarrollo (check:dev-only lo busca en el dist). */
+/** Development-only marker (check:dev-only looks for it in the dist). */
 export const RENDER_STATS_MARKER = "__lg_director:render-stats";
 
-/** Ventana de la muestra de FPS. */
+/** FPS sample window. */
 export const SAMPLE_WINDOW_MS = 1000;
 
 export interface RenderStatsSample {
-  /** Llamadas de dibujo del último cuadro completo (todas sus pasadas). */
+  /** Draw calls of the last complete frame (all its passes). */
   drawCalls: number;
-  /** Triángulos del último cuadro completo (todas sus pasadas). */
+  /** Triangles of the last complete frame (all its passes). */
   triangles: number;
-  /** Texturas y geometrías vivas en la GPU. */
+  /** Textures and geometries alive on the GPU. */
   textures: number;
   geometries: number;
-  /** Cuadros por segundo dibujados en la última ventana (con el tope de cuadros aplicado). */
+  /** Frames per second drawn in the last window (with the frame cap applied). */
   fps: number;
 }
 
-/** Lo que se lee de `WebGLRenderer.info` (inyectable en los tests). */
+/** What is read from `WebGLRenderer.info` (injectable in the tests). */
 export interface RendererInfoLike {
   render: { calls: number; triangles: number };
   memory: { textures: number; geometries: number };
 }
 
-/** Una muestra a partir de lo acumulado en un cuadro y de los cuadros contados en la ventana. */
+/** A sample from what was accumulated in a frame and the frames counted in the window. */
 export function sampleRenderStats(info: RendererInfoLike, frames: number, windowMs: number): RenderStatsSample {
   return {
     drawCalls: info.render.calls,
@@ -46,10 +46,10 @@ export function sampleRenderStats(info: RendererInfoLike, frames: number, window
 
 let latest: RenderStatsSample | null = null;
 
-/** La última muestra (null si el canvas no dibujó todavía). La lee el modo director por boot/dev.ts. */
+/** The last sample (null if the canvas has not drawn yet). Director mode reads it through boot/dev.ts. */
 export const readRenderStats = (): RenderStatsSample | null => latest;
 
-/** La sonda: va dentro del <Canvas>; corre antes que todo lo demás de cada cuadro (prioridad muy negativa). */
+/** The probe: goes inside the <Canvas>; runs before everything else each frame (very negative priority). */
 export default function RenderStatsProbe() {
   const gl = useThree((s) => s.gl);
   const win = useRef({ start: 0, frames: 0, fps: 0 });
@@ -57,7 +57,7 @@ export default function RenderStatsProbe() {
     const prev = gl.info.autoReset;
     gl.info.autoReset = false;
     gl.info.reset();
-    // El marcador queda en el DOM del canvas: si este módulo llegara a un build, check:dev-only lo encuentra en el dist.
+    // The marker stays in the canvas DOM: if this module ever reached a build, check:dev-only finds it in the dist.
     gl.domElement.setAttribute("data-lg-render-stats", RENDER_STATS_MARKER);
     return () => {
       gl.info.autoReset = prev;
@@ -75,7 +75,7 @@ export default function RenderStatsProbe() {
       w.start = now;
       w.frames = 0;
     }
-    // Lo acumulado es el cuadro anterior entero (todas sus pasadas): se guarda y se pone en cero para este.
+    // What is accumulated is the whole previous frame (all its passes): it is saved and zeroed for this one.
     latest = { ...sampleRenderStats(gl.info, 0, 0), fps: w.fps };
     gl.info.reset();
   }, -1000);

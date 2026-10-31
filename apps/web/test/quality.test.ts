@@ -1,4 +1,4 @@
-// Tiers como contrato (R12): A7 (unión exacta, el selector nunca devuelve xr) y A3 (sin WebGL → dialog-only).
+// Tiers as a contract (R12): A7 (exact union, the selector never returns xr) and A3 (no WebGL → dialog-only).
 import { describe, expect, expectTypeOf, test } from "vitest";
 import {
   detectCapabilities, effectiveTier, QUALITY_TIERS, TIER_PARAMS, type QualityTier, type SelectableTier, type TierChoice,

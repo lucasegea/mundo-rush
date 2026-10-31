@@ -1,6 +1,6 @@
-// i18n/ — helper propio mínimo (ADR-019): JSON por locale, claves tipadas, plurales con Intl.PluralRules.
-// Un solo locale hoy: es-AR con voseo (D-045). Las cadenas de juego vienen del contenido (R9); acá solo
-// las de interfaz.
+// i18n/ — own minimal helper (ADR-019): JSON per locale, typed keys, plurals with Intl.PluralRules.
+// A single locale today: es-AR with voseo (D-045). Game strings come from content (R9); here only
+// the interface ones.
 import esAR from "./es-AR.json";
 
 export type Locale = "es-AR";
@@ -9,7 +9,7 @@ type Message = string | PluralForms;
 
 export const CATALOGS: Record<Locale, Record<string, Message>> = { "es-AR": esAR };
 
-/** Las claves del catálogo base: un typo en `t("...")` no compila. */
+/** The base catalog's keys: a typo in `t("...")` does not compile. */
 export type MessageKey = keyof typeof esAR;
 export type Params = Record<string, string | number>;
 
@@ -22,8 +22,8 @@ const interpolate = (text: string, params: Params): string =>
   text.replace(/\{(\w+)\}/g, (whole, name: string) => (name in params ? String(params[name]) : whole));
 
 /**
- * Traduce una clave. Con forma plural, elige por `params.count` (Intl.PluralRules). Una clave inexistente
- * (solo posible con claves dinámicas) se devuelve tal cual, visible: el test de claves faltantes la caza antes.
+ * Translates a key. With a plural form, it picks by `params.count` (Intl.PluralRules). A nonexistent key
+ * (only possible with dynamic keys) is returned as is, visible: the missing-keys test catches it beforehand.
  */
 export function t(key: MessageKey, params: Params = {}): string {
   const message: Message | undefined = CATALOGS[LOCALE][key];
@@ -33,7 +33,7 @@ export function t(key: MessageKey, params: Params = {}): string {
   return interpolate(message[plural.select(count)] ?? message.other, params);
 }
 
-/** Traduce una clave que llega como texto (p. ej. de un anuncio del store); `keyParams` se traducen primero. */
+/** Translates a key that arrives as text (e.g. from a store announcement); `keyParams` are translated first. */
 export function tDynamic(key: string, params: Params = {}, keyParams: Record<string, string> = {}): string {
   const resolved: Params = { ...params };
   for (const [name, k] of Object.entries(keyParams)) resolved[name] = isMessageKey(k) ? t(k) : k;

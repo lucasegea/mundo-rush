@@ -1,5 +1,5 @@
-// F5.1a A5: libro de costos. La cuenta por adaptador con las tarifas de models.yaml, la fila de escena, el promedio
-// móvil y la alerta a US$0,05/min (D-027); A7: el adaptador de archivo es append-only y rechaza binarios.
+// F5.1a A5: cost ledger. The per-adapter accounting with the models.yaml rates, the scene row, the moving
+// average and the alert at US$0.05/min (D-027); A7: the file adapter is append-only and rejects binaries.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -63,16 +63,16 @@ describe("A5: alerta por promedio móvil > US$0,05/min (D-027)", () => {
     const l = createMemoryCostLedger(small);
     const close = (id: string, wallSeconds: number) =>
       l.closeScene({ at: AT, sceneRunId: id, accountId: "op-local", adapter: "gemini-live", wallSeconds });
-    // US$0,03 en 1 min.
+    // US$0.03 in 1 min.
     l.recordTurn(turn("a", { kind: "tokens", audioIn: 10_000, audioOut: 0, textIn: 0, textOut: 0 }));
     expect(close("a", 60).alert).toBeNull();
-    // US$0,12 en 1 min: el promedio de las dos (0,15/2 = 0,075) supera 0,05.
+    // US$0.12 in 1 min: the average of the two (0.15/2 = 0.075) exceeds 0.05.
     l.recordTurn(turn("b", { kind: "tokens", audioIn: 40_000, audioOut: 0, textIn: 0, textOut: 0 }));
     const { alert } = close("b", 60);
     expect(alert?.thresholdUsdPerMin).toBe(0.05);
     expect(alert?.scenes).toBe(2);
     expect(alert?.usdPerMin).toBeCloseTo(0.075, 10);
-    // Justo en el umbral no alerta (la alerta es "supera"): US$0,03 en 1 min con umbral 0,03.
+    // Right at the threshold it doesn't alert (the alert is "exceeds"): US$0.03 in 1 min with threshold 0.03.
     const e = createMemoryCostLedger({ ...small, windowScenes: 1, alertUsdPerMin: 0.03 });
     e.recordTurn(turn("c", { kind: "tokens", audioIn: 10_000, audioOut: 0, textIn: 0, textOut: 0 }));
     expect(e.closeScene({ at: AT, sceneRunId: "c", accountId: "a", adapter: "gemini-live", wallSeconds: 60 }).alert).toBeNull();

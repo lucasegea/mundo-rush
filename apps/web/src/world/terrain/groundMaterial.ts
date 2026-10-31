@@ -1,13 +1,13 @@
-// world/terrain/groundMaterial.ts: el sombreador del suelo del mundo abierto (open-world-3d T6, D-819, PD-4, clase
-// `terreno`), port del splat del mockup V6 (`world.js` groundMaterial): pasto y pasto ralo con antirrepetición (dos
-// muestras giradas mezcladas por ruido), tierra del camino por el peso `aDirt` de cada vértice con borde gastado y
-// ruidoso, dos rocas por pendiente y ruido, y la cama de pasto verde bajo el disco de pasto (`uGrassBed`, T8). Con un
-// grado más verde que V6 (AC41: el mostaza y el parche de zoom medio). Los mapas son los .ktx2 del suelo (scripts/assets/
-// ktx2.ts) cargados con KTX2Loader de three/addons y el transcodificador Basis autoalojado en /decoders/; los normales
-// van apagados en `low`. Mientras los mapas no llegaron (o si fallan) el suelo queda con su color por vértice: la escena
-// nunca espera ni se rompe por una textura.
-// Open-world-3d T7b (D-839, D-842): qué mapa va en cada ranura del splat y el grado del pasto son del look
-// (`WorldLook.ground`); el grado entra como uniforms (no como texto del sombreador), así dos looks comparten el programa.
+// world/terrain/groundMaterial.ts: the open world ground shader (open-world-3d T6, D-819, PD-4, class
+// `terreno`), port of the V6 mockup splat (`world.js` groundMaterial): grass and sparse grass with anti-tiling (two
+// rotated samples blended by noise), path dirt by each vertex `aDirt` weight with a worn,
+// noisy edge, two rocks by slope and noise, and the green grass bed under the grass disc (`uGrassBed`, T8). With a
+// greener grade than V6 (AC41: the mustard and the mid-zoom patch). The maps are the ground .ktx2 (scripts/assets/
+// ktx2.ts) loaded with three/addons KTX2Loader and the self-hosted Basis transcoder in /decoders/; the normals
+// are off on `low`. While the maps have not arrived (or if they fail) the ground keeps its vertex color: the scene
+// never waits for or breaks over a texture.
+// Open-world-3d T7b (D-839, D-842): which map goes in each splat slot and the grass grade belong to the look
+// (`WorldLook.ground`); the grade enters as uniforms (not as shader text), so two looks share the program.
 import { DataTexture, MeshStandardMaterial, RepeatWrapping, RGBAFormat, SRGBColorSpace, Vector2, Vector3, Vector4, type Texture, type WebGLRenderer } from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@lg/art";
 import { tagMaterial } from "../materials/registry";
 
-/** Ruido de valor y fbm en GLSL (el del mockup V6). */
+/** Value noise and fbm in GLSL (the V6 mockup one). */
 export const NOISE_GLSL = /* glsl */ `
   float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -23,7 +23,7 @@ export const NOISE_GLSL = /* glsl */ `
   float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * vn(p); p = p * 2.03 + 11.7; a *= 0.5; } return s / 0.9375; }
 `;
 
-/** Uniform del sampler de cada ranura (difuso `t*`, normal `n*`), en el orden de GROUND_SLOTS. */
+/** Sampler uniform of each slot (diffuse `t*`, normal `n*`), in GROUND_SLOTS order. */
 const SAMPLER: Readonly<Record<GroundSlot, readonly [string, string]>> = {
   grass: ["tG1", "nG1"],
   sparse: ["tG2", "nG2"],
@@ -33,15 +33,15 @@ const SAMPLER: Readonly<Record<GroundSlot, readonly [string, string]>> = {
 };
 
 /*
- * El grado del pasto (AC41, `WorldLook.ground.grassGrade`, uniforms uGrassLow, uGrassHigh y uSparseGain): de dónde a
- * dónde va el tono según el ruido grande. V6 iba de (0,34, 0,66, 0,13) a (0,62, 0,74, 0,17) con el ralo a 1,7, y el mapa
- * entero se leía mostaza. Medido en LG_GL=gpu, medium, t = 1 (amarillo entre los píxeles de terreno, tope 0,35): V6
- * 0,83; el primer grado de T6 (0,3, 0,64, 0,14)-(0,44, 0,7, 0,15) también 0,83 (el tonemapping y el sol cálido corren el
- * verde al amarillo); (0,2, 0,62, 0,18)-(0,3, 0,68, 0,2) 0,015 con el tono pegado a 72°; el de DEFAULT_LOOK, 0,012 con el
- * tono en 80-88°.
+ * The grass grade (AC41, `WorldLook.ground.grassGrade`, uniforms uGrassLow, uGrassHigh and uSparseGain): from where to
+ * where the tone goes according to the large noise. V6 went from (0.34, 0.66, 0.13) to (0.62, 0.74, 0.17) with the sparse at 1.7, and the whole
+ * map read as mustard. Measured at LG_GL=gpu, medium, t = 1 (yellow among the terrain pixels, cap 0.35): V6
+ * 0.83; T6's first grade (0.3, 0.64, 0.14)-(0.44, 0.7, 0.15) also 0.83 (tonemapping and the warm sun shift the
+ * green toward yellow); (0.2, 0.62, 0.18)-(0.3, 0.68, 0.2) 0.015 with the hue pinned at 72°; DEFAULT_LOOK's, 0.012 with the
+ * hue at 80-88°.
  */
 
-/** Fragmento del color del suelo (reemplaza `color_fragment`); `vColor` es el color por vértice de buildTerrain. */
+/** Ground color fragment (replaces `color_fragment`); `vColor` is buildTerrain's vertex color. */
 const COLOR_GLSL = /* glsl */ `#include <color_fragment>
   if (uMaps > 0.5) {
     vec2 gq = vWPos.xz;
@@ -78,7 +78,7 @@ const COLOR_GLSL = /* glsl */ `#include <color_fragment>
   }
 `;
 
-/** Normales de los mapas (reemplaza `normal_fragment_maps`), solo con `uNormOn` y los mapas cargados. */
+/** Map normals (replaces `normal_fragment_maps`), only with `uNormOn` and the maps loaded. */
 const NORMAL_GLSL = /* glsl */ `
   if (uMaps > 0.5 && uNormOn > 0.5) {
     vec3 n1 = nx(nG1, gPG), n2 = nx(nG2, gPG * 1.3 + 4.7);
@@ -96,9 +96,9 @@ const NORMAL_GLSL = /* glsl */ `
 `;
 
 /**
- * El borde del mundo (open-world-3d M3, AC35, TERRAIN_APRON): después de la niebla, el color se funde al de la niebla
- * según la distancia (Chebyshev, la de la extensión) fuera de los límites caminables `uEdge`, de `uEdgeFade.x` a
- * `uEdgeFade.y` m. Usa `fogColor` del mismo `fog_fragment`, así el borde queda del color exacto del fondo y del horizonte.
+ * The world edge (open-world-3d M3, AC35, TERRAIN_APRON): after the fog, the color blends into the fog one
+ * according to the distance (Chebyshev, the extent one) outside the walkable bounds `uEdge`, from `uEdgeFade.x` to
+ * `uEdgeFade.y` m. It uses `fogColor` from the same `fog_fragment`, so the edge ends up the exact color of the background and horizon.
  */
 const EDGE_GLSL = /* glsl */ `#include <fog_fragment>
   #ifdef USE_FOG
@@ -107,7 +107,7 @@ const EDGE_GLSL = /* glsl */ `#include <fog_fragment>
   #endif
 `;
 
-/** Límites caminables y distancias (m fuera de ellos) donde el suelo empieza y termina de fundirse a la niebla. */
+/** Walkable bounds and distances (m outside them) where the ground starts and finishes blending into the fog. */
 export interface GroundEdge {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
   fade: readonly [number, number];
@@ -121,24 +121,24 @@ const placeholder = (): Texture => {
 
 export interface GroundMaterial {
   material: MeshStandardMaterial;
-  /** Centro (x, z), radio y encendido (0 a 1) de la cama de pasto; la mueve el pasto (world/nature/grass.ts, T8). */
+  /** Center (x, z), radius and on state (0 to 1) of the grass bed; the grass moves it (world/nature/grass.ts, T8). */
   grassBed: Vector4;
   /**
-   * Baja los mapas del tier y los pone en el material (una sola vez). Llamado después de `dispose` (el doble efecto de
-   * StrictMode) lo revive: los mapas vuelven a subir a la GPU en el próximo cuadro.
+   * Downloads the tier maps and puts them on the material (only once). Called after `dispose` (StrictMode double
+   * effect) it revives it: the maps upload to the GPU again on the next frame.
    */
   loadMaps(renderer: WebGLRenderer): Promise<void>;
-  /** Libera material y mapas; los mapas que llegan después (carga en curso) se liberan al llegar y no se asignan. */
+  /** Frees material and maps; maps that arrive later (load in progress) are freed on arrival and not assigned. */
   dispose(): void;
 }
 
-/** La url servida de un mapa del suelo (apps/web/public/textures/... → <base>textures/...). */
+/** The served url of a ground map (apps/web/public/textures/... → <base>textures/...). */
 export const groundMapUrl = (map: GroundMap, kind: "diff" | "nor", base = "/"): string =>
   `${base}${groundTextureFile(map, kind).slice(TEXTURES_DIR.length - "textures".length)}`;
 
 /**
- * Los mapas que pide un tier con un look: los 5 difusos siempre, los 5 normales solo si el tier los usa (o si `normals`,
- * la perilla de T10 (b), lo dice).
+ * The maps a tier asks for with a look: the 5 diffuse ones always, the 5 normal ones only if the tier uses them (or if `normals`,
+ * the T10 (b) knob, says so).
  */
 export function groundMapsFor(
   tier: WorldTier, look: WorldLook, normals = OPEN_WORLD_DENSITY[tier].groundNormals,
@@ -149,15 +149,15 @@ export function groundMapsFor(
 
 let ktx2: KTX2Loader | null = null;
 
-/** El cargador KTX2 del mundo (uno solo: el suelo y, desde T7, la naturaleza), con el transcodificador autoalojado. */
+/** The world KTX2 loader (only one: the ground and, since T7, the nature), with the self-hosted transcoder. */
 export function ktx2Loader(renderer: WebGLRenderer): KTX2Loader {
   ktx2 ??= new KTX2Loader().setTranscoderPath(`${import.meta.env.BASE_URL}decoders/`).detectSupport(renderer);
   return ktx2;
 }
 
 /**
- * El material del suelo del mundo abierto (uno por escena), con los mapas y el grado del look. `normals` (T10 (b)): por
- * defecto los del tier; false arma el sombreador sin mapas normales y no los baja.
+ * The open world ground material (one per scene), with the look maps and grade. `normals` (T10 (b)): by
+ * default the tier ones; false builds the shader without normal maps and does not download them.
  */
 export function groundMaterial(
   tier: WorldTier, look: WorldLook, edge: GroundEdge | null = null, normals = OPEN_WORLD_DENSITY[tier].groundNormals,
@@ -168,13 +168,13 @@ export function groundMaterial(
     uMaps: { value: 0 },
     uNormOn: { value: normals ? 1 : 0 },
     uGrassBed: { value: grassBed },
-    // Sin borde, el fundido queda fuera de alcance (de 1e5 a 2e5 m; dos bordes distintos también en float32).
+    // Without an edge, the fade stays out of reach (from 1e5 to 2e5 m; two distinct edges also in float32).
     uEdge: { value: edge ? new Vector4(edge.bounds.minX, edge.bounds.minZ, edge.bounds.maxX, edge.bounds.maxZ) : new Vector4() },
     uEdgeFade: { value: edge ? new Vector2(edge.fade[0], edge.fade[1]) : new Vector2(1e5, 2e5) },
     uGrassLow: { value: new Vector3(...look.ground.grassGrade.low) },
     uGrassHigh: { value: new Vector3(...look.ground.grassGrade.high) },
     uSparseGain: { value: look.ground.grassGrade.sparseGain },
-    // T8 (D-839): el tinte de la cama de pasto es del look (`grass.bed`), como uniform.
+    // T8 (D-839): the grass bed tint belongs to the look (`grass.bed`), as a uniform.
     uBedTint: { value: new Vector3(...look.grass.bed) },
   };
   const fallback = placeholder();
@@ -228,7 +228,7 @@ export function groundMaterial(
           return { name: SAMPLER[slot][kind === "diff" ? 0 : 1], tex };
         }));
         if (!alive) {
-          // Liberado mientras bajaban (cambio de tier rápido): no se asignan; la próxima carga, si la hay, baja de nuevo.
+          // Freed while downloading (fast tier change): they are not assigned; the next load, if any, downloads again.
           for (const m of maps) m.tex.dispose();
           loading = null;
           return;
@@ -241,7 +241,7 @@ export function groundMaterial(
     dispose() {
       alive = false;
       for (const u of Object.values(uniforms)) if ((u.value as Texture | undefined)?.isTexture) (u.value as Texture).dispose();
-      // El 1 × 1 de espera ya no está en los uniforms cuando llegaron los mapas, pero subió a la GPU en los primeros cuadros.
+      // The 1 × 1 placeholder is no longer in the uniforms when the maps arrived, but it was uploaded to the GPU in the first frames.
       fallback.dispose();
       material.dispose();
     },

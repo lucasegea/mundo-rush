@@ -1,8 +1,8 @@
-// state/selectors/ — view-models con nombre (R14), un archivo por slice. ui/ y world/ leen solo de acá.
+// state/selectors/ — named view-models (R14), one file per slice. ui/ and world/ read only from here.
 export * from "./session";
 export * from "./settings";
 export * from "./world";
-// Open-world-3d T9: el minimapa (NPCs pendientes, modelo heading-up y colores del look).
+// Open-world-3d T9: the minimap (pending NPCs, heading-up model and look colors).
 export * from "./minimap";
 export * from "./player";
 export * from "./dialogue";

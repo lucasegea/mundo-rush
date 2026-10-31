@@ -1,4 +1,4 @@
-// Fase de la app y pila de paneles (slices session y ui).
+// App phase and panel stack (session and ui slices).
 import { describe, expect, test } from "vitest";
 import { APP_PHASES, canEnterWorld, phaseAfterBoot, popPanel, pushPanel, type Panel } from "../src/index";
 

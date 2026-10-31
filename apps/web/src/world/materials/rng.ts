@@ -1,5 +1,5 @@
-// world/materials/rng.ts — generador determinístico chico (mulberry32) para el arte por código: misma semilla, mismo
-// dibujo. El Rng del núcleo es para la simulación; este es solo de presentación y no se comparte con el juego.
+// world/materials/rng.ts — small deterministic generator (mulberry32) for code-built art: same seed, same
+// drawing. The core Rng is for the simulation; this one is presentation-only and is not shared with the game.
 export function rng(seed: number): () => number {
   let s = seed | 0;
   return () => {

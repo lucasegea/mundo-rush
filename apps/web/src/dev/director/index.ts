@@ -1,7 +1,7 @@
-// dev/director/ — cliente del modo director (FD0, 03 §6.5.2, ADR-026). Solo lo carga boot/dev.ts con
-// `import()` bajo `import.meta.env.DEV && VITE_LG_DIRECTOR === "1"`: en `vite build` no existe.
-// Lee el juego solo por state/selectors/ (el store le llega inyectado como lector) y manda por el canal de HMR
-// el snapshot (≤ 4 por segundo y solo si cambió) y los eventos del diario.
+// dev/director/ — director-mode client (FD0, 03 §6.5.2, ADR-026). Only boot/dev.ts loads it, with
+// `import()` under `import.meta.env.DEV && VITE_LG_DIRECTOR === "1"`: it does not exist in `vite build`.
+// It reads the game only through state/selectors/ (the store is injected as a reader) and sends over the HMR channel
+// the snapshot (≤ 4 per second and only if it changed) and the journal events.
 import { JOURNAL_EVENT, SNAPSHOT_EVENT, type JournalBatch, type JournalEventInput, type RenderStats } from "@lg/protocol/director";
 import { selectEffectiveTier, type GameState } from "../../state/selectors";
 import { browserClock, createJournalEmitter, createSnapshotEmitter, type DirectorClock } from "./emitter";
@@ -12,12 +12,12 @@ export { advanceHistory, emptyHistory, selectDirectorSnapshot, type DirectorHist
 export { createJournalEmitter, createSnapshotEmitter, MIN_INTERVAL_MS, type DirectorClock } from "./emitter";
 export { journalEvents } from "./journal";
 
-/** Lo mínimo del canal de HMR de Vite (`import.meta.hot`). */
+/** The minimum of Vite's HMR channel (`import.meta.hot`). */
 export interface HotSender {
   send(event: string, data?: unknown): void;
 }
 
-/** Lector del store: estado actual y suscripción (estado nuevo, estado anterior). */
+/** Store reader: current state and subscription (new state, previous state). */
 export interface GameReader {
   getState(): GameState;
   subscribe(listener: (state: GameState, prev: GameState) => void): () => void;
@@ -28,26 +28,26 @@ export interface DirectorDeps {
   store: GameReader;
   clock?: DirectorClock;
   sessionId?: string;
-  /** Recibe `pagehide` para cerrar la sesión del diario (la app pasa window). */
+  /** Receives `pagehide` to close the journal session (the app passes window). */
   pageEvents?: EventTarget;
   /**
-   * Plan estetica-c M6: lector de los contadores del renderer (boot/dev.ts inyecta world/budget/renderStats; dev/ no
-   * conoce world/ ni three). Con él, el snapshot lleva `render` y se vuelve a armar cada RENDER_SAMPLE_MS aunque el store
-   * no cambie (el emisor solo manda si cambió).
+   * Plan estetica-c M6: reader of the renderer counters (boot/dev.ts injects world/budget/renderStats; dev/ does not
+   * know world/ or three). With it, the snapshot carries `render` and is rebuilt every RENDER_SAMPLE_MS even if the store
+   * does not change (the emitter only sends if it changed).
    */
   render?: () => RenderStats | null;
 }
 
-/** Cada cuánto se re-arma el snapshot para refrescar los contadores del renderer. */
+/** How often the snapshot is rebuilt to refresh the renderer counters. */
 export const RENDER_SAMPLE_MS = 1000;
 
-/** Id de sesión ordenable por fecha y seguro como nombre de archivo: `20261007-183012-k3f9`. */
+/** Session id sortable by date and safe as a file name: `20261007-183012-k3f9`. */
 export const newSessionId = (now: number, random: () => number = Math.random): string => {
-  const stamp = new Date(now).toISOString().replace(/\D/g, ""); // AAAAMMDDhhmmssmmm (UTC)
+  const stamp = new Date(now).toISOString().replace(/\D/g, ""); // YYYYMMDDhhmmssmmm (UTC)
   return `${stamp.slice(0, 8)}-${stamp.slice(8, 14)}-${random().toString(36).slice(2, 6).padEnd(4, "0")}`;
 };
 
-/** Arranca el modo director. Devuelve una función que lo detiene (cierra la sesión del diario). */
+/** Starts director mode. Returns a function that stops it (closes the journal session). */
 export function startDirector(deps: DirectorDeps): () => void {
   const clock = deps.clock ?? browserClock;
   const sessionId = deps.sessionId ?? newSessionId(clock.now());
@@ -67,7 +67,7 @@ export function startDirector(deps: DirectorDeps): () => void {
     journal.add(journalEvents(prev, state, at));
   };
 
-  // El plugin completa gitSha y contentHash de session.start (los sabe Node, no el navegador).
+  // The plugin fills in gitSha and contentHash of session.start (Node knows them, the browser does not).
   const start: JournalEventInput = { type: "session.start", at: iso(), gitSha: null, contentHash: null, tier: selectEffectiveTier(deps.store.getState()) };
   journal.add([start]);
   onState(deps.store.getState(), null);

@@ -1,7 +1,7 @@
-// services/quality/quality.ts — tiers de calidad como contrato (R12, 03 §2.7.1): el ÚNICO objeto del que se
-// leen los parámetros por tier, y la detección de capacidades del navegador (§2.7.2). Las reglas (sugerir y
-// resolver el tier, nunca `xr`) están en @lg/core; acá solo se mide el navegador.
-// El micro-benchmark de ~1 s y PerformanceMonitor llegan con el canvas (F2).
+// services/quality/quality.ts — quality tiers as a contract (R12, 03 §2.7.1): the ONLY object from which
+// per-tier parameters are read, and browser capability detection (§2.7.2). The rules (suggest and
+// resolve the tier, never `xr`) are in @lg/core; here only the browser is measured.
+// The ~1 s micro-benchmark and PerformanceMonitor arrive with the canvas (F2).
 import type { Capabilities, SelectableTier } from "@lg/core";
 import type { SceneDensity } from "@lg/art";
 
@@ -18,13 +18,13 @@ export interface TierParams {
   post: "none" | "bloom" | "full";
   maxTextureMb: number;
   /**
-   * Plan estetica-c M6: densidad de la escena (DENSITY de @lg/art). `low` reducida (menos detalle, geometría y cuerpos
-   * reducidos, terreno más grueso, niebla más corta: "distancia de dibujo corta" de §2.7.1); el resto, la completa.
+   * Plan estetica-c M6: scene density (DENSITY from @lg/art). `low` reduced (less detail, fewer geometry and bodies,
+   * coarser terrain, shorter fog: the "short draw distance" of §2.7.1); the rest, the full one.
    */
   density: SceneDensity;
 }
 
-/** Parámetros de 03 §2.7.1. `xr` no tiene fila: está reservado y nunca se elige (R12). */
+/** Parameters from 03 §2.7.1. `xr` has no row: it is reserved and never chosen (R12). */
 export const TIER_PARAMS: Readonly<Record<SelectableTier, TierParams>> = {
   low: { targetFps: 30, maxDpr: 1, maxTriangles: 25_000, maxDrawCalls: 60, maxAnimatedCharacters: 4, shadows: "none", post: "none", maxTextureMb: 24, density: "reduced" },
   medium: { targetFps: 60, maxDpr: 1.5, maxTriangles: 50_000, maxDrawCalls: 120, maxAnimatedCharacters: 8, shadows: "blob", post: "bloom", maxTextureMb: 48, density: "full" },
@@ -32,9 +32,9 @@ export const TIER_PARAMS: Readonly<Record<SelectableTier, TierParams>> = {
   "dialog-only": { targetFps: null, maxDpr: null, maxTriangles: 0, maxDrawCalls: 0, maxAnimatedCharacters: 0, shadows: "none", post: "none", maxTextureMb: 0, density: "reduced" },
 };
 
-/** Lo mínimo del navegador que mira la detección (inyectable para tests sin navegador). */
+/** The minimum of the browser that detection looks at (injectable for tests without a browser). */
 export interface QualityEnv {
-  /** Crea un canvas para probar WebGL2; no se agrega al documento. */
+  /** Creates a canvas to probe WebGL2; it is not added to the document. */
   createCanvas(): { getContext(id: "webgl2"): unknown } | null;
   deviceMemory?: number | undefined;
   hardwareConcurrency?: number | undefined;
@@ -48,7 +48,7 @@ export const browserQualityEnv = (): QualityEnv => ({
 
 const positive = (n: number | undefined): number | null => (typeof n === "number" && Number.isFinite(n) && n > 0 ? n : null);
 
-/** WebGL2, memoria y núcleos. Cualquier excepción del navegador al probar WebGL cuenta como "sin WebGL". */
+/** WebGL2, memory and cores. Any browser exception while probing WebGL counts as "no WebGL". */
 export function detectCapabilities(env: QualityEnv = browserQualityEnv()): Capabilities {
   let webgl2 = false;
   try {

@@ -1,5 +1,5 @@
-// F4.1 A1: la máquina de escena de 03 §3.5.1 — cada transición, los tres temporizadores (D-130) y las invariantes
-// (a)-(e), con un test de propiedades sobre secuencias aleatorias de eventos con el RNG con semilla del núcleo.
+// F4.1 A1: the scene machine of 03 §3.5.1 — every transition, the three timers (D-130) and the invariants
+// (a)-(e), with a property test over random event sequences using the core's seeded RNG.
 import { describe, expect, test } from "vitest";
 import {
   ACTIVE_STATES, CLOCK_STATES, createRng, initialSceneSnapshot, PASS_OPTIONS, PLAYER_SUB_STATES, runScene, SCENE_EVENTS,
@@ -10,7 +10,7 @@ import {
 const ev = (type: SceneEvent["type"], extra: Record<string, unknown> = {}): SceneEvent => ({ type, ...extra }) as SceneEvent;
 const INTERACT = ev("interact", { npcId: "NPC-INES", sceneId: "M0.1-E1", modality: "voice" });
 
-/** Un snapshot en `state` (y `sub`) con contexto coherente: sesión y reloj como quedan al llegar ahí. */
+/** A snapshot in `state` (and `sub`) with coherent context: session and clock as they are when arriving there. */
 const at = (state: SceneStateName, sub: PlayerSubState | null = null, ctx: Partial<SceneSnapshot["ctx"]> = {}): SceneSnapshot => {
   const clock = CLOCK_STATES.includes(state);
   return {
@@ -33,7 +33,7 @@ describe("forma (lista cerrada de 03 §3.5.1)", () => {
   });
 });
 
-// [desde, sub, evento, hacia, sub, efectos esperados (prefijo exacto)]
+// [from, sub, event, to, sub, expected effects (exact prefix)]
 type Row = [SceneStateName, PlayerSubState | null, SceneEvent, SceneStateName, PlayerSubState | null, string[], Partial<SceneSnapshot["ctx"]>?];
 const ROWS: Row[] = [
   ["idle", null, INTERACT, "pretask", null, ["openSession", "startPretask"]],
@@ -138,7 +138,7 @@ describe("A1: estados activos (voiceLost, budgetExhausted, safetyRisk, abort)", 
       expect(sceneStepName(t.snapshot)).toBe(sceneStepName(s));
       expect(t.snapshot.ctx.modality).toBe("text");
       expect(t.effects).toEqual([{ type: "modalityChanged", modality: "text" }]);
-      expect(sceneTransition(t.snapshot, ev(type)).changed).toBe(false); // ya en texto
+      expect(sceneTransition(t.snapshot, ev(type)).changed).toBe(false); // already in text
     }
   });
 
@@ -238,7 +238,7 @@ describe("A1: los tres temporizadores (D-130)", () => {
 
 const ERRORS = ["subject-verb:3sg-s", "article:a", "tense:past"];
 
-/** Un evento al azar de la lista cerrada (con su carga). */
+/** A random event from the closed list (with its payload). */
 function randomEvent(rng: Rng): SceneEvent {
   const type = rng.pick(SCENE_EVENTS);
   switch (type) {
@@ -251,8 +251,8 @@ function randomEvent(rng: Rng): SceneEvent {
 }
 
 /**
- * Eventos que el sistema siempre termina disparando (03 §3.5.1): el fin de cada línea guionada, la unión de pretask
- * y el tope duro del servidor. Con ellos, desde cualquier estado alcanzable se llega a done o aborted.
+ * Events the system always ends up firing (03 §3.5.1): the end of each scripted line, the pretask join
+ * and the server's hard cap. With them, from any reachable state it gets to done or aborted.
  */
 const GUARANTEED: SceneEvent[] = [
   ev("sceneFailed", { reason: "net" }), ev("pretaskDone"), ev("openingDone"), ev("hardCap"),
@@ -298,7 +298,7 @@ describe("A1: invariantes (property test, RNG con semilla)", () => {
         }
       }
     }
-    // Directo: la misma clave otra vez se ignora; otra clave sí entra.
+    // Direct: the same key again is ignored; another key does get in.
     const s = at("npcTurn", null, { lastSignalErrorKey: "article:a" });
     expect(sceneTransition(s, ev("companionSignal", { errorKey: "article:a" })).changed).toBe(false);
     expect(sceneTransition(s, ev("companionSignal", { errorKey: "tense:past" })).snapshot.state).toBe("signal");

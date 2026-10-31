@@ -1,8 +1,8 @@
-// open-world-3d AC74, fix 1 de QA (hallazgo 6): la fila del paso elegido de PD-4 es lo que sirve @lg/art. Antes el
-// recorte "normales de 1024 a 512" bajaba también el atlas 2 × 2 de las rocas, la fila decía 19,9 / 23,9 MB contra
-// 20,9 / 24,9 del inventario, y el paso 1 parecía entrar mientras el código fijaba el 2 (D-832).
-// Cambio registrado (open-world-3d T7b, D-841): OPEN_WORLD_TEXTURES pasó a ser `worldTextures(look)`; el test corre sobre
-// cada look del catálogo (DEFAULT_LOOK incluido) con su propia descarga, sin cambiar ningún tope.
+// open-world-3d AC74, QA's fix 1 (finding 6): the chosen PD-4 step's row is what @lg/art serves. Before, the
+// "normals from 1024 to 512" cut also lowered the rocks' 2 × 2 atlas, the row said 19.9 / 23.9 MB against
+// the inventory's 20.9 / 24.9, and step 1 appeared to fit while the code fixed step 2 (D-832).
+// Recorded change (open-world-3d T7b, D-841): OPEN_WORLD_TEXTURES became `worldTextures(look)`; the test runs over
+// each look of the catalog (DEFAULT_LOOK included) with its own download, without changing any cap.
 import { DEFAULT_LOOK, TIER_BUDGETS, WORLD_LOOKS, WORLD_TIERS, worldTextures } from "@lg/art";
 import { describe, expect, test } from "vitest";
 import { loadBudgets } from "../budgets/bundle-size.ts";
@@ -20,7 +20,7 @@ describe("texture-table (AC74)", () => {
     for (const tier of WORLD_TIERS) expect(row?.gpuMb[tier], tier).toBeCloseTo(inv.gpuMb[tier], 6);
     expect(row?.downloadMb).toBeCloseTo(inv.downloadMb, 6);
     expect(inv.fits).toBe(true);
-    // LK4: cada look entra solo en los topes de siempre (24 / 48 / 96 MB y la descarga de 6 MB).
+    // LK4: each look fits alone in the usual caps (24 / 48 / 96 MB and the 6 MB download).
     for (const tier of WORLD_TIERS) expect(inv.gpuMb[tier], tier).toBeLessThanOrEqual(TIER_BUDGETS[tier].maxTextureMb);
     expect(inv.downloadMb).toBeLessThanOrEqual(capMb);
   });

@@ -1,11 +1,11 @@
-// Open-world-3d T7 (AC43): el escritor de .glb propio. Cabecera (magic y versión 2), chunks JSON y BIN de largo múltiplo
-// de 4, claves del JSON en orden fijo, sin fecha ni versión en `generator`, los mismos datos dan los mismos bytes, y lo
-// escrito, leído por el lector de inspect-budgets (gltf-transform), da los triángulos y primitivas de la geometría.
+// Open-world-3d T7 (AC43): the own .glb writer. Header (magic and version 2), JSON and BIN chunks of length a multiple
+// of 4, JSON keys in fixed order, no date or version in `generator`, the same data gives the same bytes, and what is
+// written, read by inspect-budgets's reader (gltf-transform), gives the geometry's triangles and primitives.
 import { describe, expect, test } from "vitest";
 import { GLB_ATTRIBUTES, readGlbChunks, writeGlb, type GlbMesh } from "./glb-write.ts";
 import { medirPieza } from "./inspect-budgets.ts";
 
-/** Un quad (2 triángulos) y un triángulo, en dos mallas; con todos los atributos. */
+/** A quad (2 triangles) and a triangle, in two meshes; with all attributes. */
 const fixture = (): GlbMesh[] => [
   {
     name: "quad",

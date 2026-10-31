@@ -1,6 +1,6 @@
-// book-mode slice-1 M1 (D-804/D-805): namespacing de universos en el reader y el build.
-// Prueba que el lector con --universe normaliza a rutas canónicas, que el lector legacy no se contamina con
-// content/universes/, y que un universo con solo cabeza compila como scaffold (AC2).
+// book-mode slice-1 M1 (D-804/D-805): universe namespacing in the reader and the build.
+// Proves that the reader with --universe normalizes to canonical paths, that the legacy reader is not contaminated with
+// content/universes/, and that a head-only universe compiles as a scaffold (AC2).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,7 +14,7 @@ const REPO = fileURLToPath(new URL("../..", import.meta.url));
 const temporales: string[] = [];
 afterAll(() => { for (const d of temporales) rmSync(d, { recursive: true, force: true }); });
 
-/** root temporal con un universo: content/universes/<id>/manifiesto.yaml (+ archivos extra opcionales). */
+/** temporary root with a universe: content/universes/<id>/manifiesto.yaml (+ optional extra files). */
 const rootConUniverso = (id: string, manifiesto: string, extra: Record<string, string> = {}): string => {
   const root = mkdtempSync(join(tmpdir(), "lg-univ-"));
   temporales.push(root);
@@ -47,7 +47,7 @@ describe("M1 reader: namespacing de universos", () => {
   });
 
   test("el lector legacy (sin universo) NO desciende a content/universes/ (AC1/C-B)", () => {
-    // El repo real ya tiene content/universes/U-GALEANO/manifiesto.yaml; no debe aparecer en el árbol campesino.
+    // The real repo already has content/universes/U-GALEANO/manifiesto.yaml; it must not appear in the farmer tree.
     const rutas = leerContenido(REPO).map((a) => a.ruta);
     expect(rutas.some((r) => r.startsWith("content/universes/"))).toBe(false);
     expect(rutas.some((r) => r === "content/manifiesto.yaml")).toBe(false);
@@ -75,9 +75,9 @@ describe("M1 build: scaffold de un universo con solo cabeza (AC2)", () => {
     expect(construir({ root, modo: "dev", universe: "U-GALEANO", log })).toBe(1);
   });
 
-  // M3 (AC6): el repo real ya tiene el dataset Galeano R1 completo, así que --universe=U-GALEANO routea al
-  // compilador completo (no al scaffold de M1). Se verifica con el compilador PURO (compilarContenido), que no
-  // escribe salida, para no tocar los stores reales del operador (lección 2026-10-08). `construir` sí escribiría.
+  // M3 (AC6): the real repo already has the complete Galeano R1 dataset, so --universe=U-GALEANO routes to the
+  // full compiler (not to M1's scaffold). It is verified with the PURE compiler (compilarContenido), which does not
+  // write output, so as not to touch the operator's real stores (lesson 2026-10-08). `construir` would write.
   test("el repo real con --universe=U-GALEANO compila el dataset completo (AC6, sin escribir)", () => {
     const r = compilarContenido(leerContenido(REPO, "U-GALEANO"), "dev");
     expect(r.errores).toEqual([]);

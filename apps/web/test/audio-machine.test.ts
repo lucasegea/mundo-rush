@@ -1,5 +1,5 @@
-// F5.2: máquina de estados del audio del cliente (sin permiso / listo / escuchando / pensando / reproduciendo) y la cola
-// de reproducción de la voz del NPC con un AudioContext falso (sin Web Audio).
+// F5.2: the client audio state machine (no permission / ready / listening / thinking / playing) and the NPC voice
+// playback queue with a fake AudioContext (no Web Audio).
 import { describe, expect, test } from "vitest";
 import { audioTransition, canTalk, createPlaybackQueue, resumeIfSuspended, type AudioEvent, type AudioState, type PlaybackContext } from "../src/services/audio";
 
@@ -88,7 +88,7 @@ describe("cola de reproducción", () => {
     q.push(Int16Array.from(new Array(2400).fill(16384)), 24000); // 100 ms
     q.push(new Int16Array(1200), 24000); // 50 ms
     expect(ctx.sources[0]?.at).toBeCloseTo(5.1, 9);
-    expect(ctx.sources[1]?.at).toBeCloseTo(5.2, 9); // pegado al anterior: 5,1 + 100 ms
+    expect(ctx.sources[1]?.at).toBeCloseTo(5.2, 9); // glued to the previous one: 5.1 + 100 ms
     expect(ctx.sources[0]?.buffer?.data[0]).toBe(0.5);
     expect(ctx.sources[0]?.buffer?.rate).toBe(24000);
     expect(q.playing).toBe(true);

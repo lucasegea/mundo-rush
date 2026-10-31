@@ -1,17 +1,17 @@
-// Reinicio de desarrollo de un encuentro de conversación (A2, ADR-027 "Rejugar"): para volver a jugar la charla con un
-// NPC desde cero sin tocar el resto del progreso real. Borra el estado del encuentro (lo que sabés del NPC, los
-// medidores) y registra un reinicio de las misiones cuya escena usa esa ficha: el log de evidencia es append-only y no
-// se toca; al leer el progreso, lo de esas misiones fechado hasta el reinicio deja de contar (progress.ts withoutResets).
+// Development reset of a conversation encounter (A2, ADR-027 "Replay"): to replay the chat with an
+// NPC from scratch without touching the rest of the real progress. Deletes the encounter state (what you know about the NPC, the
+// meters) and records a reset of the missions whose scene uses that sheet: the evidence log is append-only and is not
+// touched; when progress is read, anything from those missions dated up to the reset stops counting (progress.ts withoutResets).
 import type { FichaConversacion, Mision } from "@lg/content-schema";
 import type { ServerContent } from "../content/loader.ts";
 import type { EncounterStore } from "../store/encounters.ts";
 
 export interface ResetResult {
-  /** Fichas reiniciadas (CONV-*). */
+  /** Sheets reset (CONV-*). */
   sheets: string[];
-  /** Misiones cuya evidencia previa deja de contar. */
+  /** Missions whose earlier evidence stops counting. */
   missions: string[];
-  /** Fichas que tenían estado guardado. */
+  /** Sheets that had saved state. */
   cleared: string[];
 }
 
@@ -22,7 +22,7 @@ export class ResetError extends Error {
   }
 }
 
-/** `target`: un NPC (NPC-*) o una ficha (CONV-*). */
+/** `target`: an NPC (NPC-*) or a sheet (CONV-*). */
 export function resetEncounter(opts: { store: EncounterStore; content: ServerContent; target: string; accountId: string; at: string }): ResetResult {
   const sheets = (Array.isArray(opts.content["conversaciones.json"]) ? opts.content["conversaciones.json"] : []) as FichaConversacion[];
   const missions = (Array.isArray(opts.content["misiones.json"]) ? opts.content["misiones.json"] : []) as Mision[];

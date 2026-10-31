@@ -1,9 +1,9 @@
-// world/post/ — postprocesado por tier (D-077, 03 §2.9): `low` ninguno; `medium` bloom barato (umbral alto,
-// media resolución); `high` bloom + profundidad de campo tipo tilt-shift + viñeta. Se carga como chunk aparte
-// (import() desde GameCanvas): `low` y `dialog-only` nunca lo descargan (propuesta de D-160 como implementación). El
-// tilt-shift enfoca al jugador y se ajusta a la distancia de la cámara (tiltShift.ts, D-208). Open-world-3d T6 (D-823):
-// en `thirdPerson` no hay tilt-shift (borronea el cielo y los pies en una vista detrás del personaje); queda en la vista
-// de conjunto y en el plano de a dos de `high`. T10-integrate: sus pasadas se precompilan al armarse (con `precompile`).
+// world/post/ — postprocessing per tier (D-077, 03 §2.9): `low` none; `medium` cheap bloom (high threshold,
+// half resolution); `high` bloom + tilt-shift-style depth of field + vignette. Loaded as a separate chunk
+// (import() from GameCanvas): `low` and `dialog-only` never download it (D-160 proposal as implementation). The
+// tilt-shift focuses on the player and adjusts to the camera distance (tiltShift.ts, D-208). Open-world-3d T6 (D-823):
+// in `thirdPerson` there is no tilt-shift (it blurs the sky and the feet in a behind-the-character view); it stays in the overview
+// and in the `high` two-person shot. T10-integrate: its passes are precompiled when built (with `precompile`).
 import { useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, TiltShift2, Vignette } from "@react-three/postprocessing";
 import { useCallback, useEffect, useRef } from "react";
@@ -14,20 +14,20 @@ import { tiltShiftFor } from "./tiltShift";
 export type { PostComposer, PostLevel } from "./level";
 
 /**
- * `viewScale` es el de la distancia pedida de la cámara (world/camera/rig.ts). `composer` (T10 (b)): sin él,
- * multisampling 0 y el frame buffer por defecto del composer.
+ * `viewScale` is that of the requested camera distance (world/camera/rig.ts). `composer` (T10 (b)): without it,
+ * multisampling 0 and the composer default frame buffer.
  */
 export default function Post({ level, viewScale, tiltShift = true, composer, precompile }: {
   level: PostLevel; viewScale: number; tiltShift?: boolean; composer?: PostComposer | undefined;
   /**
-   * T10-integrate: precompila las pasadas del composer armado (GameCanvas pasa `precompilePasses` de WorldLoad.tsx; por
-   * prop y no por import, así este chunk no arrastra módulos del canvas).
+   * T10-integrate: precompiles the passes of the built composer (GameCanvas passes `precompilePasses` from WorldLoad.tsx; by
+   * prop and not by import, so this chunk does not drag in canvas modules).
    */
   precompile?: ((gl: WebGLRenderer, composer: { passes: readonly unknown[] }) => void) | undefined;
 }) {
-  // T10-integrate: las pasadas se precompilan al armarse el composer (la ref llega con él) y otra vez cuando cambian
-  // (nivel o tilt-shift), sin retener el frameloop. La microtarea espera a que el composer termine de rearmar sus pasadas
-  // (lo hace en un re-render síncrono de su efecto de layout).
+  // T10-integrate: the passes are precompiled when the composer is built (the ref arrives with it) and again when they change
+  // (level or tilt-shift), without holding the frameloop. The microtask waits for the composer to finish rebuilding its passes
+  // (it does so in a synchronous re-render of its layout effect).
   const gl = useThree((s) => s.gl);
   const built = useRef<{ passes: readonly unknown[] } | null>(null);
   const warm = useCallback(() => queueMicrotask(() => {

@@ -1,6 +1,6 @@
-// Selección del adaptador de voz del NPC por configuración (03 §5.10-§5.11, D-092, ADR-023): `voice.npc.adapter` en
-// models.yaml elige el adaptador y scene-runtime no cambia. Toda la elección vive acá, en providers/ (F5.1a A4).
-// Sin clave no hay sesión de voz: la escena de voz cae a texto con aviso (03 §5.8). Nunca se lee ni imprime la clave.
+// NPC voice adapter selection by configuration (03 §5.10-§5.11, D-092, ADR-023): `voice.npc.adapter` in
+// models.yaml chooses the adapter and scene-runtime doesn't change. The whole choice lives here, in providers/ (F5.1a A4).
+// Without a key there is no voice session: the voice scene falls back to text with a notice (03 §5.8). The key is never read or printed.
 import { GEMINI_KEY_VAR, hasGeminiKey, type ModelsConfig } from "../config/models.ts";
 import { createGeminiLiveProvider } from "./gemini-live/adapter.ts";
 import { FAKE_MODELS_VAR } from "./scripted.ts";
@@ -10,13 +10,13 @@ import type { RealtimeVoiceProvider, VoiceProviderFactory } from "./types.ts";
 export const CASCADE_ADAPTER = "cascade";
 
 export interface VoiceSelection {
-  /** null: la voz no está disponible (y `reason` dice por qué, sin datos sensibles). */
+  /** null: voice is not available (and `reason` says why, with no sensitive data). */
   factory: VoiceProviderFactory | null;
   adapter: ModelsConfig["voice"]["npc"]["adapter"];
   reason: string | null;
 }
 
-/** La cascada llega en F5.1b: hasta entonces, un adaptador que no abre (la escena sigue por texto). */
+/** Cascade arrives in F5.1b: until then, an adapter that doesn't open (the scene carries on by text). */
 const pendingCascade = (): RealtimeVoiceProvider => ({
   adapter: CASCADE_ADAPTER,
   provider: "cascade",
@@ -37,8 +37,8 @@ export function voiceProviderFromConfig(
   test: { liveEndpoint?: string } = {},
 ): VoiceSelection {
   const adapter = models.voice.npc.adapter;
-  // Con modelos guionados nunca se abre una sesión paga, aunque haya clave: no hay voz guionada, así que la escena de
-  // voz cae a texto (03 §5.8) y sigue con el NPC guionado (D-027).
+  // With scripted models a paid session is never opened, even if there is a key: there is no scripted voice, so the voice
+  // scene falls back to text (03 §5.8) and carries on with the scripted NPC (D-027).
   if (env[FAKE_MODELS_VAR] === "1") return { adapter, factory: null, reason: `${FAKE_MODELS_VAR}=1: sin voz guionada, la escena sigue por texto` };
   switch (adapter) {
     case "cascade":

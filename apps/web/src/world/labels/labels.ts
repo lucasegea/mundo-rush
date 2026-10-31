@@ -1,8 +1,8 @@
-// world/labels/labels.ts — qué etiquetas de nombre hay y cómo se ven (plan estetica-c M1 ítems 14 y 15), puro. Una por
-// NPC del diorama con su nombre del catálogo (el `MapActor.name`, que ya cae al id si el catálogo no cargó); oculta para
-// el NPC de la charla en curso (el panel ya lo nombra). La resaltada es la del NPC que eligió `selectInteractionPrompt`
-// (el mismo selector que el aviso del HUD: no pueden diferir, A13): chip `ámbar` con borde `ámbar-osc` y la tecla E.
-// De lejos (D-208) los chips amontonan: pasado LABEL_HIDE_DISTANCE solo queda el resaltado, el que va a responder a la E.
+// world/labels/labels.ts — which name labels exist and how they look (plan estetica-c M1 items 14 and 15), pure. One per
+// diorama NPC with its catalog name (the `MapActor.name`, which already falls back to the id if the catalog did not load); hidden for
+// the NPC of the chat in progress (the panel already names it). The highlighted one is the NPC chosen by `selectInteractionPrompt`
+// (the same selector as the HUD prompt: they cannot differ, A13): `ámbar` chip with `ámbar-osc` border and the E key.
+// From afar (D-208) the chips pile up: past LABEL_HIDE_DISTANCE only the highlighted one remains, the one that will answer E.
 import { PALETTE } from "@lg/art";
 
 export interface LabelActor {
@@ -17,19 +17,19 @@ export interface LabelEntry {
 }
 
 /**
- * Distancia de cámara (m) desde la que se ocultan las etiquetas no resaltadas. Con 65 m todavía se lee quién es quién;
- * con 90 m el chip mide más que el personaje y tapa el mapa.
+ * Camera distance (m) from which the non-highlighted labels are hidden. At 65 m you can still tell who is who;
+ * at 90 m the chip is bigger than the character and covers the map.
  */
 export const LABEL_HIDE_DISTANCE = 75;
 
-/** ¿Se dibuja una etiqueta a esta distancia de cámara? La resaltada siempre. */
+/** Is a label drawn at this camera distance? The highlighted one always. */
 export function labelVisibleAt(highlighted: boolean, viewDistance: number): boolean {
   return highlighted || viewDistance <= LABEL_HIDE_DISTANCE;
 }
 
 /**
- * Open-world-3d T5 (PD-5): con el zoom continuo las etiquetas se apagan al alejar (mockup V6: de t 0,3 a 0,55); pasado
- * este t solo queda la resaltada, y aparecen las balizas (Beacons.tsx).
+ * Open-world-3d T5 (PD-5): with the continuous zoom the labels fade out when moving away (V6 mockup: from t 0.3 to 0.55); past
+ * this t only the highlighted one remains, and the beacons appear (Beacons.tsx).
  */
 export const LABEL_HIDE_T = 0.45;
 
@@ -40,14 +40,14 @@ export function labelEntries(actors: readonly LabelActor[], highlightId: string 
     .filter((e) => labelVisibleAt(e.highlighted, viewDistance) && (e.highlighted || zoomT < LABEL_HIDE_T));
 }
 
-/** Medidas del chip dibujado a 2x (px del canvas). */
+/** Chip measurements drawn at 2x (canvas px). */
 export const LABEL_FONT_PX = 30;
 const PAD_X = 18;
 const PAD_Y = 10;
 const BORDER = 4;
 const KEY_GAP = 12;
 export const LABEL_FONT = `600 ${LABEL_FONT_PX}px ui-rounded, "Segoe UI Rounded", "Segoe UI", system-ui, sans-serif`;
-/** Alto del chip en pantalla, como fracción del alto del canvas (constante en todos los pasos de zoom). */
+/** Chip screen height, as a fraction of the canvas height (constant at all zoom steps). */
 export const LABEL_SCREEN_FRACTION = 0.03;
 
 export interface LabelStyle {
@@ -65,13 +65,13 @@ export interface LabelLayout {
   width: number;
   height: number;
   style: LabelStyle;
-  /** La tecla E (solo resaltada): cuadro a la izquierda del nombre. */
+  /** The E key (highlighted only): box to the left of the name. */
   key: { x: number; y: number; size: number } | null;
   textX: number;
   textY: number;
 }
 
-/** Medidas del chip. `measure` da el ancho del texto en px (en el navegador, measureText del canvas). */
+/** Chip measurements. `measure` gives the text width in px (in the browser, the canvas's measureText). */
 export function labelLayout(name: string, highlighted: boolean, measure: (text: string) => number): LabelLayout {
   const textW = Math.ceil(measure(name));
   const height = LABEL_FONT_PX + 2 * PAD_Y + 2 * BORDER;
@@ -88,7 +88,7 @@ export function labelLayout(name: string, highlighted: boolean, measure: (text: 
   };
 }
 
-/** Escala del sprite (sin atenuación por distancia) para que el chip mida LABEL_SCREEN_FRACTION del alto. */
+/** Sprite scale (no distance attenuation) so the chip measures LABEL_SCREEN_FRACTION of the height. */
 export function labelScale(layout: Pick<LabelLayout, "width" | "height">, fovDeg: number): [number, number] {
   const h = 2 * LABEL_SCREEN_FRACTION * Math.tan(((fovDeg * Math.PI) / 180) / 2);
   return [h * (layout.width / layout.height), h];

@@ -1,6 +1,6 @@
-// book-mode slice-1 M6 (AC5..AC7): el runtime de escenas real, sobre el contenido compilado de U-GALEANO y con los
-// modelos guionados de LG_FAKE_MODELS, recorre la cadena MITAYO, CERRO, FACTOR: el FACTOR está bloqueado hasta que el
-// CERRO lo presenta, y CONV-POTOSI se completa por medidores hasta "The milk was never ours".
+// book-mode slice-1 M6 (AC5..AC7): the real scene runtime, over the compiled content of U-GALEANO and with the scripted
+// models of LG_FAKE_MODELS, walks the chain MITAYO, CERRO, FACTOR: FACTOR is locked until
+// CERRO introduces it, and CONV-POTOSI completes by meters up to "The milk was never ours".
 import { compilarContenido } from "@lg/content-schema";
 import { createManualClock } from "@lg/core";
 import type { ServerMessage } from "@lg/protocol";
@@ -16,10 +16,10 @@ import { manualScheduler, must, REPO_ROOT } from "./helpers.ts";
 
 const models = loadModelsConfig();
 const compiled = compilarContenido(leerContenido(REPO_ROOT, "U-GALEANO"), "dev");
-// El npc-base sale del propio universo (fixture + EMIT, M6.4): no se inyecta nada de la campesino.
+// The npc-base comes from the universe itself (fixture + EMIT, M6.4): nothing is injected from the farmer universe.
 const content = Object.freeze({ ...must(compiled.salida, "U-GALEANO no compila").servidor });
 
-/** Una "partida": evidencia y encuentros compartidos; cada escena abre una sesión nueva (como cada conexión). */
+/** A "game": shared evidence and encounters; each scene opens a new session (like each connection). */
 function newRun() {
   const clock = createManualClock(Date.UTC(2026, 9, 26, 12));
   const evidence = createMemoryEvidenceStore();

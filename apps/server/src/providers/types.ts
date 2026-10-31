@@ -1,24 +1,24 @@
-// Contrato de voz del NPC (P0 §4.3, 03 §5.11, ADR-023 enmendado por P0, D-092, D-196): `RealtimeVoiceProvider` con
-// dos adaptadores intercambiables por configuración (Gemini Live en F5.1a, cascada en F5.1b). Vive en el servidor y
-// no en @lg/protocol: lleva audio PCM y nunca viaja al cliente.
-// Reglas del contrato:
-//   1. Todo evento lleva `turnId` (null solo en eventos de sesión que llegan sin turno abierto).
-//   2. La moderación de salida vive en scene-runtime, no en el adaptador.
-//   3. El clip del turno (TurnClip) lo arma scene-runtime con los `sendAudio` del jugador; el adaptador copia lo que
-//      envía en el momento de la llamada y nunca guarda una referencia al audio.
-//   4. El test de contrato compartido compara la SECUENCIA DE TIPOS de evento, no los tiempos.
+// NPC voice contract (P0 §4.3, 03 §5.11, ADR-023 amended by P0, D-092, D-196): `RealtimeVoiceProvider` with
+// two adapters interchangeable by configuration (Gemini Live in F5.1a, cascade in F5.1b). It lives on the server and
+// not in @lg/protocol: it carries PCM audio and never travels to the client.
+// Contract rules:
+//   1. Every event carries `turnId` (null only for session events that arrive with no open turn).
+//   2. Output moderation lives in scene-runtime, not in the adapter.
+//   3. The turn clip (TurnClip) is built by scene-runtime from the player's `sendAudio`; the adapter copies what it
+//      sends at call time and never keeps a reference to the audio.
+//   4. The shared contract test compares the SEQUENCE OF event TYPES, not the timings.
 
-/** Lo que scene-runtime arma para abrir la sesión de voz de una escena. El modelo y la clave los pone el adaptador. */
+/** What scene-runtime builds to open a scene's voice session. The model and key are supplied by the adapter. */
 export interface SceneVoiceSetup {
-  /** Instrucción de sistema del NPC (prompt base + ficha + escena), armada por el servidor (03 §5.4). */
+  /** The NPC's system instruction (base prompt + sheet + scene), built by the server (03 §5.4). */
   readonly systemInstruction: string;
-  /** Voz del NPC (nombre de voz del proveedor, sale de models.yaml). */
+  /** NPC voice (provider voice name, comes from models.yaml). */
   readonly voiceName: string;
-  /** Idioma de la conversación (BCP-47). */
+  /** Conversation language (BCP-47). */
   readonly languageCode: string;
 }
 
-/** Turno de contexto inyectado (apertura guionada ya dicha, resumen, notas [DIRECTOR]). */
+/** Injected context turn (already-spoken scripted opening, summary, [DIRECTOR] notes). */
 export interface ScriptedTurn {
   readonly role: "user" | "model";
   readonly text: string;
@@ -33,44 +33,44 @@ export type VoiceUsage =
 export type VoiceEvent =
   | { readonly type: "playerTranscriptPartial"; readonly turnId: string; readonly text: string }
   | { readonly type: "playerTranscriptFinal"; readonly turnId: string; readonly text: string }
-  /** Cascada: el texto completo del NPC ANTES del audio. Live puede no emitirlo. */
+  /** Cascade: the full NPC text BEFORE the audio. Live may not emit it. */
   | { readonly type: "npcTextFinal"; readonly turnId: string; readonly text: string }
-  /** Live: transcripción de salida incremental. */
+  /** Live: incremental output transcription. */
   | { readonly type: "npcTranscript"; readonly turnId: string; readonly text: string }
   | { readonly type: "npcAudioChunk"; readonly turnId: string; readonly pcm16: Int16Array; readonly sampleRate: 24000 | 16000 }
   | { readonly type: "npcTurnDone"; readonly turnId: string }
   | { readonly type: "interrupted"; readonly turnId: string }
-  /** Live: goAway (el adaptador se reconecta solo); cascada: nunca. */
+  /** Live: goAway (the adapter reconnects on its own); cascade: never. */
   | { readonly type: "sessionEnding"; readonly turnId: string | null; readonly secondsLeft: number | null }
   | { readonly type: "usage"; readonly turnId: string | null; readonly usage: VoiceUsage }
-  /** `recoverable: false`: la sesión no sigue (scene-runtime pasa la escena a texto). */
+  /** `recoverable: false`: the session does not continue (scene-runtime moves the scene to text). */
   | { readonly type: "error"; readonly turnId: string | null; readonly recoverable: boolean; readonly code: string };
 
 export type VoiceEventType = VoiceEvent["type"];
 
 export interface RealtimeVoiceProvider {
-  /** Adaptador ("gemini-live", "cascade"): el ledger registra el costo por adaptador. */
+  /** Adapter ("gemini-live", "cascade"): the ledger records cost per adapter. */
   readonly adapter: string;
-  /** Proveedor y modelo para el ledger. Nunca viajan al cliente. */
+  /** Provider and model for the ledger. They never travel to the client. */
   readonly provider: string;
   readonly model: string;
-  /** Abre la sesión con el setup armado por scene-runtime. Rechaza si no se pudo abrir. */
+  /** Opens the session with the setup built by scene-runtime. Rejects if it could not be opened. */
   open(setup: SceneVoiceSetup): Promise<void>;
   /**
-   * Inyecta turnos de contexto. Si el último turno es del usuario, el modelo responde (una nota [DIRECTOR]) y los
-   * eventos de esa respuesta llevan `turnId`; si es del modelo (la apertura ya dicha), no genera nada.
+   * Injects context turns. If the last turn is the user's, the model responds (a [DIRECTOR] note) and the
+   * events of that reply carry `turnId`; if it is the model's (the already-spoken opening), it generates nothing.
    */
   injectContext(turns: readonly ScriptedTurn[], turnId?: string): void;
-  /** Live: activityStart; cascada: abrir el STT. */
+  /** Live: activityStart; cascade: open the STT. */
   startTurn(turnId: string): void;
   sendAudio(turnId: string, pcm16: Int16Array): void;
-  /** Live: activityEnd; cascada: cerrar el STT. */
+  /** Live: activityEnd; cascade: close the STT. */
   endTurn(turnId: string): void;
-  /** El jugador habla encima del NPC: se corta el audio del turno en curso. */
+  /** The player speaks over the NPC: the audio of the current turn is cut. */
   interrupt(): void;
   close(reason: CloseReason): Promise<void>;
   on(handler: (e: VoiceEvent) => void): void;
 }
 
-/** Crea el adaptador de una escena (una sesión por escena, ADR-006). */
+/** Creates a scene's adapter (one session per scene, ADR-006). */
 export type VoiceProviderFactory = () => RealtimeVoiceProvider;

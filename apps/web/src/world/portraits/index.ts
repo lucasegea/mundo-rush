@@ -1,3 +1,3 @@
-// world/portraits/ — estudio de retratos de solo-diálogo, solo de desarrollo (plan estetica-c M3, D-030). Marcador de zona:
-// lo carga boot/dev.ts con import() bajo la doble llave del modo director; el juego no lo importa.
+// world/portraits/ — dialogue-only portrait studio, development only (plan estetica-c M3, D-030). Zone marker:
+// boot/dev.ts loads it with import() under the director mode double key; the game does not import it.
 export * from "./studio";

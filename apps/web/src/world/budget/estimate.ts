@@ -1,8 +1,8 @@
-// world/budget/estimate.ts — estimador estático de draw calls y triángulos (plan estetica-c M1 A15, revisión de arquitectura 2026-10-12):
-// una suma pura sobre lo que devuelven los constructores, sin capa nueva de "descripción de escena". Una llamada por
-// malla visible, una por InstancedMesh (triángulos × instancias) y una por Sprite. No cuenta las pasadas de sombra ni de
-// post: desde M6 el estimador de validate:content suma la pasada de sombra de `high` (una llamada y el cuerpo por
-// personaje) y lo real de cada cuadro, post incluido, lo mide renderer.info en la instantánea del modo director.
+// world/budget/estimate.ts — static estimator of draw calls and triangles (plan estetica-c M1 A15, architecture review 2026-10-12):
+// a pure sum over what the builders return, with no new "scene description" layer. One call per
+// visible mesh, one per InstancedMesh (triangles × instances) and one per Sprite. It does not count shadow or
+// post passes: since M6 the validate:content estimator adds the `high` shadow pass (one call and the body per
+// character) and the real thing each frame, post included, is measured by renderer.info in the director-mode snapshot.
 import { InstancedMesh, Mesh, Sprite, type Material, type Object3D } from "three";
 
 export interface BudgetEstimate {
@@ -17,7 +17,7 @@ export interface BudgetLimits {
 
 const visibleMaterial = (m: Material | Material[]): boolean => (Array.isArray(m) ? m.some((x) => x.visible) : m.visible);
 
-/** Suma de lo que dibuja el grafo (solo objetos visibles con material visible). */
+/** Sum of what the graph draws (visible objects with visible material only). */
 export function estimateBudget(roots: readonly Object3D[]): BudgetEstimate {
   let drawCalls = 0;
   let triangles = 0;

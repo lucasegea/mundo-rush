@@ -1,10 +1,10 @@
-// CLI del modo director (03 §6.5.2, D-188): `npm run director -- <comando>`. Sin dependencias nuevas.
-//   state                               snapshot completo (JSON)
-//   where                               una línea: diorama, tile, NPC cercano, misión y paso
-//   journal [--tail N] [--session ID]   eventos del diario (JSONL), por defecto de la sesión más reciente
-//   sessions                            sesiones del diario, de la más nueva a la más vieja
-//   content <id>                        dónde está definido un id de contenido y su YAML
-//   prune                               deja las últimas 30 sesiones del diario (D-192)
+// Director mode CLI (03 §6.5.2, D-188): `npm run director -- <command>`. No new dependencies.
+//   state                               full snapshot (JSON)
+//   where                               one line: diorama, tile, nearby NPC, mission and step
+//   journal [--tail N] [--session ID]   journal events (JSONL), by default from the most recent session
+//   sessions                            journal sessions, newest to oldest
+//   content <id>                        where a content id is defined and its YAML
+//   prune                               keeps the last 30 journal sessions (D-192)
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REPO_ROOT } from "./files.ts";
@@ -25,7 +25,7 @@ const flag = (args: readonly string[], name: string): string | undefined => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 
-/** Corre un comando. Devuelve el código de salida. */
+/** Runs a command. Returns the exit code. */
 export function runCli(argv: readonly string[], io: CliIo): number {
   const [command, ...args] = argv;
   try {

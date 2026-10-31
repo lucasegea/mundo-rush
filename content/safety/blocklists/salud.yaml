@@ -1,4 +1,4 @@
-# Salud solo en boca de NPC-GRACE (D-176; 02 §6.3 regla 26, §6.6 #17). Los demás derivan: "Ask Grace."
+# Health only in the mouth of NPC-GRACE (D-176; 02 §6.3 rule 26, §6.6 #17). The rest redirect: "Ask Grace."
 id: salud
 regla: salud
 fuente: "02 §6.6 #17; D-176"

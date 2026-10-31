@@ -1,7 +1,7 @@
-// services/content — carga del contenido compilado por F1.2 (apps/web/public/content/, D-159) para el modo
-// solo-diálogo: lugares de la región y dónde está cada NPC. Efecto de red en services/ (R5); el resultado
-// entra al store por acciones. Validación mínima a mano (sin zod en el shell): si la forma no es la esperada,
-// falla claro, sin datos inventados.
+// services/content — loading of the content compiled by F1.2 (apps/web/public/content/, D-159) for the
+// dialogue-only mode: places in the region and where each NPC is. Network effect in services/ (R5); the result
+// enters the store via actions. Minimal hand-written validation (no zod in the shell): if the shape is not the expected one,
+// it fails clearly, with no invented data.
 import { parseApariencia, type CharacterLook } from "@lg/art";
 import type { DialogOnlyCatalog } from "../../state/actions";
 import type { NpcInfo, PlaceInfo } from "../../state/slices";
@@ -31,8 +31,8 @@ const localized = (file: string, o: Json, key: string): string => {
 };
 
 /**
- * Plan estetica-c M5: la apariencia de la ficha (`apariencia`, ya validada por el compilador). Ausente o null: null (el
- * mundo dibuja la de reserva). Presente pero mal formada: falla claro, sin datos inventados.
+ * Plan estetica-c M5: the card's appearance (`apariencia`, already validated by the compiler). Absent or null: null (the
+ * world draws the fallback one). Present but malformed: fails clearly, with no invented data.
  */
 const lookOf = (file: string, n: Json): CharacterLook | null => {
   const v = n["apariencia"];
@@ -42,7 +42,7 @@ const lookOf = (file: string, n: Json): CharacterLook | null => {
   return r.look;
 };
 
-/** Arma el catálogo desde los dos JSON del cliente. Toma la primera región (la Región 1 en v0.2). */
+/** Builds the catalog from the two client JSONs. Takes the first region (Region 1 in v0.2). */
 export function parseDialogOnlyCatalog(placesJson: unknown, npcsJson: unknown): DialogOnlyCatalog {
   const pf = CONTENT_FILES.places;
   if (!isObj(placesJson) || !Array.isArray(placesJson.regiones) || !Array.isArray(placesJson.lugares)) {
@@ -72,7 +72,7 @@ export function parseDialogOnlyCatalog(placesJson: unknown, npcsJson: unknown): 
 
 export type FetchJson = (url: string) => Promise<unknown>;
 
-/** fetch real: un status que no es 2xx es un error (no se parsea una página de error como contenido). */
+/** real fetch: a non-2xx status is an error (an error page is not parsed as content). */
 export const browserFetchJson: FetchJson = async (url) => {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`GET ${url}: ${res.status}`);
@@ -85,7 +85,7 @@ export interface CatalogSink {
   contentFailed(): void;
 }
 
-/** Carga el catálogo y lo entrega al store. Devuelve true si cargó. `universeId` namespacea la ruta (S4/D-806). */
+/** Loads the catalog and hands it to the store. Returns true if it loaded. `universeId` namespaces the path (S4/D-806). */
 export async function loadDialogOnlyCatalog(sink: CatalogSink, baseUrl: string, universeId?: string, fetchJson: FetchJson = browserFetchJson): Promise<boolean> {
   sink.contentLoading();
   try {
@@ -97,7 +97,7 @@ export async function loadDialogOnlyCatalog(sink: CatalogSink, baseUrl: string, 
     sink.contentLoaded(parseDialogOnlyCatalog(places, npcs));
     return true;
   } catch (err) {
-    // El jugador ve el error en la UI (aria-live); el detalle queda en la consola para quien depura.
+    // The player sees the error in the UI (aria-live); the detail stays in the console for whoever debugs.
     console.warn("[content] no se pudo cargar el catálogo de solo-diálogo:", err instanceof Error ? err.message : err);
     sink.contentFailed();
     return false;

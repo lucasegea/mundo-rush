@@ -1,6 +1,6 @@
-// open-world-3d T2(c) (AC8, D-831): procedencia de cada byte de terceros, sobre el árbol REAL. Cada chequeo es su
-// propio test, así una fila mala enciende solo el suyo (la prueba de dientes de QA planta una falla por chequeo sobre
-// el árbol real y lo restaura byte a byte). Este archivo y el de la lista negra (AC10) se excluyen por nombre allí.
+// open-world-3d T2(c) (AC8, D-831): provenance of every third-party byte, over the REAL tree. Each check is its
+// own test, so a bad row lights up only its own (QA's teeth test plants one failure per check on
+// the real tree and restores it byte for byte). This file and the blacklist one (AC10) are excluded by name there.
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import {

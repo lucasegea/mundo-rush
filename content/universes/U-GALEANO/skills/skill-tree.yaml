@@ -1,5 +1,5 @@
-# Ramas de pociones (01 §2.7.2) y árbol de habilidades de la v1 (01 §2.8.2), transcriptos tal cual.
-# La clave de rama es el color en minúscula, como en 02 §6.2.2 (`rama: verde`).
+# Potion branches (01 §2.7.2) and v1 skill tree (01 §2.8.2), transcribed verbatim.
+# The branch key is the lowercase color, as in 02 §6.2.2 (`rama: verde`).
 ramas:
   - { id: ambar, nombre: "Vincular (social)", color: "Ámbar", demuestra: "Saludar, presentarse, agradecer, preguntar por el otro, cortesía" }
   - { id: verde, nombre: "Pedir y ofrecer (transacción)", color: "Verde", demuestra: "Pedir cosas, cantidades, ofrecer ayuda, aceptar y rechazar" }

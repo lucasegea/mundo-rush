@@ -1,4 +1,4 @@
-// F1.3 A4: el script de contraste sobre los tokens reales, con dientes (un token roto lo hace fallar).
+// F1.3 A4: the contrast script over the real tokens, with teeth (a broken token makes it fail).
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -91,7 +91,7 @@ describe("M4 (estetica-c): HUD papel y tinta", () => {
     expect(ratio("paper", "ink")).toBeGreaterThanOrEqual(7);
     expect(ratio("ink-muted", "paper")).toBeGreaterThanOrEqual(4.5);
     expect(ratio("on-amber", "amber")).toBeGreaterThanOrEqual(7);
-    // Los cuatro están en las listas que corre el CLI, no solo en este test.
+    // All four are in the lists the CLI runs, not only in this test.
     expect(AAA_PAIRS).toEqual(expect.arrayContaining([["ink", "paper"], ["paper", "ink"], ["on-amber", "amber"]]));
     expect(TEXT_PAIRS).toEqual(expect.arrayContaining([["ink-muted", "paper"]]));
     const aaa = checkContrast(css).filter((r) => r.min === 7);
@@ -122,7 +122,7 @@ describe("M4 (estetica-c): HUD papel y tinta", () => {
   });
 });
 
-describe("M4 (revisión de arquitectura M1 A14): una sola fuente de hex, papel, tinta y ámbar de tokens.css = @lg/art", () => {
+describe("M4 (architecture review M1 A14): una sola fuente de hex, papel, tinta y ámbar de tokens.css = @lg/art", () => {
   test("papel, tinta y ámbar (y los demás tokens de paleta del HUD) son iguales a PALETTE", () => {
     const { normal } = parseThemes(css);
     expect(normal.paper).toBe(PALETTE.papel.toLowerCase());
@@ -155,9 +155,9 @@ describe("M4 (estetica-c): tokens.css de la propuesta C §8", () => {
 
   test("todo en rem: solo bordes, contornos y radios en px (ningún tamaño de texto); la raíz escala con --lg-font-scale", () => {
     const withPx = code.split("\n").filter((l) => /\b\d+(?:\.\d+)?px\b/.test(l));
-    expect(withPx.length).toBeGreaterThanOrEqual(1); // guardia: el radio de la tarjeta está
+    expect(withPx.length).toBeGreaterThanOrEqual(1); // guard: the card's radius is there
     expect(withPx.filter((l) => !/^\s*(--lg-radius-[\w-]+|outline|outline-offset|border[\w-]*):/.test(l))).toEqual([]);
-    // Dientes: un tamaño de texto en px se caza.
+    // Teeth: a text size in px is caught.
     expect("  font-size: 22px;".match(/^\s*(--lg-radius-[\w-]+|outline|outline-offset|border[\w-]*):/)).toBeNull();
     expect(code).toMatch(/--lg-radius-card: 14px;/);
     expect(code).toMatch(/font-size: calc\(100% \* var\(--lg-font-scale\)\)/);

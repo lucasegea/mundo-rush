@@ -1,18 +1,18 @@
-// Motor de audio del navegador (F5.2, R13): el ÚNICO AudioContext del cliente, el micrófono y la cola de reproducción.
-// Procedencia: un prototipo de voz anterior (public/index.html, startSession/playPcm16) captura con ScriptProcessor a 16 kHz; acá la
-// captura es un AudioWorklet que envuelve dsp/ (bloques de 40 ms a 16 kHz en PCM16) con el AudioContext a su tasa
-// nativa, y ScriptProcessor queda solo como respaldo si el worklet no carga. La voz del NPC (24 kHz) suena por la cola
-// de playback.ts. Se carga por import() diferido con la primera escena de voz: nada de esto entra al chunk inicial.
+// Browser audio engine (F5.2, R13): the client's ONLY AudioContext, the microphone and the playback queue.
+// Provenance: an earlier voice prototype (public/index.html, startSession/playPcm16) captures with ScriptProcessor at 16 kHz; here
+// capture is an AudioWorklet that wraps dsp/ (40 ms blocks at 16 kHz PCM16) with the AudioContext at its native
+// rate, and ScriptProcessor remains only as a fallback if the worklet fails to load. The NPC voice (24 kHz) plays through the queue
+// in playback.ts. Loaded via deferred import() with the first voice scene: none of this enters the initial chunk.
 import type { MicProblem } from "../../state/slices";
 import { createCaptureFramer, type CaptureFrame } from "./dsp";
 import { createPlaybackQueue, resumeIfSuspended, type PlaybackContext } from "./playback";
 import type { AudioEngine, MicResult } from "./types";
 import captureWorkletUrl from "./capture.worklet.ts?worker&url";
 
-/** Mismo nombre que registra capture.worklet.ts. */
+/** Same name that capture.worklet.ts registers. */
 const CAPTURE_PROCESSOR = "lg-capture";
 
-/** Error de getUserMedia → por qué no hay micrófono (el HUD lo dice en llano). */
+/** getUserMedia error → why there is no microphone (the HUD says so in plain language). */
 export function micProblemOf(err: unknown): MicProblem {
   const name = err instanceof Error || (typeof err === "object" && err !== null && "name" in err) ? String((err as { name: unknown }).name) : "";
   if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") return "denied";
@@ -31,9 +31,9 @@ export async function createBrowserAudioEngine(): Promise<AudioEngine> {
   const nodes: AudioNode[] = [];
   let closed = false;
 
-  /** Conecta la captura: AudioWorklet si se puede; si no, ScriptProcessor con el mismo dsp/. */
+  /** Connects capture: AudioWorklet if possible; otherwise ScriptProcessor with the same dsp/. */
   async function connectCapture(source: MediaStreamAudioSourceNode, onFrame: (f: CaptureFrame) => void): Promise<void> {
-    // Salida muda hacia el destino: algunos navegadores no procesan un nodo que no llega a ningún lado.
+    // Muted output to the destination: some browsers do not process a node that is not connected to anything.
     const sink = ctx.createGain();
     sink.gain.value = 0;
     sink.connect(ctx.destination);
@@ -85,8 +85,8 @@ export async function createBrowserAudioEngine(): Promise<AudioEngine> {
     },
     play(pcm16, sampleRate) {
       if (closed) return;
-      // Un AudioContext suspendido (sin gesto todavía, o suspendido por el navegador) no avanza: la cola nunca se vacía
-      // y el cliente quedaría "sonando" para siempre. Se intenta reanudar acá; el servicio tiene además un vigía.
+      // A suspended AudioContext does not advance (no gesture yet, or suspended by the browser): the queue never drains
+      // and the client would stay "playing" forever. We try to resume here; the service also has a watchdog.
       resumeIfSuspended(ctx);
       queue.push(pcm16, sampleRate);
     },

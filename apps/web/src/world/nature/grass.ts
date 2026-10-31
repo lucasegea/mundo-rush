@@ -1,22 +1,22 @@
-// world/nature/grass.ts — el pasto V6 del mundo abierto (open-world-3d T8, amendment 3, D-821, PD-1, PD-2, AC48, AC49,
-// AC75), port del mockup V6 (`world.js` GRASS_VERT, GRASS_FRAG, bladeClumpGeometry, buildGrass, cullGrass). Una sola
-// distribución de matas (posiciones sembradas y fijas en un cuadrado de lado 2 × radio, envueltas alrededor del disco
-// con grassWrap.ts) y dos mallas instanciadas, las dos ShaderMaterial de clase `pasto` con los tres trozos de niebla de
-// three y `fog: true`:
-//   1. una tarjeta por mata (2 triángulos) que mira a la cámara girando en el eje vertical y se inclina hacia atrás la
-//      mitad de la elevación de la vista, con el atlas de matas (dos matas por tarjeta, una en la variante con flores)
-//   2. cerca del jugador (radio de hojas reales), 8 a 10 hojas curvas y afinadas por mata (dos tramos y la punta, 3
-//      triángulos), con giro e inclinación al azar, que se traman a lo largo de 1,5 m en el borde de ese radio.
-// La altura y la tierra salen de la textura RG16F que arma y es dueña world/terrain (heightTexture.ts); acá solo se lee
-// (G es la tierra: con más de 0,5 no hay pasto). El viento es un uniform, 0 con movimiento reducido. Solo suben a la GPU
-// las matas dentro del disco y del frustum; se vuelven a elegir cuando la vista cambió (CullGate de culling.ts: 1 m, 5°,
-// y una vez más al asentarse) y se suben solo si la elección cambió. La cama de pasto del suelo (groundMaterial
-// `grassBed`) sigue al disco y se apaga con el zoom (t de 0,45 a 0,65); el disco empieza a achicarse en t 0,36.
-// D-839: colores del atlas y de las hojas, tinte de parches, tinte de la cama y multiplicador de matas son del look
-// (`WorldLook.grass`); D-842: entran como uniforms y textura, así dos looks comparten los dos programas.
-// Desviación registrada (AC48): V6 inclinaba la tarjeta HACIA la cámara (la punta hacia ella), lo que la pone de canto
-// mirando desde arriba (|cos| 0,69 a 30°, 0,35 a 45°). Acá se inclina hacia atrás, como dice el plan: |cos| >= 0,79 de
-// 6 a 82° de elevación.
+// world/nature/grass.ts — the open world V6 grass (open-world-3d T8, amendment 3, D-821, PD-1, PD-2, AC48, AC49,
+// AC75), port of the V6 mockup (`world.js` GRASS_VERT, GRASS_FRAG, bladeClumpGeometry, buildGrass, cullGrass). A single
+// distribution of tufts (seeded, fixed positions in a square of side 2 × radius, wrapped around the disc
+// with grassWrap.ts) and two instanced meshes, both ShaderMaterial of class `pasto` with the three fog chunks of
+// three and `fog: true`:
+//   1. one card per tuft (2 triangles) that faces the camera turning on the vertical axis and tilts back by half
+//      the view elevation, with the tuft atlas (two tufts per card, one in the variant with flowers)
+//   2. near the player (real-blade radius), 8 to 10 curved, tapered blades per tuft (two segments and the tip, 3
+//      triangles), with random turn and lean, which are dithered over 1.5 m at the edge of that radius.
+// The height and dirt come from the RG16F texture that world/terrain builds and owns (heightTexture.ts); here it is only read
+// (G is dirt: above 0.5 there is no grass). The wind is a uniform, 0 with reduced motion. Only the tufts inside the disc and the frustum
+// are uploaded to the GPU; they are re-chosen when the view changed (CullGate from culling.ts: 1 m, 5°,
+// and once more on settling) and uploaded only if the choice changed. The ground grass bed (groundMaterial
+// `grassBed`) follows the disc and fades out with the zoom (t from 0.45 to 0.65); the disc starts shrinking at t 0.36.
+// D-839: atlas and blade colors, patch tint, bed tint and tuft multiplier belong to the look
+// (`WorldLook.grass`); D-842: they enter as uniforms and texture, so two looks share the two programs.
+// Registered deviation (AC48): V6 tilted the card TOWARD the camera (the tip toward it), which puts it edge-on
+// when looking from above (|cos| 0.69 at 30°, 0.35 at 45°). Here it tilts back, as the plan says: |cos| >= 0.79 from
+// 6 to 82° of elevation.
 import {
   BufferGeometry, CanvasTexture, DataTexture, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, Frustum, Group, InstancedBufferAttribute,
   InstancedMesh, LinearMipmapLinearFilter, Matrix4, RGBAFormat, ShaderMaterial, Sphere, SRGBColorSpace, UniformsLib, UniformsUtils,
@@ -28,29 +28,29 @@ import { sampleHeightDirt, type HeightDirtMap } from "../terrain/heightTexture";
 import { CullGate, viewAngles } from "./culling";
 import { GRASS_WRAP_GLSL, grassWrap } from "./grassWrap";
 
-/** Medidas y reglas del pasto (núcleo; las del mockup V6). */
+/** Grass measurements and rules (core; the V6 mockup ones). */
 export const GRASS = {
-  /** La tarjeta: ancho y alto (m). */
+  /** The card: width and height (m). */
   card: { width: 0.95, height: 0.5 },
-  /** Inclinación de la tarjeta: `factor` × la elevación de la vista, con la elevación acotada a `maxElevation` rad. */
+  /** Card tilt: `factor` × the view elevation, with the elevation clamped to `maxElevation` rad. */
   lean: { factor: 0.55, maxElevation: 1.4 },
-  /** El centro del disco va `ahead` radios delante del jugador, hacia donde mira la cámara. */
+  /** The disc center goes `ahead` radii in front of the player, toward where the camera looks. */
   ahead: 0.3,
-  /** El disco se achica con el zoom: de t `from` a `to`, hasta perder `amount` del radio; con menos de `minRadius` m se apaga. */
+  /** The disc shrinks with the zoom: from t `from` to `to`, until it loses `amount` of the radius; below `minRadius` m it turns off. */
   shrink: { from: 0.36, to: 0.75, amount: 0.93, minRadius: 4.5 },
-  /** La cama de pasto del suelo se apaga con el zoom de t `from` a `to`. */
+  /** The ground grass bed fades out with the zoom from t `from` to `to`. */
   bed: { from: 0.45, to: 0.65 },
-  /** Las tarjetas se traman fuera desde `fade` × radio hasta el radio. */
+  /** The cards are dithered out from `fade` × radius to the radius. */
   fade: 0.7,
-  /** Medio ancho (m) del tramado de las hojas reales en el borde de su radio (1,5 m en total). */
+  /** Half width (m) of the real-blade dither at the edge of their radius (1.5 m in total). */
   nearDither: 0.75,
-  /** Con tierra (canal G) desde `from` el pasto se achica, y a `cut` ya no hay (AC48). */
+  /** With dirt (G channel) from `from` the grass shrinks, and at `cut` there is none (AC48). */
   dirt: { from: 0.3, cut: 0.5 },
-  /** Margen (en UV) dentro de la textura de altura: fuera de él no hay pasto. */
+  /** Margin (in UV) inside the height texture: outside it there is no grass. */
   inset: 0.02,
-  /** La esfera de cada mata para el frustum: centro `lift` m sobre el suelo, radio `radius` m. */
+  /** The sphere of each tuft for the frustum: center `lift` m above the ground, radius `radius` m. */
   sphere: { lift: 0.2, radius: 0.9 },
-  /** Semilla del sembrado y de las hojas (la del mockup). */
+  /** Seed of the seeding and the blades (the mockup one). */
   seed: 77,
 } as const;
 
@@ -59,19 +59,19 @@ const smoothstep = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-/** El radio del disco con el zoom (m): el del tier hasta t 0,36, y después se achica (mockup `applyView`). */
+/** The disc radius with the zoom (m): the tier one up to t 0.36, and then it shrinks (mockup `applyView`). */
 export const grassRadiusAt = (radius: number, t: number): number =>
   radius * (1 - smoothstep(GRASS.shrink.from, GRASS.shrink.to, t) * GRASS.shrink.amount);
 
-/** Cuánta cama de pasto pinta el suelo con el zoom (1 cerca, 0 desde t 0,65). */
+/** How much grass bed the ground paints with the zoom (1 close, 0 from t 0.65). */
 export const grassBedOn = (t: number): number => 1 - smoothstep(GRASS.bed.from, GRASS.bed.to, t);
 
-/** Inclinación de la tarjeta (rad) para una elevación de la vista (rad); la misma regla que el sombreador. */
+/** Card tilt (rad) for a view elevation (rad); the same rule as the shader. */
 export const cardLean = (elevation: number): number => Math.min(Math.max(elevation, 0), GRASS.lean.maxElevation) * GRASS.lean.factor;
 
 /**
- * El "arriba" de una tarjeta (unitario) para la dirección horizontal hacia la cámara (`hx`, `hz`, unitaria) y la
- * elevación de la vista: vertical a 0°, con la punta hacia atrás (lejos de la cámara) a medida que la vista baja.
+ * The "up" of a card (unit) for the horizontal direction toward the camera (`hx`, `hz`, unit) and the
+ * view elevation: vertical at 0°, with the tip backward (away from the camera) as the view lowers.
  */
 export function cardUp(hx: number, hz: number, elevation: number): [number, number, number] {
   const l = cardLean(elevation);
@@ -165,7 +165,7 @@ const GRASS_FRAG = /* glsl */ `
   }
 `;
 
-/** Una mata de hojas reales: cada hoja dos tramos y la punta (5 vértices, 3 triángulos), afinada y curvada hacia afuera. */
+/** A tuft of real blades: each blade two segments and the tip (5 vertices, 3 triangles), tapered and curved outward. */
 export function bladeClumpGeometry(blades: number, seed: number = GRASS.seed): BufferGeometry {
   const rnd = mulberry32(seed);
   const pos: number[] = [];
@@ -177,14 +177,14 @@ export function bladeClumpGeometry(blades: number, seed: number = GRASS.seed): B
     const r = Math.sqrt(rnd()) * 0.14;
     const bx = Math.cos(a) * r;
     const bz = Math.sin(a) * r;
-    const yaw = a + (rnd() - 0.5) * 1.2; // hacia dónde se inclina: casi siempre lejos del centro
+    const yaw = a + (rnd() - 0.5) * 1.2; // where it leans: almost always away from the center
     const dx = Math.cos(yaw);
     const dz = Math.sin(yaw);
     const h = 0.2 + rnd() * 0.26 * (1 - r * 2.5);
     const w = 0.016 + rnd() * 0.014;
-    const lean = 0.18 + rnd() * 0.5; // alcance horizontal de la punta, en fracción del alto
+    const lean = 0.18 + rnd() * 0.5; // horizontal reach of the tip, as a fraction of the height
     const px = -dz;
-    const pz = dx; // a lo ancho de la hoja, horizontal
+    const pz = dx; // across the blade width, horizontal
     const v0 = pos.length / 3;
     for (const [hf, rf, wf] of [[0, 0, 1], [0.55, 0.3, 0.75], [1, 1, 0]] as const) {
       const cx = bx + dx * lean * h * rf;
@@ -210,7 +210,7 @@ export function bladeClumpGeometry(blades: number, seed: number = GRASS.seed): B
   return g;
 }
 
-/** La tarjeta: un solo quad (4 vértices, 2 triángulos), con el pie en y = 0. */
+/** The card: a single quad (4 vertices, 2 triangles), with the foot at y = 0. */
 export function grassCardGeometry(): BufferGeometry {
   const { width: w, height: h } = GRASS.card;
   const g = new BufferGeometry();
@@ -223,9 +223,9 @@ export function grassCardGeometry(): BufferGeometry {
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, "0")}`;
 
 /**
- * El atlas de matas (mockup `grassAtlas`): cuatro variantes de 256 px; dos matas por tarjeta de pie separado (una en la
- * última, con motas de flor) a alturas de base escalonadas, de hojas afinadas y curvas que abren en abanico, oscuras en
- * el pie y claras en la punta. Colores del look. Sin `document` (los tests en Node) queda un 1 × 1 transparente.
+ * The tuft atlas (mockup `grassAtlas`): four 256 px variants; two tufts per card with separate feet (one in the
+ * last, with flower specks) at staggered base heights, with tapered, curved blades fanning out, dark at
+ * the foot and light at the tip. Look colors. Without `document` (Node tests) it is a transparent 1 × 1.
  */
 export function grassAtlas(colors: GrassLook["atlas"]): Texture {
   const [W, S] = RUNTIME_TEXTURE_PX.grassAtlas;
@@ -245,7 +245,7 @@ export function grassAtlas(colors: GrassLook["atlas"]): Texture {
     const ox = v * S;
     const nT = v === variants - 1 ? 1 : 2;
     const tufts = Array.from({ length: nT }, (_, j) => ({ cx: S * (0.5 + (j - (nT - 1) / 2) * 0.48 + (rnd() - 0.5) * 0.06), k: 0.65 + rnd() * 0.35, lift: j === 1 ? 0 : 8 + rnd() * 26 }));
-    // Las matas a distintas alturas de base: en una tarjeta inclinada, una base más alta se lee como una mata más lejos.
+    // The tufts at different base heights: on a tilted card, a higher base reads as a tuft farther away.
     tufts.sort((a, b) => b.lift - a.lift);
     for (const [ti, tf] of tufts.entries()) {
       for (let i = 0; i < 34; i++) {
@@ -298,14 +298,14 @@ export function grassAtlas(colors: GrassLook["atlas"]): Texture {
 export interface GrassInput {
   tier: WorldTier;
   look: WorldLook;
-  /** La textura de altura y tierra de world/terrain (la única RG16F de la escena; el pasto no arma otra). */
+  /** The height and dirt texture from world/terrain (the scene only RG16F; the grass builds no other). */
   heightDirt: HeightDirtMap;
-  /** El vector de la cama de pasto del material del suelo (centro x, z, radio, encendido); null sin suelo. */
+  /** The ground material grass-bed vector (center x, z, radius, on); null without ground. */
   bed: Vector4 | null;
 }
 
 export interface GrassSelection {
-  /** Índices de las matas subidas con tarjeta y, de esas, las que también llevan hojas reales. */
+  /** Indices of the tufts uploaded with a card and, of those, the ones that also carry real blades. */
   cards: number[];
   blades: number[];
 }
@@ -314,15 +314,15 @@ export interface Grass {
   group: Group;
   cards: InstancedMesh;
   blades: InstancedMesh;
-  /** Todas las matas del tier: aData = (x, z en [-1, 1], giro, escala), 4 por mata. */
+  /** All the tier tufts: aData = (x, z in [-1, 1], turn, scale), 4 per tuft. */
   base: Float32Array;
   uniforms: GrassUniforms;
   gate: CullGate;
-  /** Veces que se subió el búfer de instancias (AC49). */
+  /** Times the instance buffer was uploaded (AC49). */
   uploads: number;
-  /** Lo subido ahora (índices en `base`). */
+  /** What is uploaded now (indices into `base`). */
   selection: GrassSelection;
-  /** Por cuadro: viento, cama, y si la vista cambió, elige y sube lo que cambió. Devuelve si subió. */
+  /** Per frame: wind, bed, and if the view changed, chooses and uploads what changed. Returns whether it uploaded. */
   update(camera: Camera, px: number, pz: number, t: number, dt: number, still: boolean): boolean;
   dispose(): void;
 }
@@ -347,7 +347,7 @@ export interface GrassUniforms {
   uBladeTipB: { value: Vector3 };
 }
 
-/** Las matas del tier: una grilla sacudida en [-1, 1]², en orden barajado (las primeras N son un subconjunto al azar). */
+/** The tier tufts: a jittered grid in [-1, 1]², in shuffled order (the first N are a random subset). */
 export function grassBase(count: number, seed: number = GRASS.seed): Float32Array {
   const cols = Math.ceil(Math.sqrt(count));
   const rows = Math.ceil(count / cols);
@@ -371,7 +371,7 @@ export function grassBase(count: number, seed: number = GRASS.seed): Float32Arra
 }
 
 export interface GrassView {
-  /** Centro y radio del disco, jugador (centro de las hojas reales). */
+  /** Center and radius of the disc, player (center of the real blades). */
   cx: number;
   cz: number;
   radius: number;
@@ -383,9 +383,9 @@ export interface GrassView {
 const sphere = new Sphere();
 
 /**
- * Qué matas suben (mockup `cullGrass`): de las primeras `drawMax`, las que la envoltura pone dentro del disco, dentro de
- * la textura de altura, con tierra por debajo del corte y con la esfera en el frustum. Las que además quedan dentro del
- * radio de hojas reales más el tramado llevan hojas.
+ * Which tufts are uploaded (mockup `cullGrass`): of the first `drawMax`, those the wrap puts inside the disc, inside
+ * the height texture, with dirt below the cut and with the sphere in the frustum. Those that also fall inside the
+ * real-blade radius plus the dither carry blades.
  */
 export function selectGrass(base: Float32Array, drawMax: number, nearRadius: number, map: HeightDirtMap, v: GrassView): GrassSelection {
   const cards: number[] = [];
@@ -401,7 +401,7 @@ export function selectGrass(base: Float32Array, drawMax: number, nearRadius: num
     const q = (wz - map.originZ) / h;
     if (!(u > GRASS.inset && q > GRASS.inset && u < 1 - GRASS.inset && q < 1 - GRASS.inset)) continue;
     const s = sampleHeightDirt(map, wx, wz);
-    if (s.dirt >= GRASS.dirt.cut) continue; // el sombreador la deja en escala 0: no se sube
+    if (s.dirt >= GRASS.dirt.cut) continue; // the shader leaves it at scale 0: it is not uploaded
     sphere.center.set(wx, s.height + GRASS.sphere.lift, wz);
     sphere.radius = GRASS.sphere.radius;
     if (!v.frustum.intersectsSphere(sphere)) continue;
@@ -449,7 +449,7 @@ export function buildGrass(input: GrassInput): Grass {
       defines: geo ? { GEO: "" } : {},
       uniforms: UniformsUtils.merge([UniformsLib.fog, uniforms as unknown as Record<string, { value: unknown }>]),
     }), "pasto");
-    // Los dos materiales comparten los mismos objetos uniform (merge los clona): uno se mueve, se mueven los dos.
+    // The two materials share the same uniform objects (merge clones them): if one moves, both move.
     for (const [k, u] of Object.entries(uniforms)) m.uniforms[k] = u;
     m.customProgramCacheKey = () => `pasto-${geo ? "hojas" : "tarjeta"}`;
     return m;
@@ -457,7 +457,7 @@ export function buildGrass(input: GrassInput): Grass {
   const mesh = (geo: BufferGeometry, mat: ShaderMaterial, name: string): InstancedMesh => {
     geo.setAttribute("aData", new InstancedBufferAttribute(new Float32Array(count * 4), 4).setUsage(DynamicDrawUsage));
     const im = new InstancedMesh(geo, mat, count);
-    im.frustumCulled = false; // selectGrass ya eligió lo que se ve
+    im.frustumCulled = false; // selectGrass already chose what is seen
     im.count = 0;
     im.name = name;
     return im;
@@ -508,7 +508,7 @@ export function buildGrass(input: GrassInput): Grass {
       const distance = camPos.distanceTo(target.set(px, 0, pz).setY(sampleHeightDirt(heightDirt, px, pz).height));
       let uploaded = false;
       if (gate.shouldUpdate({ x: px, z: pz, yawDeg, pitchDeg, distance })) {
-        // El centro, el radio y el jugador se fijan en el recorrido: lo elegido y lo dibujado usan los mismos.
+        // The center, the radius and the player are fixed at the walk: what was chosen and what is drawn use the same ones.
         const e = camera.matrixWorld.elements;
         const fl = Math.hypot(e[8] as number, e[10] as number) || 1;
         const cx = px - ((e[8] as number) / fl) * radius * GRASS.ahead;
@@ -544,5 +544,5 @@ export function buildGrass(input: GrassInput): Grass {
   return grass;
 }
 
-/** El GLSL de los vértices del pasto (los tests de AC75 lo inspeccionan). */
+/** The GLSL of the grass vertices (the AC75 tests inspect it). */
 export const GRASS_VERTEX_SHADER = GRASS_VERT;

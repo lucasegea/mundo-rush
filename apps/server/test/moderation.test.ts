@@ -1,6 +1,6 @@
-// F4.2 A2: moderación de texto (03 §7.7). Fixtures de entradas y salidas inaceptables → corte + línea segura guionada +
-// safety_event, con modelos y clasificador falsos (sin red, D-027). Riesgo → contención (D-112): línea fuera de la
-// ficción + recurso + evento. Ningún evento guarda el texto cortado.
+// F4.2 A2: text moderation (03 §7.7). Fixtures of unacceptable inputs and outputs → cut + scripted safe line +
+// safety_event, with fake models and classifier (no network, D-027). Risk → containment (D-112): out-of-fiction
+// line + resource + event. No event stores the cut text.
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,7 +15,7 @@ import { harness, play, realContent } from "./helpers.ts";
 const catalog = readCatalog(realContent());
 const SAFE_LINE = catalog.safety.containment.linea_segura_en;
 
-/** Clasificador falso: devuelve el veredicto que decide la función (o falla). */
+/** Fake classifier: returns the verdict the function decides (or fails). */
 function fakeClassifier(decide: (text: string, dir: "input" | "output") => ModerationVerdict | Error): ModerationProvider & { calls: string[] } {
   const calls: string[] = [];
   return {
@@ -105,7 +105,7 @@ describe("A2 en la escena: corte + línea segura + safety_event", () => {
     const [ev] = h.safety.list("op-local");
     expect(ev).toMatchObject({ layer: "input", action: "cut", category: "inapropiado", missionId: "M0.1", sceneId: "M0.1-E1", visibility: "operator" });
     expect(JSON.stringify(h.safety.list("op-local"))).not.toMatch(/idiot|fucking/);
-    // La escena sigue: el turno siguiente llega al modelo, y el texto cortado nunca entró al transcripto.
+    // The scene carries on: the next turn reaches the model, and the cut text never entered the transcript.
     await h.session.receive({ type: "turn.text", text: "Hello! I'm Nico." });
     expect(h.of("scene.end")[0]?.outcome).toBe("success");
     expect(JSON.stringify(h.npc.calls)).not.toContain("idiot");
@@ -184,7 +184,7 @@ describe("A2 riesgo → contención (D-112, mecanismo con textos provisorios)", 
       resource: { label: content.recursos.AR?.etiqueta, detail: content.recursos.AR?.detalle }, provisional: true,
     });
     expect(h.of("scene.end")[0]?.outcome).toBe("containment");
-    // La contención nunca cumple la misión ni emite efectos (D-199).
+    // Containment never fulfils the mission or emits effects (D-199).
     expect(h.of("scene.effects")).toEqual([]);
     expect(h.safety.list("op-local")).toEqual([expect.objectContaining({ layer: "input", action: "containment", category: "riesgo" })]);
     expect(JSON.stringify(h.safety.list("op-local"))).not.toContain("kill");

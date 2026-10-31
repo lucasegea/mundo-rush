@@ -1,7 +1,7 @@
-// Plan estetica-c M2: el cargador de world/props/gltf.ts sin GPU (D-016). Todo glTF cargado usa el material toon
-// compartido (A4 sigue en 2 instancias de superficie), los modelos reales del pipeline entran en su caja `tam`, el
-// decodificador meshopt autoalojado es la copia exacta del de three, y el diorama de prueba con los modelos sigue
-// dentro del presupuesto de `medium`.
+// Plan estetica-c M2: the world/props/gltf.ts loader without GPU (D-016). Every loaded glTF uses the shared toon
+// material (A4 stays at 2 surface instances), the pipeline's real models fit their `tam` box, the self-hosted
+// meshopt decoder is the exact copy of three's, and the test diorama with the models stays
+// within the `medium` budget.
 import { prepareDiorama, type DioramaLayout, type DioramaRuntime, cellAt, isWalkable } from "@lg/core";
 import { Document, NodeIO } from "@gltf-transform/core";
 import { Box3, Group, Vector3, type Object3D } from "three";
@@ -19,8 +19,8 @@ import { auditMaterials, toonMaterial } from "../src/world/materials/registry";
 import { fitToBox, isModelAsset, modelUrl, meshoptDecoderUrl, parseModel } from "../src/world/props/gltf";
 import { compiledClientContent, lookOf } from "./helpers";
 
-// Sin node:fs (el tsconfig del cliente no trae tipos de Node): los bytes servidos entran por Vite. Los .glb como data URL
-// (`?inline`, con assetsInclude solo en el proyecto de test) y el decodificador como texto (`?raw`).
+// Without node:fs (the client tsconfig has no Node types): the served bytes come in through Vite. The .glb as a data URL
+// (`?inline`, with assetsInclude only in the test project) and the decoder as text (`?raw`).
 const SERVED_MODELS = import.meta.glob("../public/models/**/*.glb", { query: "?inline", import: "default", eager: true }) as Record<string, string>;
 const SERVED_DECODERS = import.meta.glob("../public/decoders/*.js", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const fromDataUrl = (url: string): Uint8Array => Uint8Array.from(atob(url.slice(url.indexOf(",") + 1)), (c) => c.charCodeAt(0));
@@ -34,7 +34,7 @@ function servedModel(asset: string): ArrayBuffer {
   return asBuffer(fromDataUrl(url));
 }
 
-/** Un .glb de fixture con dos materiales de origen distintos y color por vértice (sin meshopt). */
+/** A fixture .glb with two distinct source materials and vertex color (without meshopt). */
 async function fixtureGlb(withColor = true): Promise<ArrayBuffer> {
   const doc = new Document();
   const buffer = doc.createBuffer();
@@ -85,7 +85,7 @@ describe("M2 cargador: material toon compartido", () => {
   });
 });
 
-/** Los props modelo/* del diorama de prueba, cargados desde public/models con meshopt y puestos en su caja. */
+/** The test diorama's modelo/* props, loaded from public/models with meshopt and placed in their box. */
 async function loadedModels(d: DioramaRuntime): Promise<{ slot: ReturnType<typeof buildDioramaScene>["models"][number]; model: Object3D }[]> {
   const scene = buildDioramaScene(d);
   return Promise.all(scene.models.map(async (slot) => ({
@@ -116,7 +116,7 @@ describe("M2 modelos reales del pipeline en el diorama de prueba", () => {
       expect(size.y, slot.asset).toBeLessThanOrEqual(slot.h + 1e-3);
       expect(size.z, slot.asset).toBeLessThanOrEqual(slot.d + 1e-3);
       const fill = Math.max(size.x / slot.w, size.y / slot.h, size.z / slot.d);
-      expect(fill, slot.asset).toBeCloseTo(1, 3); // toca la caja en al menos un eje
+      expect(fill, slot.asset).toBeCloseTo(1, 3); // touches the box on at least one axis
       expect(bb.min.y, slot.asset).toBeCloseTo(slot.y, 3);
       const c = bb.getCenter(new Vector3());
       expect(c.x, slot.asset).toBeCloseTo(slot.x, 3);
@@ -141,7 +141,7 @@ describe("M2 modelos reales del pipeline en el diorama de prueba", () => {
     expect(audit.surfaceInstances).toBeLessThanOrEqual(2);
     const withModels = estimateBudget([all]);
     const without = estimateBudget([scene.root, ...actors, ...labels, blobs]);
-    expect(withModels.drawCalls - without.drawCalls).toBe(models.children.length); // una llamada por pieza (join)
+    expect(withModels.drawCalls - without.drawCalls).toBe(models.children.length); // one call per piece (join)
     expect(withinBudget(withModels, { maxDrawCalls: 120, maxTriangles: 50_000 }), JSON.stringify(withModels)).toBe(true);
   });
 });

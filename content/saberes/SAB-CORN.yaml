@@ -1,5 +1,5 @@
-# Saber del prólogo dicho por Lumi con plantilla (02 §1.5, §2.7.3 LUMI-M0.2-CORN, §4.4 M0.2, §8).
-# Lumi no explica ciencia: la plantilla remite a la ficha. linea_sin_dato = LUMI-COMO-01 sin la nota (F1.2).
+# Prologue knowledge item said by Lumi with a template (02 §1.5, §2.7.3 LUMI-M0.2-CORN, §4.4 M0.2, §8).
+# Lumi does not explain science: the template points to the sheet. linea_sin_dato = LUMI-COMO-01 without the note (F1.2).
 id: SAB-CORN
 titulo_corto: { es-AR: "Corn: maíz (y a veces cualquier grano)" }
 linea_en: null

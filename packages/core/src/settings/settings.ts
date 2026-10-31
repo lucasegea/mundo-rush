@@ -1,20 +1,20 @@
-// Ajustes del jugador (slice `settings`, 03 §3.3; GDD §2.19). Reglas puras: valores por defecto,
-// saneo de lo que llega (UI, guardado local de una versión vieja) y pasos del tamaño de texto.
-// Ninguna de estas funciones se desbloquea con progreso (GDD §2.19, regla inviolable 3).
+// Player settings (`settings` slice, 03 §3.3; GDD §2.19). Pure rules: default values,
+// sanitizing of what arrives (UI, local save from an old version) and text size steps.
+// None of these functions is unlocked by progress (GDD §2.19, inviolable rule 3).
 import { isSelectableTier, isTierChoice, type SelectableTier, type TierChoice } from "../quality/tiers";
 
-/** Silencio en tu turno antes del chip de pista (D-035, GDD §2.6.2: 10 s; el andamiaje lo ajusta en F6). */
+/** Silence on your turn before the hint chip (D-035, GDD §2.6.2: 10 s; scaffolding adjusts it in F6). */
 export const HINT_CHIP_DELAY_MS = 10_000;
 
-/** Tamaño de texto: 4 pasos entre 100 % y 200 % (GDD §2.19), default 125 %. */
+/** Text size: 4 steps between 100 % and 200 % (GDD §2.19), default 125 %. */
 export const TEXT_SCALES = [100, 125, 150, 175, 200] as const;
 export type TextScale = (typeof TEXT_SCALES)[number];
 
-/** Tres velocidades de NPC (GDD §2.6): Natural, Más lenta, Muy lenta. */
+/** Three NPC speeds (GDD §2.6): Natural, Más lenta, Muy lenta. */
 export const NPC_SPEEDS = ["natural", "slower", "slowest"] as const;
 export type NpcSpeed = (typeof NPC_SPEEDS)[number];
 
-/** Modos de feedback (03 §3.3, GDD §2.4.4). En F1.3 solo se guardan; el efecto llega con F6. */
+/** Feedback modes (03 §3.3, GDD §2.4.4). In F1.3 they are only saved; the effect arrives with F6. */
 export const FEEDBACK_MODES = ["accompanied", "flagOnly", "moreHelp"] as const;
 export type FeedbackMode = (typeof FEEDBACK_MODES)[number];
 
@@ -25,9 +25,9 @@ export const COLOR_VISION_MODES = ["none", "protanopia", "deuteranopia", "tritan
 export type ColorVisionMode = (typeof COLOR_VISION_MODES)[number];
 
 /**
- * Cámara que el jugador puede elegir. Open-world-3d T5 (PD-5): `thirdPerson` es el default; `perspective3D` (D-207)
- * sigue elegible y abre la tercera persona con el mapa entero (t = 1). Un ajuste guardado viejo (uno de los presets
- * ortográficos de HD-2D, retirados de R11 en el plan estetica-c M7) no está en la lista y `oneOf` lo lleva al default.
+ * Camera the player can choose. Open-world-3d T5 (PD-5): `thirdPerson` is the default; `perspective3D` (D-207)
+ * is still selectable and opens third person with the whole map (t = 1). An old saved setting (one of the HD-2D
+ * ortho presets, retired from R11 in plan estetica-c M7) is not in the list and `oneOf` takes it to the default.
  */
 export const CAMERA_PRESETS = ["thirdPerson", "perspective3D"] as const;
 export type CameraPreset = (typeof CAMERA_PRESETS)[number];
@@ -35,7 +35,7 @@ export type CameraPreset = (typeof CAMERA_PRESETS)[number];
 export const VOLUME_CHANNELS = ["npc", "lumi", "music", "ambient", "sfx"] as const;
 export type VolumeChannel = (typeof VOLUME_CHANNELS)[number];
 
-/** Nivel de ayuda fijado 1-5 (andamiaje, GDD §2.10) o automático. */
+/** Help level fixed 1-5 (scaffolding, GDD §2.10) or automatic. */
 export type HelpLevel = "auto" | 1 | 2 | 3 | 4 | 5;
 
 export interface Settings {
@@ -47,27 +47,27 @@ export interface Settings {
     colorVision: ColorVisionMode;
     highContrast: boolean;
     reduceMotion: boolean;
-    /** 0-100 por canal. */
+    /** 0-100 per channel. */
     volumes: Record<VolumeChannel, number>;
     lumiVoice: boolean;
   };
   input: {
     pushToTalk: boolean;
-    /** Umbral de fin de turno en ms (el botón "Terminé" siempre está). */
+    /** End-of-turn threshold in ms (the "Terminé" button is always there). */
     endOfTurnMs: number;
     buttonOnly: boolean;
-    /** Chip visual "¿Querés una pista?" a los 10 s de silencio en tu turno (D-035; desactivable, sin sonido). */
+    /** Visual chip "¿Querés una pista?" after 10 s of silence on your turn (D-035; can be disabled, no sound). */
     hintChip: boolean;
-    /** Acción semántica → tecla (R10). Vacío hasta F2. */
+    /** Semantic action → key (R10). Empty until F2. */
     keymap: Record<string, string>;
   };
   feedbackMode: FeedbackMode;
   npcSpeed: NpcSpeed;
   helpLevel: HelpLevel;
   graphics: {
-    /** Elección del jugador (solo local por dispositivo, 03 §3.3). */
+    /** Player's choice (local only per device, 03 §3.3). */
     tier: TierChoice;
-    /** Sugerencia de la detección de capacidades; se recalcula en cada arranque. */
+    /** Suggestion from capability detection; recomputed on every start. */
     suggestedTier: SelectableTier;
   };
   camera: CameraPreset;
@@ -78,7 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
     textScale: 125,
     font: "legible",
     subtitles: true,
-    karaoke: true, // GDD §2.19: encendido en A0-A1; el prólogo es A0
+    karaoke: true, // GDD §2.19: on in A0-A1; the prologue is A0
     colorVision: "none",
     highContrast: false,
     reduceMotion: false,
@@ -93,7 +93,7 @@ export const DEFAULT_SETTINGS: Settings = {
   camera: "thirdPerson",
 };
 
-/** Un cambio parcial de ajustes: lo que la UI o el guardado local mandan. Se sanea campo por campo. */
+/** A partial settings change: what the UI or the local save sends. Sanitized field by field. */
 export interface SettingsPatch {
   accessibility?: Partial<Omit<Settings["accessibility"], "volumes">> & { volumes?: Partial<Record<VolumeChannel, number>> };
   input?: Partial<Settings["input"]>;
@@ -110,13 +110,13 @@ const bool = (value: unknown, fallback: boolean): boolean => (typeof value === "
 const clamp = (value: unknown, min: number, max: number, fallback: number): number =>
   typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : fallback;
 
-/** El paso de texto más cercano a un valor cualquiera (un guardado con 130 queda en 125). */
+/** The text step closest to any value (a save with 130 ends up at 125). */
 export function nearestTextScale(value: unknown, fallback: TextScale = DEFAULT_SETTINGS.accessibility.textScale): TextScale {
   if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
   return TEXT_SCALES.reduce((best, s) => (Math.abs(s - value) < Math.abs(best - value) ? s : best), TEXT_SCALES[0]);
 }
 
-/** Un paso más grande (+1) o más chico (-1), sin salir de 100-200 %. */
+/** One step bigger (+1) or smaller (-1), without leaving 100-200 %. */
 export function stepTextScale(current: TextScale, direction: 1 | -1): TextScale {
   const i = TEXT_SCALES.indexOf(current);
   const next = Math.min(TEXT_SCALES.length - 1, Math.max(0, (i < 0 ? 1 : i) + direction));
@@ -127,8 +127,8 @@ const helpLevel = (value: unknown, fallback: HelpLevel): HelpLevel =>
   value === "auto" || (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5) ? (value as HelpLevel) : fallback;
 
 /**
- * Aplica un cambio parcial sin mutar la entrada. Todo valor fuera de contrato se ignora (queda el actual):
- * nunca entra un tier `xr`, un tamaño de texto fuera de 100-200 % ni un volumen fuera de 0-100.
+ * Applies a partial change without mutating the input. Any out-of-contract value is ignored (the current one stays):
+ * an `xr` tier never gets in, nor a text size outside 100-200 % nor a volume outside 0-100.
  */
 export function applySettingsPatch(current: Settings, patch: SettingsPatch | null | undefined): Settings {
   if (!patch || typeof patch !== "object") return current;
@@ -170,7 +170,7 @@ export function applySettingsPatch(current: Settings, patch: SettingsPatch | nul
   };
 }
 
-/** Lo que se guarda en el dispositivo: todo menos la sugerencia, que se recalcula en cada arranque. */
+/** What is saved on the device: everything except the suggestion, which is recomputed on every start. */
 export function persistableSettings(s: Settings): SettingsPatch {
   return {
     accessibility: s.accessibility,

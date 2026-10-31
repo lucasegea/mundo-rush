@@ -1,15 +1,15 @@
-// scripts/assets/ktx2.ts: los mapas fotográficos del mundo abierto como .ktx2 (open-world-3d T6, PD-4, D-832). Baja
-// el original de Poly Haven (CC0) a assets-src/ (gitignored), verifica su sha256 y lo codifica a Basis con basisu
-// FIJADO: la versión 2.50.0 compilada a WASI de un solo hilo (`basisu_st.wasm` del repo de Binomial, Apache-2.0),
-// corrida con `node:wasi`, sin dependencia npm nueva y sin binario instalado. Un solo hilo da bytes estables: el mismo
-// original y los mismos flags dan el mismo .ktx2 (refetch.ts lo comprueba por red). El formato y el tamaño de cada mapa
-// salen de la tabla del paso 0 (`npm run assets:texture-table`, AC74): difusos ETC1S de 1024, normales ETC1S de 512.
+// scripts/assets/ktx2.ts: the open world's photographic maps as .ktx2 (open-world-3d T6, PD-4, D-832). Downloads
+// the Poly Haven original (CC0) into assets-src/ (gitignored), checks its sha256 and encodes it to Basis with a
+// PINNED basisu: version 2.50.0 compiled to single-threaded WASI (`basisu_st.wasm` from Binomial's repo, Apache-2.0),
+// run with `node:wasi`, no new npm dependency and no installed binary. A single thread gives stable bytes: the same
+// original and the same flags give the same .ktx2 (refetch.ts checks it over the network). Each map's format and size
+// come from step 0's table (`npm run assets:texture-table`, AC74): 1024 ETC1S diffuse, 512 ETC1S normals.
 //
-//   node scripts/assets/ktx2.ts            codifica los mapas que faltan (o cambiaron) y escribe sus .ktx2
-//   node scripts/assets/ktx2.ts --check    re-codifica todo en memoria y compara con lo versionado (sale 1 si difiere)
+//   node scripts/assets/ktx2.ts            encodes the missing (or changed) maps and writes their .ktx2
+//   node scripts/assets/ktx2.ts --check    re-encodes everything in memory and compares with the versioned files (exits 1 if it differs)
 //
-// El .wasm del codificador se baja una vez a assets-src/tools/basisu/ y se verifica contra su sha256 fijado; si el
-// archivo local no coincide, la codificación se niega (refetch.ts lo informa como ENCODER-MISMATCH).
+// The encoder's .wasm is downloaded once into assets-src/tools/basisu/ and checked against its pinned sha256; if the
+// local file does not match, encoding is refused (refetch.ts reports it as ENCODER-MISMATCH).
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,7 +20,7 @@ import { GROUND_DIFFUSE_PX, GROUND_MAPS, GROUND_NORMAL_PX, groundTextureFile, ty
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** El codificador fijado (D-832): versión, origen y sha256 del .wasm de un solo hilo. */
+/** The pinned encoder (D-832): version, origin and sha256 of the single-threaded .wasm. */
 export const BASISU = {
   version: "2.50.0",
   url: "https://raw.githubusercontent.com/BinomialLLC/basis_universal/v2_50/bin/basisu_st.wasm",
@@ -29,38 +29,38 @@ export const BASISU = {
   licencia: "Apache-2.0",
 } as const;
 
-/** Flags por tipo de mapa (los registra cada fila en `modificaciones`). Un solo hilo: el .wasm `_st` no tiene hilos. */
+/** Flags per map type (each row records them in `modificaciones`). Single thread: the `_st` .wasm has no threads. */
 export const KTX2_FLAGS = {
   diff: ["-ktx2", "-mipmap", "-q", "128"],
   nor: ["-ktx2", "-mipmap", "-normal_map", "-q", "160"],
 } as const;
 export type MapKind = keyof typeof KTX2_FLAGS;
 
-/** Original de Poly Haven de un mapa del suelo (1k JPG; el normal es el de convención OpenGL). */
+/** Poly Haven original of a ground map (1k JPG; the normal is the OpenGL convention one). */
 export const polyHavenUrl = (map: GroundMap, kind: MapKind): string =>
   `https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/${map}/${map}_${kind === "diff" ? "diff" : "nor_gl"}_1k.jpg`;
 export const sourceCache = (map: GroundMap, kind: MapKind): string => `assets-src/polyhaven/${map}_${kind === "diff" ? "diff" : "nor_gl"}_1k.jpg`;
 export const targetPx = (kind: MapKind): number => (kind === "diff" ? GROUND_DIFFUSE_PX : GROUND_NORMAL_PX);
-/** El tipo de mapa de un .ktx2 servido, por su nombre (`<mapa>-diff.ktx2` o `<mapa>-nor.ktx2`); null si no es del suelo. */
+/** The map type of a served .ktx2, by its name (`<map>-diff.ktx2` or `<map>-nor.ktx2`); null if it is not a ground one. */
 export const mapKindOf = (file: string): MapKind | null => (file.endsWith("-diff.ktx2") ? "diff" : file.endsWith("-nor.ktx2") ? "nor" : null);
 
 export const sha256 = (b: Uint8Array): string => createHash("sha256").update(b).digest("hex");
 
-/** La línea de comando registrada en la fila (`modificaciones`). */
+/** The command line recorded in the row (`modificaciones`). */
 export function basisuCommand(kind: MapKind, sourcePx = 1024): string {
   const px = targetPx(kind);
   const resample = px !== sourcePx ? ` -resample ${px} ${px}` : "";
   return `basisu ${BASISU.version} (basisu_st.wasm, WASI, un hilo) ${KTX2_FLAGS[kind].join(" ")}${resample}`;
 }
 
-/** Baja una url a bytes (lo usan el codificador y los originales; refetch.ts pasa su propio `bajar`). */
+/** Downloads a url to bytes (used by the encoder and the originals; refetch.ts passes its own `bajar`). */
 export const fetchBytes = async (url: string): Promise<Uint8Array> => {
   const res = await fetch(url, { signal: AbortSignal.timeout(300_000) });
   if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`);
   return new Uint8Array(await res.arrayBuffer());
 };
 
-/** El .wasm fijado, leído del caché o bajado; lanza EncoderMismatch si su sha256 no es el fijado. */
+/** The pinned .wasm, read from the cache or downloaded; throws EncoderMismatch if its sha256 is not the pinned one. */
 export async function loadEncoder(root = ROOT, download: ((url: string) => Promise<Uint8Array>) | null = fetchBytes): Promise<Uint8Array> {
   const abs = join(root, BASISU.cache);
   if (!existsSync(abs)) {
@@ -74,7 +74,7 @@ export async function loadEncoder(root = ROOT, download: ((url: string) => Promi
   return bytes;
 }
 
-/** El codificador local no es el fijado: refetch.ts lo informa como ENCODER-MISMATCH, nunca como MATCH. */
+/** The local encoder is not the pinned one: refetch.ts reports it as ENCODER-MISMATCH, never as MATCH. */
 export class EncoderMismatch extends Error {
   constructor(m: string) {
     super(m);
@@ -82,19 +82,19 @@ export class EncoderMismatch extends Error {
   }
 }
 
-/** WebAssembly sin la lib DOM (scripts/ compila con los tipos de Node, que no declaran el espacio global). */
+/** WebAssembly without the DOM lib (scripts/ compiles with Node's types, which do not declare the global namespace). */
 const WASM = (globalThis as unknown as { WebAssembly: { compile(b: Uint8Array): Promise<object>; instantiate(m: object, imports: object): Promise<object> } }).WebAssembly;
 let compiled: object | null = null;
 
-/** Open-world-3d T7: un original PNG (derivado en memoria por scripts/assets/nature.ts) y su lado de destino. */
+/** Open-world-3d T7: a PNG original (derived in memory by scripts/assets/nature.ts) and its target side. */
 export interface EncodeOptions {
   ext?: "jpg" | "png";
   targetPx?: number;
 }
 
 /**
- * Codifica un original (JPG o PNG) a .ktx2 con el basisu fijado, en una carpeta temporal que se borra al final. El
- * proceso WASI solo ve esa carpeta.
+ * Encodes an original (JPG or PNG) to .ktx2 with the pinned basisu, in a temporary folder deleted at the end. The
+ * WASI process sees only that folder.
  */
 export async function encodeKtx2(source: Uint8Array, kind: MapKind, encoder: Uint8Array, sourcePx = 1024, opts: EncodeOptions = {}): Promise<Uint8Array> {
   compiled ??= await WASM.compile(encoder);
@@ -113,7 +113,7 @@ export async function encodeKtx2(source: Uint8Array, kind: MapKind, encoder: Uin
   }
 }
 
-/** El original de un mapa: del caché de assets-src o bajado. */
+/** A map's original: from the assets-src cache or downloaded. */
 export async function loadSource(map: GroundMap, kind: MapKind, root = ROOT): Promise<Uint8Array> {
   const abs = join(root, sourceCache(map, kind));
   if (!existsSync(abs)) {
@@ -135,7 +135,7 @@ export interface EncodedMap {
 
 export async function run(argv: readonly string[] = process.argv.slice(2), log: (s: string) => void = console.log, root = ROOT): Promise<number> {
   const check = argv.includes("--check");
-  // node:wasi avisa que es experimental en cada corrida; el aviso no es un error.
+  // node:wasi warns that it is experimental on every run; the warning is not an error.
   const encoder = await loadEncoder(root);
   const out: EncodedMap[] = [];
   let ok = true;

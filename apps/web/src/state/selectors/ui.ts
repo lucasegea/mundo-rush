@@ -1,5 +1,5 @@
-// Selectores del slice `ui`: view-models del shell (fase + paneles), del menú principal, del anuncio aria-live
-// y del pedido de foco.
+// Selectors of the `ui` slice: view-models of the shell (phase + panels), the main menu, the aria-live announcement
+// and the focus request.
 import { canEnterWorld, effectiveTier, type AppPhase, type Panel } from "@lg/core";
 import type { GameState } from "../store";
 import type { Announcement } from "../slices";
@@ -7,7 +7,7 @@ import { createViewSelector } from "./view";
 
 export interface ShellView {
   phase: AppPhase;
-  /** Panel visible (el de arriba de la pila) o null. */
+  /** Visible panel (the top of the stack) or null. */
   panel: Panel | null;
 }
 
@@ -17,9 +17,9 @@ export const selectShellView = createViewSelector(
 );
 
 export interface MainMenuView {
-  /** El mapa está disponible con el tier efectivo (sin WebGL no). */
+  /** The map is available with the effective tier (not without WebGL). */
   worldAvailable: boolean;
-  /** Ya hay una vista detrás del menú (el arranque terminó): Escape cierra el menú. */
+  /** There is already a view behind the menu (startup finished): Escape closes the menu. */
   canClose: boolean;
 }
 

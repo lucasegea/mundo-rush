@@ -1,4 +1,4 @@
-# Los NPCs nunca corrigen de forma explícita: solo piden aclaración o reformulan (02 §3.2 L8, §2.3 regla 3, §6.3 regla 10).
+# NPCs never correct explicitly: they only ask for clarification or rephrase (02 §3.2 L8, §2.3 rule 3, §6.3 rule 10).
 id: correccion_explicita
 regla: correccion_explicita
 fuente: "02 §3.2 L8; §2.3 regla 3; §6.3 regla 10"

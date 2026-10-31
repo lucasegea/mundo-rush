@@ -1,5 +1,5 @@
-// F1.2 A1: cada esquema tiene un fixture válido y uno inválido (incluidos fundación, saber, presentación,
-// sobre, efectos y sitios). Fixtures en YAML como el contenido real; el paquete no lee disco.
+// F1.2 A1: each schema has a valid and an invalid fixture (including foundation, knowledge item, introduction,
+// envelope, effects and sites). Fixtures in YAML like the real content; the package does not read disk.
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";

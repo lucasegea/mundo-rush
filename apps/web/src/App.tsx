@@ -1,9 +1,9 @@
-// Raíz de composición (03 §4.2.1, P0 T1): monta el shell DOM y, solo en la fase `world`, el canvas por
-// import() diferido (three nunca entra al chunk inicial, 03 §2.7.3). En solo-diálogo el canvas no se descarga.
-// Los parámetros por tier (R12) bajan al mundo por props: world/ no importa services/.
-// Open-world-3d T10 (d): con el menú arriba y quieto, el chunk 3D y los .glb de los árboles se precargan
-// (boot/preload.ts); el import() del clic encuentra el chunk ya bajado. T10-integrate: también el chunk del post (si el
-// tier lo dibuja), las rocas, los datos del mapa y los decodificadores, desde una sola lista (WORLD_PRELOAD).
+// Composition root (03 §4.2.1, P0 T1): mounts the DOM shell and, only in the `world` phase, the canvas via
+// deferred import() (three never enters the initial chunk, 03 §2.7.3). In dialog-only mode the canvas is not downloaded.
+// The per-tier parameters (R12) reach the world through props: world/ does not import services/.
+// Open-world-3d T10 (d): with the menu up and idle, the 3D chunk and the tree .glb files are preloaded
+// (boot/preload.ts); the click's import() finds the chunk already downloaded. T10-integrate: also the post chunk (if the
+// tier draws it), the rocks, the map data and the decoders, all from a single list (WORLD_PRELOAD).
 import { lazy, Suspense, useEffect } from "react";
 import { idlePreloader, shouldPreloadWorld, worldPreloadTasks } from "./boot/preload";
 import { universeFromSearch } from "./services/content";
@@ -13,16 +13,16 @@ import { Shell } from "./ui";
 
 const loadGameCanvas = () => import("./world/GameCanvas");
 const GameCanvas = lazy(loadGameCanvas);
-// T10-integrate: el mismo módulo que GameCanvas carga con lazy() (Vite emite un solo chunk para los dos import()).
+// T10-integrate: the same module GameCanvas loads with lazy() (Vite emits a single chunk for both import() calls).
 const loadPost = () => import("./world/post/Post");
 
-/** ¿El tier de ahora dibuja postprocesado? (el mismo cálculo que GameCanvas: postLevel de render.post y del tier). */
+/** Does the current tier draw post-processing? (the same calculation as GameCanvas: postLevel from render.post and the tier). */
 const postWanted = (): boolean => readGame((s) => {
   const r = selectWorldRender(s);
   return r.post && TIER_PARAMS[r.tier].post !== "none";
 });
 
-// La lista se arma en el momento quieto (boot/preload.ts, WORLD_PRELOAD): lee el tier y el universo de ese momento.
+// The list is built at the idle moment (boot/preload.ts, WORLD_PRELOAD): it reads the tier and universe of that moment.
 const worldPreload = idlePreloader(() => worldPreloadTasks({
   baseUrl: import.meta.env.BASE_URL,
   universeId: universeFromSearch(globalThis.location?.search ?? ""),

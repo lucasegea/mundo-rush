@@ -1,6 +1,6 @@
-// Salida compilada (03 §6.1, D-159): el servidor recibe todo; el cliente solo lo que puede ver, y nunca
-// prompts, personas, tarjetas de nivel, situaciones para el modelo, pistas ni glosas de diseño.
-// Filtros por modo (03 §8.3): glosario como D-067/D-128, saberes como D-170.
+// Compiled output (03 §6.1, D-159): the server receives everything; the client only what it can see, and never
+// prompts, personas, level cards, model situations, hints or design glosses.
+// Per-mode filters (03 §8.3): glossary as D-067/D-128, knowledge items as D-170.
 import { esLineaLumi } from "../schemas/common.ts";
 import type { LineaGuionada } from "../schemas/common.ts";
 import type { EntradaGlosario } from "../schemas/aprendizaje.ts";
@@ -9,11 +9,11 @@ import type { Saber } from "../schemas/saber.ts";
 import type { Conjunto } from "./conjunto.ts";
 import type { Modo } from "./tipos.ts";
 
-/** Glosario por modo: dev = todo (la UI marca "borrador", D-131); fv = approved + reviewed (D-128); release = approved. */
+/** Glossary by mode: dev = everything (the UI marks "borrador", D-131); fv = approved + reviewed (D-128); release = approved. */
 export const filtrarGlosario = (entradas: readonly EntradaGlosario[], modo: Modo): EntradaGlosario[] =>
   entradas.filter((e) => modo === "dev" || e.estado === "approved" || (modo === "fv" && e.estado === "reviewed"));
 
-/** Saberes por modo (D-170): dev = todo (marca "sin verificar"); fv y release = verificado o revisado. */
+/** Knowledge items by mode (D-170): dev = everything (marked "sin verificar"); fv and release = verified or reviewed. */
 export const filtrarSaberes = (saberes: readonly Saber[], modo: Modo): Saber[] =>
   saberes.filter((s) => modo === "dev" || s.estado !== "sin_verificar");
 
@@ -30,7 +30,7 @@ const escenaCliente = (e: Escena) => ({
   cierre_guionado: e.cierre_guionado.map(lineaCliente),
   salida_si_no_converge: "lineas" in e.salida_si_no_converge ? e.salida_si_no_converge.lineas.map(lineaCliente) : [],
   efectos: e.efectos,
-  pronunciacion: e.pronunciacion.map(({ nota, ...p }) => { void nota; return p; }), // la nota es de autor, no viaja al cliente
+  pronunciacion: e.pronunciacion.map(({ nota, ...p }) => { void nota; return p; }), // the note is the author's, it does not travel to the client
 });
 
 const misionCliente = (m: Mision) => ({
@@ -41,13 +41,13 @@ const misionCliente = (m: Mision) => ({
 
 export type Salida = Record<string, unknown>;
 
-/** Archivo → contenido para apps/server/generated/content/ (todo, filtrado por modo). */
+/** File → content for apps/server/generated/content/ (everything, filtered by mode). */
 export const vistaServidor = (c: Conjunto, modo: Modo): Salida => ({
   "misiones.json": c.misiones.map((m) => m.data),
   "npcs.json": c.npcs.map((n) => n.data),
   "pedidos.json": c.pedidos.map((p) => p.data),
   "fundaciones.json": c.fundaciones.map((f) => f.data),
-  // El servidor necesita todas las fichas: si una no es visible en el modo, el NPC dice linea_sin_dato (D-170).
+  // The server needs all the sheets: if one is not visible in the mode, the NPC says linea_sin_dato (D-170).
   "saberes.json": c.saberes.map(({ data: s }) => ({ ...s, visible_en_modo: filtrarSaberes([s], modo).length > 0 })),
   "red.json": c.presentaciones.map((p) => p.data),
   "sobres.json": c.sobres.map((s) => s.data),
@@ -59,19 +59,19 @@ export const vistaServidor = (c: Conjunto, modo: Modo): Salida => ({
   "niveles.json": c.niveles.map((n) => n.data),
   "dioramas.json": c.dioramas.map((d) => d.data),
   "prompts.json": c.prompts,
-  // ADR-027: fichas de conversación (persona, hechos, objetivo): solo servidor; el HUD recibe las etiquetas por el protocolo.
+  // ADR-027: conversation sheets (persona, facts, goal): server only; the HUD receives the labels through the protocol.
   "conversaciones.json": c.conversaciones.map((f) => f.data),
-  // F4.2: las listas también moderan en runtime (entrada del jugador y salida del NPC) y la contención (D-112).
+  // F4.2: the lists also moderate at runtime (player input and NPC output) and containment (D-112).
   "seguridad.json": { temas: c.temas, listas: c.bloqueos.map((b) => b.data), contencion: c.contencion },
 });
 
-/** Archivo → contenido para apps/web/public/content/ (solo lo visible; dev marca estados para la UI). */
+/** File → content for apps/web/public/content/ (only what is visible; dev marks states for the UI). */
 export const vistaCliente = (c: Conjunto, modo: Modo): Salida => ({
   "misiones.json": c.misiones.map((m) => misionCliente(m.data)),
   "npcs.json": c.npcs.map(({ data: n }) => ({
     id: n.id, nombre: n.nombre, rol: n.rol, lugar: n.lugar, es_menor: n.es_menor,
     requiere_presentacion: n.requiere_presentacion, presentado_por: n.presentado_por,
-    // Plan estetica-c M5: world/ dibuja a cada vecino con su apariencia (null si la ficha todavía no la trae).
+    // Plan estetica-c M5: world/ draws each neighbor with its appearance (null if the sheet does not carry it yet).
     apariencia: n.apariencia ?? null,
   })),
   "fundaciones.json": c.fundaciones.map((f) => f.data),
@@ -89,10 +89,10 @@ export const vistaCliente = (c: Conjunto, modo: Modo): Salida => ({
   "glosario.json": filtrarGlosario(c.glosario.map((g) => g.data), modo),
   "habilidades.json": { ramas: c.ramas, habilidades: c.habilidades.map((x) => x.data) },
   "lugares.json": { regiones: c.regiones.map(({ data: r }) => ({ id: r.id, nombre: r.nombre, dioramas: r.dioramas })), lugares: c.lugares.map((l) => l.data) },
-  // F4.2: qué estados del glosario muestra el HUD (03 §8.3, D-131): el valor es el modo de compilación.
+  // F4.2: which glossary states the HUD shows (03 §8.3, D-131): the value is the compilation mode.
   "manifiesto.json": { glossaryDisplay: modo },
-  // F2: el mapa necesita el layout entero (suelo de la maqueta, volúmenes, NPCs, zonas no caminables); no trae nada de diseño.
+  // F2: the map needs the whole layout (diorama ground, volumes, NPCs, non-walkable zones); it carries nothing of design.
   "dioramas.json": c.dioramas.map((d) => d.data),
-  // Plan estetica-c M2 (03 §6.4.2): lo que muestra la pantalla de créditos (las atribuciones obligatorias del registro).
+  // Plan estetica-c M2 (03 §6.4.2): what the credits screen shows (the registry's mandatory attributions).
   "creditos.json": { atribuciones: c.creditos?.data.atribuciones ?? [] },
 });

@@ -1,7 +1,7 @@
-// SafetyEventStore (03 §7.4 `safety_events`, §7.7; D-112, D-157): registro append-only de cortes de moderación y
-// contenciones. Interfaz + adaptador en memoria (tests) + adaptador de archivo (apps/server/data/safety.jsonl,
-// gitignored). Minimización (03 §7.3): nunca guarda el texto cortado ni el término que disparó; solo la capa, la
-// acción, la categoría y la escena. Visibilidad según política: en modo operador (D-135, D-158) la ve solo el operador.
+// SafetyEventStore (03 §7.4 `safety_events`, §7.7; D-112, D-157): append-only record of moderation cuts and
+// containments. Interface + in-memory adapter (tests) + file adapter (apps/server/data/safety.jsonl,
+// gitignored). Minimization (03 §7.3): it never stores the cut text or the term that triggered it; only the layer, the
+// action, the category and the scene. Visibility per policy: in operator mode (D-135, D-158) only the operator sees it.
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,7 @@ import { assertNoBinary } from "./evidence.ts";
 
 export const DEFAULT_SAFETY_PATH = fileURLToPath(new URL("../../data/safety.jsonl", import.meta.url));
 
-/** Categorías: la regla de la lista que disparó, una regla de código, el clasificador o el observador. */
+/** Categories: the list rule that fired, a code rule, the classifier or the observer. */
 export const SAFETY_CATEGORIES = [
   "riesgo", "inapropiado", "apelativos", "correccion_explicita", "dinero", "salud", "nombres_reales", "lumi",
   "datos_personales", "clasificador", "clasificador_error", "observador",
@@ -28,7 +28,7 @@ export const SafetyEventSchema = z.strictObject({
   layer: z.enum(SAFETY_LAYERS),
   action: z.enum(["cut", "containment"]),
   category: z.enum(SAFETY_CATEGORIES),
-  /** Visibilidad según política (D-112): en modo operador, solo el operador. */
+  /** Visibility per policy (D-112): in operator mode, only the operator. */
   visibility: z.enum(["operator"]),
 });
 export type SafetyEvent = z.infer<typeof SafetyEventSchema>;
@@ -53,7 +53,7 @@ export function createMemorySafetyStore(): SafetyEventStore {
   };
 }
 
-/** Adaptador de archivo: una línea JSON por evento. Las líneas que no validan (cortadas) se saltean al leer. */
+/** File adapter: one JSON line per event. Lines that don't validate (cut off) are skipped on reading. */
 export function createFileSafetyStore(path: string = DEFAULT_SAFETY_PATH): SafetyEventStore {
   const read = (): SafetyEvent[] => {
     if (!existsSync(path)) return [];

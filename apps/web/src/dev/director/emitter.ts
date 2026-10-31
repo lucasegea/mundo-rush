@@ -1,4 +1,4 @@
-// Emisores del modo director por el canal de HMR (03 §6.5.2, FD0 A4). Reloj inyectado: los tests usan uno falso.
+// Director-mode emitters over the HMR channel (03 §6.5.2, FD0 A4). Injected clock: tests use a fake one.
 import type { DirectorSnapshot, JournalEventInput } from "@lg/protocol/director";
 
 export interface DirectorClock {
@@ -13,15 +13,15 @@ export const browserClock: DirectorClock = {
   clearTimeout: (h) => globalThis.clearTimeout(h as ReturnType<typeof globalThis.setTimeout>),
 };
 
-/** ≤ 4 envíos por segundo: entre dos envíos pasan al menos 250 ms. */
+/** ≤ 4 sends per second: at least 250 ms pass between two sends. */
 export const MIN_INTERVAL_MS = 250;
 
-/** Lo que importa para "cambió": todo menos la marca de tiempo del snapshot. */
+/** What matters for "changed": everything except the snapshot's timestamp. */
 const changeKey = (s: DirectorSnapshot): string => JSON.stringify({ ...s, at: null });
 
 /**
- * Manda el snapshot solo si cambió y nunca más de una vez cada 250 ms. Dentro de la ventana guarda el último y lo
- * manda al abrirse (el estado final nunca se pierde). Si el pendiente vuelve a ser igual al último enviado, no manda.
+ * Sends the snapshot only if it changed and never more than once every 250 ms. Inside the window it keeps the latest and
+ * sends it when the window opens (the final state is never lost). If the pending one equals the last one sent again, it does not send.
  */
 export function createSnapshotEmitter(send: (s: DirectorSnapshot) => void, clock: DirectorClock, minIntervalMs = MIN_INTERVAL_MS) {
   let lastKey: string | null = null;
@@ -57,7 +57,7 @@ export function createSnapshotEmitter(send: (s: DirectorSnapshot) => void, clock
   };
 }
 
-/** Junta eventos del diario y los manda en lotes (a lo sumo uno cada 250 ms); `flush` fuerza el envío. */
+/** Collects journal events and sends them in batches (at most one every 250 ms); `flush` forces the send. */
 export function createJournalEmitter(send: (events: JournalEventInput[]) => void, clock: DirectorClock, intervalMs = MIN_INTERVAL_MS) {
   let queue: JournalEventInput[] = [];
   let timer: unknown = null;

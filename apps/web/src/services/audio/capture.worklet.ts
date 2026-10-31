@@ -1,9 +1,9 @@
-// AudioWorklet de captura (F5.2, D-094). Solo envuelve dsp/ (P0 §7, test en audio-dsp.test.ts): arma bloques de 40 ms
-// remuestreados a 16 kHz en PCM16 con createCaptureFramer y los manda al hilo principal (transfiriendo el buffer, sin
-// copiarlo). No tiene lógica propia. Vite lo empaqueta aparte (`?worker&url` en engine.ts).
+// AudioWorklet for capture (F5.2, D-094). It only wraps dsp/ (P0 §7, test in audio-dsp.test.ts): builds 40 ms blocks
+// resampled to 16 kHz PCM16 with createCaptureFramer and sends them to the main thread (transferring the buffer, without
+// copying it). It has no logic of its own. Vite bundles it separately (`?worker&url` in engine.ts).
 import { createCaptureFramer } from "./dsp/capture";
 
-// Tipos mínimos del AudioWorkletGlobalScope (no están en la lib DOM de TypeScript).
+// Minimal AudioWorkletGlobalScope types (they are not in TypeScript's DOM lib).
 interface WorkletPort {
   postMessage(message: unknown, transfer: Transferable[]): void;
 }
@@ -13,7 +13,7 @@ declare class AudioWorkletProcessor {
 }
 declare function registerProcessor(name: string, ctor: new () => AudioWorkletProcessor): void;
 
-/** Nombre con el que engine.ts crea el AudioWorkletNode. */
+/** Name engine.ts uses to create the AudioWorkletNode. */
 const PROCESSOR = "lg-capture";
 
 class CaptureProcessor extends AudioWorkletProcessor {

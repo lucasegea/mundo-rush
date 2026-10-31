@@ -1,5 +1,5 @@
-// Plan estetica-c M2: scripts/assets/optimize.ts sobre glTF de fixture generados en el test (con textura y materiales
-// de origen), la regla del bisel con su excepción del registro, la tabla de pintura, y las piezas reales servidas.
+// Plan estetica-c M2: scripts/assets/optimize.ts over fixture glTFs generated in the test (with source texture and materials),
+// the bevel rule with its registry exception, the paint table, and the real served pieces.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,11 +14,11 @@ import { crearIO, leerRegistro, optimizarGlb, PiezaRechazada, sha256 } from "./o
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** PNG de 1 × 1: la textura de origen que el pipeline tiene que tirar. */
+/** 1 × 1 PNG: the source texture the pipeline has to throw away. */
 const PNG = Uint8Array.from(Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"));
 
-/** Esfera UV (sin aristas duras: el diedro entre caras vecinas es chico). */
+/** UV sphere (no hard edges: the dihedral between neighboring faces is small). */
 function uvSphere(r: number, cx: number, cy: number, cz: number, seg = 16, rings = 10) {
   const pos: number[] = [];
   const nor: number[] = [];
@@ -48,7 +48,7 @@ function uvSphere(r: number, cx: number, cy: number, cz: number, seg = 16, rings
   return { pos: new Float32Array(pos), nor: new Float32Array(nor), uv: new Float32Array(uv), idx: new Uint16Array(idx) };
 }
 
-/** Cubo sin bisel (aristas de 90°). */
+/** Cube without bevel (90° edges). */
 function cube(cx: number) {
   const v = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]].map(([x, y, z]) => [(x as number) + cx, y as number, z as number]);
   const faces = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [3, 7, 6], [3, 6, 2], [0, 4, 7], [0, 7, 3], [1, 2, 6], [1, 6, 5]];
@@ -58,7 +58,7 @@ function cube(cx: number) {
 
 interface Parte { nombre: string; material: string; geo: { pos: Float32Array; nor?: Float32Array; uv?: Float32Array; idx: Uint16Array | null }; textura?: boolean }
 
-/** Un .glb de fixture: una malla por parte, cada una con su material de origen (y una textura si se pide). */
+/** A fixture .glb: one mesh per part, each with its source material (and a texture if requested). */
 async function fixture(partes: readonly Parte[]): Promise<Uint8Array> {
   const doc = new Document();
   const buffer = doc.createBuffer();
@@ -83,7 +83,7 @@ const ESFERAS: Parte[] = [
   { nombre: "derecha", material: "Azul", geo: uvSphere(1, 3, 1, 0), textura: true },
 ];
 
-/** Posiciones (en el mundo) y colores de cada vértice de la salida, ya decuantizados. */
+/** Positions (in the world) and colors of each output vertex, already dequantized. */
 async function leerSalida(glb: Uint8Array) {
   const doc = await (await crearIO()).readBinary(glb);
   await doc.transform(dequantize());
@@ -117,9 +117,9 @@ describe("optimize: un glTF de fixture con textura y materiales de origen", () =
     expect(glb.byteLength).toBeLessThan(entrada.byteLength);
     expect(reporte.texturasDescartadas).toBe(1);
     expect(reporte.materialesDescartados).toBe(2);
-    expect(reporte.primitivas).toBe(1); // join: una llamada por pieza
+    expect(reporte.primitivas).toBe(1); // join: one call per piece
     expect(reporte.tokens).toEqual({ Rojo: "techo", Azul: "agua" });
-    // Cada vértice cae en la tolerancia del token de su parte (izquierda = techo, derecha = agua) y no en la del otro.
+    // Each vertex falls within the tolerance of its part's token (left = roof, right = water) and not the other's.
     expect(vertices.length).toBeGreaterThan(100);
     const lado = (x: number): PaletteToken => (x < 0 ? "techo" : "agua");
     const otro = (x: number): PaletteToken => (x < 0 ? "agua" : "techo");
@@ -139,7 +139,7 @@ describe("optimize: un glTF de fixture con textura y materiales de origen", () =
 
 describe("optimize: regla del bisel", () => {
   const conCubo: Parte[] = [ESFERAS[0] as Parte, { nombre: "cubo", material: "Azul", geo: cube(4) }];
-  /** La fila del registro de la pieza, tal como la lee validate:content. */
+  /** The piece's registry row, as validate:content reads it. */
   const fila = (bisel: string) => ArchivoRegistroAssets.parse(parse(`
 packs:
   - { id: fixture, nombre: F, autor: A, licencia: CC0-1.0, url: https://x.example, fecha_acceso: 2026-10-13,
@@ -189,9 +189,9 @@ describe("optimize: tabla de pintura del pack", () => {
 
 describe("piezas reales del registro", () => {
   const { packs, assets } = leerRegistro(ROOT);
-  // Los archivos de personaje (bloque `personaje`, M3) tienen su propio test en characters.test.ts. Open-world-3d T7
-  // (cambio registrado): los árboles horneados (generated, bake-trees.ts) y las rocas de scripts/assets/nature.ts no
-  // salen de optimize y tienen los suyos (bake-trees.test.ts, nature.test.ts).
+  // Character files (the `personaje` block, M3) have their own test in characters.test.ts. Open-world-3d T7
+  // (recorded change): the baked trees (generated, bake-trees.ts) and the rocks of scripts/assets/nature.ts do not
+  // come out of optimize and have their own (bake-trees.test.ts, nature.test.ts).
   const servidas = assets.filter((a) => a.archivo.endsWith(".glb") && !a.personaje && a.procedencia !== "generated" && !natureJob(a.archivo));
 
   test("hay al menos dos piezas CC0 servidas y cada una salió del pipeline", async () => {
@@ -218,7 +218,7 @@ describe("piezas reales del registro", () => {
     }
   });
 
-  // assets-src/ no se versiona (D-099): con la fuente a mano, la salida servida es exactamente la del pipeline.
+  // assets-src/ is not versioned (D-099): with the source at hand, the served output is exactly the pipeline's.
   const conFuente = servidas.filter((a) => a.fuente && existsSync(join(ROOT, a.fuente)));
   test.skipIf(conFuente.length === 0)("con la fuente en assets-src/, la pieza servida es byte a byte la salida de optimize", async () => {
     for (const a of conFuente) {

@@ -1,5 +1,5 @@
-// Interactuables cercanos (03 §2.4 #5): radio de interacción por entidad. El núcleo los calcula; world/ nunca
-// escribe `nearbyInteractables` (lo lee la UI para el aviso "E para hablar" y la lista accesible).
+// Nearby interactables (03 §2.4 #5): interaction radius per entity. The core computes them; world/ never
+// writes `nearbyInteractables` (the UI reads it for the "E para hablar" notice and the accessible list).
 import type { Point } from "./grid";
 
 export interface Interactable {
@@ -7,14 +7,14 @@ export interface Interactable {
   kind: "npc" | "object";
   x: number;
   z: number;
-  /** Radio de interacción, m. */
+  /** Interaction radius, m. */
   radius: number;
 }
 
-/** Radio por defecto si el layout no fija uno: un poco más de un tile. */
+/** Default radius if the layout does not set one: a bit more than a tile. */
 export const DEFAULT_INTERACT_RADIUS = 1.5;
 
-/** Ids al alcance, del más cercano al más lejano (desempate por id: determinístico). */
+/** Ids within reach, from nearest to farthest (tie-break by id: deterministic). */
 export function nearbyInteractables(p: Point, items: readonly Interactable[]): string[] {
   return items
     .map((it) => ({ id: it.id, d: Math.hypot(it.x - p.x, it.z - p.z), r: it.radius }))
@@ -23,7 +23,7 @@ export function nearbyInteractables(p: Point, items: readonly Interactable[]): s
     .map((e) => e.id);
 }
 
-/** ¿Dos listas de ids son iguales? (evita notificar al store en cada paso) */
+/** Are two lists of ids equal? (avoids notifying the store on every step) */
 export function sameIds(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((id, i) => id === b[i]);
 }

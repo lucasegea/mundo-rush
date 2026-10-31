@@ -1,19 +1,19 @@
-// Armado de bloques de captura, puro (F5.2): junta las muestras que entrega el AudioWorklet (128 por llamada, a la
-// tasa del AudioContext), y cada `frameMs` emite un bloque remuestreado a 16 kHz en PCM16 con su energía. El worklet
-// solo envuelve esto (P0 §7: la lógica vive en dsp/, el worklet no tiene lógica propia).
+// Pure capture-block assembly (F5.2): collects the samples the AudioWorklet delivers (128 per call, at the
+// AudioContext rate), and every `frameMs` emits a block resampled to 16 kHz PCM16 along with its energy. The worklet
+// only wraps this (P0 §7: the logic lives in dsp/, the worklet has no logic of its own).
 import { floatToPcm16 } from "./pcm";
 import { resample } from "./resample";
 import { rms } from "./vad";
 
-/** Tasa del audio del jugador que acepta el servidor (= PLAYER_AUDIO_SAMPLE_RATE de @lg/protocol). */
+/** Player audio rate the server accepts (= PLAYER_AUDIO_SAMPLE_RATE from @lg/protocol). */
 export const CAPTURE_TARGET_RATE = 16000;
-/** 40 ms: bloques chicos (latencia) y con largo entero de salida para 8/16/22,05/24/32/44,1/48/96 kHz. */
+/** 40 ms: small blocks (latency) with an integer output length for 8/16/22.05/24/32/44.1/48/96 kHz. */
 export const CAPTURE_FRAME_MS = 40;
 
 export interface CaptureFrame {
-  /** PCM16 a `targetRate`. */
+  /** PCM16 at `targetRate`. */
   pcm: Int16Array;
-  /** Energía RMS del bloque (antes de remuestrear). */
+  /** RMS energy of the block (before resampling). */
   rms: number;
 }
 
@@ -24,7 +24,7 @@ export interface CaptureFramerOptions {
 }
 
 export interface CaptureFramer {
-  /** Muestras nuevas; devuelve los bloques completos que se cerraron (cero o más). */
+  /** New samples; returns the complete blocks that closed (zero or more). */
   push(samples: Float32Array): CaptureFrame[];
   readonly frameMs: number;
 }

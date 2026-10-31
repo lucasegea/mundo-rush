@@ -1,6 +1,6 @@
-// M6.4 T8: lo puro de la caminata de navegador (D-815). La caminata en si es a pedido y fuera de `verify`; aca se
-// fijan el criterio de pixeles, la busqueda de Chromium (nunca instala) y la condicion del operador: el navegador
-// se cierra siempre (el cierre vive en un `finally`).
+// M6.4 T8: the pure parts of the browser walk (D-815). The walk itself is on demand and outside `verify`; here
+// the pixel criterion, the Chromium search (never installs) and the operator condition are pinned: the browser
+// is always closed (the close lives in a `finally`).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -56,9 +56,9 @@ describe("findChromium", () => {
   });
 });
 
-// Cambio registrado (open-world-3d T2(f), D-833): el lanzamiento de Chromium se mudo de browser-walk.ts al lanzador
-// compartido gl-mode.ts (lo usan la caminata y la sonda). La asercion vieja leia `chromium.launch(` en browser-walk.ts;
-// ahora se lee en gl-mode.ts, y browser-walk.ts tiene que abrir el navegador solo por `withGlBrowser`.
+// Recorded change (open-world-3d T2(f), D-833): the Chromium launch moved from browser-walk.ts to the shared
+// launcher gl-mode.ts (used by the walk and the probe). The old assertion read `chromium.launch(` in browser-walk.ts;
+// now it is read in gl-mode.ts, and browser-walk.ts has to open the browser only through `withGlBrowser`.
 describe("condicion del operador (D-815): el navegador siempre se cierra", () => {
   const src = readFileSync(new URL("./browser-walk.ts", import.meta.url), "utf8");
   const launcher = readFileSync(new URL("./gl-mode.ts", import.meta.url), "utf8");
@@ -96,7 +96,7 @@ describe("AC51 (open-world-3d T8): las poses de las capturas de defectos son las
 
 describe("AC57 (open-world-3d T9): puntos rojos del minimapa en una captura", () => {
   const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-  /** Una captura de 40x20 con el suelo del look y cuadrados de 4x4 del rojo en las x dadas. */
+  /** A 40x20 capture with the look's ground and 4x4 squares of red at the given xs. */
   const img = (xs: readonly number[]): { width: number; height: number; data: Uint8Array } => {
     const [w, h] = [40, 20];
     const data = new Uint8Array(w * h * 4);

@@ -1,21 +1,21 @@
-// world/budget/perfProbe.ts — gancho de la sonda de rendimiento (open-world-3d T2(g), D-833, AC58). SOLO DESARROLLO:
-// GameCanvas lo carga con import() bajo la doble llave `import.meta.env.DEV && VITE_LG_PERF_PROBE === "1"` (la que pone
-// scripts/dev/perf-probe.ts al levantar su propio Vite); en `vite build` la rama se elimina y este módulo no se emite
-// (check:dev-only busca su marcador en el dist, también en el build con las variables puestas).
+// world/budget/perfProbe.ts — performance probe hook (open-world-3d T2(g), D-833, AC58). DEVELOPMENT ONLY:
+// GameCanvas loads it with import() under the double key `import.meta.env.DEV && VITE_LG_PERF_PROBE === "1"` (the one set by
+// scripts/dev/perf-probe.ts when it starts its own Vite); in `vite build` the branch is eliminated and this module is not emitted
+// (check:dev-only looks for its marker in the dist, also in the build with the variables set).
 //
-// Bajo la misma llave el canvas corre sin tope (frameloop "always", FrameRegulator desmontado; canvasLoop en
-// frameRate.ts), y este gancho deja en `globalThis.__lgPerfProbe` lo que la sonda mide: los tiempos entre cuadros, los
-// contadores de `renderer.info` del último cuadro completo (todas sus pasadas), los programas compilados, el modo de
-// frameloop de R3F y cuántos FrameRegulator hay montados (tiene que ser 0).
+// Under the same key the canvas runs uncapped (frameloop "always", FrameRegulator unmounted; canvasLoop in
+// frameRate.ts), and this hook leaves in `globalThis.__lgPerfProbe` what the probe measures: the times between frames, the
+// `renderer.info` counters of the last complete frame (all its passes), the compiled programs, the R3F
+// frameloop mode and how many FrameRegulators are mounted (must be 0).
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import { frameRegulatorsMounted } from "../FrameRegulator";
 
-/** Marcador de solo-desarrollo (check:dev-only lo busca en el dist). */
+/** Development-only marker (check:dev-only looks for it in the dist). */
 export const PERF_PROBE_MARKER = "__lg_director:perf-probe";
-/** Nombre del gancho en globalThis. */
+/** Name of the hook on globalThis. */
 export const PERF_PROBE_GLOBAL = "__lgPerfProbe";
-/** Tope del anillo de tiempos (a 1.000 FPS, 60 s). */
+/** Cap of the timing ring (at 1,000 FPS, 60 s). */
 const MAX_FRAMES = 60_000;
 
 export interface PerfCounters {
@@ -28,15 +28,15 @@ export interface PerfCounters {
 
 export interface PerfProbeApi {
   marker: string;
-  /** "always" en modo sin tope. */
+  /** "always" in uncapped mode. */
   frameloop: () => string;
-  /** FrameRegulator montados ahora (0 en modo sin tope). */
+  /** FrameRegulators mounted now (0 in uncapped mode). */
   regulators: () => number;
-  /** Contadores del último cuadro completo. */
+  /** Counters of the last complete frame. */
   counters: () => PerfCounters;
-  /** Tiempos entre cuadros (ms) desde el último `resetFrames`. */
+  /** Times between frames (ms) since the last `resetFrames`. */
   frameTimes: () => number[];
-  /** Milisegundos (reloj de la página) desde el último `resetFrames`. */
+  /** Milliseconds (page clock) since the last `resetFrames`. */
   sinceReset: () => number;
   resetFrames: () => void;
 }
@@ -71,7 +71,7 @@ export default function PerfProbe() {
     const now = performance.now();
     if (s.last !== 0 && s.times.length < MAX_FRAMES) s.times.push(now - s.last);
     s.last = now;
-    // Lo acumulado es el cuadro anterior entero (todas sus pasadas): se guarda y se pone en cero para este.
+    // What is accumulated is the whole previous frame (all its passes): it is saved and zeroed for this one.
     s.counters = {
       calls: gl.info.render.calls, triangles: gl.info.render.triangles, programs: gl.info.programs?.length ?? 0,
       textures: gl.info.memory.textures, geometries: gl.info.memory.geometries,

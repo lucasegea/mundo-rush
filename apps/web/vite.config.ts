@@ -7,8 +7,8 @@ const src = (dir: string): string => fileURLToPath(new URL(`./src/${dir}`, impor
 const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url)).replace(/\\/g, "/");
 
 /**
- * Módulo → ruta relativa y sin datos de la máquina: desde `node_modules/` si es una dependencia, o desde la raíz del
- * repo si es código propio (el dist no lleva rutas absolutas con el usuario).
+ * Module → path relative to the repo, with no machine data: from `node_modules/` if it is a dependency, or from the repo
+ * root if it is our own code (dist carries no absolute paths with the user name).
  */
 export function relativeModuleId(id: string, root = REPO_ROOT): string {
   const clean = id.replace(/\\/g, "/").replace(/^\0/, "").replace(/\?.*$/, "");
@@ -17,7 +17,7 @@ export function relativeModuleId(id: string, root = REPO_ROOT): string {
   return clean.startsWith(root) ? clean.slice(root.length) : clean.slice(clean.lastIndexOf("/") + 1);
 }
 
-/** F2 A6: escribe dist/.vite/chunk-modules.json (archivo de chunk → módulos) para check:budgets. */
+/** F2 A6: writes dist/.vite/chunk-modules.json (chunk file → modules) for check:budgets. */
 function chunkModules(): Plugin {
   return {
     name: "lg-chunk-modules",
@@ -33,25 +33,25 @@ function chunkModules(): Plugin {
 }
 
 /**
- * F4.2: el HUD habla con apps/server por el MISMO origen (03 §7.8: connect-src solo a la API propia). En `vite` y en
- * `vite preview`, /scene-token y el WebSocket /scene van al servidor de escenas en 127.0.0.1 (LG_PORT, 8787 por
- * defecto; D-158). Sin servidor arriba, el HUD dice que no hay conexión.
+ * F4.2: the HUD talks to apps/server over the SAME origin (03 Â§7.8: connect-src only to its own API). In `vite` and in
+ * `vite preview`, /scene-token and the /scene WebSocket go to the scene server on 127.0.0.1 (LG_PORT, 8787 by
+ * default; D-158). With no server up, the HUD says there is no connection.
  */
 const SCENE_SERVER = `http://127.0.0.1:${process.env["LG_PORT"] ?? "8787"}`;
 const sceneProxy = { "/scene": { target: SCENE_SERVER, ws: true, changeOrigin: false } };
 
-// Alias de apps/web (P0 T3, 03 §4.2.1); espejo de "paths" en tsconfig.json.
+// apps/web aliases (P0 T3, 03 Â§4.2.1); mirror of "paths" in tsconfig.json.
 export default defineConfig({
   server: { proxy: sceneProxy },
   preview: { proxy: sceneProxy },
-  // Tailwind v4 (03 §2.6): tokens en src/styles/tokens.css.
+  // Tailwind v4 (03 Â§2.6): tokens in src/styles/tokens.css.
   plugins: [react(), tailwindcss(), chunkModules()],
-  // check:budgets lee dist/.vite/manifest.json y chunk-modules.json (03 §2.7.3, F1.1b, F2).
-  // Los topes los fija check:budgets (450 KB gzip para el chunk 3D); el aviso de 500 kB sin comprimir de Vite no aplica.
+  // check:budgets reads dist/.vite/manifest.json and chunk-modules.json (03 Â§2.7.3, F1.1b, F2).
+  // check:budgets sets the caps (450 KB gzip for the 3D chunk); Vite's 500 kB uncompressed warning does not apply.
   build: { manifest: true, chunkSizeWarningLimit: 1500 },
-  // Open-world-3d T6: KTX2Loader lo importa un chunk perezoso (world/terrain/groundMaterial.ts) que el escaneo inicial de
-  // Vite no descubre; sin esto, la primera visita con la caché fría re-optimiza y RECARGA la página a mitad de camino
-  // (medido: la Walk quedó en el menú). Incluirlo lo pre-empaqueta al arrancar.
+  // Open-world-3d T6: KTX2Loader is imported by a lazy chunk (world/terrain/groundMaterial.ts) that Vite's initial scan
+  // does not discover; without this, the first visit with a cold cache re-optimizes and RELOADS the page midway
+  // (measured: the Walk was left in the menu). Including it pre-bundles it at startup.
   optimizeDeps: { include: ["three/addons/loaders/KTX2Loader.js"] },
   resolve: {
     alias: {

@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-// Open-world-3d T9 (M4): el minimapa en el store y en la interfaz.
-//   · AC54: `completedNpcs` crece con un `scene.end` exitoso; los pendientes de Galeano y de la campesino.
-//   · AC55: abajo a la derecha (1rem + área segura), 7rem/10rem, tres anillos `data-npc-id` con los colores del
-//     selector y un nombre accesible con cada pendiente y su distancia en metros (el contraste >= 3:1 de esos colores,
-//     contra cada look, está en scripts/a11y/minimap-contrast.test.ts, donde vive la fórmula WCAG). jsdom no tiene layout: la geometría real (px a
-//     1280x720 y 375x667) la mide la caminata (`LG_WALK_ONLY=minimap`, AC57); acá se prueba el contrato de clases.
-//   · AC56: a lo sumo 10 redibujos por segundo con 60 cuadros de movimiento en un reloj de prueba, ninguno quieto, fuera
-//     del bucle de render; "reducir movimiento" corta el giro.
-//   · Visible a todo zoom; oculto en la charla y en `dialog-only`.
+// Open-world-3d T9 (M4): the minimap in the store and in the interface.
+//   · AC54: `completedNpcs` grows with a successful `scene.end`; the pending ones of Galeano and of the farmer.
+//   · AC55: bottom right (1rem + safe area), 7rem/10rem, three `data-npc-id` rings with the selector's colors and
+//     an accessible name with each pending NPC and its distance in meters (the >= 3:1 contrast of those colors,
+//     against each look, is in scripts/a11y/minimap-contrast.test.ts, where the WCAG formula lives). jsdom has no layout: the real geometry (px at
+//     1280x720 and 375x667) is measured by the walk (`LG_WALK_ONLY=minimap`, AC57); here the class contract is tested.
+//   · AC56: at most 10 redraws per second with 60 movement frames on a test clock, none standing still, outside
+//     the render loop; "reduce motion" cuts the spin.
+//   · Visible at every zoom; hidden in conversation and in `dialog-only`.
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { prepareDiorama, type DioramaLayout } from "@lg/core";
@@ -31,7 +31,7 @@ const layoutOf = (c: Record<string, unknown>, pred: (d: DioramaLayout) => boolea
 const MUELLE = layoutOf(GALEANO, (d) => d.id === "muelle");
 const CAMPESINO_MAP = layoutOf(CAMPESINO, (d) => (d.npcs ?? []).some((n) => n.id === "NPC-INES"));
 
-/** Mapa jugable con ese contenido: catálogo, diorama, fase `world`, tier medio. */
+/** Playable map with that content: catalog, diorama, `world` phase, medium tier. */
 function playOn(content: Record<string, unknown>, layout: DioramaLayout): void {
   actions.contentLoaded(parseDialogOnlyCatalog(content["lugares.json"], content["npcs.json"]));
   actions.dioramaLoaded(layout);
@@ -42,7 +42,7 @@ function playOn(content: Record<string, unknown>, layout: DioramaLayout): void {
   });
 }
 
-/** Una escena abierta con `npcId` que termina con `outcome` (lo que manda el servidor). */
+/** An open scene with `npcId` that ends with `outcome` (what the server sends). */
 function finishScene(npcId: string, outcome: Extract<ServerMessage, { type: "scene.end" }>["outcome"]): void {
   actions.sceneMessage({ type: "scene.opened", sceneRunId: `run-${npcId}`, missionId: "M1.2", sceneId: "E1", npcId, modality: "text" } as ServerMessage);
   actions.sceneMessage({ type: "scene.end", outcome, criteriaMet: [], evidence: [] });
@@ -70,7 +70,7 @@ describe("AC54: completedNpcs en el store y los pendientes del selector", () => 
     finishScene("NPC-MITAYO", "success");
     expect(gameStore.getState().progression.completedNpcs).toEqual(["NPC-MITAYO"]);
     expect(pendingIds()).toEqual(["NPC-CERRO", "NPC-FACTOR"]);
-    // Repetir el éxito no duplica.
+    // Repeating the success does not duplicate.
     finishScene("NPC-MITAYO", "success");
     expect(gameStore.getState().progression.completedNpcs).toEqual(["NPC-MITAYO"]);
   });
@@ -123,7 +123,7 @@ describe("visibilidad: a todo zoom; oculto en la charla y en dialog-only", () =>
   });
 });
 
-/** Contexto 2D de mentira: jsdom no tiene canvas. Cuenta los redibujos por `clearRect`. */
+/** Fake 2D context: jsdom has no canvas. Counts redraws by `clearRect`. */
 function fakeCanvas(): { clears: () => number; reset: () => void } {
   let n = 0;
   const ctx = new Proxy({}, {
@@ -131,7 +131,7 @@ function fakeCanvas(): { clears: () => number; reset: () => void } {
     set: () => true,
   });
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation((() => ctx) as never);
-  // jsdom no tiene layout (clientWidth 0) y sin lado medido el minimapa no pinta: se simula el de escritorio.
+  // jsdom has no layout (clientWidth 0) and without a measured side the minimap does not paint: the desktop one is simulated.
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(160);
   return { clears: () => n, reset: () => { n = 0; } };
 }
@@ -145,10 +145,10 @@ describe("AC55: lugar, tamaño, anillos y nombre accesible", () => {
     const cls = root.className.split(" ");
     expect(cls).toEqual(expect.arrayContaining(["fixed", "right-[calc(1rem+env(safe-area-inset-right))]", "bottom-[calc(1rem+env(safe-area-inset-bottom))]"]));
     const map = screen.getByTestId("minimap-map").className.split(" ");
-    expect(map).toEqual(expect.arrayContaining(["size-[7rem]", "md:size-[10rem]"])); // 112 y 160 px con texto al 100 %
+    expect(map).toEqual(expect.arrayContaining(["size-[7rem]", "md:size-[10rem]"])); // 112 and 160 px with text at 100 %
     const rings = root.querySelectorAll("[data-npc-id]");
     expect([...rings].map((r) => r.getAttribute("data-npc-id"))).toEqual(["NPC-MITAYO", "NPC-CERRO", "NPC-FACTOR"]);
-    // El nombre accesible lista cada pendiente con su distancia redondeada en metros.
+    // The accessible name lists each pending NPC with its distance rounded in meters.
     const s = gameStore.getState();
     const p = s.player.position as { x: number; z: number };
     const name = root.getAttribute("aria-label") ?? "";
@@ -158,7 +158,7 @@ describe("AC55: lugar, tamaño, anillos y nombre accesible", () => {
     }
     expect(screen.getByRole("region", { name })).toBe(root);
     expect(root.querySelectorAll("ul.sr-only li")).toHaveLength(3);
-    // Cada anillo pinta el rojo con contorno de tinta (los colores del selector, ningún hex en ui/).
+    // Each ring paints the red with an ink outline (the selector's colors, no hex in ui/).
     const style = (rings[0] as HTMLElement).getAttribute("style") ?? "";
     expect(style).toMatch(/rgb\(255, 84, 72\)|#ff5448/i);
     expect(style).toMatch(/rgb\(42, 42, 51\)|#2a2a33/i);
@@ -181,7 +181,7 @@ describe("AC56: redibujo con tope de 10 por segundo, fuera del bucle de render",
     const canvas = fakeCanvas();
     playOn(GALEANO, MUELLE);
     render(<Minimap />);
-    expect(canvas.clears()).toBe(1); // el primer dibujo, al montar
+    expect(canvas.clears()).toBe(1); // the first draw, on mount
     canvas.reset();
     for (let f = 0; f < 60; f++) {
       const s = gameStore.getState();
@@ -191,7 +191,7 @@ describe("AC56: redibujo con tope de 10 por segundo, fuera del bucle de render",
     }
     expect(canvas.clears()).toBeLessThanOrEqual(10);
     expect(canvas.clears()).toBeGreaterThanOrEqual(9);
-    // El último paso puede caer justo después del último redibujo: se deja pasar un redibujo y después, quieto, nada.
+    // The last step may fall right after the last redraw: one redraw is let through and then, standing still, nothing.
     act(() => { vi.advanceTimersByTime(100); });
     canvas.reset();
     act(() => { vi.advanceTimersByTime(1000); });
@@ -200,7 +200,7 @@ describe("AC56: redibujo con tope de 10 por segundo, fuera del bucle de render",
 
   test("el código no toca el bucle de three (useFrame, @react-three, requestAnimationFrame) ni escribe un hex", () => {
     const code = minimapSource.replace(/^\s*\/\/.*$/gm, "");
-    expect(minimapSource.length).toBeGreaterThan(1000); // guardia contra 0 medido
+    expect(minimapSource.length).toBeGreaterThan(1000); // guard against a measured 0
     expect(code).not.toMatch(/useFrame|@react-three|requestAnimationFrame/);
     expect(code).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(code).toContain("setInterval(tick, MINIMAP_REDRAW_MS)");
@@ -226,7 +226,7 @@ describe("AC56: redibujo con tope de 10 por segundo, fuera del bucle de render",
     render(<Minimap />);
     turn(180);
     expect(screen.getByTestId("minimap-map").dataset.heading).toBe("180");
-    // El selector, sin componente: con reducir movimiento el giro es el pedido en un solo redibujo.
+    // The selector, without a component: with reduce motion the spin is the requested one in a single redraw.
     expect(selectMinimap(gameStore.getState(), { prevYawDeg: 0, dtS: 0.1 }).yawDeg).toBe(180);
   });
 

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-// Open-world-3d T7b, LK3 enmendado (D-840): el esqueleto se elige en el punto de uso. Se monta Character (sin canvas:
-// useFrame no corre y la carga de cuerpos se espía) y se mira qué esqueleto pide cargar. Con un look de prueba KayKit
-// sobre el muelle (relieve) y las reglas de distancia de NPC del mundo abierto encendidas, carga RIGS.kaykit: el
-// esqueleto sale del look, nunca de distanceRules, del relieve ni del mundo abierto.
+// Open-world-3d T7b, LK3 amended (D-840): the skeleton is chosen at the point of use. Character is mounted (without canvas:
+// useFrame does not run and body loading is spied on) and we look at which skeleton it asks to load. With a KayKit test look
+// on the dock (relief) and the open world's NPC distance rules switched on, it loads RIGS.kaykit: the
+// skeleton comes from the look, never from distanceRules, relief or the open world.
 import { DEFAULT_LOOK, PAINTED_LOOK, type LookId, type WorldLook } from "@lg/art";
 import { prepareDiorama, type DioramaLayout } from "@lg/core";
 import { cleanup, render } from "@testing-library/react";
@@ -14,17 +14,17 @@ import { buildDioramaScene } from "../src/world/dioramas/scene";
 import { compiledUniverseClientContent } from "./helpers";
 
 const loads = vi.hoisted(() => [] as RigSpec[]);
-// T10-integrate: Character precompila el cuerpo con usePrecompile (useThree); acá el cuerpo nunca llega, no se llama.
+// T10-integrate: Character precompiles the body with usePrecompile (useThree); here the body never arrives, it is not called.
 vi.mock("@react-three/fiber", () => ({ useFrame: () => {}, useThree: (pick: (s: { get: () => never }) => unknown) => pick({ get: () => { throw new Error("sin canvas"); } }) }));
 vi.mock("../src/world/actors/characterAssets", () => ({
   loadCharacterAssets: (_body: unknown, _lod: unknown, rig: RigSpec) => {
     loads.push(rig);
-    return new Promise(() => {}); // nunca llega: queda el cuerpo de cápsulas
+    return new Promise(() => {}); // never arrives: the capsule body remains
   },
 }));
 
 const PERSON: CharacterLook = { body: "tunica", shirt: "casa-1", pants: "pantalon", skin: "piel", hair: "pelo", hairStyle: "casquete", hat: "gorra", scarf: "bufanda", scale: 1 };
-/** Un look de prueba (no del catálogo): DEFAULT_LOOK con el esqueleto KayKit. */
+/** A test look (not from the catalog): DEFAULT_LOOK with the KayKit skeleton. */
 const KAYKIT_TEST_LOOK: WorldLook = { ...DEFAULT_LOOK, id: "prueba-kaykit" as LookId, characters: { ...DEFAULT_LOOK.characters, rig: "kaykit" } };
 
 const mount = (cast: WorldLook["characters"] | null, distanceRules: boolean): RigSpec | undefined => {
@@ -36,7 +36,7 @@ const mount = (cast: WorldLook["characters"] | null, distanceRules: boolean): Ri
 };
 
 beforeEach(() => {
-  // react-dom no conoce <primitive> (es de R3F) y avisa por console.error: es ruido del montaje sin canvas.
+  // react-dom does not know <primitive> (it is R3F's) and warns via console.error: it is mount noise without a canvas.
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => {
@@ -47,7 +47,7 @@ describe("LK3: Character carga el esqueleto del look (cast), no el de distanceRu
   test("look de prueba KayKit sobre el muelle (relieve) con reglas de NPC del mundo abierto: carga RIGS.kaykit", () => {
     const muelle = (compiledUniverseClientContent("U-GALEANO")["dioramas.json"] as DioramaLayout[]).find((d) => d.id === "muelle") as DioramaLayout;
     const scene = buildDioramaScene(prepareDiorama(muelle), "reduced", "low", KAYKIT_TEST_LOOK);
-    expect(scene.picker).not.toBeNull(); // relieve: sí
+    expect(scene.picker).not.toBeNull(); // relief: yes
     const cast = scene.look.characters;
     scene.dispose();
     expect(mount(cast, true)).toBe(RIGS.kaykit);

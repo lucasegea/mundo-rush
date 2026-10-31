@@ -1,6 +1,6 @@
-// Efectos de misión sobre el mundo y orden de escenas (03 §6.4.8, D-168, D-169, D-194). Puro: el servidor decide qué
-// efectos emite al cerrar una escena y el cliente los aplica con la misma función. Las formas son estructurales (el
-// núcleo no depende de @lg/content-schema, 03 §4.3): calzan con las misiones y NPCs compilados.
+// Mission effects on the world and scene order (03 §6.4.8, D-168, D-169, D-194). Pure: the server decides which
+// effects it emits when closing a scene and the client applies them with the same function. The shapes are structural (the
+// core does not depend on @lg/content-schema, 03 §4.3): they match the compiled missions and NPCs.
 
 export type FoundationStage = "idea" | "en_marcha" | "fundado" | "crece";
 const STAGE_ORDER: readonly FoundationStage[] = ["idea", "en_marcha", "fundado", "crece"];
@@ -22,7 +22,7 @@ export const emptyWorldProgress = (): WorldProgress => ({ flags: {}, foundations
 const effectKey = (e: WorldEffect): string =>
   "flag" in e ? `flag:${e.flag}` : "intro" in e ? `intro:${e.intro}` : `fundacion:${e.fundacion}:${e.estado}`;
 
-/** Quita repetidos conservando el primer orden. */
+/** Removes duplicates keeping the first order. */
 export const dedupeEffects = (effects: readonly WorldEffect[]): WorldEffect[] => {
   const seen = new Set<string>();
   return effects.filter((e) => {
@@ -34,8 +34,8 @@ export const dedupeEffects = (effects: readonly WorldEffect[]): WorldEffect[] =>
 };
 
 /**
- * Aplica efectos al mundo (inmutable). Una fundación nunca retrocede (idea → en_marcha → fundado → crece, 02 §1.8);
- * un intro o un flag repetido no cambia nada. Sin cambios devuelve el mismo objeto.
+ * Applies effects to the world (immutable). A foundation never goes backward (idea → en_marcha → fundado → crece, 02 §1.8);
+ * a repeated intro or flag changes nothing. Without changes it returns the same object.
  */
 export function applyWorldEffects(world: WorldProgress, effects: readonly WorldEffect[]): WorldProgress {
   let flags = world.flags;
@@ -56,7 +56,7 @@ export function applyWorldEffects(world: WorldProgress, effects: readonly WorldE
   return flags === world.flags && foundations === world.foundations && intros === world.intros ? world : { flags, foundations, intros };
 }
 
-// ---------- misiones y escenas ----------
+// ---------- missions and scenes ----------
 
 export interface SceneLike {
   readonly escena_id: string;
@@ -67,7 +67,7 @@ export interface SceneLike {
 
 export interface MissionLike {
   readonly id: string;
-  /** Misiones previas (`M0.1`) o presentaciones (`intro:NPC-X`). */
+  /** Previous missions (`M0.1`) or introductions (`intro:NPC-X`). */
   readonly requiere: readonly string[];
   readonly efectos: readonly WorldEffect[];
   readonly red?: { readonly nombra: readonly string[]; readonly presenta: readonly { readonly npc: string }[] } | undefined;
@@ -89,20 +89,20 @@ export const emptyStoryProgress = (): StoryProgress => ({ completedMissions: [],
 
 const INTRO_PREFIX = "intro:";
 
-/** Un requisito de misión: `M0.1` (misión cumplida) o `intro:NPC-X` (presentación consumada). */
+/** A mission requirement: `M0.1` (mission completed) or `intro:NPC-X` (introduction done). */
 export const requirementMet = (req: string, progress: StoryProgress): boolean =>
   req.startsWith(INTRO_PREFIX) ? progress.intros.includes(req.slice(INTRO_PREFIX.length)) : progress.completedMissions.includes(req);
 
 export type SceneResolution =
   | { readonly kind: "scene"; readonly missionId: string; readonly sceneId: string }
-  /** El NPC pide presentación y nadie lo presentó: saluda con su línea guionada y no abre la misión (02 §1.7). */
+  /** The NPC asks for an introduction and nobody introduced them: it greets with its scripted line and does not open the mission (02 §1.7). */
   | { readonly kind: "notIntroduced"; readonly npcId: string }
   | { readonly kind: "none" };
 
 /**
- * Qué escena abre hablar con `npc` (o, con `null`, la escena sin NPC del compañero, como M0.2). Las misiones se
- * recorren en el orden del contenido; una misión está disponible cuando no se cumplió y sus `requiere` sí. Así el
- * prólogo corre M0.1 → M0.2 → M0.3 por sus propios requisitos.
+ * Which scene talking to `npc` opens (or, with `null`, the companion's scene without an NPC, like M0.2). Missions are
+ * walked in content order; a mission is available when it is not completed and its `requiere` are. That way the
+ * prologue runs M0.1 → M0.2 → M0.3 by its own requirements.
  */
 export function resolveScene(missions: readonly MissionLike[], npc: NpcLike | null, progress: StoryProgress): SceneResolution {
   if (npc && npc.requiere_presentacion && !progress.intros.includes(npc.id)) return { kind: "notIntroduced", npcId: npc.id };
@@ -115,13 +115,13 @@ export function resolveScene(missions: readonly MissionLike[], npc: NpcLike | nu
   return { kind: "none" };
 }
 
-/** ¿Cerrar esta escena cierra la misión? (es la última escena que faltaba) */
+/** Does closing this scene close the mission? (it is the last scene that was missing) */
 export const closesMission = (mission: MissionLike, sceneId: string, progress: StoryProgress): boolean =>
   mission.escenas.every((e) => e.escena_id === sceneId || progress.completedScenes.includes(e.escena_id));
 
 /**
- * Efectos que emite el cierre de una escena (03 §6.4.8): los de la escena y, si cierra la misión, los de la misión más
- * las presentaciones de su bloque `red` (`presenta` y `nombra`: quien te nombra a un vecino te lo presenta).
+ * Effects emitted by closing a scene (03 §6.4.8): those of the scene and, if it closes the mission, those of the mission plus
+ * the introductions of its `red` block (`presenta` and `nombra`: whoever names a neighbor to you introduces them to you).
  */
 export function sceneCloseEffects(mission: MissionLike, sceneId: string, progress: StoryProgress): WorldEffect[] {
   const scene = mission.escenas.find((e) => e.escena_id === sceneId);
@@ -134,7 +134,7 @@ export function sceneCloseEffects(mission: MissionLike, sceneId: string, progres
   return dedupeEffects([...scene.efectos, ...mission.efectos, ...red]);
 }
 
-/** Progreso tras cerrar la escena (y quizás la misión), con las presentaciones de los efectos. */
+/** Progress after closing the scene (and maybe the mission), with the introductions from the effects. */
 export function advanceStory(progress: StoryProgress, mission: MissionLike, sceneId: string,
   effects: readonly WorldEffect[]): StoryProgress {
   const completedScenes = progress.completedScenes.includes(sceneId) ? progress.completedScenes : [...progress.completedScenes, sceneId];

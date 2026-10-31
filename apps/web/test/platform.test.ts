@@ -1,4 +1,4 @@
-// Adaptador web de Platform (R15, F1.1b) con dobles del navegador: sin jsdom (D-016).
+// Web adapter of Platform (R15, F1.1b) with browser doubles: no jsdom (D-016).
 import { describe, expect, test, vi } from "vitest";
 import { createWebPlatform, PlatformError, STORAGE_PREFIX, type WebPlatformEnv } from "../src/services/platform";
 

@@ -1,6 +1,6 @@
-# Señales de riesgo en lo que escribe el jugador (03 §7.7 puntos 2 y 5; 02 §3.2 S3; D-112). PROVISORIA: la revisan
-# especialistas antes de cualquier piloto (F13). Solo frases claras: un falso positivo corta la escena y abre la
-# contención. Dispara contención (no un corte). El lint de contenido no la corre (aplica_a: jugador).
+# Risk signals in what the player writes (03 §7.7 points 2 and 5; 02 §3.2 S3; D-112). PROVISIONAL: specialists
+# review it before any pilot (F13). Only clear phrases: a false positive cuts the scene and opens the
+# containment. It triggers containment (not a cut). The content lint does not run it (aplica_a: jugador).
 id: riesgo
 regla: riesgo
 fuente: "03 §7.7; 02 §3.2 S3; D-112"

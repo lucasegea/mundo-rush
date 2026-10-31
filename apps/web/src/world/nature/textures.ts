@@ -1,8 +1,8 @@
-// world/nature/textures.ts — el atlas de flores (open-world-3d T7), dibujado por código como en el mockup V6 (`world.js`
-// flowerAtlas): cuatro celdas de 64 px (margarita, botón de oro, lila, amapola), siete flores cada una con tallo y hoja.
-// Arte propio: no hay arte de terceros. Sin `document` (los tests en Node) queda un 1 × 1 transparente.
+// world/nature/textures.ts — the flower atlas (open-world-3d T7), drawn in code as in the V6 mockup (`world.js`
+// flowerAtlas): four 64 px cells (daisy, buttercup, lilac, poppy), seven flowers each with stem and leaf.
+// Own art: there is no third-party art. Without `document` (Node tests) it is a transparent 1 × 1.
 import { CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, type Texture } from "three";
-// Open-world-3d T7b (D-839): los colores son los del look (`WorldLook.vegetation.colors`).
+// Open-world-3d T7b (D-839): the colors are the look ones (`WorldLook.vegetation.colors`).
 import { mulberry32, RUNTIME_TEXTURE_PX, type WorldLook } from "@lg/art";
 
 const css = (hex: number): string => `#${hex.toString(16).padStart(6, "0")}`;

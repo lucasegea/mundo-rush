@@ -1,4 +1,4 @@
-// Grupo de opciones = fieldset + radios nativos (flechas dentro del grupo, Tab entre grupos).
+// Option group = fieldset + native radios (arrows within the group, Tab between groups).
 export interface RadioOption<T extends string> {
   value: T;
   label: string;

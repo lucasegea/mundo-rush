@@ -1,5 +1,5 @@
-// A2 (ADR-027): almacén de encuentros (memoria y archivo leído en cada consulta), filtro de reinicios del progreso,
-// guardas del proceso (promesas rechazadas sin manejar) y el juez guionado de LG_FAKE_MODELS.
+// A2 (ADR-027): encounter store (memory and file read on every query), progress reset filter,
+// process guards (unhandled rejected promises) and the scripted judge of LG_FAKE_MODELS.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

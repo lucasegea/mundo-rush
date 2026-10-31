@@ -1,52 +1,52 @@
-# Modelos como configuración (03 §5.10, D-093, ADR-018). Sin claves: las claves van en variables de entorno del proceso
-# del servidor (LG_GEMINI_API_KEY) y nunca llegan al cliente (03 §5.3). F4.1 usa solo los roles de texto.
-# Los ids de modelo cambian: validarlos contra el proveedor al arrancar (ADR-018, P0) queda diferido (sin clave no se
-# puede; F4.1 no llama a ninguna API paga). Ids tomados de un prototipo de voz anterior (03 §5.2); verificar vigencia antes de usar.
+# Models as configuration (03 §5.10, D-093, ADR-018). No keys: keys live in the server process environment variables
+# (LG_GEMINI_API_KEY) and never reach the client (03 §5.3). F4.1 uses only the text roles.
+# Model ids change: validating them against the provider at startup (ADR-018, P0) is deferred (it can't be done without a key;
+# F4.1 calls no paid API). Ids taken from an earlier voice prototype (03 §5.2); check they are still valid before use.
 roles:
   textNpc:  { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 256, timeoutMs: 8000 }
   observer: { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 1024, timeoutMs: 4000 }
-  # A2 (ADR-027): juez de la conversación por medidores. Solo ETIQUETA el intercambio (JSON de listas cerradas). Corre
-  # después de que el NPC respondió (no frena la respuesta): por eso tiene más tiempo. 2048 tokens: 2.5 Flash piensa y el
-  # pensamiento cuenta contra el tope (un tope chico trunca el JSON).
+  # A2 (ADR-027): meters conversation judge. It only LABELS the exchange (JSON of closed lists). Runs
+  # after the NPC has answered (it does not hold up the reply): hence it gets more time. 2048 tokens: 2.5 Flash thinks and
+  # thinking counts against the cap (a small cap truncates the JSON).
   judge:    { provider: gemini-text, model: "gemini-2.5-flash", maxOutputTokens: 2048, timeoutMs: 10000 }
-  # F5.1a: voz del NPC por Gemini Live (D-093: el modelo de un prototipo de voz anterior, listado según P0 §4.1). Id sin validar contra
-  # el proveedor al arrancar (sin clave no se puede; ADR-018 enmendado por P0).
+  # F5.1a: NPC voice via Gemini Live (D-093: the an earlier voice prototype model, listed per P0 §4.1). Id not validated against
+  # the provider at startup (can't be done without a key; ADR-018 amended by P0).
   npcVoice: { provider: gemini-live, model: "gemini-3.1-flash-live-preview", openTimeoutMs: 10000, maxReconnects: 2 }
-  # Reservados (F5.1b, F6): summary, lumiTts, npcLinesTts, moderation, cascade.
-# Voz híbrida (03 §5.11, D-092, D-148): `live | cascade`. Sin reporte de F0.1, `live` (D-149, D-162). `cascade` llega en F5.1b:
-# hasta entonces una escena de voz con `cascade` cae a texto con aviso.
+  # Reserved (F5.1b, F6): summary, lumiTts, npcLinesTts, moderation, cascade.
+# Hybrid voice (03 §5.11, D-092, D-148): `live | cascade`. Without the F0.1 report, `live` (D-149, D-162). `cascade` arrives in F5.1b:
+# until then a voice scene set to `cascade` falls back to text with a notice.
 voice:
   npc: { adapter: live }
-  # Fuente de la transcripción del jugador que lee el observador. `adapter`: la del adaptador de voz (Live:
-  # inputAudioTranscription). El observador recibe además, siempre, el clip de audio del turno (D-095).
+  # Source of the player transcript the observer reads. `adapter`: the voice adapter's (Live:
+  # inputAudioTranscription). The observer also always receives the turn's audio clip (D-095).
   observer: { source: adapter }
-  # Voces prebuilt por NPC (nombre del proveedor); sin entrada, la de `default`. Se eligen por oído (Sección D).
+  # Prebuilt voices per NPC (provider name); with no entry, the `default` one. Chosen by ear (Section D).
   voices: { default: "Aoede", byNpc: { NPC-HARLAN: "Charon" } }
   languageCode: "en-US"
-  # El clip del turno se libera al terminar el observador o a los 10 s (P0 §4.3).
+  # The turn clip is released when the observer finishes or after 10 s (P0 §4.3).
   clipTtlMs: 10000
 observer:
   liveGrammarSignals: false
-# Moderación de texto (03 §7.7, F4.2): las listas de content/safety/blocklists/ y las reglas corren siempre. El
-# clasificador del proveedor (DP-A05) queda en `none` hasta tener clave y autorización (D-027).
+# Text moderation (03 §7.7, F4.2): the content/safety/blocklists/ lists and the rules always run. The
+# provider classifier (DP-A05) stays at `none` until there is a key and authorization (D-027).
 moderation:
   classifier: none
 scene:
   softCapMs: 240000
   hardCapMs: 300000
   turnTimerMs: 3000
-# Tarifas por adaptador en US$ (03 §5.9, §5.11; research/voz-costo-valor-2026-10-06.md §2.1 y §3.2, consultado 2026-10-06).
-# Gemini Live (3.1 Flash Live = 3.8 Live): audio in 3/M, audio out 12/M, texto in 0,75/M; el texto de salida no está
-# publicado: se usa la tarifa de audio de salida como cota conservadora. Cascada (F5.1b): Flux 0,0065/min, Gemini 3.8 Flash
-# 0,75/3,75 por M (hasta 2026-12-31), Aura-2 0,030/1k caracteres. Los precios de Gemini se duplican el 2027-01-01 (R17).
+# Per-adapter rates in US$ (03 §5.9, §5.11; research/voz-costo-valor-2026-10-06.md §2.1 and §3.2, consulted 2026-10-06).
+# Gemini Live (3.1 Flash Live = 3.8 Live): audio in 3/M, audio out 12/M, text in 0.75/M; output text is not
+# published: the audio-out rate is used as a conservative upper bound. Cascade (F5.1b): Flux 0.0065/min, Gemini 3.8 Flash
+# 0.75/3.75 per M (until 2026-12-31), Aura-2 0.030/1k characters. Gemini prices double on 2027-01-01 (R17).
 prices:
   version: "2026-10-06"
   source: "research/voz-costo-valor-2026-10-06.md §2.1, §3.2 (consultado 2026-10-06)"
   adapters:
     gemini-live: { audioInPerM: 3, audioOutPerM: 12, textInPerM: 0.75, textOutPerM: 12 }
     cascade: { sttPerMin: 0.0065, textInPerM: 0.75, textOutPerM: 3.75, ttsPerMChars: 30 }
-# Libro de costos (D-027, 03 §5.9): alerta cuando el promedio móvil de las últimas `windowScenes` escenas de voz supera
-# `alertUsdPerMin`. Nunca corta el juego: el uso del operador no tiene tope (D-027, D-135).
+# Cost ledger (D-027, 03 §5.9): alerts when the moving average of the last `windowScenes` voice scenes exceeds
+# `alertUsdPerMin`. Never cuts the game off: operator usage has no cap (D-027, D-135).
 cost:
   alertUsdPerMin: 0.05
   windowScenes: 10

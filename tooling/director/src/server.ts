@@ -1,7 +1,7 @@
-// Servidor de escenas del modo director (F4.1, A8; 03 §6.5.2, 04 FD0): `npm run dev:director` también levanta
-// apps/server como proceso hijo con LG_DEV_CONTENT_WATCH=1 (relee el contenido compilado para la próxima escena) y
-// LG_OPERATOR_MODE=1 (D-158: escenas en 127.0.0.1 con la cuenta op-local). No importa nada de apps/server: lo corre
-// con el mismo Node, como `npm start --workspace @lg/server`. Las claves pasan por el entorno, nunca por argumentos.
+// Director mode scene server (F4.1, A8; 03 §6.5.2, 04 FD0): `npm run dev:director` also starts
+// apps/server as a child process with LG_DEV_CONTENT_WATCH=1 (re-reads the compiled content for the next scene) and
+// LG_OPERATOR_MODE=1 (D-158: scenes on 127.0.0.1 with the op-local account). It imports nothing from apps/server: it runs it
+// with the same Node, like `npm start --workspace @lg/server`. Keys go through the environment, never through arguments.
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { join } from "node:path";
 import { REPO_ROOT } from "./files.ts";
@@ -14,7 +14,7 @@ export interface ServerLaunch {
   env: Record<string, string | undefined>;
 }
 
-/** Cómo se arranca el servidor: mismo Node, entrada de apps/server y las dos banderas del modo director. */
+/** How the server is started: same Node, apps/server entry and the two director mode flags. */
 export const serverLaunch = (env: Record<string, string | undefined>, entry: string = SERVER_ENTRY): ServerLaunch => ({
   command: process.execPath,
   args: [entry],
@@ -28,7 +28,7 @@ export interface ScenesServer {
   stop(): void;
 }
 
-/** Arranca el servidor hijo; un fallo (puerto ocupado, contenido sin compilar) se loguea y no tumba Vite. */
+/** Starts the child server; a failure (port in use, uncompiled content) is logged and does not take down Vite. */
 export function startScenesServer(log: (m: string) => void, env: Record<string, string | undefined> = process.env,
   spawnFn: SpawnFn = spawn): ScenesServer {
   const launch = serverLaunch(env);

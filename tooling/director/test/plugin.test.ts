@@ -1,5 +1,5 @@
-// FD0 A5 y A6: el plugin se niega fuera de loopback, escribe state.json atómico, sus manejadores devuelven JSON y
-// la recarga en caliente compila incremental (avisa los ids tocados) o, si no valida, no escribe nada y dice archivo + clave.
+// FD0 A5 and A6: the plugin refuses outside loopback, writes an atomic state.json, its handlers return JSON and
+// hot reload compiles incrementally (reports the touched ids) or, if it does not validate, writes nothing and says file + key.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -19,7 +19,7 @@ const fakeOut = () => {
   return { out, sent, overlays };
 };
 
-/** Un ViteDevServer falso: solo lo que toca configureServer. */
+/** A fake ViteDevServer: only what configureServer touches. */
 const fakeServer = (host: string | boolean | undefined) => {
   const calls = { ws: [] as string[], middleware: 0, watched: [] as string[], warn: [] as string[] };
   const server = {
@@ -194,7 +194,7 @@ describe("A6: recarga en caliente sobre una copia temporal de content/", () => {
     expect(overlays).toEqual([]);
     expect(readFileSync(server(root), "utf8")).toContain('"duracion_objetivo_min": 4');
     expect(existsSync(join(root, SALIDA_CLIENTE, "lugares.json"))).toBe(true);
-    // state.json lleva el hash nuevo y el diario la recarga.
+    // state.json carries the new hash and the journal the reload.
     const state = DirectorSnapshotSchema.parse(JSON.parse(readFileSync(statePath(root), "utf8")));
     expect(state.build.contentHash).not.toBe("h0");
     const journal = readFileSync(join(root, ".director/journal", `${snapshot().sessionId}.jsonl`), "utf8");
@@ -218,7 +218,7 @@ describe("A6: recarga en caliente sobre una copia temporal de content/", () => {
     expect(rt.contentErrors()).toEqual(expect.arrayContaining([expect.objectContaining({ file: mission, key: "escenas[0].npc" })]));
     const state = DirectorSnapshotSchema.parse(JSON.parse(readFileSync(statePath(root), "utf8")));
     expect(state.contentErrors).toEqual(expect.arrayContaining([expect.objectContaining({ file: mission, key: "escenas[0].npc" })]));
-    // Al arreglarlo, los errores se limpian y vuelve el aviso.
+    // When fixed, the errors are cleared and the notice returns.
     writeFileSync(abs, readFileSync(abs, "utf8").replace("    npc: NPC-NADIE\n", "    npc: NPC-NELL\n"));
     expect(rt.onContentChange([mission]).ok).toBe(true);
     expect(rt.contentErrors()).toEqual([]);

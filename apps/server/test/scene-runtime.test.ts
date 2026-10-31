@@ -1,4 +1,4 @@
-// F4.1 A2, A7 y las invariantes (d) y (e) en el runtime: servidor + núcleo + modelos falsos sobre el contenido real.
+// F4.1 A2, A7 and invariants (d) and (e) in the runtime: server + core + fake models over the real content.
 import { describe, expect, test } from "vitest";
 import { createMemoryEvidenceStore } from "../src/store/evidence.ts";
 import { NOT_INTRODUCED_LINE } from "../src/scene-runtime/runtime.ts";
@@ -12,19 +12,19 @@ describe("A2: una escena del prólogo completa sus criterios (servidor + core + 
     expect(h.of("scene.opened")[0]).toMatchObject({ missionId: "M0.1", sceneId: "M0.1-E1", npcId: "NPC-INES", modality: "text" });
     expect(h.steps()).toEqual([
       "pretask", "pretask", "npcOpening", "playerTurn.waiting",
-      "playerTurn.speaking", "playerTurn.endPending", "npcTurn", "playerTurn.waiting", // turno 1: solo saludo
-      "playerTurn.speaking", "playerTurn.endPending", "npcTurn", "closing", "posttask", "done", // turno 2: criterios
+      "playerTurn.speaking", "playerTurn.endPending", "npcTurn", "playerTurn.waiting", // turn 1: greeting only
+      "playerTurn.speaking", "playerTurn.endPending", "npcTurn", "closing", "posttask", "done", // turn 2: criteria
     ]);
     const end = h.of("scene.end")[0];
     expect(end?.outcome).toBe("success");
     expect(end?.criteriaMet).toEqual(["C1", "C2"]);
-    // Pretarea de Lumi (plantilla), apertura guionada y cierre guionado, en ese orden.
+    // Lumi's pretask (template), scripted opening and scripted closing, in that order.
     const lines = h.of("npc.line").map((m) => `${m.line.kind}:${m.line.text ?? m.line.template}`);
     expect(lines[0]).toBe("pretask:LUMI-M0.1-PRE");
     expect(lines).toContain("opening:Hello! Welcome to Kestrel Valley.");
     expect(lines).toContain("reply:Hello! And your name?");
     expect(lines).toContain("closing:Here's your key.");
-    // El observador vio los dos turnos; el NPC recibió el prompt del servidor con la apertura como turno previo.
+    // The observer saw both turns; the NPC received the server's prompt with the opening as a previous turn.
     expect(h.observer.observed.map((c) => c.playerText)).toEqual(["Hello!", "I'm Nico."]);
     expect(h.npc.calls[0]?.system).toContain("=== PERSONA: INÉS CALDER ===");
     expect(h.npc.calls[0]?.turns.some((t) => t.role === "model" && t.text.includes("Hello! Welcome to Kestrel Valley."))).toBe(true);
@@ -66,7 +66,7 @@ describe("A7: efectos de M0.1 y presentación de Nell", () => {
   test("el prólogo corre M0.1 → M0.2 → M0.3; después Nell abre M1.1", async () => {
     const evidence = createMemoryEvidenceStore();
     const h = harness({ evidence, observe: (c) => observerJson(c, [...M01_RULES, ...M02_RULES, ...M03_RULES]) });
-    // Maya antes de M0.2: no hay escena.
+    // Maya before M0.2: there is no scene.
     await h.session.receive({ type: "scene.start", npcId: "NPC-MAYA" });
     expect(h.of("scene.blocked").at(-1)).toMatchObject({ reason: "noScene" });
 
@@ -74,7 +74,7 @@ describe("A7: efectos de M0.1 y presentación de Nell", () => {
     await h.session.receive({ type: "scene.start", npcId: "NPC-MAYA" });
     expect(h.of("scene.blocked").at(-1)).toMatchObject({ npcId: "NPC-MAYA", reason: "noScene" });
 
-    // M0.2 es de Lumi (sin NPC): se abre con npcId null y el NPC no responde (no hay modelo de NPC).
+    // M0.2 is Lumi's (no NPC): it opens with npcId null and the NPC doesn't respond (there is no NPC model).
     const npcCalls = h.npc.calls.length;
     await play(h, null, ["What's this?"]);
     expect(h.of("scene.opened").at(-1)).toMatchObject({ missionId: "M0.2", npcId: null });
@@ -85,7 +85,7 @@ describe("A7: efectos de M0.1 y presentación de Nell", () => {
     expect(h.of("scene.opened").at(-1)).toMatchObject({ missionId: "M0.3" });
     expect(h.of("scene.effects").at(-1)?.effects).toEqual([{ flag: "firefly_crossing_1" }, { intro: "NPC-NELL" }]);
 
-    // Una conexión nueva (otra sesión) ve el progreso plegado de la evidencia: Nell ya fue presentada.
+    // A new connection (another session) sees the progress folded from the evidence: Nell was already introduced.
     const again = h.reconnect();
     await again.receive({ type: "scene.start", npcId: "NPC-NELL" });
     expect(h.of("scene.opened").at(-1)).toMatchObject({ missionId: "M1.1", npcId: "NPC-NELL" });
@@ -108,10 +108,10 @@ describe("topes (D-130) e invariantes (d) y (e) en el runtime", () => {
     h.scheduler.advance(300_000);
     await h.session.settled();
     const after = h.sent.slice(before);
-    // 4:00 marca softCap sin cortar (sigue playerTurn.waiting); 5:00 pasa a closing.
+    // 4:00 marks softCap without cutting (still playerTurn.waiting); 5:00 goes to closing.
     expect(after.filter((m) => m.type === "scene.state").map((m) => (m.type === "scene.state" ? `${m.state}:${m.softCapReached}` : "")))
       .toEqual(["playerTurn:true", "closing:true", "posttask:true", "done:true"]);
-    // La línea de salida llega después del cambio a closing (nunca con playerTurn vigente).
+    // The exit line arrives after the switch to closing (never with playerTurn in force).
     const closingIdx = after.findIndex((m) => m.type === "scene.state" && m.state === "closing");
     const exitIdx = after.findIndex((m) => m.type === "npc.line" && m.line.kind === "exit");
     expect(exitIdx).toBeGreaterThan(closingIdx);
@@ -119,7 +119,7 @@ describe("topes (D-130) e invariantes (d) y (e) en el runtime", () => {
     expect(h.session.snapshot.ctx.sessionOpen).toBe(false);
     expect(h.of("scene.end")[0]?.outcome).toBe("hardCap");
     expect(h.npc.calls).toEqual([]);
-    // Un texto tardío ya no genera nada.
+    // A late text no longer generates anything.
     await h.session.receive({ type: "turn.text", text: "Hello?" });
     expect(h.of("error").at(-1)?.code).toBe("not_your_turn");
     expect(h.npc.calls).toEqual([]);
@@ -129,7 +129,7 @@ describe("topes (D-130) e invariantes (d) y (e) en el runtime", () => {
     const h = harness({ rules: [] });
     await h.session.receive({ type: "scene.start", npcId: "NPC-INES" });
     h.clock.advance(0);
-    // El turno queda en npcTurn hasta que el modelo responda; el tope llega antes.
+    // The turn stays in npcTurn until the model responds; the cap arrives first.
     const pendingTurn = h.session.receive({ type: "turn.text", text: "Hmm." });
     h.scheduler.advance(300_000);
     await pendingTurn;
@@ -141,7 +141,7 @@ describe("topes (D-130) e invariantes (d) y (e) en el runtime", () => {
   test("softCap en playerTurn no corta: nonConverging recién después de la línea del NPC; (d) lo cumplido no se pierde", async () => {
     const h = harness({ rules: M01_RULES });
     await h.session.receive({ type: "scene.start", npcId: "NPC-INES" });
-    await h.session.receive({ type: "turn.text", text: "Hello!" }); // C1 cumplido
+    await h.session.receive({ type: "turn.text", text: "Hello!" }); // C1 fulfilled
     h.scheduler.advance(240_000);
     expect(h.session.snapshot.state).toBe("playerTurn");
     expect(h.session.snapshot.ctx.softCapReached).toBe(true);
@@ -150,7 +150,7 @@ describe("topes (D-130) e invariantes (d) y (e) en el runtime", () => {
     const end = h.of("scene.end")[0];
     expect(end?.outcome).toBe("partial");
     expect(end?.criteriaMet).toEqual(["C1"]);
-    // Salida guionada de la ficha y los mismos efectos en el mundo (02: "Llave y mapa igual").
+    // Scripted exit from the sheet and the same effects on the world (02: "Llave y mapa igual").
     expect(h.of("npc.line").some((m) => m.line.kind === "exit" && m.line.text === "It's okay! You're the new worker. Welcome!")).toBe(true);
     expect(h.of("scene.effects")[0]?.effects).toEqual([{ flag: "lamp_bunk_on" }, { intro: "NPC-MAYA" }]);
   });
@@ -167,7 +167,7 @@ describe("mensajes del cliente", () => {
     await h.session.receive({ type: "turn.pass" });
     await h.session.receive({ type: "turn.choose", option: "simpler" });
     expect(h.npc.calls.at(-1)?.turns.at(-1)?.text).toMatch(/^\[DIRECTOR\] The player asked for something simpler/);
-    expect(h.observer.observed).toEqual([]); // sin texto del jugador no hay nada que observar
+    expect(h.observer.observed).toEqual([]); // without player text there is nothing to observe
     expect(h.session.snapshot.sub).toBe("waiting");
   });
 
@@ -190,7 +190,7 @@ describe("mensajes del cliente", () => {
     expect(h.of("scene.end")[0]).toMatchObject({ outcome: "aborted" });
     expect(h.of("scene.effects")).toEqual([]);
     expect(h.scheduler.pendingCount).toBe(0);
-    // Se reanuda desde el inicio: la misma escena vuelve a abrir.
+    // Resumes from the start: the same scene opens again.
     await h.session.receive({ type: "scene.start", npcId: "NPC-INES" });
     expect(h.of("scene.opened").at(-1)).toMatchObject({ sceneId: "M0.1-E1" });
     h.session.close();

@@ -1,14 +1,14 @@
-// @lg/art shapes.ts: consultas 2D sobre las formas del layout (polígonos de agua, polilíneas de caminos y ríos) para
-// pintar y modelar el terreno (plan estetica-c M5). world/ usa el núcleo solo como tipos, así que la pintura del suelo
-// no puede llamar a la grilla del núcleo; estas son sus propias consultas, puras y sin three. La grilla de
-// caminabilidad sigue siendo del núcleo (packages/core/src/movement/grid.ts) y un test compara ambas sobre el agua.
+// @lg/art shapes.ts: 2D queries on the layout shapes (water polygons, path and river polylines) to
+// paint and model the terrain (plan estetica-c M5). world/ uses the core only as types, so the ground painting
+// cannot call the core's grid; these are its own queries, pure and without three. The walkability grid
+// is still the core's (packages/core/src/movement/grid.ts) and a test compares both over the water.
 
 export interface XZ {
   x: number;
   z: number;
 }
 
-/** Punto en polígono (regla par-impar); vértices como [x, z]. */
+/** Point in polygon (even-odd rule); vertices as [x, z]. */
 export function insidePolygon(x: number, z: number, polygon: readonly (readonly [number, number])[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -27,7 +27,7 @@ const segmentDistance = (x: number, z: number, ax: number, az: number, bx: numbe
   return Math.hypot(x - (ax + t * dx), z - (az + t * dz));
 };
 
-/** Distancia de (x, z) a una polilínea (Infinity si está vacía). */
+/** Distance from (x, z) to a polyline (Infinity if it is empty). */
 export function polylineDistance(x: number, z: number, line: readonly XZ[]): number {
   if (line.length === 1) return Math.hypot(x - (line[0] as XZ).x, z - (line[0] as XZ).z);
   let best = Infinity;
@@ -39,7 +39,7 @@ export function polylineDistance(x: number, z: number, line: readonly XZ[]): num
   return best;
 }
 
-/** Distancia de (x, z) al borde de un polígono (sin signo). */
+/** Distance from (x, z) to the edge of a polygon (unsigned). */
 export function polygonEdgeDistance(x: number, z: number, polygon: readonly (readonly [number, number])[]): number {
   let best = Infinity;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -51,8 +51,8 @@ export function polygonEdgeDistance(x: number, z: number, polygon: readonly (rea
 }
 
 /**
- * El punto de una polilínea más cercano a (x, z) y su distancia (open-world-3d T6: el camino aplana su sección con la
- * altura de su centro). null si la polilínea está vacía.
+ * The point of a polyline nearest to (x, z) and its distance (open-world-3d T6: the path flattens its section with the
+ * height of its center). null if the polyline is empty.
  */
 export function polylineNearest(x: number, z: number, line: readonly XZ[]): { x: number; z: number; d: number } | null {
   if (line.length === 0) return null;

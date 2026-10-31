@@ -1,7 +1,7 @@
-// Test de límites de módulos y costuras (F1.1a; 03 §4.3, §4.3.1, §4.3.2; P0 §2.4).
-// Corre la config REAL (eslint.config.js) por la API de ESLint con texto en memoria y un
-// filePath virtual dentro de la carpeta destino. Cada caso prohibido tiene que fallar con el
-// ruleId esperado (no con cualquier error) y cada import por ruta apunta a un archivo que existe.
+// Module boundaries and seams test (F1.1a; 03 §4.3, §4.3.1, §4.3.2; P0 §2.4).
+// Runs the REAL config (eslint.config.js) through the ESLint API with in-memory text and a
+// virtual filePath inside the target folder. Each forbidden case has to fail with the expected
+// ruleId (not with just any error) and each path import points to a file that exists.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -20,7 +20,7 @@ const SYNTAX = "no-restricted-syntax";
 const BOUNDARY_RULES = [ZONE, IMP, TS_IMP, GLOBALS, PROPS, SYNTAX];
 const SEAM_RULES = [IMP, TS_IMP, PROPS, SYNTAX];
 
-// Archivos virtuales (no existen en disco; sus carpetas sí).
+// Virtual files (they do not exist on disk; their folders do).
 const WEB = "apps/web/src";
 const F = {
   core: "packages/core/src/__probe__.ts",
@@ -53,13 +53,13 @@ interface Case {
   name: string;
   file: string;
   code: string;
-  /** ruleId esperado; con varios, alcanza con que dispare uno. */
+  /** expected ruleId; with several, it is enough that one fires. */
   rule: string | string[];
-  /** fragmento del mensaje esperado. */
+  /** fragment of the expected message. */
   msg?: string;
 }
 
-// ---------- celdas "No puede importar" de 03 §4.3 (y costuras R5, R10, R11, R13, R15) ----------
+// ---------- "Cannot import" cells of 03 §4.3 (and seams R5, R10, R11, R13, R15) ----------
 const FORBIDDEN: Case[] = [
   // packages/core (R4)
   { name: "core -> react", file: F.core, code: imp("react"), rule: IMP, msg: "R4" },
@@ -128,7 +128,7 @@ const FORBIDDEN: Case[] = [
   { name: "teacher -> dev", file: F.teacher, code: imp("../dev/director/index"), rule: ZONE, msg: "ADR-026" },
   { name: "teacher -> ui fuera de primitives", file: F.teacher, code: imp("../ui/index"), rule: ZONE, msg: "ui/primitives" },
   { name: "teacher -> three", file: F.teacher, code: imp("three"), rule: TS_IMP },
-  // apps/web/src/dev (modo director)
+  // apps/web/src/dev (director mode)
   { name: "dev -> world", file: F.dev, code: imp("../../world/index"), rule: ZONE, msg: "ADR-026" },
   { name: "dev -> services", file: F.dev, code: imp("../../services/index"), rule: ZONE, msg: "ADR-026" },
   { name: "dev -> state/slices", file: F.dev, code: imp("../../state/slices/index"), rule: ZONE, msg: "ADR-026" },
@@ -137,14 +137,14 @@ const FORBIDDEN: Case[] = [
   { name: "dev -> three", file: F.dev, code: imp("three"), rule: TS_IMP },
   { name: "dev -> @anthropic-ai/*", file: F.dev, code: imp("@anthropic-ai/sdk"), rule: TS_IMP },
   { name: "dev -> @modelcontextprotocol/*", file: F.dev, code: imp("@modelcontextprotocol/sdk"), rule: TS_IMP },
-  // apps/server, raíz de composición, scripts, config de apps/web
+  // apps/server, composition root, scripts, apps/web config
   { name: "server -> apps/web", file: F.server, code: imp("../../web/src/ui/index"), rule: ZONE, msg: "server no importa web" },
   { name: "server -> tooling/director", file: F.server, code: imp("../../../tooling/director/index"), rule: ZONE, msg: "ADR-026" },
   { name: "raíz de composición -> apps/server", file: F.webRoot, code: imp("../../server/src/index"), rule: ZONE },
   { name: "raíz de composición -> tooling/director", file: F.boot, code: imp("../../../../tooling/director/index"), rule: ZONE },
   { name: "apps/web (config) -> tooling/director", file: F.webConfig, code: imp("../../tooling/director/index"), rule: ZONE },
   { name: "scripts -> tooling/director", file: F.scripts, code: imp("../../tooling/director/index"), rule: ZONE },
-  // FD0 A2: el modo director real (cliente y Node) no entra al juego por ningún lado
+  // FD0 A2: the real director mode (client and Node) does not enter the game anywhere
   { name: "world -> tooling/director", file: F.world, code: imp("../../../../tooling/director/index"), rule: ZONE, msg: "ADR-026" },
   { name: "server -> dev/director (apps/server -> apps/web)", file: F.server, code: imp("../../web/src/dev/director/index"), rule: ZONE, msg: "server no importa web" },
   { name: "server -> tooling/director/src/plugin", file: F.server, code: imp("../../../tooling/director/src/plugin"), rule: ZONE, msg: "ADR-026" },
@@ -152,13 +152,13 @@ const FORBIDDEN: Case[] = [
   { name: "world -> dev/director/emitter", file: F.world, code: imp("../dev/director/emitter"), rule: ZONE, msg: "ADR-026" },
   { name: "services -> dev/director/journal", file: F.services, code: imp("../dev/director/journal"), rule: ZONE, msg: "ADR-026" },
   { name: "packages -> tooling/director/src/read", file: F.protocol, code: imp("../../../tooling/director/src/read"), rule: ZONE, msg: "ADR-026" },
-  // R5: efectos solo en services/
+  // R5: effects only in services/
   ...(["fetch", "WebSocket", "indexedDB", "localStorage", "sessionStorage"] as const).flatMap((g) =>
     (["ui", "world", "state"] as const).map((layer): Case => ({ name: `R5: ${g} en ${layer}/`, file: F[layer], code: expr(g), rule: GLOBALS })),
   ),
 ];
 
-// ---------- costuras R10, R11, R13, R15: fallan fuera de su carpeta ----------
+// ---------- seams R10, R11, R13, R15: fail outside their folder ----------
 const SEAM_FORBIDDEN: Case[] = [
   // R15
   { name: "R15: @tauri-apps en ui/", file: F.ui, code: named("invoke", "@tauri-apps/api/core"), rule: [TS_IMP, IMP], msg: "R15" },
@@ -193,7 +193,7 @@ const SEAM_FORBIDDEN: Case[] = [
   { name: "R13: new Audio en services/platform/", file: F.platform, code: expr('new Audio("x.ogg")'), rule: SYNTAX, msg: "R13" },
 ];
 
-// ---------- costuras: pasan dentro de su carpeta (cero mensajes de las reglas de costura) ----------
+// ---------- seams: pass inside their folder (zero messages from the seam rules) ----------
 const SEAM_ALLOWED: Omit<Case, "rule">[] = [
   { name: "R15: @tauri-apps en services/platform/", file: F.platform, code: named("invoke", "@tauri-apps/api/core") },
   { name: "R15: @capacitor en services/platform/", file: F.platform, code: 'import "@capacitor/core";\n' },
@@ -209,7 +209,7 @@ const SEAM_ALLOWED: Omit<Case, "rule">[] = [
   { name: "R13: new AudioContext en services/audio/", file: F.audio, code: expr("new AudioContext()") },
 ];
 
-// ---------- un import permitido por fila de 03 §4.3 (cero mensajes de reglas de límites) ----------
+// ---------- one allowed import per row of 03 §4.3 (zero messages from the boundary rules) ----------
 const ALLOWED: Omit<Case, "rule">[] = [
   { name: "core -> @lg/protocol", file: F.core, code: imp("@lg/protocol") },
   { name: "core -> protocol (relativo)", file: F.core, code: imp("../../protocol/src/index") },
@@ -250,23 +250,23 @@ const ALLOWED: Omit<Case, "rule">[] = [
   { name: "dev/director -> @lg/protocol/director", file: F.dev, code: imp("@lg/protocol/director") },
 ];
 
-// ---------- A4: el mismo código no determinista pasa en apps/server ----------
+// ---------- A4: the same non-deterministic code passes in apps/server ----------
 const NONDETERMINISM = "export const t = Date.now();\nexport const r = Math.random();\nexport const d = new Date();\n";
 
-// ---------- resolución de destinos (guardia contra falso verde) ----------
+// ---------- resolution of targets (guard against false green) ----------
 const WEB_ALIASES: Record<string, string> = {
   "@ui/": "ui", "@world/": "world", "@state/": "state", "@services/": "services", "@i18n/": "i18n", "@teacher/": "teacher",
 };
 const SPEC_RE = /(?:from|import)\s+"([^"]+)"/g;
 const EXTENSIONS = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"];
 
-/** Ruta absoluta base de un import por ruta (relativo, alias o @lg/*); null para paquetes de npm. */
+/** Base absolute path of a path import (relative, alias or @lg/*); null for npm packages. */
 function pathTarget(file: string, spec: string): string | null {
   if (spec.startsWith(".")) return resolve(ROOT, dirname(file), spec);
   const alias = Object.keys(WEB_ALIASES).find((a) => spec.startsWith(a));
   if (alias) return resolve(ROOT, WEB, WEB_ALIASES[alias] ?? "", spec.slice(alias.length));
   if (spec.startsWith("@lg/")) {
-    // @lg/<paquete> → src/index.ts; @lg/<paquete>/<subruta> → src/<subruta> (p. ej. @lg/protocol/director)
+    // @lg/<package> → src/index.ts; @lg/<package>/<subpath> → src/<subpath> (e.g. @lg/protocol/director)
     const [pkg = "", ...sub] = spec.slice(4).split("/");
     return resolve(ROOT, "packages", pkg, "src", sub.length > 0 ? sub.join("/") : "index.ts");
   }
@@ -282,7 +282,7 @@ function pathTargets(c: { file: string; code: string }): string[] {
     .filter((t): t is string => t !== null);
 }
 
-// ---------- corrida ----------
+// ---------- run ----------
 let eslint: ESLint;
 const lint = async (file: string, code: string): Promise<Linter.LintMessage[]> => {
   const [result] = await eslint.lintText(code, { filePath: resolve(ROOT, file) });
@@ -348,9 +348,9 @@ describe("A5: costuras fallan fuera de su carpeta", () => {
   });
 });
 
-// ---------- F1.3 A2: archivos REALES de ui/ y world/ en el set de fixtures ----------
-// El código real (no un __probe__ virtual) lintea limpio en su ruta, y el mismo archivo con un import cruzado
-// agregado falla por la regla de límites. Así el test sigue midiendo cuando ui/ y world/ crecen.
+// ---------- F1.3 A2: REAL files of ui/ and world/ in the fixture set ----------
+// The real code (not a virtual __probe__) lints clean at its path, and the same file with a cross import
+// added fails by the boundary rule. This way the test keeps measuring when ui/ and world/ grow.
 const REAL_UI = `${WEB}/ui/shell/Shell.tsx`;
 const REAL_WORLD = `${WEB}/world/GameCanvas.tsx`;
 const realCode = (file: string): string => readFileSync(resolve(ROOT, file), "utf8");
@@ -390,9 +390,9 @@ describe("A5: costuras pasan dentro de su carpeta", () => {
   });
 });
 
-// ---------- F2: archivos REALES del mundo 3D (canvas, diorama, cámara) ----------
-// Lintean limpios; con un import a lo que world/ no puede tocar (slices, store, acciones, servicios, el núcleo como
-// valor) agregado, fallan. Una cámara creada fuera de world/camera/ falla por R11; dentro, pasa.
+// ---------- F2: REAL files of the 3D world (canvas, diorama, camera) ----------
+// They lint clean; with an import of what world/ cannot touch (slices, store, actions, services, the core as a
+// value) added, they fail. A camera created outside world/camera/ fails by R11; inside, it passes.
 const REAL_DIORAMA = `${WEB}/world/dioramas/Diorama.tsx`;
 const REAL_RIG = `${WEB}/world/camera/CameraRig.tsx`;
 const REAL_PLAYER = `${WEB}/world/actors/Player.tsx`;
@@ -445,10 +445,10 @@ describe("F2: archivos reales del mundo 3D", () => {
   });
 });
 
-// ---------- FD0 A2: cableado del plugin y archivos REALES del modo director ----------
-// El plugin se registra solo en tooling/director/vite.config.ts. apps/web/vite.config.ts (archivo real, filePath real)
-// que importe el plugin o la config del director falla con la zona apps → tooling. Los archivos reales del director
-// lintean limpios; con un import a lo que dev/ no puede tocar agregado, fallan.
+// ---------- FD0 A2: plugin wiring and REAL director-mode files ----------
+// The plugin is registered only in tooling/director/vite.config.ts. apps/web/vite.config.ts (real file, real filePath)
+// importing the plugin or the director config fails with the apps → tooling zone. The real director files
+// lint clean; with an import of what dev/ cannot touch added, they fail.
 const WEB_CONFIG = "apps/web/vite.config.ts";
 const DIRECTOR_CONFIG = "tooling/director/vite.config.ts";
 const REAL_DEV = [`${WEB}/dev/director/index.ts`, `${WEB}/dev/director/snapshot.ts`, `${WEB}/dev/director/journal.ts`, `${WEB}/dev/director/emitter.ts`, `${WEB}/boot/dev.ts`];
@@ -488,10 +488,10 @@ describe("FD0 A2: cableado del plugin y archivos reales del modo director", () =
   });
 });
 
-// ---------- F4.1 A6: apps/server escribe a disco solo en src/store/ y src/cost/ (D-108, D-157) ----------
-// Archivos reales del servidor lintean limpios; con una escritura a disco agregada, fallan fuera de store/ y cost/.
-// Dentro de store/ y de cost/ (F5.1a: el libro de costos real) la misma escritura pasa. F5.1a suma los módulos de voz
-// (adaptador Live, selección, TurnClip) a los archivos reales que no pueden escribir a disco.
+// ---------- F4.1 A6: apps/server writes to disk only in src/store/ and src/cost/ (D-108, D-157) ----------
+// Real server files lint clean; with a disk write added, they fail outside store/ and cost/.
+// Inside store/ and cost/ (F5.1a: the real cost ledger) the same write passes. F5.1a adds the voice modules
+// (Live adapter, selection, TurnClip) to the real files that cannot write to disk.
 const REAL_GATEWAY = "apps/server/src/gateway/scene.ts";
 const REAL_RUNTIME = "apps/server/src/scene-runtime/runtime.ts";
 const REAL_EVIDENCE = "apps/server/src/store/evidence.ts";
@@ -545,9 +545,9 @@ describe("F4.1 A6: escrituras a disco del servidor", () => {
   });
 });
 
-// ---------- estetica-c M1 A16 (D-207): las zonas nuevas de world/ y la regla `import * as THREE` ----------
-// revisión de arquitectura 2026-10-12: la regla nueva va en la MISMA lista de no-restricted-syntax que R10, R11 y R13 (un bloque posterior
-// la reemplazaría y borraría esas costuras en silencio): por eso cada zona prueba además que R10 y R13 siguen vivas.
+// ---------- estetica-c M1 A16 (D-207): the new zones of world/ and the `import * as THREE` rule ----------
+// architecture review 2026-10-12: the new rule goes in the SAME no-restricted-syntax list as R10, R11 and R13 (a later block
+// would replace it and silently erase those seams): so each zone also proves that R10 and R13 are still alive.
 const M1_ZONES = ["materials", "terrain", "labels", "budget"] as const;
 const m1Probe = (zone: string): string => `${WEB}/world/${zone}/__probe__.ts`;
 const M1_FORBIDDEN: Case[] = [
@@ -571,7 +571,7 @@ const M1_ALLOWED: Omit<Case, "rule">[] = [
 const REAL_M1 = [
   `${WEB}/world/materials/registry.ts`, `${WEB}/world/materials/paintGeometry.ts`, `${WEB}/world/terrain/buildTerrain.ts`,
   `${WEB}/world/labels/labelSprite.ts`, `${WEB}/world/labels/NameLabel.tsx`, `${WEB}/world/budget/estimate.ts`,
-  // Chibi.tsx pasó a Character.tsx en M3 (mismo lugar, misma zona).
+  // Chibi.tsx became Character.tsx in M3 (same place, same zone).
   `${WEB}/world/actors/Character.tsx`, `${WEB}/world/dioramas/scene.ts`, `${WEB}/world/water/waterMaterial.ts`,
   `${WEB}/world/props/builders.ts`, `${WEB}/world/lighting/Lighting.tsx`,
 ];
@@ -607,7 +607,7 @@ describe("estetica-c M1 A16: zonas nuevas de world/", () => {
     const bin = resolve(ROOT, "node_modules/eslint/bin/eslint.js");
     expect(isFile(bin)).toBe(true);
     const run = (code: string) => spawnSync(process.execPath, [bin, "--stdin", "--stdin-filename", resolve(ROOT, F.ui)], { cwd: ROOT, input: code, encoding: "utf8" });
-    // La paleta se mudó a @lg/art en M2: el import conocido apunta al marcador de world/materials/, que existe.
+    // The palette moved to @lg/art in M2: the known import points to the world/materials/ marker, which exists.
     expect(isFile(resolve(ROOT, WEB, "world/materials/index.ts"))).toBe(true);
     const bad = run('import "@world/materials/index";\n');
     expect(bad.status, bad.stdout + bad.stderr).toBe(1);
@@ -617,8 +617,8 @@ describe("estetica-c M1 A16: zonas nuevas de world/", () => {
   }, 60_000);
 });
 
-// ---------- estetica-c M3: world/portraits/ (estudio de retratos) y dev/portraits/ (su panel) ----------
-// Zonas nuevas con su marcador y su fixture: el marcador se comprueba antes de mirar el ruleId.
+// ---------- estetica-c M3: world/portraits/ (portrait studio) and dev/portraits/ (its panel) ----------
+// New zones with their marker and their fixture: the marker is checked before looking at the ruleId.
 const PORTRAITS = `${WEB}/world/portraits/__probe__.ts`;
 const DEV_PORTRAITS = `${WEB}/dev/portraits/__probe__.ts`;
 const M3_FORBIDDEN: Case[] = [
@@ -672,8 +672,8 @@ describe("estetica-c M3: world/portraits/ y dev/portraits/", () => {
   });
 });
 
-// ---------- estetica-c M2 (revisión de arquitectura 2026-10-12 §10.3): @lg/art puro y la zona scripts/assets/ ----------
-// Cada zona nueva nace con su marcador y su fixture: el marcador se comprueba antes de mirar el ruleId.
+// ---------- estetica-c M2 (architecture review 2026-10-12 §10.3): pure @lg/art and the scripts/assets/ zone ----------
+// Each new zone is born with its marker and its fixture: the marker is checked before looking at the ruleId.
 const ART = "packages/art/src/__probe__.ts";
 const ASSETS = "scripts/assets/__probe__.ts";
 const M2_FORBIDDEN: Case[] = [

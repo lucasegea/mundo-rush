@@ -1,6 +1,6 @@
-// tooling/book-analyzer — analizador libro → universo, offline/build-time (ADR-029, book-mode slice-1).
-// Workspace `@lg/book-analyzer` (private). Nadie del producto lo importa (zona de lint: producto ↛ tooling).
-// La CLI es src/cli.ts; el pipeline y EMIT se exportan para los tests.
+// tooling/book-analyzer — book → universe analyzer, offline/build-time (ADR-029, book-mode slice-1).
+// Workspace `@lg/book-analyzer` (private). Nothing in the product imports it (lint zone: product ↛ tooling).
+// The CLI is src/cli.ts; the pipeline and EMIT are exported for the tests.
 export { correrPipeline } from "./src/pipeline.ts";
 export type { OpcionesPipeline } from "./src/pipeline.ts";
 export { emit, planearEmit } from "./src/stages/emit.ts";

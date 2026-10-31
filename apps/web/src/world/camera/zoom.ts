@@ -1,30 +1,30 @@
-// world/camera/zoom.ts — el zoom continuo de `thirdPerson` (open-world-3d T5, PD-5), puro: el lente según el aspecto,
-// la distancia del mapa entero (`fitDistance`, que depende del yaw y del aspecto) y la pose que sale de t en [0, 1]: la
-// distancia log-lineal de 2,5 m (t = 0) a `fitDistance` (t = 1), la inclinación efectiva que sube a 82°, el pivote que
-// va del jugador al centro del mapa, la niebla y el plano lejano que crecen, las etiquetas que se apagan y las balizas
-// que aparecen. Los números son los del mockup V6 (`main.js` updateCamera, `world.js` applyView).
-// Open-world-3d T6 (AC40): el plano lejano sale de `farPlaneFor(t)` de world/sky. Open-world-3d T7b (D-839): la niebla
-// ya no está en la pose (su rango es del look; la cámara es núcleo): la arma `fogFor(look.fog.range, fogScale, t)` de
-// world/sky con el mismo t (Lighting).
+// world/camera/zoom.ts — the continuous zoom of `thirdPerson` (open-world-3d T5, PD-5), pure: the lens by aspect,
+// the whole-map distance (`fitDistance`, which depends on yaw and aspect) and the pose that comes from t in [0, 1]: the
+// log-linear distance from 2.5 m (t = 0) to `fitDistance` (t = 1), the effective tilt rising to 82°, the pivot that
+// goes from the player to the map center, the fog and far plane that grow, the labels that fade out and the beacons
+// that appear. The numbers are the V6 mockup's (`main.js` updateCamera, `world.js` applyView).
+// Open-world-3d T6 (AC40): the far plane comes from `farPlaneFor(t)` of world/sky. Open-world-3d T7b (D-839): the fog
+// is no longer in the pose (its range belongs to the look; the camera is core): `fogFor(look.fog.range, fogScale, t)` of
+// world/sky builds it with the same t (Lighting).
 import { farPlaneFor } from "../sky/palette";
 
-/** Lente y medidas de la tercera persona (plan v3 T5; mockup V6 `fixture.js` ZOOM_MIN, ZOOM_DEFAULT). */
+/** Lens and measurements of the third person (plan v3 T5; V6 mockup `fixture.js` ZOOM_MIN, ZOOM_DEFAULT). */
 export const THIRD_PERSON_VIEW = {
-  /** FOV vertical apaisado y vertical (aspecto < 1). */
+  /** Vertical FOV landscape and portrait (aspect < 1). */
   fovDeg: 50,
   portraitFovDeg: 74,
-  /** Altura del pivote sobre el suelo (m): el pecho del personaje. */
+  /** Pivot height above the ground (m): the character's chest. */
   targetHeight: 1.4,
-  /** Distancia más cercana (t = 0) y la de entrada (m); las mismas que THIRD_PERSON del núcleo (un test lo compara). */
+  /** Closest distance (t = 0) and the entry one (m); the same as the core's THIRD_PERSON (a test compares them). */
   minDistance: 2.5,
   defaultDistance: 6,
-  /** Inclinación efectiva en t = 1. */
+  /** Effective tilt at t = 1. */
   overviewPitchDeg: 82,
-  /** En t = 1, la esquina más lejana del mapa cae a esta fracción del borde de la pantalla (NDC). */
+  /** At t = 1, the farthest corner of the map falls at this fraction of the screen edge (NDC). */
   fitNdc: 0.94,
-  /** La distancia del mapa entero nunca es menor que esto (mapas chicos). */
+  /** The whole-map distance is never less than this (small maps). */
   minFitDistance: 20,
-  /** Hasta qué distancia del pivote mira hacia adelante (la mirada baja hacia el horizonte). */
+  /** How far from the pivot it looks ahead (the gaze drops toward the horizon). */
   lookAhead: 30,
 } as const;
 
@@ -36,7 +36,7 @@ export const smoothstep = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-/** FOV vertical (grados) de la tercera persona según el aspecto del canvas. */
+/** Vertical FOV (degrees) of the third person by the canvas aspect. */
 export function thirdPersonFov(aspect: number): number {
   return aspect < 1 ? THIRD_PERSON_VIEW.portraitFovDeg : THIRD_PERSON_VIEW.fovDeg;
 }
@@ -50,7 +50,7 @@ export interface Bounds {
 
 type Vec3 = [number, number, number];
 
-/** Offset del pivote a la cámara (yaw 0 = cámara del lado +z, mirando hacia -z), como `cameraOffset` de rig.ts. */
+/** Offset from the pivot to the camera (yaw 0 = camera on the +z side, looking toward -z), like `cameraOffset` of rig.ts. */
 function offset(pitchDeg: number, yawDeg: number, distance: number): Vec3 {
   const p = pitchDeg * RAD;
   const y = yawDeg * RAD;
@@ -58,7 +58,7 @@ function offset(pitchDeg: number, yawDeg: number, distance: number): Vec3 {
   return [Math.sin(y) * flat, Math.sin(p) * distance, Math.cos(y) * flat];
 }
 
-/** Proyección de un punto a NDC para una cámara en `eye` que mira a `at` (sin roll, arriba = +y). null si queda detrás. */
+/** Projection of a point to NDC for a camera at `eye` looking at `at` (no roll, up = +y). null if it is behind. */
 export function projectNdc(eye: Vec3, at: Vec3, fovDeg: number, aspect: number, p: Vec3): [number, number] | null {
   const f: Vec3 = [at[0] - eye[0], at[1] - eye[1], at[2] - eye[2]];
   const fl = Math.hypot(f[0], f[1], f[2]) || 1;
@@ -77,16 +77,16 @@ export function projectNdc(eye: Vec3, at: Vec3, fovDeg: number, aspect: number, 
   return [x / (z * th * aspect), y / (z * th)];
 }
 
-/** Centro del mapa a la altura del pivote: hacia donde va el pivote en el mapa entero. */
+/** Map center at the pivot height: where the pivot goes on the whole map. */
 export function boundsCenter(b: Bounds, groundY = 0): Vec3 {
   return [(b.minX + b.maxX) / 2, groundY + THIRD_PERSON_VIEW.targetHeight, (b.minZ + b.maxZ) / 2];
 }
 
 /**
- * La distancia del mapa entero para un yaw y un aspecto (PD-5, AC26): la menor a la que, con la pose de t = 1
- * (inclinación 82°, pivote en el centro, mirando al pivote), las cuatro esquinas de `bounds` (a la altura `groundY`)
- * caen dentro de `fitNdc` de la pantalla. Búsqueda binaria sobre la proyección real (el tamaño aparente baja con la
- * distancia).
+ * The whole-map distance for a yaw and an aspect (PD-5, AC26): the smallest at which, with the t = 1 pose
+ * (tilt 82°, pivot at the center, looking at the pivot), the four corners of `bounds` (at height `groundY`)
+ * fall inside `fitNdc` of the screen. Binary search over the real projection (the apparent size drops with
+ * distance).
  */
 export function fitDistance(yawDeg: number, aspect: number, bounds: Bounds, groundY = 0): number {
   const fov = thirdPersonFov(aspect);
@@ -112,14 +112,14 @@ export function fitDistance(yawDeg: number, aspect: number, bounds: Bounds, grou
   return Math.max(THIRD_PERSON_VIEW.minFitDistance, hi);
 }
 
-/** Distancia (m) en un t: log-lineal de 2,5 m a `fit`. Igual a `zoomDistanceAt` del núcleo. */
+/** Distance (m) at a t: log-linear from 2.5 m to `fit`. Same as the core's `zoomDistanceAt`. */
 export function zoomDistanceAt(t: number, fit: number): number {
   const min = THIRD_PERSON_VIEW.minDistance;
   const f = Math.max(fit, min * 1.01);
   return min * Math.pow(f / min, clamp01(t));
 }
 
-/** t para una distancia, inversa de `zoomDistanceAt`. Igual a `zoomTAt` del núcleo. */
+/** t for a distance, inverse of `zoomDistanceAt`. Same as the core's `zoomTAt`. */
 export function zoomTAt(distance: number, fit: number): number {
   const min = THIRD_PERSON_VIEW.minDistance;
   const lo = Math.log(min);
@@ -129,25 +129,25 @@ export function zoomTAt(distance: number, fit: number): number {
 
 export interface ZoomPose {
   t: number;
-  /** Distancia de la cámara al pivote (m). */
+  /** Camera distance to the pivot (m). */
   distance: number;
-  /** Inclinación efectiva (grados): la del jugador en t = 0, 82 en t = 1. */
+  /** Effective tilt (degrees): the player's at t = 0, 82 at t = 1. */
   pitchDeg: number;
-  /** Cuánto mira hacia abajo (grados): de cerca hacia el horizonte (55 % de la inclinación), de lejos al pivote. */
+  /** How far down it looks (degrees): up close toward the horizon (55 % of the tilt), from afar at the pivot. */
   lookPitchDeg: number;
-  /** 0 = el pivote es el jugador, 1 = el centro del mapa. */
+  /** 0 = the pivot is the player, 1 = the map center. */
   pivotBlend: number;
-  /** Planos de recorte de la cámara (m). */
+  /** Camera clipping planes (m). */
   near: number;
   far: number;
-  /** Opacidad de las etiquetas de nombre y de las balizas del mapa entero. */
+  /** Opacity of the name labels and the whole-map beacons. */
   labelAlpha: number;
   beaconAlpha: number;
 }
 
 /**
- * La pose de un t de zoom (PD-5, AC26). `fit` es `fitDistance` del yaw y el aspecto vigentes; `userPitchDeg` la
- * inclinación del jugador.
+ * The pose at a zoom t (PD-5, AC26). `fit` is `fitDistance` of the current yaw and aspect; `userPitchDeg` the
+ * player's tilt.
  */
 export function zoomPose(t: number, fit: number, userPitchDeg: number): ZoomPose {
   const tt = clamp01(t);
@@ -168,8 +168,8 @@ export function zoomPose(t: number, fit: number, userPitchDeg: number): ZoomPose
 }
 
 /**
- * Suavizado exponencial independiente del framerate hacia un objetivo (1/s). Con "reducir movimiento" (`cut`) llega en
- * el mismo cuadro (AC26: un `zoomOut` llega a su objetivo en ese cuadro).
+ * Exponential smoothing independent of framerate toward a target (1/s). With "reduce motion" (`cut`) it arrives in
+ * the same frame (AC26: a `zoomOut` reaches its target in that frame).
  */
 export function approach(current: number, target: number, dtSec: number, rate: number, cut: boolean): number {
   if (cut) return target;

@@ -1,4 +1,4 @@
-// Tiers de calidad como contrato (R12; F1.3 A3, A7).
+// Quality tiers as a contract (R12; F1.3 A3, A7).
 import { describe, expect, expectTypeOf, test } from "vitest";
 import {
   effectiveTier, isSelectableTier, isTierChoice, QUALITY_TIERS, SELECTABLE_TIERS, suggestTier,

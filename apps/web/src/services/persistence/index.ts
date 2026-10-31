@@ -1,2 +1,2 @@
-// services/persistence/ — copia local (y, desde F7, sync con servidor).
+// services/persistence/ — local copy (and, from F7, server sync).
 export * from "./settings";

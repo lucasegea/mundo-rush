@@ -1,6 +1,6 @@
-// @lg/protocol — mensajes WS y DTOs REST (03 §4.2). Solo depende de zod (03 §4.3).
-// F4.1: escena por texto (mensajes, observador, evidencia, efectos). Extensión .ts: el servidor lo corre con Node.
-// El modo director va por la subruta @lg/protocol/director y no se re-exporta acá (FD0).
+// @lg/protocol — WS messages and REST DTOs (03 §4.2). Depends only on zod (03 §4.3).
+// F4.1: text scene (messages, observer, evidence, effects). .ts extension: the server runs it with Node.
+// Director mode goes through the @lg/protocol/director subpath and is not re-exported here (FD0).
 export const PACKAGE_NAME = "@lg/protocol";
 
 export * from "./scene.ts";

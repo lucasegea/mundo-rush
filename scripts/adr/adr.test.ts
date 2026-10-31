@@ -1,5 +1,5 @@
-// docs/adr/ (F1.1b A5; A2 suma ADR-027; plan estetica-c M7 suma ADR-028, D-207): exactamente 28 archivos ADR-001..ADR-028 sin huecos, con el estado que
-// piden 04/05 (Aceptado si hay fila `decidida`) y la marca "enmendado (P0)" de la lista de 03 §11.
+// docs/adr/ (F1.1b A5; A2 adds ADR-027; plan estetica-c M7 adds ADR-028, D-207): exactly 28 files ADR-001..ADR-028 with no gaps, with the status that
+// 04/05 ask for (Accepted if there is a `decidida` row) and the "amended (P0)" mark from 03 §11's list.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,13 +18,13 @@ const adrs = files.map((name) => {
 });
 const byNum = (n: number) => adrs.find((a) => a.num === n);
 
-// Lista de enmiendas de P0 tal como la escribe 03 §11 (si 03 cambia, este test lo nota).
+// List of P0 amendments as 03 §11 writes it (if 03 changes, this test notices).
 const arch = readFileSync(join(ROOT, "docs/03-architecture.md"), "utf8");
 const amendParagraph = /\*\*P0 amendments[^\n]*/.exec(arch)?.[0] ?? "";
 const AMENDED = [...new Set([...amendParagraph.matchAll(/ADR-(\d{3})/g)].map((m) => Number(m[1])))].sort((a, b) => a - b);
 
 // 04 F1.1b / 05 F1.1b: ADR-001/003 (D-086/D-136), 002 (D-087), 022 (D-139), 023 (D-092), 026 (D-187), 028 (D-207).
-// ADR-022 sigue Aceptado como registro: ADR-028 lo reemplaza y lo dice su estado.
+// ADR-022 stays Accepted as a record: ADR-028 replaces it and its status says so.
 const ACCEPTED = [1, 2, 3, 22, 23, 26, 28];
 
 describe("A5 docs/adr/", () => {
@@ -40,7 +40,7 @@ describe("A5 docs/adr/", () => {
   test("cada archivo abre con su número y tiene estado, decisión, alternativas y qué se resigna", () => {
     for (const a of adrs) {
       const num = String(a.num).padStart(3, "0");
-      // Desde ADR-028 el encabezado usa dos puntos (los docs nuevos van sin rayas); los anteriores no se reescriben.
+      // Since ADR-028 the header uses colons (new docs go without dashes); earlier ones are not rewritten.
       expect(a.text.startsWith(`# ADR-${num} — `) || a.text.startsWith(`# ADR-${num}: `), a.name).toBe(true);
       expect(a.estado, a.name).toMatch(/^(Accepted|Proposed) /);
       for (const h of ["## Decision", "## Rejected alternatives", "## Trade-offs"]) expect(a.text, `${a.name} ${h}`).toContain(h);

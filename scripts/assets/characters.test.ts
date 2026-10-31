@@ -1,6 +1,6 @@
-// Plan estetica-c M3: el pipeline de personajes (scripts/assets/characters.ts) sobre un glTF con esqueleto de fixture
-// generado en el test (textura de paleta, varias mallas con piel, clips y un nodo de arma), el decodificador PNG mínimo,
-// y los archivos de personaje servidos (byte a byte iguales a la salida del pipeline cuando la fuente está a mano).
+// Plan estetica-c M3: the characters pipeline (scripts/assets/characters.ts) over a fixture skinned glTF
+// generated in the test (palette texture, several skinned meshes, clips and a weapon node), the minimal PNG decoder,
+// and the served character files (byte-for-byte equal to the pipeline output when the source is at hand).
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,7 +16,7 @@ import { codificarPng, decodificarPng, muestrear } from "./png.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** Esfera UV con piel: todos sus vértices van al joint `joint` y muestrean la textura en `u`. */
+/** Skinned UV sphere: all its vertices go to joint `joint` and sample the texture at `u`. */
 function esfera(doc: Document, nombre: string, cy: number, joint: number, u: number, seg = 10, anillos = 6): Node {
   const buffer = doc.getRoot().listBuffers()[0];
   const pos: number[] = [];
@@ -55,9 +55,9 @@ function esfera(doc: Document, nombre: string, cy: number, joint: number, u: num
 }
 
 /**
- * Un personaje de fixture: esqueleto root → hips → (hand.r → Sword, upperleg.l); textura de 2 × 1 (rojo a la izquierda,
- * azul a la derecha); mallas Body (hips, rojo), Hand (hand.r, azul), Legs (upperleg.l, rojo), Head (hips, azul) y Prisma
- * (hips, rojo, de 3 lados: aristas duras); clips Idle, Wave (que mueve también el arma) y Extra.
+ * A fixture character: skeleton root → hips → (hand.r → Sword, upperleg.l); 2 × 1 texture (red on the left,
+ * blue on the right); meshes Body (hips, red), Hand (hand.r, blue), Legs (upperleg.l, red), Head (hips, blue) and Prisma
+ * (hips, red, 3-sided: hard edges); clips Idle, Wave (which also moves the weapon) and Extra.
  */
 async function personajeFixture(): Promise<Uint8Array> {
   const doc = new Document();
@@ -176,7 +176,7 @@ describe("characters: cuerpo con esqueleto", () => {
 });
 
 describe("characters: malla rígida colgada de un hueso (open-world-3d T7, AC47)", () => {
-  /** Mundo de un vértice con piel según glTF: hueso · IBM · v (con las matrices del archivo de salida). */
+  /** World position of a skinned vertex per glTF: bone · IBM · v (with the output file's matrices). */
   const mundo = (m: number[], v: number[]): number[] => [0, 1, 2].map((r) => (m[r] as number) * (v[0] as number) + (m[4 + r] as number) * (v[1] as number) + (m[8 + r] as number) * (v[2] as number) + (m[12 + r] as number));
   const mul = (a: number[], b: number[]): number[] => {
     const o = new Array<number>(16).fill(0);
@@ -209,7 +209,7 @@ describe("characters: malla rígida colgada de un hueso (open-world-3d T7, AC47)
       expect((we?.getElement(i, [] as number[]) ?? [])[0]).toBeCloseTo(1, 2);
       const m = mul(joints[j[0] as number]?.getWorldMatrix() as number[], Array.from(skin?.getInverseBindMatrices()?.getElement(j[0] as number, [] as number[]) ?? []));
       const w = mundo(m, pos?.getElement(i, [] as number[]) ?? []);
-      // la esfera de radio 0,3 centrada donde estaba: mano (-0,5; 1,4; 0) más (0; 0,2; 0)
+      // the sphere of radius 0.3 centered where it was: hand (-0.5; 1.4; 0) plus (0; 0.2; 0)
       expect(Math.hypot((w[0] as number) + 0.5, (w[1] as number) - 1.6, w[2] as number)).toBeCloseTo(0.3, 2);
     }
     expect(enMano).toBe(n);
@@ -244,7 +244,7 @@ describe("characters: archivo de clips", () => {
   });
 });
 
-/** PNG de 8 bits con el tipo de color y el filtro por fila pedidos (para probar el decodificador). */
+/** 8-bit PNG with the requested color type and per-row filter (to test the decoder). */
 function png(ancho: number, alto: number, tipo: 0 | 2 | 3 | 4 | 6, crudo: number[], filtro: 0 | 1 | 2 | 3 | 4, paleta?: number[]): Uint8Array {
   const canales = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[tipo];
   const paso = ancho * canales;
@@ -270,7 +270,7 @@ function png(ancho: number, alto: number, tipo: 0 | 2 | 3 | 4 | 6, crudo: number
   const trozo = (nombre: string, d: Uint8Array): Buffer => {
     const largo = Buffer.alloc(4);
     largo.writeUInt32BE(d.length);
-    return Buffer.concat([largo, Buffer.from(nombre, "latin1"), d, Buffer.alloc(4)]); // el decodificador no mira el CRC
+    return Buffer.concat([largo, Buffer.from(nombre, "latin1"), d, Buffer.alloc(4)]); // the decoder does not look at the CRC
   };
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(ancho, 0);
@@ -308,14 +308,14 @@ describe("png: decodificador mínimo", () => {
     expect([...img.rgba]).toEqual([...rgba]);
     expect(muestrear(img, 0.25, 0.5)).toEqual([1, 0, 0]);
     expect(muestrear(img, 0.75, 0.5)).toEqual([0, 0, 1]);
-    expect(muestrear(img, 1.25, 0.5)).toEqual([1, 0, 0]); // la UV se envuelve
+    expect(muestrear(img, 1.25, 0.5)).toEqual([1, 0, 0]); // the UV wraps
   });
 
   test("lo que no es PNG o no está cubierto falla nombrando el formato", () => {
     expect(() => decodificarPng(Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8, 9]))).toThrow(/no es un PNG/);
-    // Open-world-3d T7: 16 bits por canal se decodifica (los PNG 1k de Poly Haven); con paleta sigue sin estar cubierto.
+    // Open-world-3d T7: 16 bits per channel is decoded (Poly Haven's 1k PNGs); palette is still not covered.
     const dieciseis = png(1, 1, 3, [0], 0, [1, 2, 3]);
-    dieciseis[8 + 8 + 8] = 16; // bits por canal en el IHDR
+    dieciseis[8 + 8 + 8] = 16; // bits per channel in the IHDR
     expect(() => decodificarPng(dieciseis)).toThrow(/formato no soportado \(bits 16, tipo de color 3/);
   });
 });
@@ -326,9 +326,9 @@ describe("personajes reales del registro", () => {
 
   test("hay tres cuerpos y un archivo de clips servidos, CC0, y cada uno salió del pipeline", async () => {
     const cuerpos = personajes.filter((a) => a.personaje?.tipo === "cuerpo");
-    // Plan estetica-c M6: cada cuerpo tiene su versión reducida para `low` (`-bajo`, el mismo esqueleto, menos triángulos).
-    // Cambio registrado (open-world-3d T7, AC47): se suma el personaje de Quaternius del mundo abierto (cuerpo, su -bajo
-    // y su archivo de clips). Antes eran 6 cuerpos y 1 archivo de clips, todos de KayKit; esos siguen iguales.
+    // Plan estetica-c M6: each body has its reduced version for `low` (`-bajo`, the same skeleton, fewer triangles).
+    // Recorded change (open-world-3d T7, AC47): the open-world Quaternius character is added (body, its -bajo
+    // and its clips file). Before, there were 6 bodies and 1 clips file, all KayKit; those stay the same.
     const kaykit = (a: { pack: string }): boolean => a.pack === "kaykit-adventurers-1";
     expect(cuerpos.filter(kaykit)).toHaveLength(6);
     expect(cuerpos.filter((a) => a.pack === "quaternius-character-animated").map((a) => a.id).sort())
@@ -379,8 +379,8 @@ describe("personajes reales del registro", () => {
     const cuerpo = fila("cuerpo");
     expect(cuerpo?.personaje?.tipo === "cuerpo" && cuerpo.personaje.nodos).toEqual(["Rogue", "NurbsPath.001"]);
     expect(fila("animaciones")?.personaje).toEqual({ tipo: "animaciones", clips: ["Idle", "Walk", "Run", "PickUp"] });
-    // El pelo y la cara (NurbsPath.001, sin piel, hija del hueso Head) quedan en la primitiva con peso 1 en Head, en su
-    // lugar: en reposo el cuerpo mide 2,82 de alto (la punta del pelo), no 2,74 (la de la cabeza sin pelo).
+    // The hair and face (NurbsPath.001, unskinned, child of the Head bone) stay in the primitive with weight 1 on Head, in their
+    // place: at rest the body is 2.82 tall (the hair tip), not 2.74 (the hairless head's).
     const doc = await (await crearIO()).read(join(ROOT, cuerpo?.archivo ?? ""));
     await doc.transform(dequantize());
     const skin = doc.getRoot().listSkins()[0];
@@ -398,7 +398,7 @@ describe("personajes reales del registro", () => {
       const jm = joints[head]?.getWorldMatrix() as number[];
       const ibm = Array.from(skin?.getInverseBindMatrices()?.getElement(head, [] as number[]) ?? []);
       const v = pos?.getElement(i, [] as number[]) ?? [];
-      // y del mundo = fila 1 de hueso · IBM aplicada a v
+      // and world = row 1 of bone · IBM applied to v
       let y = 0;
       for (let k = 0; k < 4; k++) {
         let col = 0;
@@ -413,7 +413,7 @@ describe("personajes reales del registro", () => {
     expect(fila("cuerpo-bajo")?.triangulos ?? Infinity).toBeLessThan((cuerpo?.triangulos ?? 0) * 0.5);
   });
 
-  // assets-src/ no se versiona (D-099): con la fuente a mano, lo servido es exactamente la salida del pipeline.
+  // assets-src/ is not versioned (D-099): with the source at hand, what is served is exactly the pipeline output.
   const conFuente = personajes.filter((a) => a.fuente && existsSync(join(ROOT, a.fuente)));
   test.skipIf(conFuente.length === 0)("con la fuente en assets-src/, cada archivo de personaje es byte a byte la salida de optimize", async () => {
     for (const a of conFuente) {

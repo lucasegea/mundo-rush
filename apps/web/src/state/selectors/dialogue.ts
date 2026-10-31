@@ -1,6 +1,6 @@
-// Selectores del slice `dialogue` (R14): el view-model del HUD de diálogo (F4.2). La UI no conoce el protocolo ni el
-// glosario crudo: recibe líneas ya partidas en palabras tocables y el glosario ya filtrado por `glossaryDisplay`
-// (03 §8.3, D-131). Una palabra sin entrada visible no tiene traducción (D-068): la UI ofrece marcarla.
+// Selectors of the `dialogue` slice (R14): the dialogue HUD's view-model (F4.2). The UI does not know the protocol or the
+// raw glossary: it receives lines already split into tappable words and the glossary already filtered by `glossaryDisplay`
+// (03 §8.3, D-131). A word without a visible entry has no translation (D-068): the UI offers to mark it.
 import { glossaryKey, glossaryVisibility, HINT_CHIP_DELAY_MS, isGlossaryDisplay, plainTemplateText, tokenizeLine, type LineToken } from "@lg/core";
 import type { NoticeCause } from "@lg/protocol";
 import type { GameState } from "../store";
@@ -22,87 +22,87 @@ export interface GlossaryView {
   en: string;
   es: string;
   notes: string | null;
-  /** Marca visible "borrador" (dev: reviewed/draft, D-131). */
+  /** Visible "draft" mark (dev: reviewed/draft, D-131). */
   draft: boolean;
 }
 
 export interface HudLine {
   id: string;
   who: "npc" | "lumi" | "player" | "system";
-  /** Nombre del hablante (NPC) o null (la UI pone "Vos", "Lumi"...). */
+  /** Speaker name (NPC) or null (the UI shows "You", "Lumi"...). */
   name: string | null;
   kind: DialogueLine["kind"];
-  /** Idioma del texto: las líneas de NPC son en inglés; Lumi y el sistema, en es-AR. */
+  /** Language of the text: NPC lines are in English; Lumi and the system, in es-AR. */
   lang: "en" | "es-AR";
   text: string;
-  /** Palabras tocables (solo líneas en inglés de NPC). */
+  /** Tappable words (only NPC English lines). */
   tokens: LineToken[] | null;
 }
 
 export type HudPhase = "connecting" | "offline" | "starting" | "npcSpeaking" | "yourTurn" | "passMenu" | "ended" | "blocked";
 
-/** F5.2: qué está pasando con la voz (indicador "te escucho / pensando"). */
+/** F5.2: what is happening with the voice ("I'm listening / thinking" indicator). */
 export type VoicePhase = "asking" | "yourTurn" | "listening" | "thinking" | "npcSpeaking";
 
 export interface VoiceHudView {
   phase: VoicePhase;
-  /** Se puede abrir el turno hablado ("Hablar"). */
+  /** A spoken turn can be opened ("Speak"). */
   canTalk: boolean;
-  /** Hay un turno hablado abierto que "Terminé" cierra. */
+  /** A spoken turn is open and "Done" closes it. */
   canFinish: boolean;
-  /** El turno se está cerrando (cola corta de audio antes del fin). */
+  /** The turn is closing (short audio tail before the end). */
   ending: boolean;
-  /** Nivel del micrófono 0..1. */
+  /** Microphone level 0..1. */
   level: number;
-  /** Lo que el servidor va oyendo (parcial). */
+  /** What the server is hearing (partial). */
   heard: string | null;
   hint: "silent" | "unheard" | null;
 }
 
 export interface DialogueHudView {
-  /** Con quién (null = escena sin NPC: seguir la historia con Lumi). */
+  /** With whom (null = scene without an NPC: follow the story with Lumi). */
   npcId: string | null;
   npcName: string | null;
   phase: HudPhase;
-  /** Se puede escribir y apretar Terminé. */
+  /** You can type and press Done. */
   canWrite: boolean;
-  /** Se puede abrir "Pasar el turno". */
+  /** "Pass the turn" can be opened. */
   canPass: boolean;
-  /** Sub-estado `waiting` (el reloj del chip de pista corre solo acá, 03 §5.5.3). */
+  /** `waiting` sub-state (the hint chip's clock runs only here, 03 §5.5.3). */
   waiting: boolean;
   hintChipEnabled: boolean;
-  /** Silencio antes del chip (D-035: 10 s; 03 §5.5.3, timer del cliente en `waiting`). */
+  /** Silence before the chip (D-035: 10 s; 03 §5.5.3, client timer in `waiting`). */
   hintChipDelayMs: number;
   lines: HudLine[];
   outcome: string | null;
   blocked: "notIntroduced" | "noScene" | null;
   containment: { line: string; resource: { label: string; detail: string } | null; provisional: boolean } | null;
   notice: string | null;
-  /** Causa del aviso `model_unavailable` (open-world-3d T1); null sin causa. */
+  /** Cause of the `model_unavailable` notice (open-world-3d T1); null without a cause. */
   noticeCause: NoticeCause | null;
-  /** Clave de palabra → entrada visible en este build. */
+  /** Word key → entry visible in this build. */
   glossary: Readonly<Record<string, GlossaryView>>;
   glossaryReady: boolean;
-  /** F5.2: controles de voz; null si la escena va por texto. */
+  /** F5.2: voice controls; null if the scene goes by text. */
   voice: VoiceHudView | null;
-  /** F5.2: la escena va por texto porque no hay micrófono o permiso (mensaje claro en el HUD). */
+  /** F5.2: the scene goes by text because there is no microphone or permission (clear message in the HUD). */
   micProblem: MicProblem | null;
-  /** F5.2: el micrófono se perdió con la escena en voz (hay que salir y volver a entrar). */
+  /** F5.2: the microphone was lost during a voice scene (you must leave and re-enter). */
   micLost: boolean;
-  /** A2 (ADR-027): medidores de la conversación libre (null en escenas guionadas). */
+  /** A2 (ADR-027): free-conversation meters (null in scripted scenes). */
   conversation: ConversationUi | null;
-  /** Silencio en `waiting` para subir la escalera de ayuda del lado del cliente: [pista, frases] en ms. */
+  /** Silence in `waiting` to climb the help ladder on the client side: [hint, phrases] in ms. */
   conversationHelpIdleMs: readonly [number, number];
-  /** "Reducir movimiento": el punto de "tu turno" no late (plan estetica-c M4). */
+  /** "Reduce motion": the "your turn" dot does not pulse (plan estetica-c M4). */
   reduceMotion: boolean;
 }
 
-/** A2: el cliente sube la ayuda sola si el jugador no dice nada (el servidor la sube por turnos sin progreso). */
+/** A2: the client raises help by itself if the player says nothing (the server raises it by turns without progress). */
 export const CONVERSATION_HELP_IDLE_MS = [20000, 40000] as const;
 
 const glossaryCache = new WeakMap<Lexicon, Record<string, GlossaryView>>();
 
-/** Glosario visible en este build, indexado por palabra (y su plural). Lo que `glossaryVisibility` oculta no entra. */
+/** Glossary visible in this build, indexed by word (and its plural). What `glossaryVisibility` hides does not enter. */
 export function visibleGlossary(lex: Lexicon): Record<string, GlossaryView> {
   const cached = glossaryCache.get(lex);
   if (cached) return cached;
@@ -122,7 +122,7 @@ function buildGlossary(lex: Lexicon): Record<string, GlossaryView> {
     for (const form of [e.en, e.enPlural]) {
       if (!form) continue;
       const key = glossaryKey(form);
-      // Solo entradas de una palabra se tocan en un subtítulo (D-068: líneas IA traducidas por palabra).
+      // Only single-word entries are tappable in a subtitle (D-068: AI lines translated word by word).
       if (key !== "" && !/\s/.test(key) && !(key in out)) out[key] = view;
     }
   }
@@ -131,7 +131,7 @@ function buildGlossary(lex: Lexicon): Record<string, GlossaryView> {
 
 const hudLine = (l: DialogueLine, lex: Lexicon, npcName: (id: string) => string | null): HudLine | null => {
   if (l.speaker === "LUMI") {
-    // Lumi habla solo con plantillas por id (02 §2.7); sin el texto cargado, la línea no se muestra (nada inventado).
+    // Lumi speaks only with templates by id (02 §2.7); without the loaded text, the line is not shown (nothing invented).
     const text = l.template ? lex.lumi[l.template] : undefined;
     return text ? { id: l.id, who: "lumi", name: null, kind: l.kind, lang: "es-AR", text: plainTemplateText(text), tokens: null } : null;
   }
@@ -209,29 +209,29 @@ export const selectDialogueHudView = createViewSelector(
   },
 );
 
-/** El servicio de escena lee esto para saber qué pedir y qué mandar. */
+/** The scene service reads this to know what to ask for and what to send. */
 export const selectSceneRequest = (s: GameState) => s.dialogue.request;
 export const selectSceneOutbox = (s: GameState) => s.dialogue.outbox;
 export const selectLexiconStatus = (s: GameState) => s.dialogue.lexicon.status;
 
-/** El papel de un personaje en la escena en curso (lo lee la máquina de animación de world/actors, plan estetica-c M3). */
+/** A character's role in the current scene (read by the world/actors animation machine, plan estetica-c M3). */
 export type SceneRoleView = "habla" | "escucha" | null;
 
 export interface SceneActivityView {
-  /** El NPC de la escena (null sin escena). */
+  /** The scene's NPC (null without a scene). */
   npcId: string | null;
   npc: SceneRoleView;
   player: SceneRoleView;
-  /** La escena está arrancando: el NPC saluda. */
+  /** The scene is starting: the NPC greets. */
   greet: boolean;
 }
 
 const NO_ACTIVITY: SceneActivityView = { npcId: null, npc: null, player: null, greet: false };
 
 /**
- * Quién habla y quién escucha: el NPC habla mientras dice su línea y escucha en el turno del jugador; el jugador habla
- * con el micrófono abierto. M3 SEAM: los gestos que pida el diálogo (asentir, negar, pensar, sorprenderse, dar algo)
- * entran acá cuando el protocolo los mande; hoy el único pedido es el saludo al empezar.
+ * Who speaks and who listens: the NPC speaks while saying their line and listens on the player's turn; the player speaks
+ * with the microphone open. M3 SEAM: the gestures the dialogue asks for (nod, shake head, think, be surprised, give something)
+ * enter here when the protocol sends them; today the only request is the greeting at the start.
  */
 let lastActivity: SceneActivityView = NO_ACTIVITY;
 const sameActivity = (a: SceneActivityView, b: SceneActivityView): boolean =>
@@ -247,7 +247,7 @@ export const selectSceneActivity = createViewSelector(
       const player: SceneRoleView = voicePhaseOf(d) === "listening" && voiceView(d) !== null ? "habla" : phase === "npcSpeaking" ? "escucha" : null;
       next = { npcId: d.npcId, npc, player, greet: phase === "starting" };
     }
-    // El nivel del micrófono cambia muchas veces por segundo: la misma actividad devuelve el mismo objeto (sin re-render).
+    // The microphone level changes many times per second: the same activity returns the same object (no re-render).
     if (!sameActivity(next, lastActivity)) lastActivity = next;
     return lastActivity;
   },

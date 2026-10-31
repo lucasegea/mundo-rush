@@ -1,21 +1,21 @@
-// boot/preload.ts — precarga del mundo mientras el menú está quieto (open-world-3d T10 (d), D-835, AC63): el chunk 3D
-// (GameCanvas y three) y los .glb de los árboles del mundo abierto bajan en un requestIdleCallback antes del clic, así
-// la carga medida (lg:world-enter → lg:world-first-frame) no los espera. Sin requestIdleCallback (Safari, jsdom) no se
-// precarga nada: el mundo baja con el clic, como antes. Lo de acá es puro; App.tsx lo conecta.
-// T10-integrate: UNA lista de objetivos (`WORLD_PRELOAD`), uno por renglón: chunk 3D, chunk del postprocesado (solo si
-// el tier lo dibuja), los .glb de árboles y rocas, los datos del mapa y los decodificadores. Sumar uno es un renglón.
+// boot/preload.ts — world preload while the menu is idle (open-world-3d T10 (d), D-835, AC63): the 3D chunk
+// (GameCanvas and three) and the open-world tree .glb files download in a requestIdleCallback before the click, so
+// the measured load (lg:world-enter → lg:world-first-frame) does not wait for them. Without requestIdleCallback (Safari, jsdom) nothing is
+// preloaded: the world downloads on click, as before. What is here is pure; App.tsx wires it up.
+// T10-integrate: ONE list of targets (`WORLD_PRELOAD`), one per line: 3D chunk, post-processing chunk (only if
+// the tier draws it), the tree and rock .glb files, the map data and the decoders. Adding one is one line.
 //
-// SEAM (T10-measure): los archivos van a la caché HTTP del navegador (fetch completo); GLTFLoader, el KTX2Loader y el
-// cargador del diorama los vuelven a pedir con la misma url. Si el servidor estático obliga a revalidar, el siguiente
-// paso es entregar los ArrayBuffer en memoria.
+// SEAM (T10-measure): the files go to the browser's HTTP cache (full fetch); GLTFLoader, the KTX2Loader and the
+// diorama loader request them again with the same url. If the static server forces revalidation, the next
+// step is to hand over the ArrayBuffers in memory.
 import { lookForRelief, natureModelFiles, publicUrl, type WorldLook } from "@lg/art";
 import type { AppPhase } from "@lg/core";
 import { DIORAMAS_FILE, universeContentBase } from "../services/content";
 
-/** Tope de espera del requestIdleCallback: si el menú nunca queda quieto, la precarga arranca igual a los 2 s. */
+/** Wait cap for requestIdleCallback: if the menu never goes idle, the preload starts anyway at 2 s. */
 export const PRELOAD_IDLE_TIMEOUT_MS = 2_000;
 
-/** Lo mínimo del navegador para la precarga (globalThis en la app; un doble en los tests). */
+/** The minimum of the browser for the preload (globalThis in the app; a double in tests). */
 export interface IdleEnv {
   requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
   cancelIdleCallback?: (id: number) => void;
@@ -23,13 +23,13 @@ export interface IdleEnv {
 
 export interface PreloadTrigger {
   phase: AppPhase;
-  /** El menú principal es el panel de arriba. */
+  /** The main menu is the top panel. */
   menuOpen: boolean;
-  /** El tier efectivo deja entrar al mapa (sin WebGL o en solo-diálogo, no se baja nada). */
+  /** The effective tier lets the map in (without WebGL or in dialog-only mode, nothing is downloaded). */
   worldAvailable: boolean;
 }
 
-/** ¿Precargar ahora? Con el menú arriba, el mapa disponible y fuera del mundo (adentro ya está cargado). */
+/** Preload now? With the menu up, the map available and outside the world (inside, it is already loaded). */
 export const shouldPreloadWorld = (t: PreloadTrigger): boolean => t.menuOpen && t.worldAvailable && t.phase !== "world";
 
 const withBase = (baseUrl: string, files: readonly string[]): string[] => {
@@ -38,35 +38,35 @@ const withBase = (baseUrl: string, files: readonly string[]): string[] => {
 };
 
 /**
- * Los .glb de árboles (completo y liviano por especie) y rocas (completo y lejano por escaneo) del look del mundo
- * abierto: `natureModelFiles`, con la misma url que pide buildNature (`base` sin la barra final + la ruta pública). Por
- * defecto el look con relieve (DEFAULT_LOOK).
+ * The .glb files of trees (full and light per species) and rocks (full and distant per scan) of the open-world
+ * look: `natureModelFiles`, with the same url that buildNature requests (`base` without the trailing slash + the public path). By
+ * default the relief look (DEFAULT_LOOK).
  */
 export function naturePreloadUrls(baseUrl: string, look: WorldLook = lookForRelief(true)): string[] {
   return withBase(baseUrl, natureModelFiles(look));
 }
 
-/** Los decodificadores autoalojados de apps/web/public/decoders/ (meshopt para los .glb, basis para los .ktx2). */
+/** The self-hosted decoders in apps/web/public/decoders/ (meshopt for the .glb files, basis for the .ktx2). */
 export const DECODER_FILES = ["meshopt_decoder.module.js", "basis_transcoder.js", "basis_transcoder.wasm"] as const;
 
-/** Lo que necesitan los objetivos de la precarga (App.tsx lo arma; los tests, a mano). */
+/** What the preload targets need (App.tsx builds it; tests, by hand). */
 export interface PreloadContext {
   baseUrl: string;
-  /** Universo a jugar (S4/D-806): de él sale la ruta de los datos del mapa. */
+  /** Universe to play (S4/D-806): the map data path comes from it. */
   universeId?: string | undefined;
-  /** El tier dibuja postprocesado (`low`, solo-diálogo y "reducir movimiento" nunca bajan su chunk, D-160). */
+  /** The tier draws post-processing (`low`, dialog-only and "reduce motion" never download its chunk, D-160). */
   post: boolean;
-  /** Los mismos import() que usan los lazy() (Vite los deduplica: el clic encuentra el chunk ya bajado). */
+  /** The same import() calls the lazy() ones use (Vite deduplicates them: the click finds the chunk already downloaded). */
   loadCanvas: () => Promise<unknown>;
   loadPost: () => Promise<unknown>;
-  /** Baja una url entera (fetch + arrayBuffer en la app). */
+  /** Downloads a whole url (fetch + arrayBuffer in the app). */
   fetchUrl: (url: string) => Promise<unknown>;
 }
 
 type PreloadTask = () => Promise<unknown>;
 const fetchAll = (c: PreloadContext, urls: readonly string[]): PreloadTask[] => urls.map((u) => () => c.fetchUrl(u));
 
-/** LA lista de objetivos de la precarga, uno por renglón y con nombre (sumar uno es sumar un renglón). */
+/** THE list of preload targets, one per line and named (adding one is adding a line). */
 export const WORLD_PRELOAD: readonly { id: string; tasks: (c: PreloadContext) => PreloadTask[] }[] = [
   { id: "chunk-3d", tasks: (c) => [c.loadCanvas] },
   { id: "chunk-post", tasks: (c) => (c.post ? [c.loadPost] : []) },
@@ -75,13 +75,13 @@ export const WORLD_PRELOAD: readonly { id: string; tasks: (c: PreloadContext) =>
   { id: "decodificadores", tasks: (c) => fetchAll(c, DECODER_FILES.map((f) => `${c.baseUrl}decoders/${f}`)) },
 ];
 
-/** Las tareas de todos los objetivos, en el orden de la lista. */
+/** The tasks of all the targets, in the order of the list. */
 export const worldPreloadTasks = (c: PreloadContext): PreloadTask[] => WORLD_PRELOAD.flatMap((t) => t.tasks(c));
 
 /**
- * Un precargador de una sola vez: `schedule(env)` pide un momento quieto y corre las tareas (cada una con su error
- * tragado: precargar es un atajo, nunca un fallo). Devuelve con qué cancelar si todavía no corrió. `tasks` puede ser
- * una función: la lista se arma en el momento quieto (así lee el tier de ese momento).
+ * A one-shot preloader: `schedule(env)` asks for an idle moment and runs the tasks (each with its error
+ * swallowed: preloading is a shortcut, never a failure). Returns what cancels it if it has not run yet. `tasks` can be
+ * a function: the list is built at the idle moment (so it reads the tier of that moment).
  */
 export function idlePreloader(tasks: readonly PreloadTask[] | (() => readonly PreloadTask[]), timeoutMs = PRELOAD_IDLE_TIMEOUT_MS): { schedule(env: IdleEnv): () => void; started(): boolean } {
   let started = false;
@@ -98,13 +98,13 @@ export function idlePreloader(tasks: readonly PreloadTask[] | (() => readonly Pr
         try {
           list = typeof tasks === "function" ? tasks() : tasks;
         } catch {
-          // armar la lista no puede tirar abajo el menú; sin lista no se precarga
+          // building the list must not bring the menu down; without a list nothing is preloaded
         }
         for (const task of list) {
           try {
             void task().catch(() => {});
           } catch {
-            // una tarea que tira al arrancar no frena a las demás
+            // a task that throws on startup does not stop the others
           }
         }
       }, { timeout: timeoutMs });

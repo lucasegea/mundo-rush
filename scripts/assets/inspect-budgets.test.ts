@@ -1,5 +1,5 @@
-// Plan estetica-c M2: inspect-budgets mide piezas y dioramas y check:budgets lo usa contra assets_muelle_mb y
-// assets_muelle_plaza_mb (03 §2.7.3). Con dientes: un muelle sintético pesado y una pieza con textura fallan.
+// Plan estetica-c M2: inspect-budgets measures pieces and dioramas and check:budgets uses it against assets_muelle_mb and
+// assets_muelle_plaza_mb (03 §2.7.3). With teeth: a heavy synthetic dock and a piece with a texture fail.
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,20 +22,20 @@ describe("inspect-budgets sobre el árbol real", () => {
   test("mide las piezas servidas y pasa (exit 0)", async () => {
     const modelos = listarModelos(ROOT);
     expect(modelos.length).toBeGreaterThanOrEqual(2);
-    const conMalla = modelos.find((m) => !m.endsWith("/animaciones.glb")) as string; // el archivo de clips no tiene mallas
+    const conMalla = modelos.find((m) => !m.endsWith("/animaciones.glb")) as string; // the clips file has no meshes
     const p = await medirPieza(conMalla, new Uint8Array(readFileSync(join(ROOT, conMalla))));
     expect(p.triangulos).toBeGreaterThan(0);
     expect(p.texturas).toBe(0);
     expect(p.conColor).toBe(true);
     const lineas: string[] = [];
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
-    // Plan estetica-c M3: el diorama de prueba baja sus 2 modelos más los archivos de personaje, dentro del tope de muelle.
-    // M6: 3 cuerpos, 3 cuerpos reducidos de `low` y el de clips (cota de arriba: un tier baja unos u otros).
-    // Cambio registrado (open-world-3d T7, AC47): la cota de arriba suma el personaje de Quaternius del mundo abierto
-    // (cuerpo, -bajo y clips): 2 modelos + 10 archivos de personaje. Antes, 9.
+    // Plan estetica-c M3: the test diorama downloads its 2 models plus the character files, within the dock cap.
+    // M6: 3 bodies, 3 reduced `low` bodies and the clips one (upper bound: a tier downloads one or the other).
+    // Recorded change (open-world-3d T7, AC47): the upper bound adds the open-world Quaternius character
+    // (body, -bajo and clips): 2 models + 10 character files. Before, 9.
     expect(lineas.join("\n")).toMatch(/info diorama test: 12 modelo\(s\)/);
     expect(lineas.join("\n")).toMatch(/OK {3}diorama test contra assets_muelle_mb/);
-    // Plan estetica-c M5: cada fila del registro con pieza servida trae la medida que usa el estimador, y coincide.
+    // Plan estetica-c M5: each registry row with a served piece carries the measurement the estimator uses, and it matches.
     expect(lineas.filter((l) => /^OK {3}registro /.test(l)).length).toBe(modelos.length);
     expect(lineas.filter((l) => /^FAIL registro /.test(l))).toEqual([]);
   });
@@ -67,7 +67,7 @@ describe("presupuestos de descarga (03 §2.7.3)", () => {
     const [d] = medirDioramas([{ id: "muelle", props: [{ asset: modelo("a") }] }], mapa, [archivo("b"), archivo("a")]);
     expect(d?.modelos).toEqual([archivo("a"), archivo("b")]);
     expect(d?.bytes).toBe(7_000_000);
-    // 7 MB pasan el tope de 6 MB de muelle: los personajes cuentan contra el presupuesto.
+    // 7 MB exceeds the 6 MB dock cap: the characters count against the budget.
     expect(chequearDescarga(piezas, [d as NonNullable<typeof d>], B).ok).toBe(7 <= B.assets_muelle_mb);
   });
 
@@ -132,8 +132,8 @@ describe("open-world-3d T6 (AC42, cambio registrado): la carga del muelle del mu
     const lineas: string[] = [];
     expect(await run(ROOT, (l) => lineas.push(l))).toBe(0);
     const texto = lineas.join("\n");
-    // T7 (cambio registrado): la carga suma los árboles horneados y las rocas; la cuenta sale de cargaMundoAbierto.
-    // T7b (cambio registrado, D-841): la carga es la de cada look del catálogo, y run() los recorre todos.
+    // T7 (recorded change): the load adds the baked trees and the rocks; the count comes from cargaMundoAbierto.
+    // T7b (recorded change, D-841): the load is that of each look of the catalog, and run() walks them all.
     for (const look of Object.values(WORLD_LOOKS)) {
       const carga = cargaMundoAbierto(look);
       expect(texto).toContain(`look ${look.id}:`);
@@ -141,7 +141,7 @@ describe("open-world-3d T6 (AC42, cambio registrado): la carga del muelle del mu
       for (const a of carga) expect(texto).toContain(`OK   carga del muelle ${a}:`);
       expect(carga).toEqual(expect.arrayContaining([...DECODIFICADOR_BASIS, "apps/web/public/textures/leafy-grass-diff.ktx2"]));
     }
-    expect(cargaMundoAbierto(DEFAULT_LOOK)).toHaveLength(38); // 0034931: 14 .ktx2, 22 .glb, 2 del transcodificador
+    expect(cargaMundoAbierto(DEFAULT_LOOK)).toHaveLength(38); // 0034931: 14 .ktx2, 22 .glb, 2 of the transcoder
   });
 
   test("un diorama con relieve suma su carga; uno sin relieve no", () => {
@@ -160,7 +160,7 @@ describe("open-world-3d T6 (AC42, cambio registrado): la carga del muelle del mu
     const r = chequearCargaRegistrada([{ archivo: "apps/web/public/textures/leafy-grass-diff.ktx2", bytes: 196_231 }, { archivo: sinFila, bytes: 1_000_000 }], new Set(["apps/web/public/textures/leafy-grass-diff.ktx2"]));
     expect(r.ok).toBe(false);
     expect(r.lineas.join("\n")).toContain(`FAIL carga del muelle ${sinFila}: 1000000 bytes; sin fila en content/assets-registry.yaml ni content/code-registry.yaml`);
-    // Y un archivo de la carga que no está en disco también.
+    // And a load file that is not on disk too.
     expect(chequearCargaRegistrada([{ archivo: sinFila, bytes: null }], new Set([sinFila])).ok).toBe(false);
   });
 

@@ -1,4 +1,4 @@
-// F4.1 A3: salida inválida del observador → 1 reintento → evento de error; nunca un criterio inventado.
+// F4.1 A3: invalid observer output → 1 retry → error event; never an invented criterion.
 import { describe, expect, test } from "vitest";
 import { OBSERVER_MAX_ATTEMPTS, parseObserverOutput, runObserver, type ObserverInput } from "../src/observer/observer.ts";
 import { ProviderError } from "../src/providers/text.ts";

@@ -1,9 +1,9 @@
-// Adaptador Gemini Live de `RealtimeVoiceProvider` (03 §5.11, ADR-005/006/007, D-001, D-091, D-093).
-// Procedencia: la cola de mensajes previa a la apertura y el cierre seguro salen del proxy de un prototipo de voz anterior
-// (server.js, relay /proxy); la lectura de los mensajes del servidor, de su public/index.html. Lo demás es nuevo: el
-// servidor arma el setup, una sesión por escena, turnos manuales (activityStart/activityEnd), reconexión con el handle de
-// `sessionResumption` ante goAway o un corte, y eventos del contrato con `turnId`.
-// La clave viaja solo en la URL del socket hacia Google (como en LT) y nunca se loguea ni aparece en un error.
+// Gemini Live adapter of `RealtimeVoiceProvider` (03 §5.11, ADR-005/006/007, D-001, D-091, D-093).
+// Provenance: the message queue before opening and the safe close come from the an earlier voice prototype proxy
+// (server.js, relay /proxy); reading the server messages, from its public/index.html. The rest is new: the
+// server builds the setup, one session per scene, manual turns (activityStart/activityEnd), reconnection with the
+// `sessionResumption` handle on goAway or a drop, and contract events with `turnId`.
+// The key travels only in the socket URL to Google (as in LT) and is never logged or shown in an error.
 import { WebSocket, type RawData } from "ws";
 import { ProviderError } from "../text.ts";
 import type { RealtimeVoiceProvider, SceneVoiceSetup, ScriptedTurn, VoiceEvent } from "../types.ts";
@@ -17,10 +17,10 @@ export const GEMINI_LIVE_ADAPTER = "gemini-live";
 export interface GeminiLiveOptions {
   apiKey: string;
   model: string;
-  /** Solo los tests lo cambian (servidor Live falso en 127.0.0.1). */
+  /** Only the tests change this (fake Live server on 127.0.0.1). */
   endpoint?: string;
   openTimeoutMs?: number;
-  /** Reconexiones por sesión (goAway o corte); después, error no recuperable y la escena sigue por texto. */
+  /** Reconnections per session (goAway or drop); after that, an unrecoverable error and the scene carries on by text. */
   maxReconnects?: number;
 }
 
@@ -40,7 +40,7 @@ interface LiveMessage {
   sessionResumptionUpdate?: { newHandle?: string; token?: string; resumable?: boolean };
 }
 
-/** Códigos de cierre que `ws` acepta mandar (LT: toSendableCloseCode). */
+/** Close codes that `ws` accepts sending (LT: toSendableCloseCode). */
 function closeSafely(socket: WebSocket, code: number, reason: string): void {
   if (socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) return;
   try {
@@ -66,7 +66,7 @@ export function createGeminiLiveProvider(opts: GeminiLiveOptions): RealtimeVoice
   let reconnecting = false;
   const queue: string[] = [];
 
-  // Turno vigente: el del jugador (startTurn) o el de una respuesta pedida por injectContext.
+  // Current turn: the player's (startTurn) or that of a reply requested by injectContext.
   let current: string | null = null;
   let playerTurn: string | null = null;
   let playerText = "";
@@ -98,7 +98,7 @@ export function createGeminiLiveProvider(opts: GeminiLiveOptions): RealtimeVoice
     }
     const parts = sc.modelTurn?.parts ?? [];
     const npcOutput = Boolean(sc.outputTranscription?.text) || parts.length > 0 || sc.turnComplete === true;
-    if (npcOutput) flushFinal(); // la transcripción del jugador quedó completa cuando el NPC empieza a responder
+    if (npcOutput) flushFinal(); // the player's transcript was complete once the NPC starts to respond
     if (!current) return;
     if (sc.interrupted && interruptedTurn !== current) {
       interruptedTurn = current;
@@ -134,7 +134,7 @@ export function createGeminiLiveProvider(opts: GeminiLiveOptions): RealtimeVoice
     }
   };
 
-  /** Abre un socket, manda el setup y resuelve con setupComplete. Recién ahí reemplaza al socket anterior. */
+  /** Opens a socket, sends the setup and resolves with setupComplete. Only then does it replace the previous socket. */
   function connect(resume: boolean): Promise<void> {
     const s = setup;
     if (!s) return Promise.reject(new ProviderError("sesión sin setup", "unavailable"));
@@ -188,7 +188,7 @@ export function createGeminiLiveProvider(opts: GeminiLiveOptions): RealtimeVoice
     if (reconnecting) return;
     reconnects++;
     reconnecting = true;
-    ready = false; // lo que se mande mientras tanto espera al socket nuevo
+    ready = false; // anything sent in the meantime waits for the new socket
     connect(true).then(
       () => { reconnecting = false; },
       () => {
@@ -198,7 +198,7 @@ export function createGeminiLiveProvider(opts: GeminiLiveOptions): RealtimeVoice
     );
   }
 
-  /** El socket activo se cerró sin que lo pidiéramos (corte de red o del proveedor). */
+  /** The active socket closed without our asking (network or provider drop). */
   function lost(): void {
     socket = null;
     ready = false;

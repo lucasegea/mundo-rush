@@ -1,9 +1,9 @@
-// world/sky/sky.ts: el cielo del mundo abierto (open-world-3d T6, D-823, AC38), armado sin GPU como el resto del
-// diorama. Una cúpula de degradé (clase `cielo`) con color por vértice de palette.ts (horizonte = niebla), que sigue a la
-// cámara, sin escribir profundidad y sin niebla; y una sola malla de nubes (clase `nube`, el atlas del mockup V6: 3
-// cúmulos y 2 jirones en un canvas de 512 x 1280), ausente en `low`. Sin canvas 2D (tests), el atlas queda en blanco y
-// el resto igual. Las medidas (segmentos, cantidad de nubes) son las de @lg/art sky.ts, que cuenta el estimador.
-// Open-world-3d T7b (D-839): los colores de la cúpula y del atlas de nubes son del look (`WorldLook.sky`).
+// world/sky/sky.ts: the open world sky (open-world-3d T6, D-823, AC38), built without GPU like the rest of the
+// diorama. A gradient dome (class `cielo`) with vertex color from palette.ts (horizon = fog), which follows the
+// camera, writes no depth and has no fog; and a single cloud mesh (class `nube`, the V6 mockup atlas: 3
+// cumulus and 2 wisps in a 512 x 1280 canvas), absent on `low`. Without a 2D canvas (tests), the atlas stays blank and
+// the rest is the same. The measurements (segments, cloud count) are @lg/art sky.ts ones, which the estimator counts.
+// Open-world-3d T7b (D-839): the dome and cloud atlas colors belong to the look (`WorldLook.sky`).
 import {
   BackSide, BufferGeometry, CanvasTexture, Color, DataTexture, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial,
   RGBAFormat, SphereGeometry, SRGBColorSpace, Vector3, type Texture,
@@ -20,11 +20,11 @@ const smooth = (a: number, b: number, x: number): number => {
 };
 
 /**
- * Color de la cúpula a una altura relativa y (de -1 a 1): horizonte hasta 0,02, bruma a 0,12 (el anillo de 7,5°),
- * cénit desde 0,26 (el de 15°) para arriba. AC39, medido en la vista por defecto (LG_GL=gpu, cámara a -9,4° con FOV
- * 50°: el cielo visible va de 0° a unos 11°): con la bruma a 0,32 la banda de arriba quedaba a 3,5 % de luminancia del
- * horizonte; con anillos cada 15° y el cénit en el de 15°, a 7,6 % (los colores se interpolan entre anillos y la
- * luminancia la manda el verde, que casi no cambia entre celeste y bruma); con anillos cada 7,5° el azul llega antes.
+ * Dome color at a relative height y (from -1 to 1): horizon up to 0.02, haze at 0.12 (the 7.5° ring),
+ * zenith from 0.26 (the 15° one) upward. AC39, measured in the default view (LG_GL=gpu, camera at -9.4° with FOV
+ * 50°: the visible sky goes from 0° to about 11°): with the haze at 0.32 the top band was at 3.5 % of the luminance of the
+ * horizon; with rings every 15° and the zenith at the 15° one, at 7.6 % (colors interpolate between rings and the
+ * luminance is driven by green, which barely changes between sky blue and haze); with rings every 7.5° the blue arrives sooner.
  */
 export function domeColor(sky: SkyLook, y: number): Color {
   const h = new Color(sky.horizon);
@@ -88,7 +88,7 @@ function wisp(g: Ctx, oy: number, seed: number, stops: readonly CloudStop[]): vo
   }
 }
 
-/** El atlas de nubes: 5 filas de 256 px (3 cúmulos, 2 jirones), dibujado una vez. */
+/** The cloud atlas: 5 rows of 256 px (3 cumulus, 2 wisps), drawn once. */
 export function cloudAtlas(clouds: SkyLook["clouds"]): Texture {
   const [w, h] = RUNTIME_TEXTURE_PX.cloudAtlas;
   const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
@@ -107,7 +107,7 @@ export function cloudAtlas(clouds: SkyLook["clouds"]): Texture {
   return t;
 }
 
-/** Las nubes: un quad por nube, a SKY_CLOUDS.distance m, mirando al centro; una sola malla y un solo material. */
+/** The clouds: one quad per cloud, at SKY_CLOUDS.distance m, looking at the center; a single mesh and a single material. */
 function buildClouds(clouds: SkyLook["clouds"]): Mesh {
   const r = rng(99);
   const items: { row: number; w: number; el: number }[] = [];
@@ -151,7 +151,7 @@ export interface Sky {
   group: Group;
   dome: Mesh;
   clouds: Mesh | null;
-  /** Cada cuadro: la cúpula y las nubes van con la cámara; las nubes giran despacio (quietas con reducir movimiento). */
+  /** Each frame: the dome and clouds move with the camera; the clouds turn slowly (still with reduce motion). */
   follow(x: number, y: number, z: number, dtSec: number, still: boolean): void;
   dispose(): void;
 }

@@ -1,11 +1,11 @@
-// services/scene — cliente del servidor de escenas (F4.2; 03 §5.3, §5.8; protocolo de F4.1). Efecto de red en
-// services/ (R5): escucha el store, abre la conexión cuando la UI pide una escena (token de un solo uso + WebSocket),
-// manda los comandos que la UI dejó en `dialogue.outbox` y entrega cada mensaje del servidor al store por acciones.
-// Todo mensaje que llega se valida con el esquema estricto de @lg/protocol (03 §7.8): lo que no valida se descarta.
-// Se carga por import() diferido la primera vez que se abre una escena: zod no entra al chunk inicial (03 §2.7.3).
-// F5.2: con un motor de audio (deps.audio), antes de pedir la escena prepara el micrófono: con micrófono pide la escena
-// en voz y hace de VoiceTransport (frames binarios, ADR-017); sin micrófono o sin permiso, la pide por texto y el HUD
-// dice por qué.
+// services/scene — scene server client (F4.2; 03 §5.3, §5.8; F4.1 protocol). Network effect in
+// services/ (R5): listens to the store, opens the connection when the UI asks for a scene (single-use token + WebSocket),
+// sends the commands the UI left in `dialogue.outbox` and delivers each server message to the store via actions.
+// Every incoming message is validated with the strict @lg/protocol schema (03 §7.8): what does not validate is discarded.
+// Loaded via deferred import() the first time a scene is opened: zod does not enter the initial chunk (03 §2.7.3).
+// F5.2: with an audio engine (deps.audio), before requesting the scene it prepares the microphone: with a microphone it requests the scene
+// in voice and acts as VoiceTransport (binary frames, ADR-017); without a microphone or permission, it requests it as text and the HUD
+// says why.
 import { ClientMessageSchema, ServerMessageSchema, type ClientMessage } from "@lg/protocol";
 import { startAudioService, type AudioEngine, type AudioService, type VoiceTransport } from "../audio";
 import { pcm16FromBytes, pcm16ToBytes } from "../audio/dsp";
@@ -27,22 +27,22 @@ export interface SceneServiceDeps {
   connector: SceneConnector;
   baseUrl: string;
   fetchJson?: FetchJson;
-  /** D-814: universo del contenido (glosario, manifiesto, Lumi). Sin esto, el árbol legacy. */
+  /** D-814: content universe (glossary, manifest, Lumi). Without this, the legacy tree. */
   universeId?: string;
-  /** F5.2: voz. Sin esto (tests de texto, `?voz=0`) las escenas se piden por texto. */
+  /** F5.2: voice. Without this (text tests, `?voz=0`) scenes are requested as text. */
   audio?: { createEngine: () => Promise<AudioEngine> };
 }
 
-/** Arranca el servicio. Devuelve la función que lo para (cierra la conexión abierta). */
+/** Starts the service. Returns the function that stops it (closes the open connection). */
 export function startSceneService(deps: SceneServiceDeps): () => void {
   const { store, actions } = deps;
   let socket: SceneSocket | null = null;
-  /** Sube con cada pedido: una conexión que termina de abrir para un pedido viejo se cierra sin usarse. */
+  /** Increments with each request: a connection that finishes opening for an old request is closed unused. */
   let generation = 0;
   let stopped = false;
   const npcListeners = new Set<(pcm16: Int16Array) => void>();
 
-  /** La voz viaja por el mismo WebSocket de la escena. */
+  /** Voice travels over the same scene WebSocket. */
   const transport: VoiceTransport = {
     sendPlayerAudio: (pcm16) => socket?.sendBinary(pcm16ToBytes(pcm16)),
     onNpcAudio(listener) {
@@ -96,7 +96,7 @@ export function startSceneService(deps: SceneServiceDeps): () => void {
     closeSocket();
     actions.sceneConnecting();
     if (selectLexiconStatus(store.getState()) === "idle") void loadLexicon(actions, deps.baseUrl, deps.fetchJson, deps.universeId);
-    // El micrófono se pide ANTES del token (vence en 60 s; el permiso puede tardar lo que tarde el jugador).
+    // The microphone is requested BEFORE the token (it expires in 60 s; the permission can take as long as the player takes).
     const modality = audio ? await audio.prepare() : null;
     if (stopped || gen !== generation) return;
     try {
@@ -122,8 +122,8 @@ export function startSceneService(deps: SceneServiceDeps): () => void {
     if (req) void open(req.npcId);
     else {
       generation++;
-      closeSocket(); // el servidor aborta una escena en curso al cerrarse la conexión (03 §3.5.1)
-      audio?.release(); // se suelta el micrófono al salir de la escena
+      closeSocket(); // the server aborts a scene in progress when the connection closes (03 §3.5.1)
+      audio?.release(); // the microphone is released on leaving the scene
     }
   }, { fireImmediately: true });
   const stopOutbox = store.subscribe(selectSceneOutbox, flush);

@@ -1,6 +1,6 @@
-// Acciones semánticas de input (R10, D-145, D-197). Los dispositivos (teclado, mouse, táctil, gamepad, XR)
-// se traducen a estas acciones en apps/web/src/services/input/ o, para un clic sobre una malla, en el handler
-// de R3F vía state/bridge.ts. El núcleo, el store y world/ solo ven acciones.
+// Semantic input actions (R10, D-145, D-197). Devices (keyboard, mouse, touch, gamepad, XR)
+// are translated into these actions in apps/web/src/services/input/ or, for a click on a mesh, in the
+// R3F handler via state/bridge.ts. The core, the store and world/ only see actions.
 
 export const SEMANTIC_ACTIONS = [
   "move", "moveTo", "interact", "talk", "cancel", "openNotebook", "zoomIn", "zoomOut", "look", "run", "toggleOverview",
@@ -8,11 +8,11 @@ export const SEMANTIC_ACTIONS = [
 export type SemanticActionType = (typeof SEMANTIC_ACTIONS)[number];
 
 export type SemanticAction =
-  /** Dirección mantenida en pantalla (x = derecha, y = arriba); {0, 0} = soltar. */
+  /** Direction held on screen (x = right, y = up); {0, 0} = release. */
   | { type: "move"; dir: { x: number; y: number } }
-  /** Caminar hasta un punto del suelo (metros, plano XZ). */
+  /** Walk to a point on the ground (meters, XZ plane). */
   | { type: "moveTo"; x: number; z: number }
-  /** Interactuar: con un id elegido (clic) o, sin id, con el más cercano. */
+  /** Interact: with a chosen id (click) or, without an id, with the nearest one. */
   | { type: "interact"; target: string | null }
   | { type: "talk" }
   | { type: "cancel" }
@@ -20,44 +20,44 @@ export type SemanticAction =
   | { type: "zoomIn" }
   | { type: "zoomOut" }
   /**
-   * Open-world-3d T4 (D-820): mirar. `dx`/`dy` en píxeles de pantalla (un arrastre pasado LOOK_DRAG_PX, o Q y R
-   * mantenidas, que services/input traduce a píxeles por paso); el reductor los lleva a yaw e inclinación.
+   * Open-world-3d T4 (D-820): look. `dx`/`dy` in screen pixels (a drag past LOOK_DRAG_PX, or Q and R
+   * held, which services/input translates to pixels per step); the reducer turns them into yaw and tilt.
    */
   | { type: "look"; dx: number; dy: number }
-  /** Correr mientras se mantiene (Shift): 5,5 m/s en vez de 3,5. */
+  /** Run while held (Shift): 5.5 m/s instead of 3.5. */
   | { type: "run"; on: boolean }
-  /** V: el mapa entero (t = 1) o de vuelta a la distancia anterior (PD-5). */
+  /** V: the whole map (t = 1) or back to the previous distance (PD-5). */
   | { type: "toggleOverview" };
 
 /**
- * Open-world-3d T4 (D-820): umbral único entre clic y arrastre, en píxeles. services/input lo importa del núcleo; world/
- * (que no importa el núcleo en tiempo de ejecución) lo recibe por state/bridge.ts. Un arrastre más largo mira y nunca
- * camina; uno más corto es un clic.
+ * Open-world-3d T4 (D-820): single threshold between click and drag, in pixels. services/input imports it from the core; world/
+ * (which does not import the core at runtime) receives it through state/bridge.ts. A longer drag looks and never
+ * walks; a shorter one is a click.
  */
 export const LOOK_DRAG_PX = 6;
 
-/** Lo que el puntero tocó en el mundo (lo resuelve el raycast de R3F en world/). */
+/** What the pointer touched in the world (resolved by the R3F raycast in world/). */
 export type PointerHit = { kind: "ground"; x: number; z: number } | { kind: "interactable"; id: string };
 
-/** Botón principal: camina o interactúa. Los demás botones no hacen nada todavía. */
+/** Primary button: walks or interacts. The other buttons do nothing yet. */
 export function pointerAction(hit: PointerHit, button = 0): SemanticAction | null {
   if (button !== 0) return null;
   return hit.kind === "ground" ? { type: "moveTo", x: hit.x, z: hit.z } : { type: "interact", target: hit.id };
 }
 
-/** Rueda: hacia adelante (deltaY < 0) acerca, hacia atrás aleja (D-197). */
+/** Wheel: forward (deltaY < 0) zooms in, backward zooms out (D-197). */
 export function wheelAction(deltaY: number): SemanticAction | null {
   if (!Number.isFinite(deltaY) || deltaY === 0) return null;
   return { type: deltaY < 0 ? "zoomIn" : "zoomOut" };
 }
 
-/** Píxeles de rueda que valen una muesca (una rueda de mouse da ~100 por muesca; un trackpad, muchos eventos chicos). */
+/** Wheel pixels worth one notch (a mouse wheel gives ~100 per notch; a trackpad, many small events). */
 export const WHEEL_NOTCH_PX = 50;
 
 /**
- * Rueda acumulada (D-208): un paso de zoom por muesca, también con trackpad. En píxeles (`deltaMode` 0) suma hasta
- * WHEEL_NOTCH_PX y ahí da un paso y vuelve a cero; un cambio de sentido descarta lo acumulado. En líneas o páginas
- * (`deltaMode` 1 o 2) cada evento es una muesca.
+ * Accumulated wheel (D-208): one zoom step per notch, also with a trackpad. In pixels (`deltaMode` 0) it adds up to
+ * WHEEL_NOTCH_PX and then gives a step and returns to zero; a change of direction discards what was accumulated. In lines or pages
+ * (`deltaMode` 1 or 2) each event is a notch.
  */
 export function wheelZoom(acc: number, deltaY: number, deltaMode = 0): { acc: number; action: SemanticAction | null } {
   if (!Number.isFinite(deltaY) || deltaY === 0) return { acc, action: null };
@@ -68,7 +68,7 @@ export function wheelZoom(acc: number, deltaY: number, deltaMode = 0): { acc: nu
 
 export type HeldDirection = "up" | "down" | "left" | "right";
 
-/** Dirección de pantalla a partir de las teclas mantenidas; opuestas se anulan; diagonal normalizada. */
+/** Screen direction from the held keys; opposites cancel out; diagonal normalized. */
 export function dirFromHeld(held: ReadonlySet<HeldDirection>): { x: number; y: number } {
   const x = (held.has("right") ? 1 : 0) - (held.has("left") ? 1 : 0);
   const y = (held.has("up") ? 1 : 0) - (held.has("down") ? 1 : 0);

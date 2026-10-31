@@ -1,6 +1,6 @@
-// Servidor MCP por stdio del modo director (03 §6.5.2, D-188), registrado en .mcp.json. Cuatro herramientas de solo
-// lectura, cáscaras sobre src/read.ts: director_state, director_journal, director_sessions, director_content_lookup.
-// Sin red: stdio local. Claude Code las usa para saber dónde está el operador y qué pasó.
+// Director mode MCP server over stdio (03 §6.5.2, D-188), registered in .mcp.json. Four read-only tools,
+// shells over src/read.ts: director_state, director_journal, director_sessions, director_content_lookup.
+// No network: local stdio. Claude Code uses them to know where the operator is and what happened.
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -12,7 +12,7 @@ import { formatWhere, listSessions, lookupContent, readJournal, readState } from
 export const TOOL_NAMES = ["director_state", "director_journal", "director_sessions", "director_content_lookup"] as const;
 export type ToolName = (typeof TOOL_NAMES)[number];
 
-/** Lo que devuelve cada herramienta: exactamente lo que devuelve read.ts. */
+/** What each tool returns: exactly what read.ts returns. */
 export function directorTools(root: string) {
   return {
     director_state: () => readState(root),

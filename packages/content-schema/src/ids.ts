@@ -1,5 +1,5 @@
-// Formatos de id del contenido (03 §6.1 validación 1; 02 §0.1, §0.4, §2.7.1, §6.2).
-// Una sola tabla: los esquemas la usan para validar y el compilador para clasificar referencias.
+// Content id formats (03 §6.1 validation 1; 02 §0.1, §0.4, §2.7.1, §6.2).
+// A single table: the schemas use it to validate and the compiler to classify references.
 import { z } from "zod";
 
 export const ID_PATTERNS = {
@@ -19,15 +19,15 @@ export const ID_PATTERNS = {
   region: /^R\d+$/,
   lugar: /^(?:campos|cruce)\.[a-z0-9_]+$/,
   pronunciacion: /^M\d+\.\d+-E\d+-PRON-\d+$/,
-  /** Ficha de conversación por medidores (ADR-027). */
+  /** Meter-based conversation sheet (ADR-027). */
   conversacion: /^CONV-[A-Z]+$/,
-  /** Universo (dataset de un libro; book-mode slice-1, D-804). `U-CAMPESINO` es el fallback curado. */
+  /** Universe (dataset of a book; book-mode slice-1, D-804). `U-CAMPESINO` is the curated fallback. */
   universo: /^U-[A-Z]+$/,
 } as const;
 
 export type IdKind = keyof typeof ID_PATTERNS;
 
-/** Esquema zod de un id con su formato; el mensaje nombra el formato esperado. */
+/** Zod schema of an id with its format; the message names the expected format. */
 export const idOf = (kind: IdKind) =>
   z.string().regex(ID_PATTERNS[kind], { message: `id de ${kind} con formato inválido` });
 

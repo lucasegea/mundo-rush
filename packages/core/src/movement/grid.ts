@@ -1,7 +1,7 @@
-// Grilla de caminabilidad (03 §2.4 #1): celdas de 0,5 m en el plano XZ sobre tiles de 1 m. Fuera de la
-// grilla todo es bloqueado. TS puro y determinístico: la misma entrada da la misma grilla.
+// Walkability grid (03 §2.4 #1): 0.5 m cells in the XZ plane over 1 m tiles. Outside the
+// grid everything is blocked. Pure and deterministic TS: the same input gives the same grid.
 
-/** Lado de una celda de caminabilidad, en metros (03 §2.4: 0,5 m sobre tiles de 1 m). */
+/** Side of a walkability cell, in meters (03 §2.4: 0.5 m over 1 m tiles). */
 export const CELL_SIZE = 0.5;
 
 export interface Bounds {
@@ -12,7 +12,7 @@ export interface Bounds {
 }
 
 export interface WalkGrid {
-  /** Esquina (minX, minZ) de la celda [0, 0]. */
+  /** Corner (minX, minZ) of cell [0, 0]. */
   originX: number;
   originZ: number;
   cols: number;
@@ -22,7 +22,7 @@ export interface WalkGrid {
   walkable: Uint8Array;
 }
 
-/** Una celda como [columna (x), fila (z)]. */
+/** A cell as [column (x), row (z)]. */
 export type Cell = readonly [number, number];
 
 export interface Point {
@@ -30,7 +30,7 @@ export interface Point {
   z: number;
 }
 
-/** Rectángulo alineado a los ejes (huella de un volumen). */
+/** Axis-aligned rectangle (footprint of a volume). */
 export interface Rect {
   minX: number;
   maxX: number;
@@ -44,7 +44,7 @@ export const inBounds = (g: WalkGrid, col: number, row: number): boolean =>
 export const isWalkable = (g: WalkGrid, col: number, row: number): boolean =>
   inBounds(g, col, row) && g.walkable[row * g.cols + col] === 1;
 
-/** Celda que contiene el punto (puede quedar fuera de la grilla). */
+/** Cell that contains the point (may fall outside the grid). */
 export const cellAt = (g: WalkGrid, x: number, z: number): Cell => [
   Math.floor((x - g.originX) / g.cellSize),
   Math.floor((z - g.originZ) / g.cellSize),
@@ -55,7 +55,7 @@ export const cellCenter = (g: WalkGrid, col: number, row: number): Point => ({
   z: g.originZ + (row + 0.5) * g.cellSize,
 });
 
-/** Punto en polígono (regla par-impar); los vértices van como [x, z]. */
+/** Point in polygon (even-odd rule); vertices are given as [x, z]. */
 export function pointInPolygon(x: number, z: number, polygon: readonly (readonly [number, number])[]): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -68,18 +68,18 @@ export function pointInPolygon(x: number, z: number, polygon: readonly (readonly
 
 export interface WalkGridSpec {
   bounds: Bounds;
-  /** Polígonos no caminables (agua, bordes): bloquean las celdas cuyo centro cae adentro. */
+  /** Non-walkable polygons (water, edges): they block the cells whose center falls inside. */
   polygons?: readonly (readonly (readonly [number, number])[])[];
-  /** Huellas de volúmenes: bloquean toda celda que se superpone con área positiva. */
+  /** Volume footprints: they block every cell that overlaps with positive area. */
   rects?: readonly Rect[];
   /**
-   * Franjas a lo largo de una polilínea (ríos, plan estetica-c M5): bloquean las celdas cuyo centro queda a menos de
-   * `halfWidth` de la línea.
+   * Strips along a polyline (rivers, plan estetica-c M5): they block the cells whose center is less than
+   * `halfWidth` from the line.
    */
   bands?: readonly { line: readonly Point[]; halfWidth: number }[];
 }
 
-/** Distancia de (x, z) a una polilínea (a su único punto si tiene uno; Infinity si está vacía). */
+/** Distance from (x, z) to a polyline (to its single point if it has one; Infinity if it is empty). */
 export function distanceToPolyline(x: number, z: number, line: readonly Point[]): number {
   if (line.length === 1) {
     const p = line[0] as Point;
@@ -98,7 +98,7 @@ export function distanceToPolyline(x: number, z: number, line: readonly Point[])
   return best;
 }
 
-/** Arma la grilla de un diorama (en build o al cargar). */
+/** Builds a diorama's grid (at build time or on load). */
 export function buildWalkGrid(spec: WalkGridSpec, cellSize = CELL_SIZE): WalkGrid {
   const { bounds } = spec;
   const cols = Math.max(0, Math.round((bounds.maxX - bounds.minX) / cellSize));
@@ -118,7 +118,7 @@ export function buildWalkGrid(spec: WalkGridSpec, cellSize = CELL_SIZE): WalkGri
   return g;
 }
 
-/** Grilla desde un dibujo ASCII ('#' bloqueada, cualquier otro caracter caminable). Para tests y fixtures. */
+/** Grid from an ASCII drawing ('#' blocked, any other character walkable). For tests and fixtures. */
 export function gridFromRows(rows: readonly string[], cellSize = CELL_SIZE, originX = 0, originZ = 0): WalkGrid {
   const cols = rows[0]?.length ?? 0;
   const walkable = new Uint8Array(cols * rows.length);
@@ -129,8 +129,8 @@ export function gridFromRows(rows: readonly string[], cellSize = CELL_SIZE, orig
 }
 
 /**
- * La celda caminable más cercana a `cell` (anillos crecientes, desempate por orden fijo), hasta `maxRadius`
- * celdas. Sirve para un clic sobre un obstáculo: se camina hasta el borde. null si no hay ninguna.
+ * The walkable cell nearest to `cell` (growing rings, tie-break in fixed order), up to `maxRadius`
+ * cells. Used for a click on an obstacle: you walk to the edge. null if there is none.
  */
 export function nearestWalkable(g: WalkGrid, cell: Cell, maxRadius = 3): Cell | null {
   const [c0, r0] = cell;

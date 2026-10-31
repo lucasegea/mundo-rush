@@ -1,8 +1,8 @@
-// A2 (ADR-027): conversación por medidores con Harlan (M9.1, CONV-HARLAN) de punta a punta sin red: juez falso que
-// devuelve etiquetas fijas por frase del jugador, NPC falso, almacén de encuentros en memoria y voz de referencia.
-// Cubre: el NPC no recibe el objetivo antes de su fase; la nota cambia al llenarse el medidor de conocerse; el cierre lo
-// pide el código (criteriaMet en el próximo npcTurn); una charla sin éxito deja la misión abierta y lo conocido guardado;
-// el reinicio de desarrollo; el cambio de sesión de Live en un punto seguro (y su respaldo si la nueva no abre).
+// A2 (ADR-027): meters conversation with Harlan (M9.1, CONV-HARLAN) end to end without network: fake judge that
+// returns fixed labels per player phrase, fake NPC, in-memory encounter store and reference voice.
+// Covers: the NPC doesn't receive the goal before its phase; the note changes when the get-to-know meter fills; the closing is
+// requested by the code (criteriaMet on the next npcTurn); a talk without success leaves the mission open and what is known saved;
+// the development reset; the Live session swap at a safe point (and its fallback if the new one doesn't open).
 import { describe, expect, test } from "vitest";
 import { DIALOGUE_ACTS, initialEncounterState, type EncounterState } from "@lg/core/conversation";
 import { ACTOS_PASO, type FichaConversacion } from "@lg/content-schema";
@@ -33,7 +33,7 @@ const L = (over: Labels = {}): string => JSON.stringify({
   language: "L2", comprehensible: 2, acts: [], npc_facts: [], player_facts: [], objections: [], safety: "none", ...over,
 });
 
-/** Etiquetas por frase del jugador: el camino que llena "Conocer a Harlan" y después el pedido. */
+/** Labels per player phrase: the path that fills "Conocer a Harlan" and then the request. */
 const SCRIPT: Record<string, string> = {
   "Is this your farm?": L({ acts: ["personal_question"], npc_facts: ["granero"] }),
   "Your father built it?": L({ acts: ["follow_up_question"], npc_facts: ["toda_la_vida"] }),
@@ -195,7 +195,7 @@ describe("M9.1 por texto", () => {
     expect(afterRapport.meters.map((m) => m.status)).toEqual(["full", "active"]);
     expect(afterRapport.activeMeter).toBe("recado");
     expect(afterRapport.facts.map((f) => f.id)).toEqual(["granero", "toda_la_vida", "nieto", "perra", "maiz"]);
-    // La nota cambió: el próximo pedido al NPC ya trae el recado y el puente.
+    // The note changed: the next request to the NPC already carries the errand and the bridge.
     const before = r.h.npc.calls.length;
     await r.say(must(GOAL_TURNS[0]));
     const sys = must(r.h.npc.calls[before]).system;
@@ -203,10 +203,10 @@ describe("M9.1 por texto", () => {
     await r.say(must(GOAL_TURNS[1]));
     await r.say(must(GOAL_TURNS[2]));
     expect(must(r.states().at(-1)).completed).toBe(true);
-    expect(r.h.session.snapshot).toMatchObject({ state: "playerTurn", sub: "waiting" }); // 03 §3.5.1: solo se marca
+    expect(r.h.session.snapshot).toMatchObject({ state: "playerTurn", sub: "waiting" }); // 03 §3.5.1: only marked
     const npcCalls = r.h.npc.calls.length;
     await r.say("Thank you!");
-    expect(r.h.npc.calls.length).toBe(npcCalls); // la despedida no pide respuesta: sale el cierre guionado
+    expect(r.h.npc.calls.length).toBe(npcCalls); // the farewell doesn't ask for a reply: the scripted closing goes out
     expect(r.h.of("npc.line").filter((m) => m.line.kind === "closing").map((m) => m.line.text ?? m.line.template)).toEqual([
       "Hm. All right.", "The old posts are behind the barn. You can take them.", "My father cut those.", "Tell Nell... hello.", "LUMI-M9.1-CIERRE",
     ]);
@@ -231,12 +231,12 @@ describe("M9.1 por texto", () => {
     const r = rig({ store });
     await play(r.h, "NPC-HARLAN", []);
     await r.say("Is this your farm?");
-    r.h.scheduler.advance(600_000); // tope duro propio de la escena (topes.duro_s)
+    r.h.scheduler.advance(600_000); // the scene's own hard cap (topes.duro_s)
     await r.h.session.settled();
     expect(r.h.of("scene.end")[0]?.outcome).toBe("hardCap");
     expect(r.h.evidence.list("op-local").some((e) => e.kind === "mission_outcome")).toBe(false);
     expect(r.h.of("scene.effects")).toEqual([]);
-    // Otra conexión: la misma escena, con lo que ya sabías.
+    // Another connection: the same scene, with what you already knew.
     const again = rig({ store });
     await play(again.h, "NPC-HARLAN", []);
     expect(again.h.of("scene.opened")[0]?.missionId).toBe("M9.1");
@@ -268,7 +268,7 @@ describe("M9.1 por texto", () => {
     await play(r.h, "NPC-HARLAN", []);
     for (const text of [...RAPPORT_TURNS, ...GOAL_TURNS, "Thanks!"]) await r.say(text);
     expect(r.h.of("scene.end")[0]?.outcome).toBe("success");
-    // Sin reinicio, Harlan no tiene más escena.
+    // Without a reset, Harlan has no more scene.
     const before = r.h.reconnect();
     const sent: string[] = [];
     await before.receive({ type: "scene.start", npcId: "NPC-HARLAN" });
@@ -295,7 +295,7 @@ describe("M9.1 por texto", () => {
 });
 
 describe("M9.1 por voz: cambio de sesión de Live", () => {
-  /** Estado guardado al borde del lleno: un intercambio más (con un hecho nuevo) abre el pedido. */
+  /** Saved state at the edge of full: one more exchange (with a new fact) opens the request. */
   const nearlyFull = (): EncounterState => ({
     ...initialEncounterState(DEF), unlockedTier: 2, factsLearned: ["granero", "toda_la_vida", "nieto", "perra"], playerShared: ["nombre", "cuadrilla", "origen"],
     meters: [{ points: 15, full: false, steps: {} }, { points: 0, full: false, steps: {} }],
@@ -313,7 +313,7 @@ describe("M9.1 por voz: cambio de sesión de Live", () => {
     };
     const store = createMemoryEncounterStore();
     store.put("op-local", "CONV-HARLAN", nearlyFull());
-    // La transcripción del jugador de la voz de referencia es "Hello, I'm Nico.": el juez falso la etiqueta con un hecho.
+    // The reference voice's player transcript is "Hello, I'm Nico.": the fake judge labels it with a fact.
     const judge = scriptedJudge({ "Hello, I'm Nico.": L({ acts: ["personal_question"], npc_facts: ["maiz"] }) });
     return { providers, r: rig({ store, voice: factory, judge }) };
   }
@@ -336,11 +336,11 @@ describe("M9.1 por voz: cambio de sesión de Live", () => {
     expect(providers.length).toBe(2);
     const [oldP, newP] = [must(providers[0]), must(providers[1])];
     expect(must(newP.setup).systemInstruction).toMatch(/old wooden posts/);
-    // Historial inyectado terminado en un turno del modelo (no genera respuesta).
+    // History injected ending in a model turn (generates no reply).
     const inject = newP.voice.calls.find((c) => c.startsWith("inject:"));
     expect(inject).toMatch(/^inject:user,model.*model$/);
     expect(oldP.voice.closedWith).toBe("done");
-    // El próximo turno ya va por la sesión nueva.
+    // The next turn already goes through the new session.
     await r.h.session.receive({ type: "voice.turnStart" });
     expect(newP.voice.calls.some((c) => c.startsWith("start:"))).toBe(true);
     expect(oldP.voice.calls.filter((c) => c.startsWith("start:")).length).toBe(1);
@@ -352,7 +352,7 @@ describe("M9.1 por voz: cambio de sesión de Live", () => {
     await talk(r);
     const oldP = must(providers[0]);
     expect(oldP.voice.closedWith).toBeNull();
-    expect(oldP.voice.calls.filter((c) => c === "inject:user,model").length).toBe(2); // apertura + nota actualizada
+    expect(oldP.voice.calls.filter((c) => c === "inject:user,model").length).toBe(2); // opening + updated note
     expect(r.h.session.snapshot).toMatchObject({ state: "playerTurn", ctx: { modality: "voice" } });
   });
 

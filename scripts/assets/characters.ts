@@ -1,44 +1,44 @@
-// scripts/assets/characters.ts: la parte de personajes del pipeline de assets (plan estetica-c M3). La llama
-// scripts/assets/optimize.ts para las filas del registro con `personaje` (la única puerta sigue siendo optimize.ts).
+// scripts/assets/characters.ts: the characters part of the asset pipeline (plan estetica-c M3). Called by
+// scripts/assets/optimize.ts for registry rows with `personaje` (the only gate is still optimize.ts).
 //
-// Un CUERPO (`tipo: cuerpo`) sale de un glTF con esqueleto (KayKit Rig_Medium):
-//   · quedan solo las mallas con esqueleto que nombra `nodos` (se van armas, cascos, capas y la cabeza: la cabeza, el
-//     pelo y los accesorios los arma world/ por código y los cuelga del hueso `head`; M5 los pasa al contenido)
-//   · se unen en UNA primitiva con piel (una llamada por cuerpo); se van las animaciones (viven en el archivo de clips)
-//   · cada vértice toma un token de la paleta por reglas, en orden: el hueso que más lo mueve y/o el color de la textura
-//     de paleta del pack muestreado en su UV (se descarta la textura después). Una regla puede marcar el vértice como
-//     `remera` o `pantalon`: se pinta con un token por defecto y queda en el atributo `_ROPA` para que world/ lo
-//     repinte con el color de cada vecino (casa-1..6) sin un .glb por color
-//   · la regla del bisel igual que los props; texturas y materiales afuera; meshopt
-//   · con `simplificar` (plan estetica-c M6, el cuerpo de `low`): la misma pieza con meshopt simplify hasta esa fracción
-//     de los triángulos, sobre el mismo esqueleto y la misma pintura (simplificar solo quita índices: colores, `_ROPA` y
-//     pesos de los vértices que quedan son los del cuerpo completo)
-//   · open-world-3d T7 (AC47): una malla SIN esqueleto colgada de un hueso del esqueleto (el pelo y la cara del rig de
-//     Quaternius cuelgan del hueso `Head`) entra rígida: sus vértices pasan al espacio de enlace de ese hueso y toman
-//     peso 1 en él, así se une a la misma primitiva con piel. Una malla sin esqueleto que no cuelga de un hueso se
-//     rechaza igual que antes.
-// Los CLIPS (`tipo: animaciones`) salen de un glTF del mismo esqueleto: quedan los clips que nombra `clips` (falta uno:
-// se rechaza nombrándolo), sin mallas ni texturas; se remuestrean y se comprimen con meshopt.
+// A BODY (`tipo: cuerpo`) comes from a skinned glTF (KayKit Rig_Medium):
+//   · only the skinned meshes named by `nodos` remain (weapons, helmets, capes and the head go: the head, hair
+//     and accessories are assembled by world/ in code and hung from the `head` bone; M5 moves them to content)
+//   · they are merged into ONE skinned primitive (one call per body); animations go (they live in the clips file)
+//   · each vertex takes a palette token by rules, in order: the bone that moves it most and/or the color of the pack's
+//     palette texture sampled at its UV (the texture is discarded afterwards). A rule may mark the vertex as
+//     `remera` or `pantalon`: it is painted with a default token and stays in the `_ROPA` attribute so world/
+//     repaints it with each neighbor's color (casa-1..6) without one .glb per color
+//   · the bevel rule same as the props; textures and materials out; meshopt
+//   · with `simplificar` (plan estetica-c M6, the `low` body): the same piece with meshopt simplify down to that fraction
+//     of the triangles, on the same skeleton and the same paint (simplify only removes indices: colors, `_ROPA` and
+//     weights of the remaining vertices are those of the full body)
+//   · open-world-3d T7 (AC47): a mesh WITHOUT a skeleton hung from a skeleton bone (the hair and face of the Quaternius
+//     rig hang from the `Head` bone) enters rigid: its vertices move to that bone's bind space and take
+//     weight 1 on it, so it joins the same skinned primitive. A mesh without a skeleton that does not hang from a bone is
+//     rejected as before.
+// The CLIPS (`tipo: animaciones`) come from a glTF of the same skeleton: the clips named by `clips` remain (one missing:
+// it is rejected naming it), without meshes or textures; they are resampled and compressed with meshopt.
 import { Document, Primitive, type Accessor, type Animation, type Node, type Skin, type TypedArray } from "@gltf-transform/core";
 import { dedup, dequantize, meshopt, prune, resample, simplify, weld } from "@gltf-transform/functions";
 import { MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
 import { MAX_DIHEDRAL_DEG, maxDihedralDeg, paintColors, PALETTE, tokenRgb, type PaletteToken } from "@lg/art";
 import { decodificarPng, muestrear, type Imagen } from "./png.ts";
 
-/** Atributo de vértice con la prenda que world/ repinta por personaje (glTF: los atributos propios empiezan con `_`). */
+/** Vertex attribute with the garment that world/ repaints per character (glTF: custom attributes start with `_`). */
 export const ATRIBUTO_ROPA = "_ROPA";
-/** Valores de `_ROPA`. */
+/** Values of `_ROPA`. */
 export const ROPA = { fija: 0, remera: 1, pantalon: 2 } as const;
 export type Prenda = "remera" | "pantalon";
-/** Con qué se pintan las prendas en el archivo (world/ las repinta con el color de cada uno). */
+/** What garments are painted with in the file (world/ repaints them with each one's color). */
 export const TOKEN_PRENDA: Readonly<Record<Prenda, PaletteToken>> = { remera: "casa-1", pantalon: "pantalon" };
-/** Radio por defecto de una regla de color (distancia euclídea en sRGB de 0 a 1). */
+/** Default radius of a color rule (Euclidean distance in sRGB from 0 to 1). */
 export const RADIO_COLOR = 0.12;
 
 export interface ReglaPintura {
-  /** El vértice entra si el hueso que más lo mueve es uno de estos. */
+  /** The vertex enters if the bone that moves it most is one of these. */
   huesos?: readonly string[] | undefined;
-  /** El vértice entra si el color de la textura en su UV está a menos de `radio` de este hex. */
+  /** The vertex enters if the texture color at its UV is within `radio` of this hex. */
   color?: string | undefined;
   radio?: number | undefined;
   token?: string | undefined;
@@ -51,18 +51,18 @@ export interface OpcionesCuerpo {
   pintura: readonly ReglaPintura[];
   bisel?: "rehecho_por_codigo" | "aceptado" | undefined;
   semilla?: number;
-  /** Fracción de triángulos que deja meshopt simplify (0 a 1); sin esto el cuerpo queda completo. */
+  /** Fraction of triangles meshopt simplify leaves (0 to 1); without this the body stays complete. */
   simplificar?: number | undefined;
 }
 
-/** Error máximo de la simplificación, como fracción del radio de la malla (deja llegar a la fracción pedida). */
+/** Maximum simplification error, as a fraction of the mesh radius (lets it reach the requested fraction). */
 export const ERROR_SIMPLIFICAR = 0.02;
 
 export interface ReporteCuerpo {
   triangulos: number;
   vertices: number;
   huesos: string[];
-  /** Vértices por token (y por prenda). */
+  /** Vertices per token (and per garment). */
   tokens: Record<string, number>;
   ropa: Record<Prenda, number>;
   diedroMax: number;
@@ -74,7 +74,7 @@ export interface ReporteClips {
   clips: string[];
   huesos: string[];
   animacionesDescartadas: number;
-  /** Canales que movían nodos fuera del esqueleto (armas, escudos, cascos). */
+  /** Channels that moved nodes outside the skeleton (weapons, shields, helmets). */
   canalesDescartados: number;
 }
 
@@ -91,7 +91,7 @@ const hexASrgb = (hex: string): [number, number, number] => {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };
 
-/** El hueso que más mueve a cada vértice (nombre del joint del esqueleto). */
+/** The bone that moves each vertex most (joint name in the skeleton). */
 function huesoDominante(prim: Primitive, nombres: readonly string[]): string[] {
   const j = prim.getAttribute("JOINTS_0");
   const w = prim.getAttribute("WEIGHTS_0");
@@ -110,7 +110,7 @@ function huesoDominante(prim: Primitive, nombres: readonly string[]): string[] {
   return out;
 }
 
-/** El color de origen (sRGB 0 a 1) de cada vértice: la textura base en su UV, o el factor del material. */
+/** The source color (sRGB 0 to 1) of each vertex: the base texture at its UV, or the material factor. */
 function coloresDeOrigen(prim: Primitive, cache: Map<unknown, Imagen>): [number, number, number][] {
   const n = prim.getAttribute("POSITION")?.getCount() ?? 0;
   const material = prim.getMaterial();
@@ -134,7 +134,7 @@ function coloresDeOrigen(prim: Primitive, cache: Map<unknown, Imagen>): [number,
   return Array.from({ length: n }, () => [f[0], f[1], f[2]] as [number, number, number]);
 }
 
-/** La primera regla que toma el vértice. */
+/** The first rule that takes the vertex. */
 export function reglaDe(reglas: readonly ReglaPintura[], hueso: string, color: readonly [number, number, number]): ReglaPintura | null {
   for (const r of reglas) {
     if (r.huesos && !r.huesos.includes(hueso)) continue;
@@ -149,7 +149,7 @@ export function reglaDe(reglas: readonly ReglaPintura[], hueso: string, color: r
 
 const hex = (c: readonly number[]): string => `#${c.slice(0, 3).map((v) => Math.round(v * 255).toString(16).padStart(2, "0")).join("")}`;
 
-/** Concatena los atributos de varias primitivas (mismo esqueleto) en arreglos nuevos del tipo del primero. */
+/** Concatenates the attributes of several primitives (same skeleton) into new arrays of the first one's type. */
 function concatenar(prims: readonly Primitive[], semantica: string): { array: TypedArray; tipo: ReturnType<Accessor["getType"]>; normalizado: boolean } | null {
   const accs = prims.map((p) => p.getAttribute(semantica));
   if (accs.some((a) => !a)) {
@@ -168,14 +168,14 @@ function concatenar(prims: readonly Primitive[], semantica: string): { array: Ty
   return { array: out, tipo: primero.getType(), normalizado: primero.getNormalized() };
 }
 
-/** Un clip afuera con sus canales y muestreadores (si no, prune deja sus accesores colgados de los muestreadores). */
+/** A clip out with its channels and samplers (otherwise prune leaves its accessors hanging from the samplers). */
 function descartarClip(a: Animation): void {
   for (const c of a.listChannels()) c.dispose();
   for (const s of a.listSamplers()) s.dispose();
   a.dispose();
 }
 
-/** Saca texturas, materiales y lo que quede sin uso. */
+/** Removes textures, materials and whatever is left unused. */
 function limpiar(doc: Document): { texturas: number } {
   const root = doc.getRoot();
   const texturas = root.listTextures().length;
@@ -189,7 +189,7 @@ type Mat4 = number[];
 
 const at = (m: readonly number[], i: number): number => m[i] as number;
 
-/** a · b (columna mayor, como glTF). */
+/** a · b (column-major, like glTF). */
 function mul(a: readonly number[], b: readonly number[]): Mat4 {
   const out = new Array<number>(16).fill(0);
   for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
@@ -200,7 +200,7 @@ function mul(a: readonly number[], b: readonly number[]): Mat4 {
   return out;
 }
 
-/** Inversa de una 4 × 4 afín (columna mayor); rechaza una singular. */
+/** Inverse of an affine 4 × 4 (column-major); rejects a singular one. */
 function invertir(m: readonly number[], id: string): Mat4 {
   const [a, b, c, d, e, f, g, h, i] = [0, 1, 2, 4, 5, 6, 8, 9, 10].map((k) => at(m, k)) as [number, number, number, number, number, number, number, number, number];
   const A = e * i - f * h, B = -(b * i - c * h), C = b * f - c * e;
@@ -218,7 +218,7 @@ function invertir(m: readonly number[], id: string): Mat4 {
   return r;
 }
 
-/** El índice del hueso más cercano de los que cuelga `n` (o -1). */
+/** The index of the nearest bone that `n` hangs from (or -1). */
 function huesoPadre(n: Node, articulaciones: readonly Node[]): number {
   for (let p = n.getParentNode(); p; p = p.getParentNode()) {
     const j = articulaciones.indexOf(p);
@@ -228,18 +228,18 @@ function huesoPadre(n: Node, articulaciones: readonly Node[]): number {
 }
 
 /**
- * Una malla rígida colgada del hueso `j` pasa al espacio de enlace del cuerpo. Un vértice con piel termina en
- * hueso · IBM · v (glTF ignora la transformación del nodo de la malla con piel; medido sobre el rig de Quaternius: así
- * mide 2,74 de alto, como lo dibuja three), entonces v' = (hueso_j · IBM_j)⁻¹ · mundoNodo · v, con peso 1 en `j`.
- * Cambia los atributos de sus primitivas en el lugar (la malla rígida se va después) con los tipos de las del cuerpo,
- * para que se concatenen.
+ * A rigid mesh hung from bone `j` moves to the body's bind space. A skinned vertex ends up at
+ * bone · IBM · v (glTF ignores the skinned mesh node's transform; measured on the Quaternius rig: that way it
+ * is 2.74 tall, as three draws it), so v' = (bone_j · IBM_j)⁻¹ · nodeWorld · v, with weight 1 on `j`.
+ * Changes its primitives' attributes in place (the rigid mesh goes afterwards) with the types of the body's,
+ * so they concatenate.
  */
 function enlazarRigida(doc: Document, nodo: Node, j: number, skin: Skin, molde: Primitive, id: string): void {
   const ibm = Array.from((skin.getInverseBindMatrices()?.getElement(j, []) ?? []) as number[]);
   if (ibm.length !== 16) throw new PersonajeRechazado(`${id}: el esqueleto no trae la matriz de enlace del hueso ${j}`);
   const hueso = skin.listJoints()[j] as Node;
   const m = mul(invertir(mul(hueso.getWorldMatrix(), ibm), id), nodo.getWorldMatrix());
-  const inv = invertir(m, id); // normales: la inversa traspuesta de la parte 3 × 3
+  const inv = invertir(m, id); // normals: the inverse transpose of the 3 × 3 part
   const buffer = doc.getRoot().listBuffers()[0] ?? doc.createBuffer();
   const jMolde = molde.getAttribute("JOINTS_0") as Accessor;
   const wMolde = molde.getAttribute("WEIGHTS_0") as Accessor;
@@ -280,7 +280,7 @@ function enlazarRigida(doc: Document, nodo: Node, j: number, skin: Skin, molde: 
   }
 }
 
-/** Un cuerpo con esqueleto: una primitiva con piel, pintada por reglas, sin texturas ni animaciones. */
+/** A skinned body: one skinned primitive, painted by rules, without textures or animations. */
 export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise<ReporteCuerpo> {
   const root = doc.getRoot();
   await doc.transform(dequantize());
@@ -314,7 +314,7 @@ export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise
   const dominantes = prims.flatMap((p) => huesoDominante(p, huesos));
   const origen = prims.flatMap((p) => coloresDeOrigen(p, cache));
 
-  // Una sola primitiva: los atributos uno detrás del otro y los índices corridos.
+  // A single primitive: the attributes one after another and the indices shifted.
   const buffer = root.listBuffers()[0] ?? doc.createBuffer();
   const unida = doc.createPrimitive();
   for (const sem of ["POSITION", "NORMAL", "TEXCOORD_0", "JOINTS_0", "WEIGHTS_0"]) {
@@ -333,7 +333,7 @@ export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise
   unida.setIndices(doc.createAccessor().setType("SCALAR").setArray(base > 65535 ? Uint32Array.from(indices) : Uint16Array.from(indices)).setBuffer(buffer));
   const posiciones = unida.getAttribute("POSITION")?.getArray() as Float32Array;
 
-  // Reglas → token y prenda de cada vértice.
+  // Rules → token and garment of each vertex.
   const tokens: Record<string, number> = {};
   const ropa: Record<Prenda, number> = { remera: 0, pantalon: 0 };
   const tokenDe: PaletteToken[] = [];
@@ -350,7 +350,7 @@ export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise
       ropa[r.ropa] += 1;
     }
   }
-  // La misma pintura que world/: cada token sobre el cuerpo entero (el degradé va de los pies a los hombros).
+  // The same paint as world/: each token over the whole body (the gradient goes from feet to shoulders).
   const colores = new Float32Array(base * 3);
   const usados = [...new Set(tokenDe)].sort();
   usados.forEach((token, k) => {
@@ -365,13 +365,13 @@ export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise
     throw new PersonajeRechazado(`${o.id}: arista dura de ${diedroMax.toFixed(1)}° (tope ${MAX_DIHEDRAL_DEG}°); registrala con bisel: rehecho_por_codigo | aceptado`);
   }
 
-  // El cuerpo queda en el primer nodo con piel; el resto de las mallas (las otras partes, armas, cascos) se va.
+  // The body stays on the first skinned node; the rest of the meshes (the other parts, weapons, helmets) go.
   const cuerpo = conPiel as Node;
   cuerpo.setMesh(doc.createMesh(o.id.split("/").pop() ?? "cuerpo").addPrimitive(unida)).setName("cuerpo");
   for (const n of root.listNodes()) {
     if (n === cuerpo) continue;
     if (n.getMesh()) n.setMesh(null);
-    n.setSkin(null); // un esqueleto por cuerpo: los de las armas y la cabeza se van con sus mallas
+    n.setSkin(null); // one skeleton per body: those of the weapons and the head go with their meshes
   }
   for (const k of root.listSkins()) if (k !== skin) k.dispose();
   const animacionesDescartadas = root.listAnimations().length;
@@ -390,7 +390,7 @@ export async function optimizarCuerpo(doc: Document, o: OpcionesCuerpo): Promise
   };
 }
 
-/** Los clips de un esqueleto, sin mallas: quedan los pedidos, en el orden del archivo. */
+/** The clips of a skeleton, without meshes: the requested ones remain, in file order. */
 export async function optimizarClips(doc: Document, o: { id: string; clips: readonly string[] }): Promise<ReporteClips> {
   const root = doc.getRoot();
   const presentes = new Set(root.listAnimations().map((a) => a.getName()));
@@ -402,8 +402,8 @@ export async function optimizarClips(doc: Document, o: { id: string; clips: read
     descartarClip(a);
     animacionesDescartadas += 1;
   }
-  // Solo quedan los canales que mueven huesos del esqueleto: los de armas, escudos y cascos del personaje de origen no
-  // tienen nodo en los cuerpos (three avisaría por cada pista sin destino) y el manifiesto exige huesos que existen.
+  // Only the channels that move skeleton bones remain: those of the source character's weapons, shields and helmets have no
+  // node in the bodies (three would warn for each track without a target) and the manifest requires bones that exist.
   const articulaciones = new Set(root.listSkins().flatMap((sk) => sk.listJoints()));
   if (articulaciones.size === 0) throw new PersonajeRechazado(`${o.id}: el archivo de clips no trae esqueleto`);
   let canalesDescartados = 0;

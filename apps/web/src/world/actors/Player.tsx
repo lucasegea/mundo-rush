@@ -1,7 +1,7 @@
-// world/actors/Player.tsx — el jugador (plan estetica-c M1 ítem 13; con esqueleto desde M3). Lee la pose lógica (30 Hz) de forma
-// transitoria e interpola entre el paso anterior y el actual (R7); un salto de la pose (el acomodo al empezar la charla)
-// se desliza desde la última posición dibujada (glide.ts). Publica la posición dibujada para la cámara y los NPCs. En
-// la charla mira al NPC; caminando, hacia donde va.
+// world/actors/Player.tsx — the player (plan estetica-c M1 item 13; with skeleton since M3). Reads the logical pose (30 Hz) transiently
+// and interpolates between the previous step and the current one (R7); a pose jump (the settling at chat start)
+// glides from the last drawn position (glide.ts). Publishes the drawn position for the camera and the NPCs. In
+// the chat it looks at the NPC; walking, toward where it goes.
 import { useRef } from "react";
 import type { SceneDensity, WorldLook } from "@lg/art";
 import type { ConversationFrame } from "../../state/selectors";
@@ -12,12 +12,12 @@ import { Character, type ActorPose } from "./Character";
 import { stepGlide, type GlideState } from "./glide";
 import { PLAYER_LOOK, PLAYER_LOOK_ID } from "./looks";
 
-/** Fracción [0, 1] del paso fijo que ya pasó desde que cambió el tick. */
+/** Fraction [0, 1] of the fixed step that has passed since the tick changed. */
 export function interpolationAlpha(elapsedSec: number, stepSec: number): number {
   return stepSec > 0 ? Math.min(1, Math.max(0, elapsedSec / stepSec)) : 1;
 }
 
-/** `cast`: los personajes del look del diorama (open-world-3d T7b, D-840: el esqueleto sale de ahí, no del relieve). */
+/** `cast`: the characters of the diorama look (open-world-3d T7b, D-840: the skeleton comes from there, not from the relief). */
 export function Player({ conversation, cut, scene = null, lod = "full", cast = null }: { conversation: ConversationFrame | null; cut: boolean; scene?: SceneRole; lod?: SceneDensity; cast?: WorldLook["characters"] | null }) {
   const lastTick = useRef({ tick: -1, at: 0 });
   const glide = useRef<GlideState | null>(null);

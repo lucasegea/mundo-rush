@@ -1,8 +1,8 @@
-// Libro de costos de voz (03 §5.9, §5.11; D-027, D-157): una entrada por `usage` de turno y una por escena, con el
-// costo calculado al escribir con la tabla de precios de models.yaml y POR ADAPTADOR. Adaptador en memoria (tests) y de
-// archivo append-only (apps/server/data/cost-ledger.jsonl, gitignored). Alerta cuando el promedio móvil de US$/min de
-// las últimas escenas supera el umbral; nunca corta el juego (el uso del operador no tiene tope, D-135).
-// Este módulo es uno de los dos lugares de apps/server que escriben a disco (lint, D-108) y rechaza binarios.
+// Voice cost ledger (03 §5.9, §5.11; D-027, D-157): one entry per turn `usage` and one per scene, with the
+// cost computed at write time using the models.yaml price table and PER ADAPTER. In-memory adapter (tests) and
+// append-only file adapter (apps/server/data/cost-ledger.jsonl, gitignored). Alerts when the moving average of US$/min over
+// the last scenes exceeds the threshold; never cuts the game off (operator usage has no cap, D-135).
+// This module is one of the two places in apps/server that write to disk (lint, D-108) and it rejects binaries.
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,7 +46,7 @@ export class UnknownPriceError extends Error {
   }
 }
 
-/** US$ de un `usage` con la tarifa de su adaptador. Tokens: por millón; STT: por minuto; TTS: por millón de caracteres. */
+/** US$ of a `usage` at its adapter's rate. Tokens: per million; STT: per minute; TTS: per million characters. */
 export function usdForUsage(adapter: string, usage: VoiceUsage, prices: Prices): number {
   const M = 1_000_000;
   if (usage.kind === "tokens") {
@@ -60,7 +60,7 @@ export function usdForUsage(adapter: string, usage: VoiceUsage, prices: Prices):
 }
 
 export interface CostAlert {
-  /** Promedio móvil en US$ por minuto de escena de voz. */
+  /** Moving average in US$ per minute of voice scene. */
   usdPerMin: number;
   thresholdUsdPerMin: number;
   scenes: number;
@@ -72,7 +72,7 @@ export interface CostPolicy {
   windowScenes: number;
 }
 
-/** Promedio móvil de las últimas `window` escenas: US$ totales / minutos totales. Sin minutos, 0. */
+/** Moving average over the last `window` scenes: total US$ / total minutes. With no minutes, 0. */
 export function rollingUsdPerMin(scenes: readonly SceneCostEntry[], window: number): { usdPerMin: number; scenes: number } {
   const last = scenes.slice(-window);
   const minutes = last.reduce((n, s) => n + s.wallSeconds / 60, 0);
@@ -101,12 +101,12 @@ export interface SceneCloseInput {
 
 export interface CostLedger {
   recordTurn(input: TurnCostInput): TurnCostEntry;
-  /** Cierra la escena: suma sus turnos, escribe la fila de escena y devuelve la alerta si el promedio móvil la dispara. */
+  /** Closes the scene: sums its turns, writes the scene row and returns the alert if the moving average triggers it. */
   closeScene(input: SceneCloseInput): { entry: SceneCostEntry; alert: CostAlert | null };
   entries(): CostEntry[];
 }
 
-/** Valida antes de guardar: sin binarios (D-108) y con la forma exacta del esquema. */
+/** Validates before saving: no binaries (D-108) and with the exact shape of the schema. */
 function checked(entry: CostEntry): CostEntry {
   assertNoBinary(entry);
   return CostEntrySchema.parse(entry);
@@ -145,7 +145,7 @@ export const costPolicyFromConfig = (m: ModelsConfig): CostPolicy =>
 
 export const createMemoryCostLedger = (policy: CostPolicy): CostLedger => createLedger(policy, [], () => {});
 
-/** Lee el JSONL saltando líneas corruptas. */
+/** Reads the JSONL skipping corrupt lines. */
 export function readCostLedgerFile(path: string): CostEntry[] {
   if (!existsSync(path)) return [];
   const out: CostEntry[] = [];
@@ -155,13 +155,13 @@ export function readCostLedgerFile(path: string): CostEntry[] {
       const parsed = CostEntrySchema.safeParse(JSON.parse(line));
       if (parsed.success) out.push(parsed.data);
     } catch {
-      // línea corrupta: se ignora
+      // corrupt line: ignored
     }
   }
   return out;
 }
 
-/** Adaptador de archivo: una línea JSON por entrada, solo agregar; el promedio móvil sigue entre reinicios. */
+/** File adapter: one JSON line per entry, append only; the moving average carries on across restarts. */
 export function createFileCostLedger(policy: CostPolicy, path: string = DEFAULT_COST_LEDGER_PATH): CostLedger {
   const initial = readCostLedgerFile(path);
   const raw = existsSync(path) ? readFileSync(path, "utf8") : "";

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-// F2 A1 (en la app), A3, A5, A7, A8, A9: el mapa de prueba real (content/dioramas/test.yaml compilado) cargado
-// por boot(), con el store y las acciones reales. El teclado entra por services/input con eventos sintéticos sobre
-// un EventTarget; el clic de R3F entra por state/bridge.ts. Ambos tienen que producir las MISMAS acciones (R10).
-// El lazo de simulación corre con un planificador falso: el tiempo lo avanza el test.
+// F2 A1 (in the app), A3, A5, A7, A8, A9: the real test map (content/dioramas/test.yaml compiled) loaded
+// by boot(), with the real store and actions. The keyboard enters through services/input with synthetic events on
+// an EventTarget; the R3F click enters through state/bridge.ts. Both must produce the SAME actions (R10).
+// The simulation loop runs with a fake scheduler: the test advances the time.
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { circleBlocked, facingFrom, planPath, SIM_DT, THIRD_PERSON, zoomDistanceAt, type DioramaLayout } from "@lg/core";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -20,7 +20,7 @@ import { WorldHud } from "../src/ui/hud/WorldHud";
 import { labelEntries } from "../src/world/labels/labels";
 import { bootApp, compiledClientContent, resetStore } from "./helpers";
 
-/** Planificador de cuadros manual: `advance(ms)` corre un cuadro con el reloj adelantado. */
+/** Manual frame scheduler: `advance(ms)` runs one frame with the clock moved forward. */
 const manualScheduler = () => {
   let now = 0;
   let pending: ((t: number) => void) | null = null;
@@ -62,7 +62,7 @@ const npc = (id: string) => {
   if (!n) throw new Error(`sin ${id}`);
   return n;
 };
-/** Corre cuadros de 1/60 s hasta que la condición se cumpla (o falla). */
+/** Runs 1/60 s frames until the condition holds (or fails). */
 const runUntil = (cond: () => boolean, maxFrames = 1200): number => {
   for (let i = 0; i < maxFrames; i++) {
     if (cond()) return i;
@@ -87,16 +87,16 @@ describe("carga del diorama de prueba", () => {
     const view = selectMapView(gameStore.getState());
     expect(view.status).toBe("ready");
     expect(view.diorama?.id).toBe("test");
-    // Plan estetica-c M5: test.yaml va en el formato de la maqueta (curvas, agua, detalle por zonas). M7: el runtime ya
-    // no tiene capas de tiles ni atlas.
+    // Plan estetica-c M5: test.yaml uses the diorama format (curves, water, per-zone detail). M7: the runtime no
+    // longer has tile layers or atlases.
     expect(view.diorama).not.toHaveProperty("layers");
     expect(view.diorama).not.toHaveProperty("atlas");
     expect(view.diorama?.ground.paths.length).toBeGreaterThan(0);
     expect(view.diorama?.boxes.length).toBeGreaterThan(4);
     expect(view.actors.map((a) => a.id).sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-NELL"]);
-    // Los NPCs llevan el nombre del catálogo (no el id).
+    // NPCs carry the catalog name (not the id).
     expect(view.actors.every((a) => a.name !== a.id)).toBe(true);
-    // Y la apariencia de su ficha (M5), no la de reserva.
+    // And the look of their sheet (M5), not the fallback one.
     expect(view.actors.every((a) => a.look !== null)).toBe(true);
     expect(pos()).toEqual({ x: 0.5, z: 3 });
     expect(selectMapActive(gameStore.getState())).toBe(true);
@@ -108,10 +108,10 @@ describe("carga del diorama de prueba", () => {
       const files = compiledClientContent();
       return name in files ? Promise.resolve(files[name]) : Promise.reject(new Error(url));
     });
-    // Sin WebGL se aterriza en solo-diálogo; elegirlo de nuevo tampoco carga el mapa.
+    // Without WebGL you land in dialog-only; choosing it again does not load the map either.
     await act(async () => { stop = await bootApp({ webgl2: false, fetchJson }); });
     act(() => actions.enterDialogOnly());
-    act(() => actions.enterWorld()); // sin WebGL no se entra al mapa
+    act(() => actions.enterWorld()); // without WebGL you do not enter the map
     expect(fetchJson.mock.calls.map(([u]) => u).some((u) => u.endsWith("dioramas.json"))).toBe(false);
     expect(gameStore.getState().world.dioramaStatus).toBe("idle");
   });
@@ -145,14 +145,14 @@ describe("A1 en el mapa real: camino y colisión", () => {
 
   test("las dos cajas que se tocan por la esquina no dejan pasar en diagonal", async () => {
     await startMap();
-    // Se para al sudoeste de la esquina común (-8, 6) y empuja hacia el noreste.
+    // Stands southwest of the shared corner (-8, 6) and pushes northeast.
     act(() => {
       gameStore.setState((s) => ({ player: { ...s.player, position: { x: -8.6, z: 6.6 }, previous: { x: -8.6, z: 6.6 } } }));
     });
     act(() => actions.move({ x: 1, y: 1 }));
     act(() => { for (let i = 0; i < 90; i++) clock.advance(1000 / 30); });
     const p = pos();
-    // No cruzó al otro lado de la diagonal de las cajas (x > -8 y z < 6 a la vez).
+    // It did not cross to the other side of the boxes' diagonal (x > -8 and z < 6 at once).
     expect(p.x > -8 && p.z < 6).toBe(false);
   });
 
@@ -160,8 +160,8 @@ describe("A1 en el mapa real: camino y colisión", () => {
     await startMap();
     const t0 = gameStore.getState().player.simTick;
     act(() => actions.move({ x: 1, y: 0 }));
-    act(() => clock.advance(0)); // primer cuadro: fija el reloj, sin pasos
-    // 1000 ms en cuadros irregulares (ninguno pasa el tope de 5 pasos por cuadro).
+    act(() => clock.advance(0)); // first frame: sets the clock, no steps
+    // 1000 ms in irregular frames (none exceeds the cap of 5 steps per frame).
     act(() => { for (const ms of [5, 40, 16, 100, 33, 7, 99, 150, 50, 100, 120, 80, 100, 100]) clock.advance(ms); });
     expect(gameStore.getState().player.simTick - t0).toBe(Math.round(1 / SIM_DT));
     act(() => actions.openSettings());
@@ -170,7 +170,7 @@ describe("A1 en el mapa real: camino y colisión", () => {
     expect(gameStore.getState().player.simTick).toBe(t1);
     act(() => actions.closePanel());
     act(() => clock.advance(16));
-    // Al volver no hay un salto por el tiempo en pausa: a lo sumo un paso.
+    // On return there is no jump from the paused time: at most one step.
     expect(gameStore.getState().player.simTick - t1).toBeLessThanOrEqual(1);
   });
 });
@@ -197,13 +197,13 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
     expect(gameStore.getState().player.intent.kind).toBe("path");
     act(() => { settle(); });
     expect(Math.hypot(pos().x + 2, pos().z - 1)).toBeLessThanOrEqual(0.05);
-    // Botón derecho no camina.
+    // Right button does not walk.
     act(() => bridge.pointer({ kind: "ground", x: 3, z: 3 }, 2));
     expect(gameStore.getState().player.intent.kind).toBe("idle");
   });
 
   test("E frente a un NPC = clic sobre ese NPC: el mismo panel de escena", async () => {
-    // Con el teclado.
+    // With the keyboard.
     await startMap();
     const nell = npc("NPC-NELL");
     act(() => bridge.moveTo(nell.x + 1, nell.z));
@@ -211,7 +211,7 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
     act(() => { key("keydown", "KeyE"); });
     const byKey = gameStore.getState().ui.panels;
     stop();
-    // Con el puntero, desde el mismo lugar.
+    // With the pointer, from the same place.
     resetStore();
     await startMap();
     act(() => bridge.moveTo(nell.x + 1, nell.z));
@@ -238,8 +238,8 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
     surface.append(inner);
     const panel = document.createElement("div");
     document.body.append(surface, panel);
-    // Cambio registrado (open-world-3d T5, PD-5 amienda D-208 para la vista por defecto): antes se comparaba
-    // `ui.zoomStep` (índice de la escalera); con el zoom continuo se compara la distancia pedida `ui.camera.zoomDistance`.
+    // Recorded change (open-world-3d T5, PD-5 amends D-208 for the default view): before, it compared
+    // `ui.zoomStep` (ladder index); with continuous zoom it compares the requested distance `ui.camera.zoomDistance`.
     const dist = () => gameStore.getState().ui.camera.zoomDistance;
     const zoomAfter = (fn: () => void) => { act(fn); return dist(); };
     const start = dist();
@@ -247,11 +247,11 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
     expect(byKey).toBeLessThan(start);
     act(() => actions.zoomOut());
     expect(dist()).toBeCloseTo(start, 9);
-    // Teclado español/latinoamericano: el "+" impreso es BracketRight y el "-" es Slash (D-197, nota N1 de QA).
+    // Spanish/Latin American keyboard: the printed "+" is BracketRight and the "-" is Slash (D-197, QA's note N1).
     expect(zoomAfter(() => { key("keydown", "BracketRight", "+"); })).toBeCloseTo(byKey, 9);
     expect(zoomAfter(() => { key("keydown", "Slash", "-"); })).toBeCloseTo(start, 9);
     stop();
-    // La rueda sobre el canvas: el servicio escucha en document (como en window en la app) y mira el target real.
+    // The wheel over the canvas: the service listens on document (as on window in the app) and looks at the real target.
     stop = startInput({ target: document, dispatch: actions.dispatch, isActive: () => selectMapActive(gameStore.getState()) });
     act(() => { inner.dispatchEvent(new WheelEvent("wheel", { deltaY: -120, bubbles: true, cancelable: true })); });
     expect(dist()).toBeCloseTo(byKey, 9);
@@ -269,7 +269,7 @@ describe("A3 teclado (services/input) y clic (state/bridge) producen las mismas 
     act(() => actions.closePanel());
     act(() => { target.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD", ctrlKey: true })); });
     expect(gameStore.getState().player.intent.kind).toBe("idle");
-    // Dentro de un campo de texto: el servicio escucha en document y mira el target real del evento.
+    // Inside a text field: the service listens on document and looks at the event's real target.
     stop();
     stop = startInput({ target: document, dispatch: actions.dispatch, isActive: () => selectMapActive(gameStore.getState()) });
     const input = document.createElement("input");
@@ -327,14 +327,14 @@ describe("A8 aviso de interacción en el HUD (del store, no del canvas)", () => 
     act(() => { for (let i = 0; i < 30; i++) clock.advance(1000 / 30); });
     unsub();
     expect(listener).not.toHaveBeenCalled();
-    // readGame lee la posición sin suscribirse (para world/).
+    // readGame reads the position without subscribing (for world/).
     expect(readGame((s) => s.player.position)).toBe(gameStore.getState().player.position);
   });
 });
 
-// Cambio registrado (open-world-3d T5, PD-5 amienda D-208 para la vista por defecto): este bloque probaba la escalera de
-// 8 pasos (`zoomStep` de 30 a 22 y 160 m, "Zoom 1 de 8"); la cámara del mapa ahora tiene zoom continuo de 2,5 m al mapa
-// entero. Se prueban los mismos topes, teclas y botones sobre la distancia pedida.
+// Recorded change (open-world-3d T5, PD-5 amends D-208 for the default view): this block tested the
+// 8-step ladder (`zoomStep` from 30 to 22 and 160 m, "Zoom 1 de 8"); the map camera now has continuous zoom from 2.5 m to the
+// whole map. The same caps, keys and buttons are tested over the requested distance.
 describe("A9 zoom continuo (PD-5): acotado, con teclas, rueda o botones", () => {
   test("acercar se acota en 2,5 m y alejar en el mapa entero; el HUD dice la distancia y los botones hacen lo mismo", async () => {
     await startMap();
@@ -345,7 +345,7 @@ describe("A9 zoom continuo (PD-5): acotado, con teclas, rueda o botones", () => 
     expect(cam().zoomDistance).toBeCloseTo(THIRD_PERSON.minDistance, 9);
     const walked: number[] = [];
     act(() => { for (let i = 0; i < 40; i++) { key("keydown", "Minus"); walked.push(cam().zoomDistance); } });
-    // Cada paso aleja la misma razón (log-lineal) hasta el mapa entero, donde se queda.
+    // Each step moves away by the same ratio (log-linear) up to the whole map, where it stays.
     const ratios = walked.slice(1, 10).map((d, i) => d / (walked[i] as number));
     for (const r of ratios) expect(r).toBeCloseTo(ratios[0] as number, 6);
     expect(cam().overview).toBe(true);
@@ -366,7 +366,7 @@ describe("A9 zoom continuo (PD-5): acotado, con teclas, rueda o botones", () => 
     document.body.append(surface);
     stop();
     stop = startInput({ target: document, dispatch: actions.dispatch, isActive: () => selectMapActive(gameStore.getState()) });
-    // Cambio registrado (PD-5): una muesca es un paso de zoom continuo; antes se contaban índices de `zoomStep`.
+    // Recorded change (PD-5): a notch is one continuous zoom step; before, `zoomStep` indices were counted.
     const fit = gameStore.getState().ui.camera.fitDistance;
     const t = () => Math.log(gameStore.getState().ui.camera.zoomDistance / THIRD_PERSON.minDistance) / Math.log(fit / THIRD_PERSON.minDistance);
     const start = t();
@@ -458,7 +458,7 @@ describe("unreachable: un destino sin camino se dice por aria-live", () => {
   });
 });
 
-// Plan estetica-c M1 (D-207): las partes del look C que viven en el store, sobre el diorama de prueba real.
+// Plan estetica-c M1 (D-207): the parts of look C that live in the store, over the real test diorama.
 describe("estetica-c M1 en el mapa real", () => {
   test("A7: con los árboles agregados el diorama tiene 8 a 14 árboles y pinos, y su tronco bloquea la grilla", async () => {
     await startMap();
@@ -485,7 +485,7 @@ describe("estetica-c M1 en el mapa real", () => {
     if (!d) throw new Error("sin diorama");
     expect(Math.abs(Math.hypot(after.x - ines.x, after.z - ines.z) - 2.6)).toBeLessThanOrEqual(0.25);
     expect(circleBlocked(d.grid, after.x, after.z, 0.24)).toBe(false);
-    // Del lado desde el que llegó.
+    // From the side it arrived from.
     expect((before.x - ines.x) * (after.x - ines.x) + (before.z - ines.z) * (after.z - ines.z)).toBeGreaterThan(0);
     expect(p.previous).toEqual(p.position);
     expect(p.facing).toBe(facingFrom(ines.x - after.x, ines.z - after.z, p.facing));
@@ -523,10 +523,10 @@ describe("estetica-c M1 en el mapa real", () => {
     expect(selectConversationFrame(gameStore.getState())).toBeNull();
     act(() => actions.closePanel());
     act(() => actions.closePanel());
-    // Cambio registrado (open-world-3d T5, PD-5): la cámara del mapa fuera de la charla pasó de "perspective3D" a
-    // "thirdPerson" (en las dos aserciones de este test).
+    // Recorded change (open-world-3d T5, PD-5): the map camera outside conversation went from "perspective3D" to
+    // "thirdPerson" (in both assertions of this test).
     expect(selectWorldRender(gameStore.getState()).preset).toBe("thirdPerson");
-    // A8: una escena con un NPC que no está en este diorama no encuadra a nadie.
+    // A8: a scene with an NPC that is not in this diorama frames nobody.
     act(() => actions.enterScene("NPC-MAYA"));
     expect(gameStore.getState().ui.panels.at(-1)).toEqual({ kind: "scene", npcId: "NPC-MAYA" });
     expect(selectConversationFrame(gameStore.getState())).toBeNull();
@@ -558,7 +558,7 @@ describe("estetica-c M1 en el mapa real", () => {
       if (highlighted === null) expect(card).toBeNull();
       else expect(card?.textContent?.replace(/\s+/g, " ")).toBe(`E Hablar con ${npcName(highlighted)}`);
     }
-    // El recorrido pasa por los tres NPCs y por lugares sin nadie en rango.
+    // The route passes through the three NPCs and through places with nobody in range.
     expect([...seen].sort()).toEqual(["NPC-HARLAN", "NPC-INES", "NPC-NELL", null].sort());
   });
 });

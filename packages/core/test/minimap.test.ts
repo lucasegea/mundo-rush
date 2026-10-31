@@ -1,5 +1,5 @@
-// Open-world-3d T9 (AC53, AC56 en lo puro): el modelo del minimapa (arriba es adelante, 60 m, anillo del borde), los
-// pendientes y el giro que corta con "reducir movimiento".
+// Open-world-3d T9 (AC53, AC56 in the pure part): the minimap model (up is forward, 60 m, edge ring), the
+// pending markers and the turn that cuts out with "reduce motion".
 import { describe, expect, test } from "vitest";
 import { MINIMAP, minimapModel, pendingNpcs, screenDirToWorld, stepMinimapYaw } from "../src";
 
@@ -10,7 +10,7 @@ const ahead = (yawDeg: number, m: number): { x: number; z: number } => {
 
 describe("AC53 minimapModel: jugador en (0,0), yaw 90, un NPC a 30 m adelante y otro a 100 m", () => {
   const near = { id: "NPC-A", name: "A", ...ahead(90, 30) };
-  const far = { id: "NPC-B", name: "B", x: 70, z: -71.4 }; // ~100 m, a la derecha y atrás
+  const far = { id: "NPC-B", name: "B", x: 70, z: -71.4 }; // ~100 m, to the right and behind
   const m = minimapModel({ player: { x: 0, z: 0 }, yawDeg: 90, npcs: [near, far], sizePx: 160 });
 
   test("adelante con yaw 90 es -x (la misma regla de pantalla que la cámara)", () => {
@@ -35,7 +35,7 @@ describe("AC53 minimapModel: jugador en (0,0), yaw 90, un NPC a 30 m adelante y 
     expect(Math.hypot((b?.x ?? 0) - m.center, (b?.y ?? 0) - m.center)).toBeCloseTo(m.ringPx, 6);
     expect(m.ringPx).toBeCloseTo(80 * MINIMAP.ringFraction, 9);
     expect(b?.distanceM).toBeCloseTo(Math.hypot(70, 71.4), 6);
-    // Con yaw 90 la derecha de la cámara es -z: (70, -71,4) está a la derecha (x > centro) y atrás (y > centro).
+    // With yaw 90 the camera's right is -z: (70, -71.4) is to the right (x > center) and behind (y > center).
     expect(b?.x ?? 0).toBeGreaterThan(m.center);
     expect(b?.y ?? 0).toBeGreaterThan(m.center);
     expect(b?.bearingDeg ?? 0).toBeGreaterThan(90);
@@ -48,7 +48,7 @@ describe("AC53 minimapModel: jugador en (0,0), yaw 90, un NPC a 30 m adelante y 
     const small = minimapModel({ player: { x: 5, z: 5 }, yawDeg: 0, npcs: [{ id: "N", name: "N", x: 5, z: 5 - 30 }], sizePx: 112 });
     expect(small.markers[0]?.x).toBeCloseTo(56, 6);
     expect(small.markers[0]?.y).toBeCloseTo(56 - 28, 6);
-    // Un NPC en el mismo lugar que el jugador queda en el centro, sin rumbo.
+    // An NPC at the same spot as the player ends up at the center, with no bearing.
     const same = minimapModel({ player: { x: 1, z: 1 }, yawDeg: 33, npcs: [{ id: "N", name: "N", x: 1, z: 1 }], sizePx: 160 });
     expect([same.markers[0]?.x, same.markers[0]?.y, same.markers[0]?.bearingDeg]).toEqual([80, 80, 0]);
   });
@@ -92,7 +92,7 @@ describe("AC56 stepMinimapYaw: suavizado, y corte con reducir movimiento", () =>
     expect(one).toBeGreaterThan(0);
     expect(one).toBeLessThan(90);
     expect(one).toBeCloseTo(90 * (1 - Math.exp(-MINIMAP.yawEasePerS * 0.1)), 9);
-    // 350 -> 10 cruza el 0 (20°), no da la vuelta larga.
+    // 350 -> 10 crosses 0 (20°), it does not take the long way around.
     const wrap = stepMinimapYaw(350, 10, 0.1, false);
     expect(wrap > 350 || wrap < 10).toBe(true);
     let y = 0;

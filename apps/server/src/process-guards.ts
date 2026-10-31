@@ -1,8 +1,8 @@
-// Guardas del proceso (A2, nit de la revisión de A1): una promesa rechazada que nadie maneja (p. ej. un gancho async
-// que se escapó) no tira el servidor en medio de una escena: se registra y el proceso sigue. Nunca se imprimen
-// transcripciones ni prompts: solo el mensaje del error.
+// Process guards (A2, nit from the A1 review): a rejected promise nobody handles (e.g. an async hook
+// that slipped through) must not bring the server down in the middle of a scene: it is logged and the process carries on. Transcripts
+// and prompts are never printed: only the error message.
 
-/** Lo mínimo de `process` que hace falta (los tests pasan un emisor falso). */
+/** The minimum of `process` that is needed (tests pass a fake emitter). */
 export interface ProcessEvents {
   on(event: "unhandledRejection", listener: (reason: unknown) => void): unknown;
 }

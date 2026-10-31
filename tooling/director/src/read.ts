@@ -1,5 +1,5 @@
-// Lecturas compartidas del modo director (03 §6.5.2, D-188): la CLI y el servidor MCP son cáscaras sobre esto.
-// Leen `.director/` y `content/`; no escriben nada.
+// Shared reads of director mode (03 §6.5.2, D-188): the CLI and the MCP server are shells over this.
+// They read `.director/` and `content/`; they write nothing.
 import { existsSync, readFileSync } from "node:fs";
 import { compilarContenido } from "@lg/content-schema";
 import { DirectorSnapshotSchema, type DirectorSnapshot, type JournalEvent } from "@lg/protocol/director";
@@ -7,7 +7,7 @@ import { leerContenido } from "../../../scripts/content/build.ts";
 import { statePath } from "./files.ts";
 import { readSessionEvents, sessionIds } from "./journal.ts";
 
-/** El último snapshot que escribió el plugin, o null si no hay (el juego no corrió con `npm run dev:director`). */
+/** The last snapshot the plugin wrote, or null if there is none (the game did not run with `npm run dev:director`). */
 export function readState(root: string): DirectorSnapshot | null {
   const path = statePath(root);
   if (!existsSync(path)) return null;
@@ -15,9 +15,9 @@ export function readState(root: string): DirectorSnapshot | null {
 }
 
 export interface JournalQuery {
-  /** Sesión a leer; por defecto la más reciente. */
+  /** Session to read; by default the most recent. */
   session?: string;
-  /** Solo los últimos N eventos. */
+  /** Only the last N events. */
   tail?: number;
 }
 
@@ -43,7 +43,7 @@ export interface SessionInfo {
   npcsTalked: string[];
 }
 
-/** Sesiones del diario, de la más nueva a la más vieja, con un resumen. */
+/** Journal sessions, newest to oldest, with a summary. */
 export function listSessions(root: string): SessionInfo[] {
   return sessionIds(root).map((id) => {
     const events = readSessionEvents(root, id);
@@ -65,7 +65,7 @@ export interface ContentLookup {
   text: string;
 }
 
-/** Dónde está definido un id de contenido (`NPC-NELL`, `M1.1`, `M1.1-E1`, `SAB-MATE`, `test`…) y su YAML. */
+/** Where a content id is defined (`NPC-NELL`, `M1.1`, `M1.1-E1`, `SAB-MATE`, `test`…) and its YAML. */
 export function lookupContent(root: string, id: string): ContentLookup | null {
   const files = leerContenido(root);
   const { conjunto } = compilarContenido(files);
@@ -76,13 +76,13 @@ export function lookupContent(root: string, id: string): ContentLookup | null {
   return scene ? { id, file: scene.archivo, text: files.find((f) => f.ruta === scene.archivo)?.texto ?? "" } : null;
 }
 
-/** "hace 3 s" / "hace 2 min": cuán viejo es el snapshot (si el juego se cerró, se nota). */
+/** "hace 3 s" / "hace 2 min": how old the snapshot is (if the game was closed, the assistant sees it). */
 const age = (at: string, now: number): string => {
   const s = Math.max(0, Math.round((now - Date.parse(at)) / 1000));
   return s < 120 ? `hace ${s} s` : `hace ${Math.round(s / 60)} min`;
 };
 
-/** Una línea legible: diorama, tile, NPC cercano, misión y paso (03 §6.5.2). */
+/** A readable line: diorama, tile, nearby NPC, mission and step (03 §6.5.2). */
 export function formatWhere(s: DirectorSnapshot | null, now: number = Date.now()): string {
   if (!s) return "sin estado: el juego no corre con `npm run dev:director` (o todavía no mandó nada)";
   const tile = s.player.tile ? `tile (${s.player.tile.x},${s.player.tile.y})` : "fuera del mapa";

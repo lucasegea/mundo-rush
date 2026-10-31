@@ -1,5 +1,5 @@
-// Carga de apps/server/config/models.yaml (03 §5.10, ADR-018), validada con zod. Solo lectura. Sin claves: el archivo
-// nunca las tiene y este módulo solo informa si la variable existe (presencia, nunca el valor).
+// Loads apps/server/config/models.yaml (03 §5.10, ADR-018), validated with zod. Read-only. No keys: the file
+// never has them and this module only reports whether the variable exists (presence, never the value).
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
@@ -23,7 +23,7 @@ const VoiceRole = z.strictObject({
 });
 
 const PerM = z.number().nonnegative();
-/** Tarifas por adaptador (US$; 03 §5.9): tokens por millón, STT por minuto, TTS por millón de caracteres. */
+/** Per-adapter rates (US$; 03 §5.9): tokens per million, STT per minute, TTS per million characters. */
 export const PricesSchema = z.strictObject({
   version: z.string(),
   source: z.string(),
@@ -35,7 +35,7 @@ export const PricesSchema = z.strictObject({
 export type Prices = z.infer<typeof PricesSchema>;
 
 export const ModelsConfigSchema = z.strictObject({
-  /** A2 (ADR-027): `judge` etiqueta cada intercambio de una conversación por medidores (JSON; el código suma). */
+  /** A2 (ADR-027): `judge` labels each exchange of a meters conversation (JSON; the code sums). */
   roles: z.strictObject({ textNpc: Role, observer: Role, judge: Role, npcVoice: VoiceRole }),
   voice: z.strictObject({
     npc: z.strictObject({ adapter: z.enum(["live", "cascade"]) }),
@@ -50,7 +50,7 @@ export const ModelsConfigSchema = z.strictObject({
     hardCapMs: z.number().int().positive(),
     turnTimerMs: z.number().int().positive(),
   }).refine((s) => s.softCapMs < s.hardCapMs, { message: "softCapMs tiene que ser menor que hardCapMs" }),
-  /** Capa "clasificador" de la moderación (03 §7.7, F4.2). `none`: corren solo las listas y las reglas. */
+  /** The moderation "classifier" layer (03 §7.7, F4.2). `none`: only the lists and rules run. */
   moderation: z.strictObject({ classifier: z.enum(["none"]) }),
   prices: PricesSchema,
   cost: z.strictObject({ alertUsdPerMin: z.number().positive(), windowScenes: z.number().int().positive() }),
@@ -58,7 +58,7 @@ export const ModelsConfigSchema = z.strictObject({
 export type ModelsConfig = z.infer<typeof ModelsConfigSchema>;
 export type ModelRole = ModelsConfig["roles"]["textNpc"];
 
-/** Lee y valida la configuración; falla claro con la ruta del campo inválido. */
+/** Reads and validates the configuration; fails clearly with the path of the invalid field. */
 export function loadModelsConfig(path: string = MODELS_CONFIG_PATH): ModelsConfig {
   const parsed = ModelsConfigSchema.safeParse(parse(readFileSync(path, "utf8")));
   if (!parsed.success) {
@@ -68,13 +68,13 @@ export function loadModelsConfig(path: string = MODELS_CONFIG_PATH): ModelsConfi
   return parsed.data;
 }
 
-/** Nombre de la variable de la clave del proveedor (03 §4.4). */
+/** Name of the provider key variable (03 §4.4). */
 export const GEMINI_KEY_VAR = "LG_GEMINI_API_KEY";
 
-/** Presencia de la clave, nunca su valor. */
+/** Presence of the key, never its value. */
 export const hasGeminiKey = (env: Record<string, string | undefined>): boolean => (env[GEMINI_KEY_VAR] ?? "") !== "";
 
-/** El clasificador de moderación configurado (F4.2). Hoy solo `none`: un proveedor real necesita clave (D-027). */
+/** The configured moderation classifier (F4.2). For now only `none`: a real provider needs a key (D-027). */
 export function moderationProviderFromConfig(models: ModelsConfig): ModerationProvider | null {
   switch (models.moderation.classifier) {
     case "none":

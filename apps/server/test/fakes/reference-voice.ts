@@ -1,7 +1,7 @@
-// Adaptador de voz de referencia, en memoria (F5.1a A1): implementa `RealtimeVoiceProvider` sin red y con respuestas
-// guionadas. Es la vara del test de contrato compartido: el adaptador Live (contra el servidor falso) y, en F5.1b, la
-// cascada tienen que emitir la misma secuencia de tipos de evento. Los eventos salen en microtareas (asíncronos, como un
-// proveedor real). No guarda el audio: solo cuenta muestras.
+// Reference voice adapter, in memory (F5.1a A1): implements `RealtimeVoiceProvider` with no network and with scripted
+// replies. It is the yardstick of the shared contract test: the Live adapter (against the fake server) and, in F5.1b, the
+// cascade must emit the same sequence of event types. Events go out in microtasks (asynchronous, like a real
+// provider). It doesn't keep the audio: it only counts samples.
 import type { RealtimeVoiceProvider, ScriptedTurn, VoiceEvent } from "../../src/providers/types.ts";
 import { DEFAULT_REPLY, type ScriptedReply } from "./live-server.ts";
 
@@ -13,11 +13,11 @@ export interface ReferenceVoice extends RealtimeVoiceProvider {
 
 export interface ReferenceOptions {
   replies?: readonly ScriptedReply[];
-  /** open() rechaza (sesión que no abre). */
+  /** open() rejects (a session that doesn't open). */
   failOpen?: boolean;
   /**
-   * Nombre de adaptador para el ledger. Por omisión "gemini-live": el uso que emite tiene la forma de tokens de Live,
-   * así el runtime registra el costo con esas tarifas.
+   * Adapter name for the ledger. By default "gemini-live": the usage it emits has the shape of Live tokens,
+   * so the runtime records the cost with those rates.
    */
   adapter?: string;
 }

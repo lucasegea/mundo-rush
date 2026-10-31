@@ -1,21 +1,21 @@
-// world/terrain/buildTerrain.ts: terreno por alturas de la propuesta C (plan estetica-c M1 ítem 8 y M5), puro y sin
-// three: una malla de alturas continua (una sola grilla indexada: sin vértices duplicados) con color por vértice. Lee
-// el suelo del formato de la maqueta (M5) detrás de `GroundSource`: caminos y ríos por curvas (polilíneas que el núcleo
-// muestreó), agua por polígonos. El terreno se aplana bajo los caminos (también entre las lomas de afuera), se hunde bajo
-// el agua y lleva orilla; el camino se pinta `camino` (o piedra si es empedrado) con borde ruidoso `tierra-borde`.
-// Plan estetica-c M7 (D-207): el adaptador de tiles de M1 se retiró junto con las capas `tiles` del schema.
-// Dentro de los límites caminables el suelo es plano en y = 0 (el raycast del suelo sigue siendo el plano invisible);
-// afuera sube en lomas de hasta `lomas` m, lo bastante lejos como para que ninguna cámara de juego vea el borde (A2).
-// Las líneas de la grilla salen de @lg/art (la misma cuenta que usa el estimador de validate:content). Determinístico
-// con la misma semilla.
-// Open-world-3d T6 (D-819): un diorama con `terreno.relieve` tiene relieve interior (`reliefAt` de @lg/art, con llanos
-// en la aparición y en cada NPC), los caminos aplanan su sección (el centro sigue al relieve, el ancho toma su altura),
-// el paso de la malla es el del tier (OPEN_WORLD_DENSITY) y cada vértice lleva su peso de tierra (`dirt`: caminos y
-// llanos, con la regla suave de D-819) para el sombreador del suelo. `heightAt` interpola sobre los triángulos de la
-// malla (no bilineal, que queda para los dioramas sin relieve): lo que se dibuja es lo que se mide (actores, props,
-// cámara, pasto y el raycast del suelo).
-// Open-world-3d T7b (D-839): los colores salen de la paleta del look (`spec.look`): los papeles del terreno toman su token
-// del mismo nombre (o el del camino del look) y la `paleta` de cada diorama los re-apunta DENTRO de esa paleta.
+// world/terrain/buildTerrain.ts: terrain by heights from proposal C (plan estetica-c M1 item 8 and M5), pure and without
+// three: a continuous height mesh (a single indexed grid: no duplicate vertices) with vertex color. It reads
+// the ground of the diorama format (M5) behind `GroundSource`: paths and rivers by curves (polylines the core
+// sampled), water by polygons. The terrain flattens under paths (also between the outer hills), sinks under
+// the water and has a shore; the path is painted `camino` (or stone if paved) with a noisy `tierra-borde` edge.
+// Plan estetica-c M7 (D-207): the M1 tiles adapter was removed along with the schema `tiles` layers.
+// Inside the walkable bounds the ground is flat at y = 0 (the ground raycast is still the invisible plane);
+// outside it rises in hills of up to `lomas` m, far enough that no game camera sees the edge (A2).
+// The grid lines come from @lg/art (the same count the validate:content estimator uses). Deterministic
+// with the same seed.
+// Open-world-3d T6 (D-819): a diorama with `terreno.relieve` has interior relief (`reliefAt` from @lg/art, with flats
+// at the spawn and at each NPC), paths flatten their section (the center follows the relief, the width takes its height),
+// the mesh step is the tier one (OPEN_WORLD_DENSITY) and each vertex carries its dirt weight (`dirt`: paths and
+// flats, with D-819 soft rule) for the ground shader. `heightAt` interpolates over the mesh triangles
+// (not bilinear, which stays for dioramas without relief): what is drawn is what is measured (actors, props,
+// camera, grass and the ground raycast).
+// Open-world-3d T7b (D-839): colors come from the look palette (`spec.look`): the terrain roles take their token
+// of the same name (or the look path one) and each diorama `paleta` re-points them WITHIN that palette.
 import type { Bounds, DioramaGround, WalkGrid } from "@lg/core";
 import {
   DENSITY, FINE_STEP as ART_FINE_STEP, HILL_MAX as ART_HILL_MAX, insidePolygon, noise2, OPEN_WORLD_DENSITY, pavingStoneCount,
@@ -26,54 +26,54 @@ import {
 import { mixRgb, scaleRgb } from "./color";
 import { rng } from "../materials/rng";
 
-/** Metros de terreno más allá de los límites caminables, de cada lado (D-208; ver @lg/art terrain.ts). */
+/** Meters of terrain beyond the walkable bounds, on each side (D-208; see @lg/art terrain.ts). */
 export const TERRAIN_SKIRT = ART_TERRAIN_SKIRT;
-/** Separación de vértices cerca y dentro de los límites (la mitad de una celda de 1 m). */
+/** Vertex spacing near and inside the bounds (half of a 1 m cell). */
 export const FINE_STEP = ART_FINE_STEP;
 export const HILL_MAX = ART_HILL_MAX;
 export const TERRAIN_SEED = ART_TERRAIN_SEED;
 /**
- * La textura de pincel se repite sobre las UV del terreno: su escala en metros se fija con la falda de M1 (48 m), así
- * alargar la falda no agranda la pincelada.
+ * The brush texture repeats over the terrain UVs: its scale in meters is fixed with the M1 skirt (48 m), so
+ * lengthening the skirt does not enlarge the brushstroke.
  */
 const BRUSH_UV_SKIRT = 48;
 const HILL_RAMP = 16;
 
 export interface TerrainSpec {
   bounds: Bounds;
-  /** El suelo del formato de la maqueta (plan estetica-c M5). */
+  /** The ground of the diorama format (plan estetica-c M5). */
   ground: DioramaGround;
   seed?: number;
-  /** Plan estetica-c M6: resolución de la malla por tier (la reducida de `low`: paso fino de 1 m y falda más gruesa). */
+  /** Plan estetica-c M6: mesh resolution per tier (the reduced one of `low`: fine 1 m step and coarser skirt). */
   density?: SceneDensity;
-  /** Open-world-3d T6: el tier del mundo abierto (paso del terreno de OPEN_WORLD_DENSITY si el suelo tiene relieve). */
+  /** Open-world-3d T6: the open-world tier (terrain step of OPEN_WORLD_DENSITY if the ground has relief). */
   tier?: WorldTier;
-  /** Open-world-3d T7b: el look del diorama (su paleta, su camino y los colores del suelo del mundo abierto). */
+  /** Open-world-3d T7b: the diorama look (its palette, its path and the open-world ground colors). */
   look: Pick<WorldLook, "palette" | "road" | "ground">;
 }
 
 export interface Terrain {
-  /** Líneas de la grilla en x y en z (crecientes). */
+  /** Grid lines in x and in z (increasing). */
   xs: Float64Array;
   zs: Float64Array;
-  /** x, y, z intercalados; vértice (i, j) = j * xs.length + i. */
+  /** x, y, z interleaved; vertex (i, j) = j * xs.length + i. */
   positions: Float32Array;
-  /** r, g, b lineales intercalados. */
+  /** r, g, b linear interleaved. */
   colors: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;
   extent: Bounds;
-  /** Open-world-3d T6: peso de tierra por vértice (0 pasto, 1 camino o llano; la regla suave de D-819). */
+  /** Open-world-3d T6: dirt weight per vertex (0 grass, 1 path or flat; D-819 soft rule). */
   dirt: Float32Array;
-  /** ¿Relieve interior? (el sombreador del suelo del mundo abierto lo usa; sin relieve, el suelo de campesino). */
+  /** Interior relief? (the open-world ground shader uses it; without relief, the farmer ground). */
   relief: boolean;
-  /** El paso fino de la malla (m). */
+  /** The fine mesh step (m). */
   step: number;
-  /** Altura del terreno: con relieve, sobre los triángulos de la malla (open-world-3d T6); sin relieve, bilineal. */
+  /** Terrain height: with relief, over the mesh triangles (open-world-3d T6); without relief, bilinear. */
   heightAt(x: number, z: number): number;
-  /** Peso de tierra interpolado igual que la altura (el canal G de la textura del pasto, PD-2). */
+  /** Dirt weight interpolated the same as the height (the G channel of the grass texture, PD-2). */
   dirtAt(x: number, z: number): number;
-  /** Índice del vértice que está exactamente en (x, z), o -1. */
+  /** Index of the vertex exactly at (x, z), or -1. */
   vertexAt(x: number, z: number): number;
 }
 
@@ -82,14 +82,14 @@ const smooth = (a: number, b: number, x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
-/** Distancia de (x, z) a los límites (0 adentro). */
+/** Distance from (x, z) to the bounds (0 inside). */
 export function outsideDistance(b: Bounds, x: number, z: number): number {
   const dx = Math.max(b.minX - x, 0, x - b.maxX);
   const dz = Math.max(b.minZ - z, 0, z - b.maxZ);
   return Math.hypot(dx, dz);
 }
 
-/** Índice de la celda [lines[k], lines[k+1]] que contiene v (acotado). */
+/** Index of the cell [lines[k], lines[k+1]] that contains v (clamped). */
 function lineCell(lines: Float64Array, v: number): number {
   let lo = 0;
   let hi = lines.length - 2;
@@ -101,27 +101,27 @@ function lineCell(lines: Float64Array, v: number): number {
   return lo;
 }
 
-/** Lo que el terreno pregunta del suelo. */
+/** What the terrain asks of the ground. */
 export interface GroundSource {
-  /** Superficie en (x, z): camino, empedrado o pasto. */
+  /** Surface at (x, z): path, paved or grass. */
   surface(x: number, z: number): "camino" | "empedrado" | "pasto";
-  /** ¿Agua en (x, z)? */
+  /** Water at (x, z)? */
   isWater(x: number, z: number): boolean;
-  /** Para un punto en el agua: distancia a la orilla (m, acotada a 1,5). */
+  /** For a point in the water: distance to the shore (m, clamped to 1.5). */
   shoreDistance(x: number, z: number): number;
-  /** Distancia al borde del camino más cercano (0 encima; Infinity lejos), hasta `maxR`. */
+  /** Distance to the nearest path edge (0 on top; Infinity far away), up to `maxR`. */
   roadDistance(x: number, z: number, maxR: number): number;
-  /** Distancia al agua (0 encima; Infinity lejos), hasta `maxR`. */
+  /** Distance to the water (0 on top; Infinity far away), up to `maxR`. */
   waterDistance(x: number, z: number, maxR: number): number;
-  /** Fuera de los límites: cuánto se aplanan las lomas acá (0 nada, 1 del todo), por un camino o un río. */
+  /** Outside the bounds: how much the hills flatten here (0 none, 1 fully), by a path or a river. */
   flatten(x: number, z: number): number;
 }
 
-/** El suelo del formato de la maqueta (plan estetica-c M5): curvas muestreadas y polígonos. */
+/** The ground of the diorama format (plan estetica-c M5): sampled curves and polygons. */
 export function curveGround(g: DioramaGround): GroundSource {
   const roads = g.paths.filter((p) => p.surface === "camino");
   const waterDepth = (x: number, z: number): number => {
-    // >0 adentro del agua: distancia a la orilla; 0 afuera.
+    // >0 inside the water: distance to the shore; 0 outside.
     let best = 0;
     for (const poly of g.ponds) if (insidePolygon(x, z, poly)) best = Math.max(best, polygonEdgeDistance(x, z, poly));
     for (const r of g.rivers) best = Math.max(best, r.width / 2 - polylineDistance(x, z, r.line));
@@ -157,19 +157,19 @@ export interface TerrainShape {
   bounds: Bounds;
   hillMax: number;
   seed: number;
-  /** Open-world-3d T6: relieve interior con estos llanos; null = suelo plano adentro (campesino). */
+  /** Open-world-3d T6: interior relief with these flats; null = flat ground inside (farmer). */
   pads: readonly ReliefPad[] | null;
-  /** Caminos (curvas muestreadas) que aplanan su sección. */
+  /** Paths (sampled curves) that flatten their section. */
   roads: readonly { width: number; line: readonly { x: number; z: number }[] }[];
 }
 
-/** Sobre el ancho del camino más este margen la sección es plana; hasta `+ ROAD_BANK` se mezcla con el relieve. */
+/** Over the path width plus this margin the section is flat; up to `+ ROAD_BANK` it blends with the relief. */
 const ROAD_FLAT = 0.8;
 const ROAD_BANK = 6;
 
 /**
- * Relieve con los caminos aplanados (open-world-3d T6, D-819): cerca de un camino el suelo toma la altura del relieve en
- * el punto más cercano de su centro (la sección queda plana) y se mezcla con el relieve en el talud.
+ * Relief with the paths flattened (open-world-3d T6, D-819): near a path the ground takes the relief height at
+ * the nearest point of its center (the section stays flat) and blends with the relief on the slope.
  */
 function reliefHeight(shape: TerrainShape, x: number, z: number): number {
   const pads = shape.pads ?? [];
@@ -184,7 +184,7 @@ function reliefHeight(shape: TerrainShape, x: number, z: number): number {
   return reliefAt(best.x, best.z, shape.seed, pads) + (base - reliefAt(best.x, best.z, shape.seed, pads)) * t;
 }
 
-/** Agua: se hunde solo un vértice estrictamente adentro (los cuatro cuadrantes son agua). */
+/** Water: only a vertex strictly inside sinks (all four quadrants are water). */
 function waterSink(src: GroundSource, x: number, z: number): number | null {
   const e = 1e-3;
   const water = [[-e, -e], [e, -e], [-e, e], [e, e]].every(([dx, dz]) => src.isWater(x + (dx as number), z + (dz as number)));
@@ -196,7 +196,7 @@ function groundHeight(shape: TerrainShape, src: GroundSource, x: number, z: numb
   const out = outsideDistance(shape.bounds, x, z);
   const sink = waterSink(src, x, z);
   if (shape.pads) {
-    // Relieve (open-world-3d T6): el agua se hunde desde el relieve; afuera, las lomas suben sobre él.
+    // Relief (open-world-3d T6): the water sinks from the relief; outside, the hills rise over it.
     const r = reliefHeight(shape, x, z);
     const hill = out > 0
       ? smooth(0, HILL_RAMP, out) * Math.max(0, shape.hillMax - 0.25) * (0.55 + 0.45 * noise2(x * 0.05 + 9, z * 0.05, shape.seed)) * (1 - src.flatten(x, z))
@@ -204,8 +204,8 @@ function groundHeight(shape: TerrainShape, src: GroundSource, x: number, z: numb
     return r + hill + (sink ?? 0);
   }
   if (out > 0) {
-    // Lomas: suben suave desde el borde de los límites, con variación de altura por ruido; un camino o un río las
-    // aplana (el camino sale del valle entre las lomas).
+    // Hills: rise smoothly from the edge of the bounds, with height variation by noise; a path or a river
+    // flattens them (the path comes out of the valley between the hills).
     const hill = smooth(0, HILL_RAMP, out) * Math.max(0, shape.hillMax - 0.25) * (0.55 + 0.45 * noise2(x * 0.05 + 9, z * 0.05, shape.seed));
     const wobble = (noise2(x * 0.21 + 5, z * 0.21, shape.seed) - 0.5) * 0.5 * smooth(0, 4, out);
     const h = Math.min(shape.hillMax, hill + wobble) * (1 - src.flatten(x, z));
@@ -218,7 +218,7 @@ type Palette = Record<"pasto" | "luz" | "sombra" | "camino" | "borde" | "orilla"
 
 type TerrainLook = TerrainSpec["look"];
 
-/** Un token (o un hex suelto de la `paleta` del diorama) en lineal, en la paleta del look. */
+/** A token (or a loose hex from the diorama `paleta`) in linear, in the look palette. */
 const lookRgb = (look: TerrainLook, v: string): Rgb => hexToLinear(v.startsWith("#") ? v : look.palette[v as PaletteToken]);
 
 function palette(look: TerrainLook, overrides: Readonly<Record<string, string>> = {}): Palette {
@@ -235,9 +235,9 @@ function groundColor(p: Palette, shape: TerrainShape, src: GroundSource, x: numb
   const n2 = noise2(x * 0.6 + 3, z * 0.6, seed);
   let c = mixRgb(mixRgb(p.pasto, p.luz, smooth(0.45, 0.8, n1) * 0.8), p.sombra, smooth(0.55, 0.9, n2) * 0.25);
   const outside = outsideDistance(shape.bounds, x, z) > 0;
-  // Afuera las lomas pueden quedar apenas bajo 0 sin ser agua (el temblor del borde): ahí solo pinta agua un río.
+  // Outside, the hills can end up just below 0 without being water: there only a river paints water.
   if (h < 0 && (!outside || src.isWater(x, z))) return mixRgb(p.orilla, p.honda, smooth(-0.3, -0.9, h));
-  // Corrimiento ruidoso de la consulta: los bordes entre superficies quedan pintados a mano, no en escalones.
+  // Noisy query offset: the edges between surfaces are hand-painted, not in steps.
   const jx = x + (noise2(x * 1.9 + 7, z * 1.9, seed) - 0.5) * 0.4;
   const jz = z + (noise2(x * 1.9, z * 1.9 + 7, seed) - 0.5) * 0.4;
   const surface = src.surface(jx, jz);
@@ -251,7 +251,7 @@ function groundColor(p: Palette, shape: TerrainShape, src: GroundSource, x: numb
   return c;
 }
 
-/** Los colores del suelo del mundo abierto (mockup V6 `buildTerrain`, con el alto y el alterno más verdes). */
+/** The open-world ground colors (V6 mockup `buildTerrain`, with the height and the alternate ones greener). */
 function openPalette(look: TerrainLook): Record<"bajo" | "alto" | "alterno" | "bosque" | "roca" | "rocaCalida", Rgb> {
   const v = look.ground.vertex;
   return {
@@ -260,7 +260,7 @@ function openPalette(look: TerrainLook): Record<"bajo" | "alto" | "alterno" | "b
   };
 }
 
-/** Normales por vértice ponderadas por área (las mismas que `computeVertexNormals` de three sobre esta malla). */
+/** Per-vertex normals weighted by area (the same as three `computeVertexNormals` over this mesh). */
 export function vertexNormals(positions: Float32Array, indices: Uint32Array): Float32Array {
   const n = new Float32Array(positions.length);
   const p = (k: number): number => positions[k] as number;
@@ -274,7 +274,7 @@ export function vertexNormals(positions: Float32Array, indices: Uint32Array): Fl
     const e2x = p(c) - p(a);
     const e2y = p(c + 1) - p(a + 1);
     const e2z = p(c + 2) - p(a + 2);
-    // (b - a) × (c - a) de cada triángulo tal como está en el índice: con el orden (a, c, b) de la malla apunta a +y.
+    // (b - a) × (c - a) of each triangle as it is in the index: with the mesh (a, c, b) order it points to +y.
     const cx = e1y * e2z - e1z * e2y;
     const cy = e1z * e2x - e1x * e2z;
     const cz = e1x * e2y - e1y * e2x;
@@ -294,9 +294,9 @@ export function vertexNormals(positions: Float32Array, indices: Uint32Array): Fl
 }
 
 /**
- * Peso de tierra de un vértice (D-819, mockup V6): 1 sobre el camino (medio ancho con borde ruidoso de +-0,45 m) y en
- * el llano de cada NPC (3,4 m), bajando a 0 en 0,75 pasos de malla, así a cualquier paso el camino no tiene huecos
- * (AC32). La roca de las pendientes se come hasta el 80 % (eso lo aplica buildTerrain).
+ * Dirt weight of a vertex (D-819, V6 mockup): 1 on the path (half width with a noisy edge of +-0.45 m) and on
+ * each NPC flat (3.4 m), dropping to 0 in 0.75 mesh steps, so at any step the path has no gaps
+ * (AC32). The slope rock eats up to 80 % (buildTerrain applies that).
  */
 export function roadWeight(shape: TerrainShape, x: number, z: number, step: number): number {
   let w = 0;
@@ -307,7 +307,7 @@ export function roadWeight(shape: TerrainShape, x: number, z: number, step: numb
     const hw = r.width / 2 + (noise2(x / 3, z / 3, shape.seed + 21) - 0.5) * 0.9;
     w = Math.max(w, Math.min(1, Math.max(0, 1 - (q.d - hw) / fall)));
   }
-  // El primer pad es la aparición (un llano sin tierra); los demás, los NPCs.
+  // The first pad is the spawn (a flat with no dirt); the others, the NPCs.
   for (const p of (shape.pads ?? []).slice(1)) w = Math.max(w, Math.min(1, Math.max(0, 1 - (Math.hypot(x - p.x, z - p.z) - 3.4) / fall)));
   return w;
 }
@@ -327,7 +327,7 @@ function openColor(p: ReturnType<typeof openPalette>, shape: TerrainShape, x: nu
   return c;
 }
 
-/** Altura sobre los triángulos de la celda: (a, c, b) si u + v <= 1, si no (b, c, e); a = (i, j), e = (i + 1, j + 1). */
+/** Height over the cell triangles: (a, c, b) if u + v <= 1, otherwise (b, c, e); a = (i, j), e = (i + 1, j + 1). */
 function triangleHeight(ha: number, hb: number, hc: number, he: number, u: number, v: number): number {
   return u + v <= 1 ? ha + (hb - ha) * u + (hc - ha) * v : he + (hc - he) * (1 - u) + (hb - he) * (1 - v);
 }
@@ -371,7 +371,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
       uvs.set([(x - u0) / w, (z - v0) / d], k * 2);
     }
   }
-  // Dos triángulos por celda, antihorarios vistos desde arriba (normal +y).
+  // Two triangles per cell, counterclockwise seen from above (normal +y).
   const indices = new Uint32Array((nx - 1) * (nz - 1) * 6);
   let o = 0;
   for (let j = 0; j < nz - 1; j++) {
@@ -385,7 +385,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
     }
   }
   if (relief) {
-    // Mundo abierto: el color y la tierra dependen de la pendiente (roca), así se pintan después de las normales.
+    // Open world: color and dirt depend on the slope (rock), so they are painted after the normals.
     const normals = vertexNormals(positions, indices);
     const op = openPalette(spec.look);
     for (let k = 0; k < nx * nz; k++) {
@@ -401,7 +401,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
       colors.set(groundColor(p, shape, src, positions[k * 3] as number, positions[k * 3 + 2] as number, heights[k] as number), k * 3);
     }
   }
-  // Un valor por vértice interpolado sobre los triángulos de la malla (lo dibujado es lo medido) en el mundo abierto.
+  // One value per vertex interpolated over the mesh triangles (what is drawn is what is measured) in the open world.
   const onMesh = (values: ArrayLike<number>) => (x: number, z: number): number => {
     const i = lineCell(xs, x);
     const j = lineCell(zs, z);
@@ -410,7 +410,7 @@ export function buildTerrain(spec: TerrainSpec): Terrain {
     const u = Math.min(1, Math.max(0, (x - x0) / ((xs[i + 1] as number) - x0)));
     const v = Math.min(1, Math.max(0, (z - z0) / ((zs[j + 1] as number) - z0)));
     const h = (ii: number, jj: number) => values[jj * nx + ii] as number;
-    // Sin relieve (campesino) sigue la bilineal de estetica-c: adentro el suelo es plano y el agua la miden sus tests.
+    // Without relief (farmer) the estetica-c bilinear holds: inside the ground is flat and the water is measured by its tests.
     if (!relief) return (h(i, j) * (1 - u) + h(i + 1, j) * u) * (1 - v) + (h(i, j + 1) * (1 - u) + h(i + 1, j + 1) * u) * v;
     return triangleHeight(h(i, j), h(i + 1, j), h(i, j + 1), h(i + 1, j + 1), u, v);
   };
@@ -434,7 +434,7 @@ export interface Scatter {
   scale: number;
 }
 
-/** Pinos del borde: fuera de los límites (a 3 m o más), sembrados por semilla con separación mínima. */
+/** Edge pines: outside the bounds (3 m or more), seeded with a minimum separation. */
 export function borderPines(bounds: Bounds, seed = TERRAIN_SEED, count = 16): Scatter[] {
   const r = rng(seed * 31 + 7);
   const out: Scatter[] = [];
@@ -453,7 +453,7 @@ export function borderPines(bounds: Bounds, seed = TERRAIN_SEED, count = 16): Sc
 export type DetailScatter = Record<"flores" | "matas" | "piedritas" | "empedrado", Scatter[]>;
 
 const SCALES = { flores: [0.9, 1.4], matas: [0.7, 1.1], piedritas: [0.7, 1.2], empedrado: [0.8, 1.2] } as const;
-/** Intentos por instancia antes de rendirse con una zona llena (el estimador cuenta `cantidad`: cota de arriba). */
+/** Attempts per instance before giving up on a full zone (the estimator counts `cantidad`: upper bound). */
 const TRIES_PER_ITEM = 60;
 
 const walkableAt = (g: WalkGrid, x: number, z: number): boolean => {
@@ -463,9 +463,9 @@ const walkableAt = (g: WalkGrid, x: number, z: number): boolean => {
 };
 
 /**
- * Detalle del formato de la maqueta (plan estetica-c M5): `cantidad` instancias por zona, sembradas por semilla dentro
- * del círculo, nunca sobre un camino, el agua ni una celda bloqueada (props, NPCs); y las piedras de cada camino
- * empedrado a lo largo de su línea (tantas como `pavingStoneCount`, la misma cuenta del estimador).
+ * Diorama format detail (plan estetica-c M5): `cantidad` instances per zone, seeded inside
+ * the circle, never over a path, the water or a blocked cell (props, NPCs); and the stones of each
+ * paved path along its line (as many as `pavingStoneCount`, the same count as the estimator).
  */
 export function curveDetailScatter(ground: DioramaGround, grid: WalkGrid, seed = TERRAIN_SEED): DetailScatter {
   const out: DetailScatter = { flores: [], matas: [], piedritas: [], empedrado: [] };

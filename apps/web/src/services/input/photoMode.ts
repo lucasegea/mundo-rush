@@ -1,8 +1,8 @@
-// services/input/photoMode.ts — modo captura: H oculta la interfaz y deja solo el mundo y el minimapa (tokens.css,
-// [data-lg-photo]); H otra vez la devuelve. Se usa ya dentro del mundo: ocultar el menú de entrada dejaría el juego
-// esperando un clic. Mientras se escribe no hace nada.
+// services/input/photoMode.ts — capture mode: H hides the interface and leaves only the world and the minimap (tokens.css,
+// [data-lg-photo]); H again brings it back. It is used already inside the world: hiding the entry menu would leave the game
+// waiting for a click. While typing it does nothing.
 
-/** Instala el atajo; devuelve la función que lo saca. */
+/** Installs the shortcut; returns the function that removes it. */
 export function installPhotoModeToggle(target: Window, root: HTMLElement): () => void {
   const onKey = (e: KeyboardEvent): void => {
     if (e.code !== "KeyH" || e.repeat || e.ctrlKey || e.altKey || e.metaKey) return;

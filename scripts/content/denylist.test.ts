@@ -1,8 +1,8 @@
-// open-world-3d T2(c) (AC10, C9): nada derivado de juegos comerciales ajenos entra al repo. La referencia de ánimo del
-// operador es solo eso: sin extracción, ripeo, ingeniería inversa ni emuladores. Recorre los archivos versionados (y los
-// nuevos sin ignorar, para que un archivo plantado sin `git add` también falle) bajo apps, packages, scripts, content y
-// tooling: ni la ruta ni el contenido (filas del registro incluidas: autor, url_origen, notas) nombran la lista negra.
-// Este archivo y scripts/content/provenance.test.ts quedan fuera por nombre.
+// open-world-3d T2(c) (AC10, C9): nothing derived from other people's commercial games enters the repo. The operator's mood
+// reference is only that: no extraction, ripping, reverse engineering or emulators. Walks the versioned files (and the
+// new unignored ones, so a file planted without `git add` also fails) under apps, packages, scripts, content and
+// tooling: neither the path nor the content (registry rows included: author, url_origen, notes) name the blacklist.
+// This file and scripts/content/provenance.test.ts are left out by name.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,7 +36,7 @@ describe("AC10: lista negra de derivación", () => {
       try {
         texto = readFileSync(join(ROOT, p), "latin1");
       } catch (e) {
-        // Borrado en el árbol de trabajo y todavía en el índice: no hay bytes que leer.
+        // Deleted in the working tree and still in the index: there are no bytes to read.
         if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
         throw e;
       }

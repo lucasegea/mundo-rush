@@ -1,28 +1,28 @@
-// Piezas compartidas por los esquemas (claves en español snake_case, D-090).
+// Pieces shared by the schemas (Spanish snake_case keys, D-090).
 import { z } from "zod";
 import { LumiId, NpcId } from "../ids.ts";
 
-/** Bandas MCER que usan escenas, misiones y fichas (01 §2.11). */
+/** CEFR bands used by scenes, missions and sheets (01 §2.11). */
 export const Banda = z.enum(["A0", "A1", "A2", "B1", "B2", "C1"]);
 export type Banda = z.infer<typeof Banda>;
 
-/** Estados de revisión humana de todo contenido redactado (D-067). Una corrida solo escribe draft. */
+/** Human review states of all written content (D-067). A run only writes draft. */
 export const EstadoRevision = z.enum(["draft", "reviewed", "approved"]);
 export type EstadoRevision = z.infer<typeof EstadoRevision>;
 
-/** Las 6 ramas de pociones (01 §2.7.2), con la clave de color que usa 02 §6.2.2. */
+/** The 6 potion branches (01 §2.7.2), with the color key used by 02 §6.2.2. */
 export const RamaPocion = z.enum(["ambar", "verde", "azul", "violeta", "coral", "celeste"]);
 export type RamaPocion = z.infer<typeof RamaPocion>;
 
-/** Texto por variante de L1 (`es-AR`, más adelante `pt-BR`). */
+/** Text per L1 variant (`es-AR`, later `pt-BR`). */
 export const TextoL1 = z.strictObject({ "es-AR": z.string().min(1) });
 
-/** Bloque presente con "no aplica" y su razón (02 §4.3, excepción de misión de Lumi). */
+/** Block present with "no aplica" and its reason (02 §4.3, Lumi mission exception). */
 export const NoAplica = z.strictObject({ no_aplica: z.string().min(1) });
 export type NoAplica = z.infer<typeof NoAplica>;
 export const oNoAplica = <T extends z.ZodType>(s: T) => z.union([s, NoAplica]);
 
-/** Línea guionada de un NPC: inglés textual + glosa de diseño (02 §0.2 regla 2). */
+/** Scripted line of an NPC: verbatim English + design gloss (02 §0.2 rule 2). */
 export const LineaNpc = z.strictObject({
   quien: NpcId,
   en: z.string().min(1),
@@ -31,7 +31,7 @@ export const LineaNpc = z.strictObject({
   audio: z.enum(["cache", "al_vuelo"]).default("cache"),
 });
 
-/** Línea de Lumi dentro de una escena: siempre una plantilla con id (ADR-008, 02 §2.7). */
+/** Lumi line inside a scene: always a template with an id (ADR-008, 02 §2.7). */
 export const LineaLumi = z.strictObject({
   quien: z.literal("LUMI"),
   plantilla: LumiId,

@@ -1,12 +1,12 @@
-// Servidor HTTP de @lg/server (F1.1b): /health; F4.1 suma rutas por `createHttpServer(rutas)` (token de escena). node:http sin framework.
-// Sobre de respuesta JSON único:
-//   éxito  → { ok: true,  data: … }
-//   error  → { ok: false, error: { code, message } }   (code estable, message legible)
+// HTTP server of @lg/server (F1.1b): /health; F4.1 adds routes via `createHttpServer(rutas)` (scene token). node:http, no framework.
+// Single JSON response envelope:
+//   success → { ok: true,  data: … }
+//   error  → { ok: false, error: { code, message } }   (stable code, readable message)
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 export const SERVICE_NAME = "@lg/server";
 
-/** D-158: el servidor del modo operador escucha solo en loopback. */
+/** D-158: the operator-mode server listens only on loopback. */
 export const DEFAULT_HOST = "127.0.0.1";
 export const DEFAULT_PORT = 8787;
 
@@ -19,7 +19,7 @@ export interface HealthBody {
 }
 
 export type Handler = (req: IncomingMessage, res: ServerResponse) => void;
-/** ruta → método → manejador. */
+/** route → method → handler. */
 export type Routes = Record<string, Record<string, Handler>>;
 
 export function send<T>(res: ServerResponse, status: number, body: Envelope<T>, method?: string, headers: Record<string, string> = {}): void {
@@ -45,13 +45,13 @@ const BASE_ROUTES: Routes = {
   "/health": { GET: health, HEAD: health },
 };
 
-/** Manejador de requests con las rutas base más `extra`. */
+/** Request handler with the base routes plus `extra`. */
 export function createHandler(extra: Routes = {}): Handler {
   const routes: Routes = { ...BASE_ROUTES, ...extra };
   return (req, res) => routeRequest(routes, req, res);
 }
 
-/** Manejador de requests; exportado para probarlo sin red si hace falta. */
+/** Request handler; exported so it can be tested without network if needed. */
 export const handle: Handler = createHandler();
 
 function routeRequest(routes: Routes, req: IncomingMessage, res: ServerResponse): void {
@@ -71,7 +71,7 @@ function routeRequest(routes: Routes, req: IncomingMessage, res: ServerResponse)
     }
     handler(req, res);
   } catch {
-    // Nunca se filtra el detalle del error al cliente.
+    // The error detail is never leaked to the client.
     if (!res.headersSent) fail(res, 500, "internal", "Error interno.", method);
     else res.destroy();
   }
@@ -81,7 +81,7 @@ export function createHttpServer(extra: Routes = {}): Server {
   return createServer(createHandler(extra));
 }
 
-/** Lee host y puerto del entorno: LG_PORT (entero 0-65535; 0 = efímero). El host es siempre loopback. */
+/** Reads host and port from the environment: LG_PORT (integer 0-65535; 0 = ephemeral). The host is always loopback. */
 export function listenOptions(env: Record<string, string | undefined>): { host: string; port: number } {
   const raw = env["LG_PORT"];
   if (raw === undefined || raw === "") return { host: DEFAULT_HOST, port: DEFAULT_PORT };

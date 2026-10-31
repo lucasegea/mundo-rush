@@ -1,31 +1,31 @@
-// @lg/art vegetation.ts: árboles, rocas y detalle del mundo abierto (open-world-3d T7, D2, PD-3, D-822), en dato puro y
-// sin three. Lo leen tres lugares y por eso vive acá, una sola vez:
-//   · scripts/assets/bake-trees.ts hornea cada especie de TREE_SPECIES (alto, colores, semilla de tinte del mockup V6)
-//   · @lg/core prepareDiorama bloquea en la grilla de caminata la huella de cada tronco (AC46)
-//   · world/nature arma las mallas instanciadas con las mismas posiciones, y elige banda de LOD y fundido de tarjetas
-// El sembrado es el del mockup V6 (`world.js` spots): pinos en manchas de bosque y una línea de bosque lejana, latifoliadas
-// cerca del camino, arbustos al borde del camino, rocas (afloramientos en la ladera), flores, helechos y piedritas, con
-// sus semillas (4242 y 5150) y sus reglas (lejos del camino, de los NPCs y de la aparición; sin pendientes fuertes).
-// La pendiente se mide con `reliefAt` (el relieve puro de T6), no con la malla: así el núcleo, que no tiene three, siembra
-// exactamente lo mismo que world/.
+// @lg/art vegetation.ts: trees, rocks and detail of the open world (open-world-3d T7, D2, PD-3, D-822), as pure data and
+// without three. Three places read it and that is why it lives here, once:
+//   · scripts/assets/bake-trees.ts bakes each TREE_SPECIES species (height, colors, tint seed from the V6 mockup)
+//   · @lg/core prepareDiorama blocks the footprint of each trunk in the walk grid (AC46)
+//   · world/nature builds the instanced meshes with the same positions, and chooses LOD band and card fade
+// The planting is that of the V6 mockup (`world.js` spots): pines in forest patches and a far tree line, broadleaves
+// near the path, shrubs at the path edge, rocks (outcrops on the hillside), flowers, ferns and pebbles, with
+// their seeds (4242 and 5150) and their rules (away from the path, the NPCs and the spawn; no steep slopes).
+// The slope is measured with `reliefAt` (T6's pure relief), not with the mesh: that way the core, which has no three, plants
+// exactly the same as world/.
 
 import { OPEN_WORLD_DENSITY, type OpenWorldDensity, type WorldTier } from "./density.ts";
 import { reliefAt, type ReliefPad } from "./relief.ts";
 import { RUNTIME_TEXTURE_PX, TEXTURES_DIR } from "./textures.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Especies horneadas (mockup V6 world.js PINES, BROADS, BUSHES; presets en scripts/assets/tree-presets.ts).
+// Baked species (V6 mockup world.js PINES, BROADS, BUSHES; presets in scripts/assets/tree-presets.ts).
 
 export type TreeKind = "pine" | "broad" | "bush";
 
 export interface TreeSpecies {
-  /** Nombre del preset (mockup) y del archivo servido (`pine-a.glb`, `pine-a-liviano.glb`). */
+  /** Name of the preset (mockup) and of the served file (`pine-a.glb`, `pine-a-liviano.glb`). */
   name: string;
   file: string;
   kind: TreeKind;
-  /** Alto del árbol horneado (m). */
+  /** Height of the baked tree (m). */
   height: number;
-  /** Color de las hojas abajo y arriba (sRGB hex) y semilla del tinte por hoja. */
+  /** Leaf color at the bottom and top (sRGB hex) and per-leaf tint seed. */
   low: number;
   high: number;
   tintSeed: number;
@@ -43,25 +43,25 @@ export const TREE_SPECIES: readonly TreeSpecies[] = [
   { name: "bushA", file: "bush-a", kind: "bush", height: 1.15, low: 0x4a8a35, high: 0x9ccb55, tintSeed: 21 },
   { name: "bushB", file: "bush-b", kind: "bush", height: 1.0, low: 0x558f38, high: 0xa8d25a, tintSeed: 22 },
 ];
-/** Sufijo del archivo de la versión liviana (mockup `liteCfg`). */
+/** Suffix of the light version's file (mockup `liteCfg`). */
 export const LIGHT_TREE_SUFFIX = "-liviano";
-/** Carpeta servida de los árboles horneados (desde la raíz del repo y desde la raíz del sitio). */
+/** Served folder of the baked trees (from the repo root and from the site root). */
 export const TREES_DIR = "apps/web/public/models/generated/trees";
 export const TREES_URL = "/models/generated/trees";
 export const treeFile = (s: Pick<TreeSpecies, "file">, light: boolean): string => `${TREES_DIR}/${s.file}${light ? LIGHT_TREE_SUFFIX : ""}.glb`;
-/** AC43: la versión liviana tiene a lo sumo este tanto de los triángulos de la completa. */
+/** AC43: the light version has at most this fraction of the full one's triangles. */
 export const LIGHT_TREE_MAX_SHARE = 0.35;
 
 // ---------------------------------------------------------------------------------------------------------------------
-// LOD (AC44): completos hasta `full`, livianos hasta `mid`, impostores más allá; el relevo es un tramado de ±4 m.
+// LOD (AC44): full up to `full`, light up to `mid`, impostors beyond; the handoff is a ±4 m dither.
 
 export type TreeBand = "full" | "light" | "impostor";
-/** Ancho del relevo tramado a cada lado del radio (m, el `smoothstep(r - 4, r + 4)` del sombreador). */
+/** Width of the dithered handoff on each side of the radius (m, the shader's `smoothstep(r - 4, r + 4)`). */
 export const BAND_DITHER = 4;
-/** Margen de la cuenta en la CPU: una instancia va a cada banda que la pueda pintar (mockup `M = 4.5`). */
+/** CPU counting margin: an instance goes to every band that could draw it (mockup `M = 4.5`). */
 export const BAND_MARGIN = 4.5;
 
-/** La banda de un árbol a `distance` m del jugador (el centro del relevo). */
+/** The band of a tree at `distance` m from the player (the center of the handoff). */
 export function treeBand(distance: number, tier: WorldTier): TreeBand {
   const r = OPEN_WORLD_DENSITY[tier].treeLod;
   if (distance < r.full) return "full";
@@ -70,9 +70,9 @@ export function treeBand(distance: number, tier: WorldTier): TreeBand {
 }
 
 /**
- * Open-world-3d T8 (mockup V6 `applyView`, AC51): con el zoom los radios de LOD se achican hasta 0 (de t 0,3 a 0,72, y
- * en 0 desde t 0,7): de lejos todo árbol es impostor, cuya copa horizontal al 58 % se lee sólida desde arriba. T7 usaba
- * los radios del tier a todo zoom y las copas reales vistas desde arriba fallaban la solidez de AC51 a t 0,65 a 0,8.
+ * Open-world-3d T8 (mockup V6 `applyView`, AC51): with zoom the LOD radii shrink down to 0 (from t 0.3 to 0.72, and
+ * at 0 from t 0.7): from afar every tree is an impostor, whose horizontal canopy at 58 % reads solid from above. T7 used
+ * the tier's radii at every zoom and the real canopies seen from above failed AC51's solidity at t 0.65 to 0.8.
  */
 export function treeLodShrink(t: number): number {
   if (t > 0.7) return 0;
@@ -80,11 +80,11 @@ export function treeLodShrink(t: number): number {
   return 1 - x * x * (3 - 2 * x);
 }
 
-/** Las bandas de los sombreadores (mockup `BAND`): [desde, hasta] en metros, contra uLod = (full, mid). */
+/** The shader bands (mockup `BAND`): [from, to] in meters, against uLod = (full, mid). */
 export const SHADER_BANDS = ["near", "mid", "far", "nearMid", "midFar"] as const;
 export type ShaderBand = (typeof SHADER_BANDS)[number];
 
-/** El intervalo de distancias (con el margen) en el que una instancia entra en la banda. */
+/** The distance interval (with the margin) in which an instance enters the band. */
 export function bandLimits(band: ShaderBand, full: number, mid: number): [number, number] {
   const M = BAND_MARGIN;
   switch (band) {
@@ -96,21 +96,21 @@ export function bandLimits(band: ShaderBand, full: number, mid: number): [number
   }
 }
 
-/** Umbrales de |cos| del fundido de tarjeta (AC44): 0 hasta `edge`, 1 desde `face`. El shader los lee de acá. */
+/** |cos| thresholds of the card fade (AC44): 0 up to `edge`, 1 from `face`. The shader reads them from here. */
 export const CARD_FADE = { edge: 0.4, face: 0.6 } as const;
-/** Fundido de una tarjeta de impostor según |cos| entre su normal y la vista (AC44): 1 de frente, 0 de canto. */
+/** Fade of an impostor card according to |cos| between its normal and the view (AC44): 1 head-on, 0 edge-on. */
 export function cardFade(cosAngle: number): number {
   const t = Math.min(1, Math.max(0, (Math.abs(cosAngle) - CARD_FADE.edge) / (CARD_FADE.face - CARD_FADE.edge)));
   return t * t * (3 - 2 * t);
 }
-/** La tarjeta de copa del impostor va horizontal a este tanto del alto del árbol (mockup `world.js:1365`). */
+/** The impostor's canopy card goes horizontal at this fraction of the tree's height (mockup `world.js:1365`). */
 export const IMPOSTOR_CROWN_HEIGHT = 0.58;
-/** Lado del impostor: costado a la izquierda, copa desde arriba a la derecha (mockup 512 × 256). */
+/** Side of the impostor: side view on the left, canopy from above on the right (mockup 512 × 256). */
 export const IMPOSTOR_PX = RUNTIME_TEXTURE_PX.impostor;
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Rocas (Poly Haven, CC0): las piezas re-derivadas por scripts/assets/nature.ts. Cada malla de cada escaneo es una
-// variante; `outcrop` es el afloramiento grande.
+// Rocks (Poly Haven, CC0): the pieces re-derived by scripts/assets/nature.ts. Each mesh of each scan is a
+// variant; `outcrop` is the large outcrop.
 
 export const ROCK_SCANS = [
   { scan: "rock_07", kind: "small", near: 900, far: 200, meshes: 1 },
@@ -118,24 +118,24 @@ export const ROCK_SCANS = [
   { scan: "rock_moss_set_01", kind: "small", near: 1800, far: 600, meshes: 6 },
   { scan: "rock_face_01", kind: "outcrop", near: 2200, far: 420, meshes: 1 },
 ] as const;
-/** Open-world-3d T7b: `meshes` es cuántas mallas (variantes) dibuja world/nature de cada escaneo (antes un literal allá). */
+/** Open-world-3d T7b: `meshes` is how many meshes (variants) of each scan world/nature draws (formerly a literal there). */
 export type RockScan = (typeof ROCK_SCANS)[number]["scan"];
 export const ROCK_MODELS_DIR = "apps/web/public/models/polyhaven";
-/** El .glb de un escaneo (scripts/assets/nature.ts): cerca o lejos. */
+/** The .glb of a scan (scripts/assets/nature.ts): near or far. */
 export const rockFile = (scan: RockScan, far: boolean): string => `${ROCK_MODELS_DIR}/${scan.replace(/_/g, "-")}${far ? "-lejos" : ""}.glb`;
-/** Los mapas de la naturaleza (scripts/assets/nature.ts): atlas 2 × 2 de rocas, hoja y corteza. */
+/** The nature maps (scripts/assets/nature.ts): 2 × 2 atlas of rocks, leaf and bark. */
 export const NATURE_TEXTURES = {
   rockDiff: `${TEXTURES_DIR}/rocas-diff.ktx2`,
   rockNor: `${TEXTURES_DIR}/rocas-nor.ktx2`,
   leaf: `${TEXTURES_DIR}/hoja-diff.ktx2`,
   bark: `${TEXTURES_DIR}/corteza-diff.ktx2`,
 } as const;
-/** Ruta del repo → URL servida (`apps/web/public/x` → `/x`). */
+/** Repo path → served URL (`apps/web/public/x` → `/x`). */
 export const publicUrl = (file: string): string => file.slice("apps/web/public".length);
 /**
- * Colores del detalle hecho por código (mockup V6): helechos (abajo y arriba, como las hojas de un árbol), piedritas
- * (roca, roca cálida y musgo arriba) y las cuatro flores del atlas de lienzo (pétalo y centro: margarita, botón de oro,
- * lila, amapola, con su cantidad de pétalos y radio en px). Números y no "#hex": la paleta del mundo es palette.ts.
+ * Colors of the code-made detail (V6 mockup): ferns (bottom and top, like a tree's leaves), pebbles
+ * (rock, warm rock and moss on top) and the four flowers of the canvas atlas (petal and center: daisy, buttercup,
+ * lilac, poppy, with their petal count and radius in px). Numbers and not "#hex": the world palette is palette.ts.
  */
 export const NATURE_COLORS = {
   fern: { low: 0x3f7a2e, high: 0x8cbf4a },
@@ -148,24 +148,24 @@ export const NATURE_COLORS = {
     { petal: 0xb79be6, centre: 0xf1e2a0, petals: 4, radius: 2.8 },
     { petal: 0xe5532d, centre: 0x2b1d14, petals: 4, radius: 3.6 },
   ],
-  /** Tinte por instancia de las flores (mockup FLOWER_TINT). */
+  /** Per-instance tint of the flowers (mockup FLOWER_TINT). */
   flowerTint: [[1, 1, 1], [1.05, 0.98, 0.92], [0.94, 1, 1.04], [1.08, 1.04, 0.96]],
 } as const;
 
-/** Las rocas chicas desaparecen en la bruma pasados estos metros (los afloramientos no). */
+/** Small rocks vanish into the haze past this many meters (outcrops do not). */
 export const SMALL_ROCK_MAX_DISTANCE = 70;
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Sembrado (mockup V6 `spots`).
+// Planting (mockup V6 `spots`).
 
 export interface VegetationSpot {
   x: number;
   z: number;
-  /** Escala, giro (rad) y variante (índice de especie o de roca, módulo lo que haya). */
+  /** Scale, rotation (rad) and variant (species or rock index, modulo what there is). */
   s: number;
   r: number;
   v: number;
-  /** Pino de la línea de bosque lejana (más de 55 m de la aparición). */
+  /** Pine of the far tree line (more than 55 m from the spawn). */
   distant?: boolean;
   /** Afloramiento (roca grande). */
   out?: boolean;
@@ -173,12 +173,12 @@ export interface VegetationSpot {
 
 export interface VegetationInput {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
-  /** Puntos de control de los caminos (Catmull-Rom) y su ancho. */
+  /** Path control points (Catmull-Rom) and their width. */
   paths: readonly { points: readonly (readonly [number, number])[]; width: number }[];
   spawn: { x: number; z: number };
-  /** Los NPCs del diorama: el primero orienta el bosque de la aparición (mockup `startYaw`). */
+  /** The diorama's NPCs: the first one orients the spawn forest (mockup `startYaw`). */
   npcs: readonly { x: number; z: number }[];
-  /** Semilla del relieve y sus llanos (la pendiente se mide sobre `reliefAt`). */
+  /** Relief seed and its flats (the slope is measured over `reliefAt`). */
   seed: number;
   pads: readonly ReliefPad[];
 }
@@ -198,7 +198,7 @@ const smooth = (a: number, b: number, x: number): number => {
   const t = clamp((x - a) / (b - a), 0, 1);
   return t * t * (3 - 2 * t);
 };
-/** mulberry32 del mockup (las mismas semillas dan el mismo bosque). */
+/** mulberry32 from the mockup (the same seeds give the same forest). */
 export function mulberry32(seed: number): () => number {
   let a = seed;
   return () => {
@@ -209,7 +209,7 @@ export function mulberry32(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-/** hash2 del mockup: un número en [0, 1) por celda entera y semilla. */
+/** hash2 from the mockup: a number in [0, 1) per integer cell and seed. */
 export function hash2(ix: number, iz: number, seed: number): number {
   let h = (Math.imul(ix, 374761393) + Math.imul(iz, 668265263) + Math.imul(seed, 1442695041)) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -229,7 +229,7 @@ function vnoise(x: number, z: number, seed: number): number {
   const d = hash2(ix + 1, iz + 1, seed);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
-/** Catmull-Rom del mockup (`per` puntos por tramo). */
+/** Catmull-Rom from the mockup (`per` points per segment). */
 export function catmull(points: readonly (readonly [number, number])[], per: number): [number, number][] {
   const out: [number, number][] = [];
   const n = points.length;
@@ -250,7 +250,7 @@ export function catmull(points: readonly (readonly [number, number])[], per: num
   return out;
 }
 
-/** Distancia al camino más cercano (a su línea central muestreada). */
+/** Distance to the nearest path (to its sampled center line). */
 function pathDistance(polys: readonly [number, number][][], x: number, z: number): number {
   let best = 1e9;
   for (const poly of polys) {
@@ -268,11 +268,11 @@ function pathDistance(polys: readonly [number, number][][], x: number, z: number
 }
 
 /**
- * El sembrado completo del mundo abierto (todas las listas en el orden del mockup; cada tier toma las primeras, ver
- * `takeVegetation`). Puro y determinístico: el mismo diorama da el mismo bosque en el núcleo y en world/.
+ * The complete planting of the open world (all lists in the mockup's order; each tier takes the first ones, see
+ * `takeVegetation`). Pure and deterministic: the same diorama gives the same forest in the core and in world/.
  */
 export function vegetationScatter(input: VegetationInput): VegetationScatter {
-  // El núcleo lo pide en cada prepareDiorama y world/ al armar la escena: el mismo diorama se siembra una sola vez.
+  // The core asks for it in every prepareDiorama and world/ when building the scene: the same diorama is planted only once.
   const key = JSON.stringify(input);
   const hit = SCATTER_CACHE.get(key);
   if (hit) return hit;
@@ -293,7 +293,7 @@ function scatter(input: VegetationInput): VegetationScatter {
   const slope = (x: number, z: number): number => Math.abs(h(x + 1, z) - h(x - 1, z)) / 2 + Math.abs(h(x, z + 1) - h(x, z - 1)) / 2;
   const cx = (input.bounds.minX + input.bounds.maxX) / 2;
   const cz = (input.bounds.minZ + input.bounds.maxZ) / 2;
-  // El mockup siembra sobre un mapa centrado en el origen con medio ancho 70 × 50; acá, relativo al centro de los límites.
+  // The mockup plants over a map centered on the origin with half width 70 × 50; here, relative to the bounds' center.
   const edge = (x: number, z: number): number => Math.max(Math.abs(x - cx) - 62, Math.abs(z - cz) - 44, 0);
   const first = npcs[0] ?? { x: spawn.x, z: spawn.z + 1 };
   const startYaw = Math.atan2(first.x - spawn.x, first.z - spawn.z);
@@ -342,7 +342,7 @@ function scatter(input: VegetationInput): VegetationScatter {
     if (vnoise(x / 26 + 9, z / 26 + 4, 5) > 0.55) continue;
     broads.push({ x, z, s: 0.7 + rnd() * 0.8, r: rnd() * 6.28, v: broads.length % 3 });
   }
-  // Arbustos al borde del camino y de la línea de árboles.
+  // Shrubs at the edge of the path and the tree line.
   const poly = polys[0] ?? [];
   for (let i = 3; i < poly.length - 3 && bushes.length < 80; i += 3) {
     const [ax, az] = poly[i] as [number, number];
@@ -364,7 +364,7 @@ function scatter(input: VegetationInput): VegetationScatter {
     if (rnd() > 0.2 + 0.8 * Math.exp(-((near(x, z) / 25) ** 2))) continue;
     bushes.push({ x, z, s: 0.6 + rnd() * 1.0, r: rnd() * 6.28, v: bushes.length % 2 });
   }
-  // Rocas: afloramientos en la ladera de la derecha primero (como en el tablero de referencia), después sembradas.
+  // Rocks: outcrops on the right hillside first (as on the reference board), then planted ones.
   const heroRocks: [number, number, number][] = [[8, 8, 2.2], [11, 9.5, 1.4], [14, 13, 4.2], [20, 15.5, 3.4], [21, -9, 1.3], [30, 8.5, 1.8], [6, -8, 1.0], [44, -3, 1.6], [26, 17, 2.6], [34, -22, 3.6]];
   for (const [f, l, s] of heroRocks) {
     const [x, z] = at(f, l);
@@ -383,7 +383,7 @@ function scatter(input: VegetationInput): VegetationScatter {
     const s = 0.5 + rnd() * rnd() * 2.8;
     rocks.push(s > 2.3 && e > 10 ? { x, z, s: 3.5 + rnd() * 2.5, r: rnd() * 6.28, v: 0, out: true } : { x, z, s, r: rnd() * 6.28, v: rocks.length });
   }
-  // Línea de bosque lejana: pinos de más solo lejos de la aparición (impostores en el horizonte).
+  // Far tree line: extra pines only far from the spawn (impostors on the horizon).
   const basePines = pines.length;
   tries = 0;
   while (pines.length < basePines + 170 && tries++ < 60000) {
@@ -395,7 +395,7 @@ function scatter(input: VegetationInput): VegetationScatter {
     if (slope(x, z) > 0.6) continue;
     pines.push({ x, z, s: pineScale(), r: rnd() * 6.28, v: pines.length % 5, distant: true });
   }
-  // Flores en manchas de pradera, helechos cerca de árboles y rocas, piedritas al borde del camino.
+  // Flowers in meadow patches, ferns near trees and rocks, pebbles at the path edge.
   const flowers: VegetationSpot[] = [];
   const ferns: VegetationSpot[] = [];
   const pebbles: VegetationSpot[] = [];
@@ -408,7 +408,7 @@ function scatter(input: VegetationInput): VegetationScatter {
     if (rndD() > smooth(0.45, 0.72, vnoise(x / 11 + 3, z / 11 + 8, 31)) * 0.9 + 0.04) continue;
     flowers.push({ x, z, s: 0.7 + rndD() * 0.7, r: rndD() * 6.28, v: 0 });
   }
-  // Celdas de 4 m con los pinos y las rocas (la misma prueba de caja del mockup, sin recorrer las listas enteras).
+  // 4 m cells with the pines and rocks (the same box test as the mockup, without walking the whole lists).
   const cells = (list: readonly VegetationSpot[]): Map<string, VegetationSpot[]> => {
     const m = new Map<string, VegetationSpot[]>();
     for (const t of list) {
@@ -468,18 +468,18 @@ function scatter(input: VegetationInput): VegetationScatter {
   return { pines, broads, bushes, rocks, flowers: shuffle(flowers), ferns: shuffle(ferns), pebbles: shuffle(pebbles) };
 }
 
-/** ¿El punto cae dentro de los límites caminables? (lo de adentro es igual en todo tier: ver `takeVegetation`). */
+/** Is the point inside the walkable bounds? (what is inside is the same in every tier: see `takeVegetation`). */
 const inside = (b: VegetationInput["bounds"], s: VegetationSpot): boolean => s.x >= b.minX && s.x <= b.maxX && s.z >= b.minZ && s.z <= b.maxZ;
 
 /**
- * Lo que dibuja un tier (OPEN_WORLD_DENSITY.trees). Árboles y rocas DENTRO de los límites son los mismos en todo tier:
- * la grilla de caminata del núcleo no tiene tier y bloquea sus troncos (AC46), así que un tronco que bloquea siempre se
- * ve. El conteo del tier recorta lo de afuera (la falda, que la grilla ya no camina): primero lo de adentro, después lo
- * de afuera en el orden del sembrado hasta el conteo (si lo de adentro ya lo pasa, no entra nada de afuera).
+ * What a tier draws (OPEN_WORLD_DENSITY.trees). Trees and rocks INSIDE the bounds are the same in every tier:
+ * the core's walk grid has no tier and blocks their trunks (AC46), so a trunk that blocks is always
+ * seen. The tier's count trims what is outside (the skirt, which the grid no longer walks): first what is inside, then what
+ * is outside in planting order up to the count (if what is inside already exceeds it, nothing outside gets in).
  */
 export function takeVegetation(
   scatter: VegetationScatter, bounds: VegetationInput["bounds"], tier: WorldTier,
-  /** Open-world-3d T7b: los multiplicadores del look (<= 1, `WorldLook.vegetation.density`); sin ellos, 1. */
+  /** Open-world-3d T7b: the look's multipliers (<= 1, `WorldLook.vegetation.density`); without them, 1. */
   scale: Readonly<Partial<Record<keyof OpenWorldDensity["trees"], number>>> = {},
 ): VegetationScatter {
   const base = OPEN_WORLD_DENSITY[tier].trees;
@@ -502,13 +502,13 @@ export function takeVegetation(
   };
 }
 
-/** Radio de la huella de un tronco (m por unidad de escala) que bloquea la grilla (AC46). */
+/** Radius of a trunk's footprint (m per unit of scale) that blocks the grid (AC46). */
 export const TRUNK_FOOTPRINT = { pine: 0.35, broad: 0.4 } as const;
-/** Radio de la huella de una roca que bloquea (m por unidad de escala; las piedras chicas no bloquean). */
+/** Radius of the footprint of a rock that blocks (m per unit of scale; small stones do not block). */
 export const ROCK_FOOTPRINT = 0.3;
 export const ROCK_BLOCK_MIN_SCALE = 1.2;
 
-/** Las huellas que bloquean la grilla: troncos de pinos y latifoliadas y rocas grandes, dentro de los límites. */
+/** The footprints that block the grid: pine and broadleaf trunks and large rocks, inside the bounds. */
 export function blockingFootprints(scatter: VegetationScatter, bounds: VegetationInput["bounds"]): { x: number; z: number; r: number }[] {
   const out: { x: number; z: number; r: number }[] = [];
   for (const s of scatter.pines) if (inside(bounds, s)) out.push({ x: s.x, z: s.z, r: TRUNK_FOOTPRINT.pine * s.s });

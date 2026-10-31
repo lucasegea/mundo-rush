@@ -1,7 +1,7 @@
-// Open-world-3d T8: el pasto V6, sin GPU. AC48 (conteos y radios por tier, una tarjeta es un quad y una hoja 3
-// triángulos, 2 llamadas de clase `pasto` con niebla, la tarjeta nunca de canto de 6 a 82°, viento 0 con movimiento
-// reducido, nada fuera de los límites más la falda ni sobre tierra > 0,5, una sola RG16F hecha en world/terrain), AC49
-// (subidas del búfer de instancias con un reloj de prueba) y AC75 (la envoltura de la CPU y la del GLSL son la misma).
+// Open-world-3d T8: the V6 grass, without GPU. AC48 (counts and radii per tier, a card is a quad and a blade 3
+// triangles, 2 `pasto`-class calls with fog, the card never edge-on from 6 to 82°, wind 0 with reduced
+// motion, nothing outside the bounds plus the skirt or over ground > 0.5, a single RG16F made in world/terrain), AC49
+// (instance buffer uploads with a test clock) and AC75 (the CPU wrap and the GLSL wrap are the same).
 import { DEFAULT_LOOK, mulberry32, OPEN_WORLD_DENSITY, WORLD_TIERS } from "@lg/art";
 import { prepareDiorama, type DioramaLayout, type DioramaRuntime } from "@lg/core";
 import { HalfFloatType, LinearFilter, PerspectiveCamera, RGFormat, ShaderMaterial, type Material, type Texture } from "three";
@@ -21,7 +21,7 @@ const grassOf = (s: DioramaScene): Grass => {
   return s.grass;
 };
 
-/** La cámara de tercera persona del juego: `dist` m detrás del jugador con `pitchDeg` de elevación, mirando al jugador. */
+/** The game's third-person camera: `dist` m behind the player with `pitchDeg` of elevation, looking at the player. */
 function placeCamera(cam: PerspectiveCamera, px: number, py: number, pz: number, yawDeg: number, pitchDeg = 17, dist = 6): void {
   const y = (yawDeg * Math.PI) / 180;
   const p = (pitchDeg * Math.PI) / 180;
@@ -41,7 +41,7 @@ describe("AC48: el pasto por tier", () => {
       const s = sceneAt(tier);
       const g = grassOf(s);
       const spec = OPEN_WORLD_DENSITY[tier].grass;
-      expect(g.base.length / 4, tier).toBe(spec.clumps); // DEFAULT_LOOK: multiplicador 1
+      expect(g.base.length / 4, tier).toBe(spec.clumps); // DEFAULT_LOOK: multiplier 1
       expect(g.uniforms.uRadius.value).toBe(spec.radius);
       expect(g.uniforms.uNearR.value).toBe(spec.nearRadius);
       expect(g.cards.geometry.getAttribute("position").count).toBe(4);
@@ -72,13 +72,13 @@ describe("AC48: el pasto por tier", () => {
         const up = cardUp(hx, hz, el);
         const right: [number, number, number] = [-hz, 0, hx];
         const n = [right[1] * up[2] - right[2] * up[1], right[2] * up[0] - right[0] * up[2], right[0] * up[1] - right[1] * up[0]];
-        const ray = [-hx * Math.cos(el), -Math.sin(el), -hz * Math.cos(el)]; // de la cámara a la mata
+        const ray = [-hx * Math.cos(el), -Math.sin(el), -hz * Math.cos(el)]; // from the camera to the tuft
         const len = Math.hypot(n[0] as number, n[1] as number, n[2] as number);
         worst = Math.min(worst, Math.abs(((n[0] as number) * (ray[0] as number) + (n[1] as number) * (ray[1] as number) + (n[2] as number) * (ray[2] as number)) / len));
       }
     }
     expect(worst).toBeGreaterThanOrEqual(0.7);
-    // El sombreador usa la misma regla: la punta hacia atrás (signo menos) y los mismos factores.
+    // The shader uses the same rule: the tip backward (minus sign) and the same factors.
     expect(GRASS_VERTEX_SHADER).toContain(`clamp(atan(toC.y, hl), 0.0, ${GRASS.lean.maxElevation.toFixed(4)}) * ${GRASS.lean.factor.toFixed(4)}`);
     expect(GRASS_VERTEX_SHADER).toContain("vec3 up = vec3(-hz.x * sin(lean), cos(lean), -hz.y * sin(lean));");
   });
@@ -109,7 +109,7 @@ describe("AC48: el pasto por tier", () => {
       const ext = s.terrain.extent;
       let rejectedForDirt = 0;
       let uploaded = 0;
-      // La aparición, el camino del muelle, cada NPC y dos esquinas (el disco toca el borde de la textura).
+      // The spawn, the dock path, each NPC and two corners (the disc touches the texture's edge).
       const spots = [[d.spawn.x, d.spawn.z], ...d.npcs.map((n) => [n.x, n.z]), [d.bounds.minX, d.bounds.minZ], [d.bounds.maxX, d.bounds.maxZ]] as [number, number][];
       for (const [px, pz] of spots) {
         for (const yaw of [0, 90, 180, 270]) {
@@ -121,7 +121,7 @@ describe("AC48: el pasto por tier", () => {
           for (const n of [...g.selection.cards, ...g.selection.blades]) {
             const [x, z] = grassWrap(g.base[n * 4] as number, g.base[n * 4 + 1] as number, c.x, c.z, r);
             expect(x >= ext.minX && x <= ext.maxX && z >= ext.minZ && z <= ext.maxZ, `${tier} ${x},${z}`).toBe(true);
-            expect(sampleHeightDirt(map as never, x, z).dirt, `${tier} tierra en ${x},${z}`).toBeLessThan(0.5); // AC48: el literal del plan
+            expect(sampleHeightDirt(map as never, x, z).dirt, `${tier} tierra en ${x},${z}`).toBeLessThan(0.5); // AC48: the plan's literal
             uploaded += 1;
           }
           for (let n = 0; n < g.base.length / 4; n++) {
@@ -132,7 +132,7 @@ describe("AC48: el pasto por tier", () => {
       }
       expect(uploaded, tier).toBeGreaterThan(100);
       expect(rejectedForDirt, `${tier}: hay matas en el disco sobre el camino (el corte de tierra hace algo)`).toBeGreaterThan(0);
-      // El sombreador también las deja en escala 0 desde la tierra 0,5.
+      // The shader also leaves them at scale 0 from ground 0.5.
       expect(GRASS.dirt.cut).toBe(0.5);
       expect(GRASS_VERTEX_SHADER).toContain(`smoothstep(${GRASS.dirt.from.toFixed(4)}, 0.5000, s.y)`);
       s.dispose();
@@ -173,7 +173,7 @@ describe("AC49: subidas del búfer de instancias del pasto con un reloj de prueb
       placeCamera(cam, x, s.terrain.heightAt(x, z), z, yaw);
       return g.update(cam, x, z, 0, 1 / 60, true);
     };
-    frame(at.x, at.z, at.yaw); // la primera elección
+    frame(at.x, at.z, at.yaw); // the first pick
     return { s, g, frame, at };
   };
 
@@ -183,11 +183,11 @@ describe("AC49: subidas del búfer de instancias del pasto con un reloj de prueb
     expect(u0).toBe(1);
     for (let i = 0; i < 60; i++) frame(at.x, at.z, at.yaw);
     expect(g.uploads - u0).toBe(0);
-    frame(at.x, at.z, at.yaw + 4); // cuadro del giro de 4°: bajo CULL_TURN_DEG
+    frame(at.x, at.z, at.yaw + 4); // frame of the 4° turn: under CULL_TURN_DEG
     expect(g.uploads - u0).toBe(0);
-    frame(at.x, at.z, at.yaw + 4 + 6); // 6° más: 10° desde lo subido
+    frame(at.x, at.z, at.yaw + 4 + 6); // 6° more: 10° from what was uploaded
     expect(g.uploads - u0).toBe(1);
-    for (let i = 0; i < 30; i++) frame(at.x, at.z, at.yaw + 10); // quieto donde subió: nada
+    for (let i = 0; i < 30; i++) frame(at.x, at.z, at.yaw + 10); // still where it uploaded: nothing
     expect(g.uploads - u0).toBe(1);
     frame(at.x + 1.2, at.z, at.yaw + 10);
     expect(g.uploads - u0).toBe(2);
@@ -206,9 +206,9 @@ describe("AC49: subidas del búfer de instancias del pasto con un reloj de prueb
   });
 
   test("un giro de 4° sostenido: el portón recorre una vez al asentarse (T7) y sube solo si la elección cambió", () => {
-    // Las dos conductas, explícitas (manager T8): el cuadro del giro no recorre ni sube; el segundo cuadro quieto recorre
-    // (el reposo de CullGate, para que una pose fija dé siempre los mismos triángulos) y sube si y solo si las matas
-    // elegidas en el reposo no son las subidas. Después, quieto, nunca más.
+    // The two behaviors, explicit (manager T8): the turn frame neither sweeps nor uploads; the second still frame sweeps
+    // (CullGate's rest, so that a fixed pose always gives the same triangles) and uploads if and only if the tufts
+    // picked at rest are not the uploaded ones. After that, still, never again.
     const { s, g, frame, at } = setup();
     const before = g.selection;
     const r0 = g.gate.runs;
@@ -228,7 +228,7 @@ describe("AC49: subidas del búfer de instancias del pasto con un reloj de prueb
   test("al asentarse en la misma pose el recorrido no sube nada (recorrer no es subir)", () => {
     const { s, g, frame, at } = setup();
     const u0 = g.uploads;
-    g.gate.reset(); // fuerza un recorrido en la misma pose: la elección es la misma
+    g.gate.reset(); // forces a sweep in the same pose: the pick is the same
     frame(at.x, at.z, at.yaw);
     expect(g.uploads - u0).toBe(0);
     s.dispose();
@@ -250,7 +250,7 @@ describe("AC49: subidas del búfer de instancias del pasto con un reloj de prueb
   });
 });
 
-/** Intérprete del subconjunto GLSL del fragmento de envoltura: números, a, c, r, vec2, mod, + - * / y paréntesis. */
+/** Interpreter of the GLSL subset of the wrap fragment: numbers, a, c, r, vec2, mod, + - * / and parentheses. */
 type Val = number | [number, number];
 function evalWrapGlsl(src: string, env: { a: [number, number]; c: [number, number]; r: number }): [number, number] {
   const body = /\{\s*return\s+([^;]+);\s*\}/.exec(src)?.[1];
@@ -337,7 +337,7 @@ describe("AC75: la envoltura de la CPU y la del GLSL son la misma fórmula", () 
           const [x, z] = grassWrap(ax, az, cx, cz, r);
           const [gx, gz] = evalWrapGlsl(GRASS_WRAP_GLSL, { a: [ax, az], c: [Math.fround(cx), Math.fround(cz)], r });
           worst = Math.max(worst, Math.abs(x - gx), Math.abs(z - gz));
-          // Siempre dentro del cuadrado centrado en el disco.
+          // Always inside the square centered on the disc.
           expect(Math.abs(x - cx) <= r + 1e-9 && Math.abs(z - cz) <= r + 1e-9).toBe(true);
         }
       }

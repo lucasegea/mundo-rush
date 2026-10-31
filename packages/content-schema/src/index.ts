@@ -1,5 +1,5 @@
-// @lg/content-schema — esquemas zod + validador + compilador de contenido (03 §4.2, §6.1).
-// Puro: sin fs ni red. scripts/content/build.ts lee content/ y escribe la salida (D-159).
+// @lg/content-schema — zod schemas + validator + content compiler (03 §4.2, §6.1).
+// Pure: no fs or network. scripts/content/build.ts reads content/ and writes the output (D-159).
 export const PACKAGE_NAME = "@lg/content-schema";
 
 export * from "./ids.ts";

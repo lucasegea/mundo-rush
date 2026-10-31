@@ -1,6 +1,6 @@
-// world/props/geometry.ts — piezas redondeadas por código (propuesta C §7: ningún volumen con aristas de 90° sin
-// bisel) y la fusión de piezas pintadas en una sola malla. Todo con imports por nombre de three y three/addons (cero
-// dependencias nuevas). Cada pieza se pinta por vértice antes de fusionarse: fusionar no pierde colores.
+// world/props/geometry.ts — code-built rounded pieces (proposal C §7: no volume with 90° edges without
+// bevel) and the merge of painted pieces into a single mesh. All with named imports from three and three/addons (zero
+// new dependencies). Each piece is painted per vertex before merging: merging does not lose colors.
 import {
   CapsuleGeometry, ExtrudeGeometry, IcosahedronGeometry, LatheGeometry, Shape, SphereGeometry, TorusGeometry, Vector2,
   type BufferGeometry,
@@ -14,7 +14,7 @@ export type Paint = PaletteToken | `#${string}`;
 
 const KEEP = new Set(["position", "normal", "uv", "color"]);
 
-/** Une piezas (ya pintadas) en una geometría no indexada con position, normal, uv y color. */
+/** Joins pieces (already painted) into a non-indexed geometry with position, normal, uv and color. */
 export function mergeParts(parts: readonly BufferGeometry[]): BufferGeometry {
   const flat = parts.map((g) => {
     const n = g.index ? g.toNonIndexed() : g;
@@ -28,22 +28,22 @@ export function mergeParts(parts: readonly BufferGeometry[]): BufferGeometry {
   return merged;
 }
 
-/** Pinta una pieza y la devuelve (para encadenar con mergeParts). */
+/** Paints a piece and returns it (to chain with mergeParts). */
 export const painted = (g: BufferGeometry, paint: Paint, seed = 0, opts: PaintOptions = {}): BufferGeometry => paintGeometry(g, paint, seed, opts);
 
-/** Caja biselada con la base en y = 0 y centrada en x, z. */
+/** Beveled box with the base at y = 0 and centered in x, z. */
 export function roundedBox(w: number, h: number, d: number, radius: number, segments = 2): BufferGeometry {
   const r = Math.min(radius, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3);
   return new RoundedBoxGeometry(w, h, d, segments, r).translate(0, h / 2, 0);
 }
 
-/** Cápsula vertical (largo total `length`) con la base en y = 0. */
+/** Vertical capsule (total length `length`) with the base at y = 0. */
 export function capsule(radius: number, length: number, radial = 8): BufferGeometry {
   const body = Math.max(0.001, length - 2 * radius);
   return new CapsuleGeometry(radius, body, 3, radial, 1).translate(0, length / 2, 0);
 }
 
-/** Cápsula horizontal a lo largo de x, centrada en el origen. */
+/** Horizontal capsule along x, centered at the origin. */
 export function capsuleX(radius: number, length: number, radial = 6): BufferGeometry {
   return new CapsuleGeometry(radius, Math.max(0.001, length - 2 * radius), 3, radial, 1).rotateZ(Math.PI / 2);
 }
@@ -52,13 +52,13 @@ export const sphere = (radius: number, w = 14, h = 10): BufferGeometry => new Sp
 export const blob = (radius: number, detail = 1): BufferGeometry => new IcosahedronGeometry(radius, detail);
 export const torus = (radius: number, tube: number, radial = 6, tubular = 16): BufferGeometry => new TorusGeometry(radius, tube, radial, tubular);
 
-/** Sólido de revolución desde un perfil (r, y) de abajo hacia arriba. */
+/** Solid of revolution from a profile (r, y) from bottom to top. */
 export const lathe = (profile: readonly (readonly [number, number])[], segments = 9): BufferGeometry =>
   new LatheGeometry(profile.map(([r, y]) => new Vector2(r, y)), segments);
 
 /**
- * Polígono con todas las esquinas redondeadas (curva cuadrática con control en la esquina, tangente a los dos lados).
- * Los puntos van en orden antihorario.
+ * Polygon with all corners rounded (quadratic curve with control at the corner, tangent to both sides).
+ * Points go counterclockwise.
  */
 export function roundedShape(points: readonly (readonly [number, number])[], radius: number): Shape {
   const n = points.length;
@@ -81,7 +81,7 @@ export function roundedShape(points: readonly (readonly [number, number])[], rad
   return s;
 }
 
-/** Extrusión biselada de un perfil (en el plano x/y) a lo largo de z, centrada en z = 0. */
+/** Beveled extrusion of a profile (in the x/y plane) along z, centered at z = 0. */
 export function extrudeRounded(shape: Shape, depth: number, bevel = 0.12, bevelSegments = 3, curveSegments = 5): BufferGeometry {
   const g = new ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments, curveSegments });
   return g.translate(0, 0, -depth / 2);

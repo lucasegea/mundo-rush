@@ -1,8 +1,8 @@
-// world/actors/glide.ts — suavizado visual de un salto de la pose lógica (plan estetica-c M1 ítem 4, revisión de arquitectura 2026-10-12):
-// al empezar la charla el núcleo deja al jugador a 2,6 m del NPC de golpe (position = previous); world/ lo lleva ahí
-// desde la última posición dibujada en ~0,35 s. Con "reducir movimiento" corta. Un paso normal (< 0,6 m) no desliza.
+// world/actors/glide.ts — visual smoothing of a jump in the logical pose (plan estetica-c M1 item 4, architecture review 2026-10-12):
+// when the chat starts the core drops the player 2.6 m from the NPC at once (position = previous); world/ carries it there
+// from the last drawn position in ~0.35 s. With "reduce motion" it snaps. A normal step (< 0.6 m) does not glide.
 export const GLIDE_SEC = 0.35;
-/** Más que esto entre lo dibujado y lo lógico es un salto (un paso a 30 Hz mueve ~0,13 m). */
+/** More than this between the drawn and the logical is a jump (a 30 Hz step moves ~0.13 m). */
 export const GLIDE_JUMP = 0.6;
 
 export interface Spot {
@@ -12,13 +12,13 @@ export interface Spot {
 
 export interface GlideState {
   shown: Spot;
-  /** Desde dónde se desliza y cuánto va (0 a 1); null sin deslizamiento. */
+  /** Where it glides from and how far along it is (0 to 1); null with no glide. */
   glide: { from: Spot; t: number } | null;
 }
 
 const ease = (t: number): number => t * t * (3 - 2 * t);
 
-/** Un cuadro: dónde se dibuja, dado lo lógico. */
+/** One frame: where it is drawn, given the logical one. */
 export function stepGlide(s: GlideState, logical: Spot, dtSec: number, cut: boolean): GlideState {
   if (cut) return { shown: logical, glide: null };
   let glide = s.glide;

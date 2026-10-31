@@ -1,6 +1,6 @@
-// Open-world-3d T6: los clasificadores puros de la Walk (AC39, AC41) con imágenes sintéticas, incluidos los controles
-// negativos del mockup (un verde de pradera es verde, un mostaza es amarillo). Open-world-3d T8 (AC50): tiras, amarillo
-// junto al pasto y solidez de copas.
+// Open-world-3d T6: the Walk's pure classifiers (AC39, AC41) with synthetic images, including the mockup's negative
+// controls (a meadow green is green, a mustard is yellow). Open-world-3d T8 (AC50): strips, yellow
+// next to grass and crown solidity.
 import { describe, expect, test } from "vitest";
 import {
   AC41, AC51, AC52, crownSolidity, diffMask, differenceHash, grassDefects, hashDistance, hueClass, hullArea, maskPixels, pairwiseDistinct, skyCheck,
@@ -17,9 +17,9 @@ describe("clase de tono (el hueClass del mockup V6)", () => {
   test("pradera verde, mostaza amarillo; tierra, gris y sombra no cuentan", () => {
     expect(hueClass(96, 150, 52)).toBe(2);
     expect(hueClass(178, 168, 48)).toBe(1);
-    expect(hueClass(120, 90, 60)).toBe(0); // tierra (tono < 40)
-    expect(hueClass(128, 128, 128)).toBe(0); // gris
-    expect(hueClass(10, 30, 8)).toBe(0); // sombra honda
+    expect(hueClass(120, 90, 60)).toBe(0); // dirt (hue < 40)
+    expect(hueClass(128, 128, 128)).toBe(0); // gray
+    expect(hueClass(10, 30, 8)).toBe(0); // deep shadow
   });
 });
 
@@ -61,10 +61,10 @@ describe("AC39: el cielo de la vista por defecto", () => {
     expect(r.ok, r.detail).toBe(true);
   });
 
-  // Cambio registrado (open-world-3d M3, QA AC39): el paso tiene signo y las bandas miran solo cielo. W2 de QA (cénit
-  // = bruma = horizonte, un cielo plano) pasaba porque la banda del horizonte tomaba la silueta de las lomas.
+  // Recorded change (open-world-3d M3, QA AC39): the step is signed and the bands look only at sky. QA's W2 (zenith
+  // = haze = horizon, a flat sky) passed because the horizon band took the hills' silhouette.
   const hills = (top: (y: number) => [number, number, number]) => {
-    const silhouette = (x: number): number => 36 + Math.round(6 * Math.sin(x / 5)); // lomas entre las filas 30 y 42
+    const silhouette = (x: number): number => 36 + Math.round(6 * Math.sin(x / 5)); // hills between rows 30 and 42
     const img = image(60, 100, (x, y) => (y < silhouette(x) ? top(y) : [70, 120, 60]));
     const sky = new Uint8Array(60 * 100).map((_, i) => (Math.floor(i / 60) < silhouette(i % 60) ? 1 : 0));
     return { img, sky };
@@ -72,7 +72,7 @@ describe("AC39: el cielo de la vista por defecto", () => {
 
   test("teeth W2: un cielo plano sobre lomas oscuras falla aunque las lomas pisen las filas del horizonte", () => {
     const { img, sky } = hills(() => [207, 231, 238]);
-    // Sin máscara (el criterio viejo con el horizonte geométrico en la fila 50) las lomas entraban en la banda.
+    // Without a mask (the old criterion with the geometric horizon at row 50) the hills entered the band.
     const r = skyCheck(img, 50, 0, undefined, sky);
     expect(Math.abs(r.lumaStep), r.detail).toBeLessThan(0.01);
     expect(r.ok).toBe(false);
@@ -80,7 +80,7 @@ describe("AC39: el cielo de la vista por defecto", () => {
 
   test("un cielo con gradiente sobre las mismas lomas pasa: la banda del horizonte es cielo justo sobre la silueta", () => {
     const { img, sky } = hills((y) => [Math.round(60 + y * 4), Math.round(130 + y * 2.5), 225]);
-    // Abajo de todo pasto para el verde (las lomas son verdes dominantes).
+    // All grass at the bottom for the green (the hills are dominant green).
     const r = skyCheck(img, 50, 0, undefined, sky);
     expect(r.ok, r.detail).toBe(true);
     expect(r.lumaStep).toBeGreaterThan(0.12);
@@ -94,7 +94,7 @@ describe("AC39: el cielo de la vista por defecto", () => {
   });
 
   test("los píxeles que tapa un panel del HUD (visible en 0) no cuentan", () => {
-    // Un panel blanco tapa 70 % de la mitad de abajo: sin la máscara el verde no llega a 40 %; con ella, sí.
+    // A white panel covers 70 % of the bottom half: without the mask the green does not reach 40 %; with it, it does.
     const img = image(100, 100, (x, y) => (y < 50 ? [Math.round(60 + y * 3), Math.round(130 + y * 1.8), 220] : x < 70 ? [250, 250, 250] : [80, 150, 50]));
     expect(skyCheck(img, 50).ok).toBe(false);
     const visible = new Uint8Array(100 * 100).map((_, i) => (Math.floor(i / 100) >= 50 && i % 100 < 70 ? 0 : 1));
@@ -117,7 +117,7 @@ describe("AC50: los clasificadores de defectos del pasto y las copas (port de to
   test("la cápsula convexa: área del polígono más medio vértice por vértice más 1 (la fórmula del mockup)", () => {
     const pts: [number, number][] = [];
     for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) pts.push([x, y]);
-    expect(hullArea(pts)).toBe(81 + 4 / 2 + 1); // el cuadrado de 0 a 9: área 81, 4 vértices
+    expect(hullArea(pts)).toBe(81 + 4 / 2 + 1); // the square from 0 to 9: area 81, 4 vertices
     expect(hullArea([[0, 0], [1, 0]])).toBe(2);
   });
 

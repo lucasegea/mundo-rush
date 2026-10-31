@@ -1,6 +1,6 @@
-// Ficha de conversación (contenido, @lg/content-schema) → definición del encuentro del motor puro (@lg/core/conversation).
-// El esquema ya validó la forma; createEncounter vuelve a chequear lo que el motor necesita (y rechaza claro un tipo de
-// medidor sin puntuador, p. ej. `negociar` hasta que exista).
+// Conversation sheet (content, @lg/content-schema) → encounter definition for the pure engine (@lg/core/conversation).
+// The schema already validated the shape; createEncounter re-checks what the engine needs (and clearly rejects a meter type
+// with no scorer, e.g. `negociar` until it exists).
 import { createEncounter, type EncounterDef, type GoalMeterDef, type MeterDef, type RapportMeterDef } from "@lg/core/conversation";
 import type { FichaConversacion } from "@lg/content-schema";
 

@@ -1,15 +1,15 @@
-// Constructor del prompt del NPC (03 §5.4 punto 2, 02 §3.2): prompt base + ficha del NPC + escena + tarjeta de nivel +
-// reglas. Lo arma SOLO el servidor; el cliente nunca ve ni arma prompts (03 §5.3, A4). Honestidad si preguntan si es una
-// IA (S6, D-061), rails de menores (02 §6.6 #14), los NPCs nunca corrigen explícito (L8, D-070).
+// NPC prompt builder (03 §5.4 point 2, 02 §3.2): base prompt + NPC sheet + scene + level card +
+// rules. Built ONLY by the server; the client never sees or builds prompts (03 §5.3, A4). Honesty if asked whether it is an
+// AI (S6, D-061), minors rails (02 §6.6 #14), NPCs never correct explicitly (L8, D-070).
 import type { Escena, Npc, TarjetaNivel } from "@lg/content-schema";
 import type { WorldProgress } from "@lg/core/scene";
 import { applies, exitLines, isNpcLine, openingLines, type Catalog } from "./catalog.ts";
 
-/** Andamiaje por defecto hasta que exista el modelo del alumno (F6/F7): 2 de 5 (02 §3.3, ejemplo de tarjeta A1). */
+/** Default scaffolding until the student model exists (F6/F7): 2 of 5 (02 §3.3, card example A1). */
 export const DEFAULT_SCAFFOLD_LEVEL = 2;
 
 
-/** Rail de menores en inglés (02 §6.6 #14 y la ficha de Noor, 02 §3.4): se suma a la persona si `es_menor`. */
+/** Minors rail in English (02 §6.6 #14 and Noor's sheet, 02 §3.4): added to the persona if `es_menor`. */
 export const MINOR_RAILS = [
   "=== EXTRA RULES: YOU ARE A MINOR ===",
   "Your scenes happen only in public places at the Crossing or the fields, with neighbors in view.",
@@ -23,20 +23,20 @@ export interface PromptInput {
   npc: Npc;
   scene: Escena;
   world: WorldProgress;
-  /** Quién presentó al jugador a este NPC, si alguien lo hizo (G9). */
+  /** Who introduced the player to this NPC, if anyone did (G9). */
   introducedBy: string | null;
   scaffoldLevel?: number;
 }
 
 export interface BuiltPrompt {
   system: string;
-  /** La apertura guionada ya dicha, como turno previo del modelo (03 §5.4 punto 3). */
+  /** The already-spoken scripted opening, as a previous model turn (03 §5.4 point 3). */
   openingAsModelTurn: string | null;
 }
 
 const PLACEHOLDER = /\{\{([a-z_]+)\}\}/g;
 
-/** Definiciones `{{nombre}} = "valor"` dentro de una persona (02 §3.4.1: la regla de L1 de Inés). */
+/** `{{nombre}} = "valor"` definitions inside a persona (02 §3.4.1: Inés's L1 rule). */
 export function personaDefinitions(persona: string): Record<string, string> {
   const out: Record<string, string> = {};
   const re = /\{\{([a-z_]+)\}\}\s*=\s*"((?:[^"\\]|\\.)*)"/g;
@@ -47,7 +47,7 @@ export function personaDefinitions(persona: string): Record<string, string> {
 
 const npcName = (catalog: Catalog, id: string): string => catalog.npc(id)?.nombre.split(" ")[0] ?? id;
 
-/** Tarjeta de nivel: el texto de ejemplo de la banda si existe; si no, sus campos (02 §3.3). */
+/** Level card: the band's example text if it exists; otherwise its fields (02 §3.3). */
 export function renderLevelCard(card: TarjetaNivel | undefined, band: string): string {
   if (!card) return `Band ${band}: short, simple sentences. One question per turn.`;
   if (card.ejemplo_tarjeta) return card.ejemplo_tarjeta.texto.trim();
@@ -78,14 +78,14 @@ function sceneFacts(catalog: Catalog, scene: Escena): { facts: string; scriptLin
   for (const id of scene.hechos_escena) {
     const s = catalog.saber(id);
     if (!s) continue;
-    // D-170: una ficha no visible en el modo no es un hecho; su linea_sin_dato entra como guion.
+    // D-170: a sheet not visible in the mode is not a fact; its linea_sin_dato enters as script.
     if (s.visible_en_modo && s.linea_en) facts.push(`- ${s.linea_en}`);
     else if (s.linea_sin_dato) scriptLines.push(s.linea_sin_dato);
   }
   return { facts: facts.length ? facts.join("\n") : "none", scriptLines };
 }
 
-/** Valores de los huecos de 02 §3.2 para esta escena. */
+/** Values for the gaps of 02 §3.2 for this scene. */
 export function placeholderValues(input: PromptInput): Record<string, string> {
   const { catalog, npc, scene, world } = input;
   const defs = personaDefinitions(npc.persona_prompt);
@@ -96,7 +96,7 @@ export function placeholderValues(input: PromptInput): Record<string, string> {
   const moves = applies(scene.andamiaje_npc) ?? [];
   return {
     allowed_topics: scene.temas_permitidos.join("; "),
-    // Línea S3: content/safety/containment.es-AR.yaml (PROVISORIA hasta los textos revisados, D-112 / F13).
+    // S3 line: content/safety/containment.es-AR.yaml (PROVISIONAL until the reviewed texts, D-112 / F13).
     safety_line_en: catalog.safety.containment.contencion_en,
     scene_facts: facts,
     who_knows_more: whoKnows.length ? whoKnows.join("; ") : "nobody in particular",
@@ -110,7 +110,7 @@ export function placeholderValues(input: PromptInput): Record<string, string> {
     pass_turn_event: "a [DIRECTOR] note, never to be said aloud",
     npc_scaffold_moves: moves.length ? moves.join(" | ") : "the four moves of L7",
     npc_need: applies(scene.necesidad_npc) ?? "to have a friendly chat",
-    // A2: en una conversación por medidores la línea de cierre nombra el objetivo: no entra al prompt (ADR-027).
+    // A2: in a meters conversation the closing line names the goal: it does not enter the prompt (ADR-027).
     closing_line: scene.conversacion ? "a short, kind goodbye (the game says the scripted closing)" : firstNpc(scene.cierre_guionado) ?? "a short, kind goodbye",
     exit_line: firstNpc(exitLines(scene)) ?? "a short, kind goodbye",
     mystery_clues_for_you: clues.length ? clues.join(" / ") : "none",
@@ -129,7 +129,7 @@ export class PromptError extends Error {
   }
 }
 
-/** Llena el prompt base; un hueco sin valor es un error (nunca se manda `{{...}}` al modelo). */
+/** Fills the base prompt; a gap with no value is an error (`{{...}}` is never sent to the model). */
 export function fillBase(base: string, values: Record<string, string>): string {
   return base.replace(PLACEHOLDER, (_all, key: string) => {
     const v = values[key];
@@ -156,7 +156,7 @@ function sceneCard(input: PromptInput): string {
   ].filter(Boolean).join("\n");
 }
 
-/** El prompt de sistema completo del NPC para esta escena. */
+/** The full system prompt of the NPC for this scene. */
 export function buildNpcPrompt(input: PromptInput): BuiltPrompt {
   const base = fillBase(input.catalog.npcBase, placeholderValues(input));
   const persona = input.npc.persona_prompt.trim();

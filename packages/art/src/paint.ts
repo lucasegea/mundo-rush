@@ -1,32 +1,32 @@
-// @lg/art paint.ts: el color por vértice "pintado" de la propuesta C §7, sin three (plan estetica-c M1 ítem 7,
-// revisión de arquitectura 2026-10-12): núcleo puro sobre arreglos, movido desde world/materials/ en M2 tal cual. Lo usan el adaptador
-// world/materials/paintGeometry.ts y scripts/assets/optimize.ts (una sola implementación). Degradé vertical (más claro
-// arriba, de 15 a 35 % más oscuro abajo) y temblor de pincel por posición. Los colores van en espacio lineal (el que
-// three usa en los atributos de color).
+// @lg/art paint.ts: the "painted" per-vertex color of proposal C §7, without three (plan estetica-c M1 item 7,
+// architecture review 2026-10-12): pure core over arrays, moved from world/materials/ in M2 as is. Used by the
+// world/materials/paintGeometry.ts adapter and scripts/assets/optimize.ts (a single implementation). Vertical gradient (lighter
+// at the top, 15 to 35 % darker at the bottom) and brush jitter by position. Colors are in linear space (the one
+// three uses in color attributes).
 import { PALETTE, type PaletteToken } from "./palette.ts";
 
 export type Rgb = readonly [number, number, number];
 
 const srgbToLinear = (c: number): number => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 
-/** #rrggbb → color lineal (lo mismo que hace `new Color(hex)` de three con el manejo de color activo). */
+/** #rrggbb → linear color (the same as three's `new Color(hex)` with the active color management). */
 export function hexToLinear(hex: string): Rgb {
   const n = Number.parseInt(hex.slice(1), 16);
   return [srgbToLinear(((n >> 16) & 255) / 255), srgbToLinear(((n >> 8) & 255) / 255), srgbToLinear((n & 255) / 255)];
 }
 
-/** Un token de la paleta o un hex suelto, en lineal. */
+/** A palette token or a loose hex, in linear. */
 export const tokenRgb = (token: PaletteToken | `#${string}`): Rgb =>
   hexToLinear(token.startsWith("#") ? token : PALETTE[token as PaletteToken]);
 
-/** Hash determinístico de una posición y una semilla → [0, 1). */
+/** Deterministic hash of a position and a seed → [0, 1). */
 export function hash3(x: number, y: number, z: number, seed = 0): number {
   let h = Math.imul(Math.round(x * 997) | 0, 374761393) ^ Math.imul(Math.round(y * 991) | 0, 668265263) ^ Math.imul(Math.round(z * 983) | 0, 1440662683);
   h = Math.imul(h ^ seed ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/** Ruido de valor 2D suave (bilineal con smoothstep sobre hash), determinístico. → [0, 1). */
+/** Smooth 2D value noise (bilinear with smoothstep over a hash), deterministic. → [0, 1). */
 export function noise2(x: number, z: number, seed = 0): number {
   const xi = Math.floor(x);
   const zi = Math.floor(z);
@@ -42,13 +42,13 @@ export function noise2(x: number, z: number, seed = 0): number {
 }
 
 export interface PaintOptions {
-  /** Cuánto se aclara hacia arriba (0 a 1; el mockup usa 0,05 a 0,3). */
+  /** How much it lightens toward the top (0 to 1; the mockup uses 0.05 to 0.3). */
   top?: number;
-  /** Cuánto más oscuro queda abajo (propuesta C §7: 0,15 a 0,35). */
+  /** How much darker it ends up at the bottom (proposal C §7: 0.15 to 0.35). */
   bottomDark?: number;
-  /** Amplitud total del temblor de pincel en luminancia (propuesta C §7: 0,07). */
+  /** Total amplitude of the brush jitter in luminance (proposal C §7: 0.07). */
   jitter?: number;
-  /** Color de arriba; si no, el base aclarado. */
+  /** Top color; otherwise, the lightened base. */
   light?: Rgb;
 }
 
@@ -58,8 +58,8 @@ const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
 const lighter = (c: Rgb): Rgb => [c[0] + (1 - c[0]) * 0.18, c[1] + (1 - c[1]) * 0.18, c[2] + (1 - c[2]) * 0.18];
 
 /**
- * Colores por vértice para `positions` (x, y, z intercalados): degradé vertical entre el y mínimo y el máximo y temblor
- * de pincel por posición. Determinístico con la misma semilla. Devuelve r, g, b intercalados.
+ * Per-vertex colors for `positions` (x, y, z interleaved): vertical gradient between the minimum and maximum y and brush
+ * jitter by position. Deterministic with the same seed. Returns r, g, b interleaved.
  */
 export function paintColors(positions: ArrayLike<number>, rgb: Rgb, seed = 0, opts: PaintOptions = {}): Float32Array {
   const top = opts.top ?? PAINT_DEFAULTS.top;

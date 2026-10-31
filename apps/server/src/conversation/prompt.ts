@@ -1,9 +1,9 @@
-// Nota del NPC para una conversación por medidores (ADR-027; informe de investigación 2.4): se suma al prompt de la escena
-// (base + persona + tarjeta) y cambia con el estado del encuentro. Reglas de oro:
-//   1. Lo que el NPC no tiene no lo puede filtrar: el objetivo (recado, objeciones, puente) entra RECIÉN en su fase.
-//   2. Solo los hechos de los niveles abiertos están en el prompt (el código abre niveles, no el modelo).
-//   3. Afina S2 para esta escena: se habla de la vida del PERSONAJE en el juego; nunca datos reales. Sin romance.
-// Inglés: es para el modelo. El jugador nunca lo ve (03 §5.3).
+// NPC note for a meters conversation (ADR-027; the research report 2.4): added to the scene prompt
+// (base + persona + card) and changes with the encounter state. Golden rules:
+//   1. What the NPC does not have it cannot leak: the goal (errand, objections, bridge) enters only in its phase.
+//   2. Only the facts of the open levels are in the prompt (the code opens levels, not the model).
+//   3. Refines S2 for this scene: talk about the CHARACTER's life in the game; never real data. No romance.
+// English: it is for the model. The player never sees it (03 §5.3).
 import type { EncounterState } from "@lg/core/conversation";
 import type { FichaConversacion } from "@lg/content-schema";
 
@@ -24,7 +24,7 @@ const RAPPORT_PHASE = [
 
 const DONE_PHASE = "WHERE YOU ARE: you already agreed to help. Keep it short and kind; the game says your closing line.";
 
-/** La nota del NPC para el estado actual del encuentro. */
+/** The NPC note for the current encounter state. */
 export function conversationBrief(f: FichaConversacion, state: EncounterState): string {
   const goal = f.medidores[1];
   const facts = f.hechos.filter((h) => h.nivel <= state.unlockedTier).map((h) => `- ${h.valor_en}`);
@@ -58,7 +58,7 @@ export function conversationBrief(f: FichaConversacion, state: EncounterState): 
   return lines.filter((l) => l !== "").join("\n");
 }
 
-/** Llenado bruto de un medidor por id (para las condiciones de los secretos): lleno = 1; activo = sus puntos. */
+/** Raw fill of a meter by id (for the secrets' conditions): full = 1; active = its points. */
 function meterFill(f: FichaConversacion, state: EncounterState, meterId: string): number {
   const i = f.medidores.findIndex((m) => m.id === meterId);
   if (i < 0) return 0;

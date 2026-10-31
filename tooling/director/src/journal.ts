@@ -1,6 +1,6 @@
-// Diario de sesiones de prueba (03 §6.5.2, D-192): `.director/journal/<sessionId>.jsonl`, solo agregar.
-// El escritor numera (`seq`) y valida cada evento contra el esquema; lo que no valida no se escribe.
-// Se conservan las últimas 30 sesiones (prune).
+// Test-session journal (03 §6.5.2, D-192): `.director/journal/<sessionId>.jsonl`, append-only.
+// The writer numbers (`seq`) and validates each event against the schema; what does not validate is not written.
+// The last 30 sessions are kept (prune).
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -13,7 +13,7 @@ export interface JournalAppend {
   rejected: number;
 }
 
-/** Último `seq` escrito en un archivo de sesión (−1 si está vacío o no existe). */
+/** Last `seq` written in a session file (−1 if it is empty or does not exist). */
 function lastSeq(path: string): number {
   if (!existsSync(path)) return -1;
   const lines = readFileSync(path, "utf8").trimEnd().split("\n").filter(Boolean);
@@ -23,7 +23,7 @@ function lastSeq(path: string): number {
   return parsed.success ? parsed.data.seq : lines.length - 1;
 }
 
-/** Escritor solo-agregar. `enrich` completa lo que el cliente no sabe (p. ej. gitSha de session.start). */
+/** Append-only writer. `enrich` fills in what the client does not know (e.g. gitSha of session.start). */
 export function createJournalWriter(root: string, enrich: (e: Record<string, unknown>) => Record<string, unknown> = (e) => e) {
   const seqs = new Map<string, number>();
   return {
@@ -52,7 +52,7 @@ export function createJournalWriter(root: string, enrich: (e: Record<string, unk
   };
 }
 
-/** Ids de sesión del diario, de la más nueva a la más vieja (por fecha de modificación, después por id). */
+/** Journal session ids, newest to oldest (by modification date, then by id). */
 export function sessionIds(root: string): string[] {
   const dir = journalDir(root);
   if (!existsSync(dir)) return [];
@@ -63,7 +63,7 @@ export function sessionIds(root: string): string[] {
     .map((s) => s.id);
 }
 
-/** Eventos válidos de una sesión, en orden. Una línea corrupta se salta (el diario sigue siendo legible). */
+/** Valid events of a session, in order. A corrupt line is skipped (the journal stays readable). */
 export function readSessionEvents(root: string, sessionId: string): JournalEvent[] {
   SessionIdSchema.parse(sessionId);
   const path = journalPath(root, sessionId);
@@ -78,7 +78,7 @@ export function readSessionEvents(root: string, sessionId: string): JournalEvent
   });
 }
 
-/** Borra las sesiones más viejas y deja `keep` (D-192: 30). Devuelve los ids borrados. */
+/** Deletes the oldest sessions and keeps `keep` (D-192: 30). Returns the deleted ids. */
 export function pruneJournal(root: string, keep = JOURNAL_KEEP_SESSIONS): string[] {
   const removed = sessionIds(root).slice(keep);
   for (const id of removed) rmSync(journalPath(root, id), { force: true });

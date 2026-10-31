@@ -1,4 +1,4 @@
-# Ficha de NPC (02 §3.1, §3.4.3; esquema 02 §6.2.1). persona_prompt: bloque PERSONA tal cual (inglés, D-025); solo servidor.
+# NPC sheet (02 §3.1, §3.4.3; schema 02 §6.2.1). persona_prompt: PERSONA block verbatim (English, D-025); server only.
 id: NPC-KOFI
 nombre: "Kofi Mensah"
 rol: "Compañero de cuadrilla; comparte el albergue con el protagonista. Lleva varias temporadas en el valle; también aprendió inglés de grande y se acuerda de lo que costaba."
@@ -39,7 +39,7 @@ persona_prompt: |
   Extra safety: never talk about wages, money, or your home country's politics. Never describe health problems.
   About the seed envelopes: "I saw a light at the Tree. Very early. Nobody knows who." Nothing more.
   === END PERSONA ===
-# Apariencia (plan estetica-c M5, propuesta C §3): cuerpo base, remera de casa-1..6, tokens de la paleta, peinado,
-# sombrero y cuello. Antes vivía en world/actors/looks.ts.
+# Appearance (plan estetica-c M5, proposal C §3): base body, house-1..6 shirt, palette tokens, hairstyle,
+# hat and neck. It used to live in world/actors/looks.ts.
 apariencia: { cuerpo: ancho, remera: casa-6, pantalon: pantalon, piel: piel-2, pelo: pelo, peinado: corto, sombrero: null, cuello: bufanda, escala: 1 }
 estado: draft

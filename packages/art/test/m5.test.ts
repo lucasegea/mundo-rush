@@ -1,6 +1,6 @@
-// Plan estetica-c M5: lo puro de @lg/art que comparten world/ y validate:content. Apariencias (vocabulario, lectura sin
-// zod), tabla de costos del estimador, líneas del terreno, empedrado y formas 2D. Que la tabla de costos dé lo mismo que
-// los constructores de three lo prueba apps/web/test/maqueta.test.ts (acá no hay three).
+// Plan estetica-c M5: the pure parts of @lg/art shared by world/ and validate:content. Appearances (vocabulary, reading without
+// zod), estimator cost table, terrain lines, cobblestones and 2D shapes. That the cost table gives the same as
+// the three constructors is tested by apps/web/test/maqueta.test.ts (there is no three here).
 import { describe, expect, test } from "vitest";
 import {
   addEstimates, codePropTriangles, fencePosts, FENCE, headTriangles, HEAD_TRIANGLES, insidePolygon, isCodeProp, isPaletteToken,
@@ -62,7 +62,7 @@ describe("tabla de costos", () => {
     expect(fencePosts(1.7)).toBe(3);
     expect(fencePosts(9)).toBe(7);
     expect(codePropTriangles("codigo/cerco", { w: 9, h: 1, d: 0.2 })).toBe(7 * FENCE.postTriangles + 2 * FENCE.railTriangles);
-    // El largo es el mayor de ancho y fondo (un cerco girado por tamaño).
+    // The length is the larger of width and depth (a fence rotated by size).
     expect(codePropTriangles("codigo/cerco", { w: 0.2, h: 1, d: 9 })).toBe(codePropTriangles("codigo/cerco", { w: 9, h: 1, d: 0.2 }));
   });
 
@@ -86,7 +86,7 @@ describe("terreno y empedrado", () => {
     expect(terrainExtent(b)).toEqual({ minX: -16 - TERRAIN_SKIRT, maxX: 16 + TERRAIN_SKIRT, minZ: -12 - TERRAIN_SKIRT, maxZ: 12 + TERRAIN_SKIRT });
     const { xs, zs } = terrainLines(b);
     expect(terrainTriangles(b)).toBe(2 * (xs.length - 1) * (zs.length - 1));
-    expect(terrainTriangles(b)).toBe(9672); // el número medido en 43c2b48 sobre el diorama de prueba
+    expect(terrainTriangles(b)).toBe(9672); // the number measured at 43c2b48 on the test diorama
     for (let i = 1; i < xs.length; i++) expect(xs[i] as number).toBeGreaterThan(xs[i - 1] as number);
   });
 

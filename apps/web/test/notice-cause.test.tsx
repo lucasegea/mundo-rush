@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// open-world-3d T1 (AC4): el HUD de diálogo muestra por qué el NPC no pudo contestar. Con causa: la frase de su kind
-// (y el estado HTTP cuando lo hay); sin causa: el texto de hoy, exacto y solo.
+// open-world-3d T1 (AC4): the dialogue HUD shows why the NPC could not answer. With a cause: the phrase for its kind
+// (and the HTTP status when there is one); without a cause: today's text, exactly and alone.
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { NoticeCause, ServerMessage } from "@lg/protocol";

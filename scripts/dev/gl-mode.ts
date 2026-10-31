@@ -1,30 +1,30 @@
-// Lanzador de Chromium por modo de GL (open-world-3d T2(f), D-833, D-834, AC12), compartido por la caminata
-// (browser-walk.ts) y la sonda de rendimiento (perf-probe.ts). `LG_GL=gpu|igpu|swiftshader` (default `gpu`):
-//   gpu          ANGLE d3d11 en la GPU de alto rendimiento (--force_high_performance_gpu): NVIDIA en la laptop del operador
-//   igpu         ANGLE d3d11 en la integrada (--force_low_power_gpu); si el renderer no es AMD y hay LG_IGPU_LUID, se
-//                relanza con --use-adapter-luid=<luid> y el log dice que se usó ese respaldo
-//   swiftshader  render por software (lo de antes de T2)
-// Se lee el renderer desenmascarado de WebGL y la corrida falla si no coincide con el modo: `gpu` falla A PROPÓSITO en
-// una máquina sin NVIDIA (estricto-local). Un modo desconocido sale con error antes de abrir un navegador.
+// Chromium launcher per GL mode (open-world-3d T2(f), D-833, D-834, AC12), shared by the walk
+// (browser-walk.ts) and the performance probe (perf-probe.ts). `LG_GL=gpu|igpu|swiftshader` (default `gpu`):
+//   gpu          ANGLE d3d11 on the high-performance GPU (--force_high_performance_gpu): NVIDIA on the operator's laptop
+//   igpu         ANGLE d3d11 on the integrated one (--force_low_power_gpu); if the renderer is not AMD and LG_IGPU_LUID is set, it is
+//                relaunched with --use-adapter-luid=<luid> and the log says that fallback was used
+//   swiftshader  software render (what existed before T2)
+// The unmasked WebGL renderer is read and the run fails if it does not match the mode: `gpu` fails ON PURPOSE on
+// a machine without NVIDIA (strict-local). An unknown mode exits with an error before opening a browser.
 //
-// Reglas duras: el navegador SIEMPRE se cierra (try/finally en `withGlBrowser`, también en falla y con
-// `--fail-on-purpose`), y solo se matan PIDs propios (este módulo no mata nada por nombre).
+// Hard rules: the browser is ALWAYS closed (try/finally in `withGlBrowser`, also on failure and with
+// `--fail-on-purpose`), and only own PIDs are killed (this module kills nothing by name).
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 
 export const GL_MODES = ["gpu", "igpu", "swiftshader"] as const;
 export type GlMode = (typeof GL_MODES)[number];
 
-/** El viewport de la caminata y de la sonda (D-834, smaller amendments: 1280x720 a DPR 1, la resolución del mockup). */
+/** The viewport of the walk and the probe (D-834, smaller amendments: 1280x720 at DPR 1, the mockup's resolution). */
 export const VIEWPORT = { width: 1280, height: 720 } as const;
 
-/** Lo que tiene que decir el renderer desenmascarado en cada modo. */
+/** What the unmasked renderer has to say in each mode. */
 export const RENDERER_PATTERN: Readonly<Record<GlMode, RegExp>> = {
   gpu: /NVIDIA/i,
   igpu: /AMD|Radeon/i,
   swiftshader: /SwiftShader/i,
 };
 
-/** `LG_GL` (o `--gl=`) a un modo; sin valor, `gpu`; un valor desconocido es un error (antes de lanzar nada). */
+/** `LG_GL` (or `--gl=`) to a mode; with no value, `gpu`; an unknown value is an error (before launching anything). */
 export function parseGlMode(value: string | undefined): GlMode {
   if (value === undefined || value === "") return "gpu";
   if ((GL_MODES as readonly string[]).includes(value)) return value as GlMode;
@@ -33,7 +33,7 @@ export function parseGlMode(value: string | undefined): GlMode {
 
 const COMMON = ["--ignore-gpu-blocklist", "--enable-webgl"];
 
-/** Banderas de Chromium del modo. `uncapped` suma las de la sonda (sin vsync ni tope de cuadros). */
+/** Chromium flags of the mode. `uncapped` adds the probe's (no vsync or frame cap). */
 export function glArgs(mode: GlMode, opts: { uncapped?: boolean; adapterLuid?: string | undefined } = {}): string[] {
   const base = mode === "swiftshader"
     ? ["--use-angle=swiftshader", "--use-gl=angle", "--enable-unsafe-swiftshader", ...COMMON]
@@ -43,12 +43,12 @@ export function glArgs(mode: GlMode, opts: { uncapped?: boolean; adapterLuid?: s
   return opts.uncapped ? [...base, "--disable-gpu-vsync", "--disable-frame-rate-limit"] : base;
 }
 
-/** null si el renderer coincide con el modo; si no, el motivo (la corrida falla con él). */
+/** null if the renderer matches the mode; otherwise, the reason (the run fails with it). */
 export function rendererMismatch(mode: GlMode, renderer: string): string | null {
   return RENDERER_PATTERN[mode].test(renderer) ? null : `el renderer "${renderer}" no es el del modo ${mode} (${RENDERER_PATTERN[mode]})`;
 }
 
-/** El renderer desenmascarado de WebGL2 de una página (un canvas aparte: no toca el del juego). */
+/** The unmasked WebGL2 renderer of a page (a separate canvas: it does not touch the game's). */
 export const readRenderer = (page: Page): Promise<string> => page.evaluate(`(() => {
   const gl = document.createElement("canvas").getContext("webgl2");
   if (!gl) return "sin webgl2";
@@ -59,7 +59,7 @@ export const readRenderer = (page: Page): Promise<string> => page.evaluate(`(() 
 export interface GlLaunch {
   mode: GlMode;
   renderer: string;
-  /** true si igpu necesitó el respaldo --use-adapter-luid. */
+  /** true if igpu needed the --use-adapter-luid fallback. */
   adapterLuidFallback: boolean;
   args: string[];
 }
@@ -70,23 +70,23 @@ export interface GlBrowserOptions {
   uncapped?: boolean;
   viewport?: { width: number; height: number };
   deviceScaleFactor?: number;
-  /** Lanza un error con el navegador abierto (QA comprueba que no queda ningún chromium vivo). */
+  /** Throws an error with the browser open (QA checks that no chromium is left alive). */
   failOnPurpose?: boolean;
-  /** Para el respaldo de igpu. */
+  /** For the igpu fallback. */
   env?: NodeJS.ProcessEnv;
   log?: (s: string) => void;
-  /** Script que corre antes que la página (p. ej. el gancho de memoria de la sonda). */
+  /** Script that runs before the page (e.g. the probe's memory hook). */
   initScript?: string;
 }
 
-/** Navegadores vivos de este proceso (para cerrarlos ante SIGINT/SIGTERM). */
+/** Live browsers of this process (to close them on SIGINT/SIGTERM). */
 const live = new Set<Browser>();
 export const closeAllGlBrowsers = async (): Promise<void> => {
   await Promise.all([...live].map((b) => b.close().catch(() => undefined)));
   live.clear();
 };
 
-/** Cierre con tope de tiempo: cada paso se intenta aunque el anterior falle. */
+/** Close with a time limit: each step is tried even if the previous one fails. */
 async function closeBrowser(context: BrowserContext | null, browser: Browser | null): Promise<void> {
   const bounded = (p: Promise<unknown> | undefined): Promise<unknown> =>
     Promise.race([p ?? Promise.resolve(), new Promise((r) => setTimeout(r, 10_000))]).catch(() => undefined);
@@ -95,7 +95,7 @@ async function closeBrowser(context: BrowserContext | null, browser: Browser | n
   if (browser) live.delete(browser);
 }
 
-/** Lanza, abre una página y lee el renderer; el que llama cierra (closeBrowser). */
+/** Launches, opens a page and reads the renderer; the caller closes (closeBrowser). */
 async function launchOnce(exe: string, o: GlBrowserOptions, adapterLuid?: string): Promise<{ browser: Browser; context: BrowserContext; page: Page; renderer: string; args: string[] }> {
   const args = glArgs(o.mode, { uncapped: o.uncapped ?? false, adapterLuid });
   const browser = await chromium.launch({ executablePath: exe, headless: o.headless ?? true, args });
@@ -113,8 +113,8 @@ async function launchOnce(exe: string, o: GlBrowserOptions, adapterLuid?: string
 }
 
 /**
- * Abre Chromium en el modo pedido, verifica el renderer y corre `run`; el `finally` cierra el navegador pase lo que
- * pase. Un renderer que no coincide con el modo es un error (la corrida falla).
+ * Opens Chromium in the requested mode, checks the renderer and runs `run`; the `finally` closes the browser no matter what
+ * happens. A renderer that does not match the mode is an error (the run fails).
  */
 export async function withGlBrowser<T>(exe: string, o: GlBrowserOptions, run: (page: Page, info: GlLaunch) => Promise<T>): Promise<T> {
   const log = o.log ?? ((s: string) => console.log(s));

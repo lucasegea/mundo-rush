@@ -1,6 +1,6 @@
-// services/content — léxico del HUD de diálogo (F4.2): `manifiesto.json` (glossaryDisplay, 03 §8.3), el glosario
-// curado (D-067) y los textos de las plantillas de Lumi (sus líneas viajan por id). Validación mínima a mano, como el
-// catálogo de solo-diálogo: una forma inesperada falla claro y el HUD sigue sin glosario (nunca inventa traducciones).
+// services/content — dialogue HUD lexicon (F4.2): `manifiesto.json` (glossaryDisplay, 03 §8.3), the curated
+// glossary (D-067) and the texts of Lumi's templates (their lines travel by id). Minimal hand-written validation, like the
+// dialogue-only catalog: an unexpected shape fails clearly and the HUD carries on without a glossary (never invents translations).
 import type { Lexicon, GlossaryEntryInfo } from "../../state/slices";
 import { browserFetchJson, ContentShapeError, type FetchJson } from "./dialogOnlyCatalog";
 import { universeContentBase } from "./universe";
@@ -41,7 +41,7 @@ export interface LexiconSink {
   lexiconFailed(): void;
 }
 
-/** `universeId` (D-814): sin él (o U-CAMPESINO) las URLs son las legacy de siempre. */
+/** `universeId` (D-814): without it (or U-CAMPESINO) the URLs are the usual legacy ones. */
 export async function loadLexicon(sink: LexiconSink, baseUrl: string, fetchJson: FetchJson = browserFetchJson, universeId?: string): Promise<boolean> {
   sink.lexiconLoading();
   const base = universeContentBase(baseUrl, universeId);

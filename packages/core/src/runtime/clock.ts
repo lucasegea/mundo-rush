@@ -1,12 +1,12 @@
-// Reloj inyectable (R4): el núcleo nunca llama Date.now(). Quien arranca el núcleo
-// (apps/web, apps/server) le pasa un Clock real; los tests usan el manual.
+// Injectable clock (R4): the core never calls Date.now(). Whoever starts the core
+// (apps/web, apps/server) passes it a real Clock; tests use the manual one.
 
-/** Fuente de tiempo en milisegundos desde la época Unix. */
+/** Time source in milliseconds since the Unix epoch. */
 export interface Clock {
   now(): number;
 }
 
-/** Reloj controlado a mano: avanza solo cuando se le pide. */
+/** Hand-controlled clock: it advances only when asked. */
 export interface ManualClock extends Clock {
   advance(ms: number): number;
   set(ms: number): void;
@@ -16,7 +16,7 @@ function assertTime(ms: number, what: string): void {
   if (!Number.isFinite(ms)) throw new RangeError(`${what}: se esperaba un número finito, llegó ${ms}`);
 }
 
-/** Crea un reloj manual que arranca en `startMs` y nunca retrocede. */
+/** Creates a manual clock that starts at `startMs` and never goes backward. */
 export function createManualClock(startMs = 0): ManualClock {
   assertTime(startMs, "createManualClock");
   let current = startMs;
@@ -37,8 +37,8 @@ export function createManualClock(startMs = 0): ManualClock {
 }
 
 /**
- * Adapta una función de tiempo del entorno (p. ej. `() => Date.now()` en apps/) a Clock.
- * Vive en el núcleo para que cada app no reinvente la validación; la función la pone la app.
+ * Adapts an environment time function (e.g. `() => Date.now()` in apps/) to Clock.
+ * It lives in the core so each app does not reinvent the validation; the function is supplied by the app.
  */
 export function clockFrom(source: () => number): Clock {
   return {

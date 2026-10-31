@@ -1,6 +1,6 @@
-// Remuestreo puro (F5.2): la captura corre a la tasa del AudioContext (44,1 o 48 kHz) y Live acepta 16 kHz (03 §5.5).
-// Bajar: promedio por ventana (un pasabajos simple que evita el aliasing más grueso). Subir: interpolación lineal.
-// El largo de salida es floor(n · to / from): con bloques de 40 ms queda entero para las tasas comunes.
+// Pure resampling (F5.2): capture runs at the AudioContext rate (44.1 or 48 kHz) and Live accepts 16 kHz (03 §5.5).
+// Downsampling: window average (a simple low-pass that avoids the worst aliasing). Upsampling: linear interpolation.
+// The output length is floor(n · to / from): with 40 ms blocks it comes out as an integer for the common rates.
 
 export function resample(input: Float32Array, fromRate: number, toRate: number): Float32Array {
   if (!(fromRate > 0) || !(toRate > 0)) throw new RangeError("resample: tasas inválidas");
@@ -15,7 +15,7 @@ export function resample(input: Float32Array, fromRate: number, toRate: number):
       let sum = 0;
       let weight = 0;
       for (let j = Math.floor(start); j < end; j++) {
-        // Peso de la muestra j dentro de [start, end): las de los bordes cuentan en parte.
+        // Weight of sample j within [start, end): the ones at the edges count partially.
         const w = Math.min(j + 1, end) - Math.max(j, start);
         sum += (input[j] ?? 0) * w;
         weight += w;

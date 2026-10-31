@@ -1,23 +1,23 @@
-// RNG con semilla (R4): el núcleo nunca llama Math.random(). Misma semilla, misma
-// secuencia, en cualquier máquina (aritmética de 32 bits con Math.imul). Algoritmo:
-// mulberry32 (estado de 32 bits); las semillas de texto se reducen con FNV-1a.
-// No es criptográfico: sirve para reglas de juego reproducibles, no para secretos.
+// Seeded RNG (R4): the core never calls Math.random(). Same seed, same
+// sequence, on any machine (32-bit arithmetic with Math.imul). Algorithm:
+// mulberry32 (32-bit state); text seeds are reduced with FNV-1a.
+// Not cryptographic: it is for reproducible game rules, not for secrets.
 
 export interface Rng {
-  /** Flotante uniforme en [0, 1). */
+  /** Uniform float in [0, 1). */
   next(): number;
-  /** Entero uniforme en [min, max], ambos incluidos. */
+  /** Uniform integer in [min, max], both included. */
   int(min: number, max: number): number;
-  /** Un elemento uniforme de una lista no vacía. */
+  /** A uniform element of a non-empty list. */
   pick<T>(items: readonly T[]): T;
-  /** Estado actual (32 bits sin signo): con createRngFromState se retoma la secuencia. */
+  /** Current state (unsigned 32 bits): createRngFromState resumes the sequence. */
   state(): number;
 }
 
 const FNV_OFFSET = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
 
-/** Reduce una semilla (número entero o texto) a 32 bits sin signo. */
+/** Reduces a seed (integer or text) to unsigned 32 bits. */
 export function seedToState(seed: number | string): number {
   if (typeof seed === "number") {
     if (!Number.isSafeInteger(seed)) throw new RangeError(`semilla inválida: ${seed} (entero seguro)`);
@@ -31,12 +31,12 @@ export function seedToState(seed: number | string): number {
   return h >>> 0;
 }
 
-/** Crea un RNG desde una semilla. */
+/** Creates an RNG from a seed. */
 export function createRng(seed: number | string): Rng {
   return createRngFromState(seedToState(seed));
 }
 
-/** Retoma un RNG desde un estado guardado con `state()`. */
+/** Resumes an RNG from a state saved with `state()`. */
 export function createRngFromState(initial: number): Rng {
   if (!Number.isInteger(initial) || initial < 0 || initial > 0xffffffff) {
     throw new RangeError(`estado de RNG inválido: ${initial} (entero de 32 bits sin signo)`);
@@ -52,7 +52,7 @@ export function createRngFromState(initial: number): Rng {
   };
 
   const int = (min: number, max: number): number => {
-    // El rango cabe en 32 bits: más ancho, next() no tiene resolución para ser uniforme.
+    // The range fits in 32 bits: any wider, next() does not have the resolution to be uniform.
     if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max) || min > max || max - min >= 0x100000000) {
       throw new RangeError(`int: rango inválido [${min}, ${max}]`);
     }

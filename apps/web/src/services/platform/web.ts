@@ -1,18 +1,18 @@
-// Adaptador `web` de Platform (R15): el único por ahora. Las APIs del navegador entran por
-// WebPlatformEnv para poder probarlo con dobles en vitest (sin jsdom ni navegador, D-016).
+// `web` adapter of Platform (R15): the only one for now. Browser APIs come in through
+// WebPlatformEnv so it can be tested with doubles in vitest (no jsdom or browser, D-016).
 import { PlatformError, type PermissionStatus, type Platform } from "./types";
 
 interface MediaTrackLike {
   stop(): void;
 }
 
-/** Lo mínimo del navegador que usa el adaptador. */
+/** The minimum of the browser the adapter uses. */
 export interface WebPlatformEnv {
   navigator: {
     permissions?: { query(descriptor: { name: "microphone" }): Promise<{ state: string }> };
     mediaDevices?: { getUserMedia(constraints: { audio: true }): Promise<{ getTracks(): MediaTrackLike[] }> };
   };
-  /** localStorage puede lanzar al accederlo (modo privado, cookies bloqueadas): por eso es función. */
+  /** localStorage can throw on access (private mode, blocked cookies): hence it is a function. */
   storage(): Pick<Storage, "getItem" | "setItem" | "removeItem">;
   document: {
     readonly fullscreenElement: unknown;
@@ -22,13 +22,13 @@ export interface WebPlatformEnv {
   open(url: string, target: string, features: string): unknown;
 }
 
-/** Prefijo de las claves del juego en el almacenamiento del navegador. */
+/** Prefix of the game's keys in browser storage. */
 export const STORAGE_PREFIX = "lg:";
 
 const PERMISSION_STATES: readonly string[] = ["granted", "denied", "prompt"];
 const DENIED_ERRORS: readonly string[] = ["NotAllowedError", "SecurityError"];
 
-/** El entorno real del navegador (se lee en cada llamada, nunca al importar el módulo). */
+/** The real browser environment (read on each call, never on module import). */
 export function browserEnv(): WebPlatformEnv {
   return {
     navigator: navigator as unknown as WebPlatformEnv["navigator"],
@@ -60,7 +60,7 @@ export function createWebPlatform(env: WebPlatformEnv = browserEnv()): Platform 
           const { state } = await env.navigator.permissions.query({ name: kind });
           return PERMISSION_STATES.includes(state) ? (state as PermissionStatus) : fallback;
         } catch {
-          // Algunos navegadores no reconocen "microphone" en la Permissions API.
+          // Some browsers do not recognize "microphone" in the Permissions API.
           return fallback;
         }
       },
@@ -69,7 +69,7 @@ export function createWebPlatform(env: WebPlatformEnv = browserEnv()): Platform 
         if (!media || typeof media.getUserMedia !== "function") return "unsupported";
         try {
           const stream = await media.getUserMedia({ audio: true });
-          // Solo pedimos el permiso: la captura real la abre services/audio/ cuando la necesita.
+          // We only request the permission: the real capture is opened by services/audio/ when it needs it.
           for (const track of stream.getTracks()) track.stop();
           return "granted";
         } catch (err) {
@@ -84,7 +84,7 @@ export function createWebPlatform(env: WebPlatformEnv = browserEnv()): Platform 
       remove: (key) => storage("remove", (s) => s.removeItem(STORAGE_PREFIX + key)),
     },
     updates: {
-      // En la web el servidor siempre entrega la versión vigente: no hay nada que actualizar.
+      // On the web the server always serves the current version: there is nothing to update.
       check: () => Promise.resolve({ available: false }),
     },
     openLink(url) {

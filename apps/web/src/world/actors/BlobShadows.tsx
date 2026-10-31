@@ -1,6 +1,6 @@
-// world/actors/BlobShadows.tsx — las sombras blob de la propuesta C (plan estetica-c M1 ítem 12): un solo quad
-// instanciado (una llamada) bajo los troncos de árboles y pinos (fijos) y bajo los personajes (en todos los tiers, así
-// en `medium`, sin sombra proyectada, nada flota). Los personajes se leen de `actorSpots` en cada cuadro.
+// world/actors/BlobShadows.tsx — proposal C's blob shadows (plan estetica-c M1 item 12): a single instanced quad
+// (one call) under the trunks of trees and pines (fixed) and under the characters (on all tiers, so
+// on `medium`, with no cast shadow, nothing floats). Characters are read from `actorSpots` every frame.
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { InstancedMesh, Matrix4, PlaneGeometry } from "three";
@@ -8,12 +8,12 @@ import { blobShadowMaterial } from "../materials/registry";
 import type { BlobAnchor } from "../dioramas/scene";
 import { actorSpots } from "../runtime";
 
-/** Lugares para personajes además de los fijos. */
+/** Spots for characters besides the fixed ones. */
 export const MAX_ACTOR_BLOBS = 12;
 export const ACTOR_BLOB_SIZE = 1.5;
 const LIFT = 0.025;
 
-/** Open-world-3d T6: `heightAt` apoya las sombras fijas en el relieve (sin relieve, el terreno es plano en y = 0). */
+/** Open-world-3d T6: `heightAt` rests the fixed shadows on the relief (without relief, the terrain is flat at y = 0). */
 export function buildBlobShadows(anchors: readonly BlobAnchor[], heightAt: (x: number, z: number) => number = () => 0): InstancedMesh {
   const mesh = new InstancedMesh(new PlaneGeometry(1, 1).rotateX(-Math.PI / 2), blobShadowMaterial(), anchors.length + MAX_ACTOR_BLOBS);
   const m = new Matrix4();

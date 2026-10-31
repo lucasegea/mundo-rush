@@ -1,7 +1,7 @@
-// book-mode slice-1 M5 / AC11: la unidad de conversación estratégica de U-GALEANO (CONV-POTOSI = CONV-C1 "whose cow,
-// whose milk?") se juega de punta a punta en modo texto SIN modelo en vivo. Las etiquetas de cada intercambio (lo que
-// normalmente da el juez LLM) son un fixture; el motor puro de medidores (@lg/core/conversation) suma por reglas. Se
-// afirma que la conversación llega a su estado terminal de deducción (deduccion_objetivo = SAB-VACA-LECHE).
+// book-mode slice-1 M5 / AC11: the strategic conversation unit of U-GALEANO (CONV-POTOSI = CONV-C1 "whose cow,
+// whose milk?") is played end to end in text mode WITHOUT a live model. The labels of each exchange (what the
+// LLM judge normally gives) are a fixture; the pure meters engine (@lg/core/conversation) sums by rules. It
+// asserts that the conversation reaches its terminal deduction state (deduccion_objetivo = SAB-VACA-LECHE).
 import { expect, test } from "vitest";
 import { compilarContenido, type FichaConversacion } from "@lg/content-schema";
 import {
@@ -12,7 +12,7 @@ import { leerContenido } from "../../../scripts/content/build.ts";
 import { encounterFromSheet } from "../src/conversation/sheet.ts";
 import { must, REPO_ROOT } from "./helpers.ts";
 
-/** La ficha real de CONV-POTOSI, compilada en memoria desde content/universes/U-GALEANO/ (sin escribir salida). */
+/** The real CONV-POTOSI sheet, compiled in memory from content/universes/U-GALEANO/ (without writing output). */
 function galeanoSheet(id: string): FichaConversacion {
   const r = compilarContenido(leerContenido(REPO_ROOT, "U-GALEANO"), "dev");
   if (!r.salida) throw new Error(`el universo U-GALEANO no compila:\n${r.errores.slice(0, 8).map((e) => JSON.stringify(e)).join("\n")}`);
@@ -20,7 +20,7 @@ function galeanoSheet(id: string): FichaConversacion {
   return must(conversaciones.find((c) => c.id === id), id);
 }
 
-/** Un intercambio etiquetado (fixture del juez); por defecto L2 claro, sin actos ni hechos. */
+/** A labeled exchange (judge fixture); by default clear L2, no acts or facts. */
 const labels = (over: Partial<ExchangeLabels> = {}): ExchangeLabels => ({
   language: "L2", comprehensible: 2, acts: [], npcFacts: [], playerFacts: [], objections: [], safety: "none", ...over,
 });
@@ -36,9 +36,9 @@ test("CONV-POTOSI apunta su deducción a SAB-VACA-LECHE (AC11, D-803)", () => {
 });
 
 test("CONV-POTOSI llega a su estado terminal de deducción con turnos guionados, sin modelo (AC11)", () => {
-  // Fase 1 (conocer al contador): el jugador aprende hechos de niveles crecientes y comparte lo suyo (reciprocidad),
-  // hasta llenar el medidor de rapport. Fase 2 (deducir): cuenta qué vino a entender y formula la pregunta del libro
-  // (¿a dónde fue a parar la plata?), que es la objeción que destraba la respuesta de la vaca y la leche.
+  // Phase 1 (getting to know the accountant): the player learns facts of increasing levels and shares their own (reciprocity),
+  // until the rapport meter fills. Phase 2 (deduce): tells what they came to understand and formulates the book's question
+  // (where did the money end up?), which is the objection that unlocks the answer about the cow and the milk.
   const script: ExchangeLabels[] = [
     labels({ acts: ["personal_question", "self_disclosure"], npcFacts: ["libros"], playerFacts: ["nombre"] }),
     labels({ acts: ["follow_up_question", "self_disclosure"], npcFacts: ["plata_sale", "espana_pobre"], playerFacts: ["origen"] }),
@@ -49,10 +49,10 @@ test("CONV-POTOSI llega a su estado terminal de deducción con turnos guionados,
 
   const state = drive(DEF, script);
 
-  // Estado terminal: todos los medidores llenos (conocer + deducir). La deducción de la leche quedó alcanzada.
+  // Terminal state: all meters full (get to know + deduce). The milk deduction was reached.
   expect(encounterComplete(DEF, state)).toBe(true);
   expect(state.meters.every((m) => m.full)).toBe(true);
-  // El medidor objetivo (deducir) cumplió sus dos pasos obligatorios: contar y formular la pregunta del libro.
+  // The goal meter (deduce) fulfilled its two mandatory steps: telling and formulating the book's question.
   const deducir = DEF.meters.findIndex((m) => m.id === "deducir");
   expect(state.meters[deducir]?.steps).toMatchObject({ contar: "yes", preguntar: "yes" });
 });

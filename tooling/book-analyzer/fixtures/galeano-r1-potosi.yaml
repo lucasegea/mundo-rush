@@ -1,16 +1,16 @@
-# Intermedio Galeano — Región R1 (Potosí). book-mode slice-1 / M3 (T3.1).
+# Galeano intermediate — Region R1 (Potosí). book-mode slice-1 / M3 (T3.1).
 #
-# La INTERPRETACIÓN a mano del libro (docs/research/book-mode/galeano-universe-interpretation.md, Parte 3,
-# Acto I / Potosí), ya organizada por campo del contrato del engine. Las etapas INGEST/EXTRACT/DESIGN/LANG-FIT
-# son stubs honestos que pasan esto tal cual; EMIT (la única etapa real) lo valida contra @lg/content-schema y
-# escribe los YAML canónicos bajo content/universes/U-GALEANO/.
+# The hand-made INTERPRETATION of the book (docs/research/book-mode/galeano-universe-interpretation.md, Part 3,
+# Act I / Potosí), already organized by field of the engine contract. The INGEST/EXTRACT/DESIGN/LANG-FIT stages
+# are honest stubs that pass this through as is; EMIT (the only real stage) validates it against @lg/content-schema and
+# writes the canonical YAML under content/universes/U-GALEANO/.
 #
-# Seam S5 (default headless): 4 figuras, 2 misiones modo-texto. La conversación estratégica del research "C1 —
-# Whose cow, whose milk?" se emite como CONV-POTOSI (ConversacionId sólo admite letras: /^CONV-[A-Z]+$/), con
+# Seam S5 (default headless): 4 figures, 2 text-mode missions. The strategic conversation of the research "C1 —
+# Whose cow, whose milk?" is emitted as CONV-POTOSI (ConversacionId only admits letters: /^CONV-[A-Z]+$/), with
 # deduccion_objetivo = SAB-VACA-LECHE (D-803).
 #
-# M3 SEAM (analizador real): cuando INGEST lea el libro crudo y EXTRACT→LANG-FIT generen este intermedio, esta
-# mano-de-obra desaparece; la FORMA (las claves de contrato de abajo) es el límite estable que EMIT ya sabe escribir.
+# M3 SEAM (real analyzer): once INGEST reads the raw book and EXTRACT→LANG-FIT generate this intermediate, this
+# manual labor goes away; the SHAPE (the contract keys below) is the stable boundary that EMIT already knows how to write.
 
 manifiesto:
   id: U-GALEANO
@@ -44,18 +44,18 @@ mundo:
 
 dioramas:
   - id: muelle
-    # open-world-3d T6 (D-819, mockup V6 fixture.js): el mundo abierto de 140x100 m caminables con relieve interior
-    # (`relieve: true`: reliefAt de @lg/art, llanos en la aparición y en cada NPC, el camino aplana su sección). Los
-    # tres NPCs a 53-67 m entre sí y el camino de tierra del mockup (Catmull-Rom) de la aparición a los tres llanos. El
-    # borde caminable es un anillo orgánico (`no_caminable`, un polígono con una ranura de 0,2 m: el contorno de los
-    # límites y, de vuelta, una curva de 20 vértices), así el borde no se lee como un rectángulo.
+    # open-world-3d T6 (D-819, mockup V6 fixture.js): the open world of 140x100 m walkable with interior relief
+    # (`relieve: true`: reliefAt of @lg/art, flats at the spawn and at each NPC, the road flattens its section). The
+    # three NPCs 53-67 m from each other and the mockup's dirt road (Catmull-Rom) from the spawn to the three flats. The
+    # walkable edge is an organic ring (`no_caminable`, a polygon with a 0.2 m slot: the outline of the
+    # bounds and, going back, a 20-vertex curve), so the edge does not read as a rectangle.
     bounds: { minX: -70, maxX: 70, minZ: -50, maxZ: 50 }
     spawn: [-48, 0, 30]
     terreno: { extension: 160, lomas: 6, semilla: 1545, relieve: true }
     caminos:
       - { puntos: [[-58, 33], [-48, 30], [-30, 26], [-18, 17], [-5, 12], [14, 6], [30, -4], [42, -18], [38, -32], [16, -42], [-6, -44], [-20, -38]], ancho: 3.2 }
     detalle:
-      # Pedregal al pie de la bocamina; matas y flores lejos del camino.
+      # Rocky ground at the foot of the mine entrance; shrubs and flowers away from the road.
       - { tipo: piedritas, centro: [50, -16], radio: 4, cantidad: 8 }
       - { tipo: piedritas, centro: [-8, 20], radio: 3, cantidad: 5 }
       - { tipo: matas, centro: [-40, 40], radio: 4, cantidad: 6 }
@@ -63,9 +63,9 @@ dioramas:
       - { tipo: flores, centro: [-38, 20], radio: 3, cantidad: 6 }
       - { tipo: flores, centro: [22, 20], radio: 3, cantidad: 5 }
     props:
-      # La bocamina: un galpon-caja al este del llano del cerro.
+      # The mine entrance: a box-shed east of the hill flat.
       - { asset: codigo/galpon, pos: [51, 0, -24], tam: [5, 2.5, 3] }
-      # Cargas de mineral junto al mitayo (cajas que se tocan solo por la esquina).
+      # Ore loads next to the mitayo (boxes that touch only at the corner).
       - { asset: codigo/caja, pos: [-2, 0, 17], tam: [1, 1, 1] }
       - { asset: codigo/caja, pos: [-1, 0, 18], tam: [1, 1, 1] }
       - { asset: codigo/cerco, pos: [-14, 0, -30], tam: [8, 1, 0.2] }
@@ -79,8 +79,8 @@ dioramas:
   - id: plaza
     bounds: { minX: 0, maxX: 24, minZ: 0, maxZ: 24 }
     spawn: [12, 0, 12]
-    # open-world-3d T3: la plaza de la villa en el formato de la maqueta, sin NPCs (D-811): terreno y dos calles
-    # empedradas que se cruzan en el centro.
+    # open-world-3d T3: the town square in the mockup format, without NPCs (D-811): terrain and two cobbled
+    # streets crossing at the center.
     terreno: { extension: 160, lomas: 4, semilla: 1572 }
     caminos:
       - { puntos: [[0, 12], [12, 12], [24, 12]], ancho: 3, superficie: empedrado }
@@ -117,7 +117,7 @@ npcs:
       You are a forced mine worker in Potosi. You speak plainly about the mountain and the shifts.
       You know the human cost of the silver, not where it goes. Keep sentences short.
       === END PERSONA ===
-    # open-world-3d T3: un NPC puesto en un diorama necesita apariencia (plan estetica-c M5).
+    # open-world-3d T3: an NPC placed in a diorama needs an appearance (plan estetica-c M5).
     apariencia: { cuerpo: tunica, remera: casa-1, pantalon: pantalon-2, piel: piel-2, pelo: pelo, peinado: corto, sombrero: null, cuello: null, escala: 1 }
     estado: draft
   - id: NPC-CERRO
@@ -150,7 +150,7 @@ npcs:
       You are the silver mountain of Potosi speaking as a voice. You remember splendor and ruin.
       You do not know who finally kept the silver. Speak slowly, with irony. Short sentences.
       === END PERSONA ===
-    # open-world-3d T3: un NPC puesto en un diorama necesita apariencia (plan estetica-c M5).
+    # open-world-3d T3: an NPC placed in a diorama needs an appearance (plan estetica-c M5).
     apariencia: { cuerpo: ancho, remera: casa-6, pantalon: pantalon-2, piel: piel-2, pelo: piedra, peinado: casquete, sombrero: null, cuello: bufanda, escala: 1 }
     estado: draft
   - id: NPC-FACTOR
@@ -183,7 +183,7 @@ npcs:
       You are the crown's accountant in the Imperial Town. You keep the ledgers and you watch the silver leave.
       You answer only after the player forms the right question. Keep sentences short and precise.
       === END PERSONA ===
-    # open-world-3d T3: un NPC puesto en un diorama necesita apariencia (plan estetica-c M5).
+    # open-world-3d T3: an NPC placed in a diorama needs an appearance (plan estetica-c M5).
     apariencia: { cuerpo: saco, remera: casa-4, pantalon: pantalon, piel: piel, pelo: pelo-2, peinado: casquete, sombrero: boina, cuello: null, escala: 1 }
     estado: draft
   - id: NPC-TUPAC
@@ -373,10 +373,10 @@ missions:
     estado: draft
 
 conversaciones:
-  # CONV-POTOSI = la unidad estratégica "C1 — Whose cow, whose milk?" del research (Parte 3). El id usa sólo letras
-  # porque ConversacionId es /^CONV-[A-Z]+$/. deduccion_objetivo nombra el saber que cierra la conversación (D-803).
-  # Este texto NO lo lintea el compilador (las fichas de conversación no pasan por extraerLineas): por eso puede
-  # llevar los nombres propios y la cita del libro. Las citas con página viven en Saber.fuente.
+  # CONV-POTOSI = the strategic unit "C1 — Whose cow, whose milk?" of the research (Part 3). The id uses only letters
+  # because ConversacionId is /^CONV-[A-Z]+$/. deduccion_objetivo names the knowledge item that closes the conversation (D-803).
+  # The compiler does NOT lint this text (conversation sheets do not go through extraerLineas): that is why it can
+  # carry proper names and the quote from the book. Quotes with page live in Saber.fuente.
   - id: CONV-POTOSI
     npc: NPC-FACTOR
     persona_extra_en: |
@@ -572,8 +572,8 @@ glossary:
       estado: draft
       revision: { rol: "revisor bilingüe", fecha: null }
 
-# Prompt base de los NPC de este universo (D-817: el servidor lo exige en prompts.json; no hereda el de la
-# campesino, que habla del valle Kestrel). Mismos huecos de plantilla que el base legacy.
+# Base prompt of this universe's NPCs (D-817: the server requires it in prompts.json; it does not inherit the farmer
+# universe's, which talks about the Kestrel valley). Same template slots as the legacy base.
 prompts:
   npc-base: |
     === BASE: Potosi NPC (applies to every character) ===

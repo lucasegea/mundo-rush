@@ -1,5 +1,5 @@
-// Retratos SVG por código (D-030): determinísticos. Que cada color sea un token de tokens.css lo verifica
-// scripts/a11y/contrast.test.ts (lee los dos archivos del disco).
+// SVG portraits by code (D-030): deterministic. That each color is a token of tokens.css is verified by
+// scripts/a11y/contrast.test.ts (it reads both files from disk).
 import { expect, test } from "vitest";
 import { portraitLook } from "../src/ui/dialog-only/Portrait";
 

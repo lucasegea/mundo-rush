@@ -1,23 +1,23 @@
-// @lg/protocol/director — snapshot del estado vivo y eventos del diario del modo director (03 §6.5.2, FD0).
-// Solo desarrollo (D-187, ADR-026): este módulo NO se re-exporta desde el índice del paquete; lo importan
-// apps/web/src/dev/director/ (dentro de la doble llave) y tooling/director/. El juego no lo conoce.
-// Nunca hay audio en estos esquemas (D-108): los objetos son estrictos y un campo de más no valida.
+// @lg/protocol/director — snapshot of the live state and journal events of director mode (03 §6.5.2, FD0).
+// Development only (D-187, ADR-026): this module is NOT re-exported from the package index; it is imported by
+// apps/web/src/dev/director/ (inside the double gate) and tooling/director/. The game does not know about it.
+// There is never audio in these schemas (D-108): the objects are strict and an extra field does not validate.
 import { z } from "zod";
 
-/** Canal de HMR por el que el cliente manda el snapshot (≤ 4 por segundo y solo si cambió). */
+/** HMR channel the client uses to send the snapshot (≤ 4 per second and only if it changed). */
 export const SNAPSHOT_EVENT = "lg:director:snapshot";
-/** Canal de HMR por el que el cliente manda eventos del diario (el plugin les pone `seq` y los agrega). */
+/** HMR channel the client uses to send journal events (the plugin adds `seq` and appends them). */
 export const JOURNAL_EVENT = "lg:director:journal";
-/** El plugin avisa que el contenido se recompiló bien: `{ ids }` con los ids tocados. */
+/** The plugin reports that the content recompiled fine: `{ ids }` with the ids touched. */
 export const CONTENT_UPDATED_EVENT = "lg:content:updated";
 
-/** Topes del snapshot (03 §6.5.2). */
+/** Snapshot caps (03 §6.5.2). */
 export const PATH_CAP = 500;
 export const DIALOGUE_CAP = 20;
-/** Sesiones del diario que se conservan (D-192). */
+/** Journal sessions that are kept (D-192). */
 export const JOURNAL_KEEP_SESSIONS = 30;
 
-/** Id de sesión: seguro como nombre de archivo (`.director/journal/<id>.jsonl`). */
+/** Session id: safe as a file name (`.director/journal/<id>.jsonl`). */
 export const SessionIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 const Iso = z.iso.datetime();
 const Tile = z.strictObject({ x: z.number().int(), y: z.number().int() });
@@ -27,9 +27,9 @@ const FoundationState = z.enum(["idea", "en_marcha", "fundado", "crece"]);
 export const ContentErrorSchema = z.strictObject({ file: z.string(), key: z.string(), message: z.string() });
 
 /**
- * Contadores reales del renderer (plan estetica-c M6): llamadas y triángulos del último cuadro completo (todas sus
- * pasadas), texturas y geometrías vivas y los FPS medidos. Los manda solo el cliente del modo director; null si el canvas
- * no dibujó todavía (o no hay mapa).
+ * Real renderer counters (plan estetica-c M6): calls and triangles of the last complete frame (all its
+ * passes), live textures and geometries, and the measured FPS. Only the director-mode client sends them; null if the canvas
+ * has not drawn yet (or there is no map).
  */
 export const RenderStatsSchema = z.strictObject({
   drawCalls: z.number().int().nonnegative(),
@@ -48,7 +48,7 @@ export const DirectorSnapshotSchema = z.strictObject({
   region: z.string().nullable(),
   diorama: z.string().nullable(),
   player: z.strictObject({
-    /** Tile de 1 m (D-154) bajo el jugador; null fuera del mapa. */
+    /** 1 m tile (D-154) under the player; null outside the map. */
     tile: Tile.nullable(),
     pos: z.strictObject({ x: z.number(), z: z.number() }).nullable(),
     facing: Facing,
@@ -57,7 +57,7 @@ export const DirectorSnapshotSchema = z.strictObject({
   scene: z.strictObject({
     missionId: z.string().nullable(),
     sceneId: z.string().nullable(),
-    /** Estado de la máquina de escena (03 §3.5.1). */
+    /** State of the scene machine (03 §3.5.1). */
     step: z.string(),
     turnIndex: z.number().int().nonnegative(),
   }).nullable(),
@@ -69,12 +69,12 @@ export const DirectorSnapshotSchema = z.strictObject({
   network: z.array(z.string().regex(/^intro:NPC-/)),
   lastPick: z.strictObject({ x: z.number(), z: z.number() }).nullable(),
   contentErrors: z.array(ContentErrorSchema),
-  /** Plan estetica-c M6: opcional (un snapshot sin contadores sigue valiendo). */
+  /** Plan estetica-c M6: optional (a snapshot without counters is still valid). */
   render: RenderStatsSchema.nullable().optional(),
 });
 export type DirectorSnapshot = z.infer<typeof DirectorSnapshotSchema>;
 
-// ---------- diario (03 §6.5.2, D-192): `{ seq, at, type, … }`, solo texto, nunca audio ----------
+// ---------- journal (03 §6.5.2, D-192): `{ seq, at, type, … }`, text only, never audio ----------
 
 const ev = <T extends string, S extends z.ZodRawShape>(type: T, shape: S) =>
   z.strictObject({ seq: z.number().int().nonnegative(), at: Iso, type: z.literal(type), ...shape });
@@ -86,10 +86,10 @@ export const JournalEventSchema = z.discriminatedUnion("type", [
   ev("scene.start", { missionId: z.string().nullable(), sceneId: z.string().nullable(), npcId: z.string().nullable() }),
   ev("scene.end", { result: z.string(), criteriaMet: z.array(z.string()) }),
   ev("choice", { choice: z.enum(["pressDone", "pressPass", "choose"]), option: z.string().nullable() }),
-  /** Texto final del turno; nunca audio (D-108). */
+  /** Final text of the turn; never audio (D-108). */
   ev("line", { turnId: z.string(), speaker: z.string(), text: z.string() }),
   ev("content.reload", { ids: z.array(z.string()), ok: z.boolean(), errors: z.array(ContentErrorSchema) }),
-  // FD1 (el esquema existe desde v0 para que el diario sea uno solo)
+  // FD1 (the schema exists since v0 so the journal is a single one)
   ev("director.note", { text: z.string() }),
   ev("director.edit", { sha: z.string(), summary: z.string(), paths: z.array(z.string()) }),
   ev("session.end", {}),
@@ -97,17 +97,17 @@ export const JournalEventSchema = z.discriminatedUnion("type", [
 export type JournalEvent = z.infer<typeof JournalEventSchema>;
 export type JournalEventType = JournalEvent["type"];
 
-/** Lo que manda el cliente: el evento sin `seq` (el escritor del diario lo numera al agregarlo). */
+/** What the client sends: the event without `seq` (the journal writer numbers it when appending). */
 export type JournalEventInput = JournalEvent extends infer E ? (E extends JournalEvent ? Omit<E, "seq"> : never) : never;
 
-/** Mensaje del canal JOURNAL_EVENT. */
+/** Message of the JOURNAL_EVENT channel. */
 export const JournalBatchSchema = z.strictObject({
   sessionId: SessionIdSchema,
   events: z.array(z.unknown()).max(500),
 });
 export type JournalBatch = { sessionId: string; events: JournalEventInput[] };
 
-/** Mensaje del canal CONTENT_UPDATED_EVENT. */
+/** Message of the CONTENT_UPDATED_EVENT channel. */
 export interface ContentUpdated {
   ids: string[];
 }

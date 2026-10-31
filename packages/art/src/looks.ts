@@ -1,12 +1,12 @@
-// @lg/art looks.ts: el vocabulario de la apariencia de los personajes (plan estetica-c M3 y M5, D-207). En M3 la tabla
-// de apariencias vivía en world/actors/looks.ts; desde M5 cada NPC la trae en su ficha (`apariencia` de
-// content/npcs/NPC-*.yaml), así que el vocabulario (cuerpos, peinados, sombreros, cuello) vive acá, en dato puro: lo
-// importan packages/content-schema (para validar la ficha), services/content (para leer npcs.json) y world/ (para
-// dibujar). Las claves del contenido van en español (D-090); el tipo que usa world/ (`CharacterLook`) sale de
-// `lookFromApariencia`, una sola traducción.
+// @lg/art looks.ts: the character appearance vocabulary (plan estetica-c M3 and M5, D-207). In M3 the appearance
+// table lived in world/actors/looks.ts; since M5 each NPC brings it in its sheet (`apariencia` in
+// content/npcs/NPC-*.yaml), so the vocabulary (bodies, hairstyles, hats, neck) lives here, as pure data: it is
+// imported by packages/content-schema (to validate the sheet), services/content (to read npcs.json) and world/ (to
+// draw). Content keys are in Spanish (D-090); the type used by world/ (`CharacterLook`) comes from
+// `lookFromApariencia`, a single translation.
 import { PALETTE, SHIRT_TOKENS, type PaletteToken } from "./palette.ts";
 
-/** Los cuerpos base (archivos del pipeline: `kaykit-adventurers-1/cuerpo-<id>`). */
+/** The base bodies (pipeline files: `kaykit-adventurers-1/cuerpo-<id>`). */
 export const BODY_IDS = ["saco", "tunica", "ancho"] as const;
 export type BodyId = (typeof BODY_IDS)[number];
 
@@ -21,7 +21,7 @@ export type ShirtToken = (typeof SHIRT_TOKENS)[number];
 
 export interface CharacterLook {
   body: BodyId;
-  /** Remera (`casa-1..6`) y pantalón: world/ repinta las prendas marcadas del cuerpo con estos tokens. */
+  /** T-shirt (`casa-1..6`) and trousers: world/ repaints the body's marked garments with these tokens. */
   shirt: ShirtToken;
   pants: PaletteToken;
   skin: PaletteToken;
@@ -29,11 +29,11 @@ export interface CharacterLook {
   hairStyle: HairStyle;
   hat: Hat | null;
   scarf: Scarf | null;
-  /** Escala del personaje (1 = adulto; Maya tiene 9 años). */
+  /** Character scale (1 = adult; Maya is 9 years old). */
   scale: number;
 }
 
-/** El bloque `apariencia` de una ficha de NPC, tal como llega del contenido compilado (claves en español, D-090). */
+/** The `apariencia` block of an NPC sheet, as it arrives from the compiled content (Spanish keys, D-090). */
 export interface Apariencia {
   cuerpo: BodyId;
   remera: ShirtToken;
@@ -46,7 +46,7 @@ export interface Apariencia {
   escala: number;
 }
 
-/** Escala permitida (de niño a adulto grande). */
+/** Allowed scale (from child to large adult). */
 export const LOOK_SCALE_MIN = 0.6;
 export const LOOK_SCALE_MAX = 1.2;
 
@@ -61,8 +61,8 @@ export function lookFromApariencia(a: Apariencia): CharacterLook {
 }
 
 /**
- * Lee un bloque `apariencia` sin zod (el cliente no carga zod): la apariencia, o el primer problema encontrado. El
- * compilador ya validó lo mismo con el esquema de content-schema; esto es la defensa del lado del cliente.
+ * Reads an `apariencia` block without zod (the client does not load zod): the appearance, or the first problem found. The
+ * compiler already validated the same thing with the content-schema schema; this is the client-side defense.
  */
 export function parseApariencia(v: unknown): { ok: true; look: CharacterLook } | { ok: false; error: string } {
   if (typeof v !== "object" || v === null || Array.isArray(v)) return { ok: false, error: "se esperaba un objeto" };
@@ -80,26 +80,26 @@ export function parseApariencia(v: unknown): { ok: true; look: CharacterLook } |
   return { ok: true, look: lookFromApariencia(o as unknown as Apariencia) };
 }
 
-/** La silueta: lo que se lee de lejos sin color (cuerpo, peinado, sombrero, cuello y tamaño). */
+/** The silhouette: what reads from afar without color (body, hairstyle, hat, neck and size). */
 export const silhouetteKey = (l: CharacterLook): string => [l.body, l.hairStyle, l.hat ?? "-", l.scarf ?? "-", l.scale].join("|");
 
 /**
- * El jugador no tiene ficha en content/ (no hay archivo de jugador), así que su apariencia sigue en código, acá, y la
- * leen world/ (para dibujarlo) y el estimador de validate:content (para contarlo).
- * M5 SEAM: si el jugador gana ficha de contenido (o el operador elige apariencia al empezar), esto pasa a ese archivo.
+ * The player has no sheet in content/ (there is no player file), so their appearance stays in code, here, and is
+ * read by world/ (to draw it) and the validate:content estimator (to count it).
+ * M5 SEAM: if the player gains a content sheet (or the operator picks an appearance at the start), this moves to that file.
  */
 export const PLAYER_LOOK: CharacterLook = {
   body: "tunica", shirt: "casa-1", pants: "pantalon", skin: "piel", hair: "pelo", hairStyle: "casquete", hat: "gorra", scarf: null, scale: 1,
 };
 
 /**
- * Open-world-3d T7 (AC47, D3): en el mundo abierto (dioramas con relieve) el jugador y los NPCs usan el personaje de
- * Quaternius de la maqueta V6 (un solo cuerpo con pelo y cara; la apariencia de cada uno repinta remera y pantalón y
- * elige sombrero y cuello). Los dioramas planos (campesino) siguen con los tres cuerpos de KayKit.
- * Open-world-3d T7b (D-840): qué esqueleto usa un diorama lo dice su look (`characters.rig` de worldLook.ts); estos son
- * los archivos del esqueleto `quaternius` (world/actors/rigs.ts) y CAP_COLOR es el valor de DEFAULT_LOOK.
+ * Open-world-3d T7 (AC47, D3): in the open world (dioramas with relief) the player and the NPCs use the
+ * Quaternius character from the V6 mockup (a single body with hair and face; each one's appearance repaints shirt and trousers and
+ * picks hat and neck). Flat dioramas (farmer) continue with the three KayKit bodies.
+ * Open-world-3d T7b (D-840): which skeleton a diorama uses is stated by its look (`characters.rig` in worldLook.ts); these are
+ * the files of the `quaternius` skeleton (world/actors/rigs.ts) and CAP_COLOR is the value of DEFAULT_LOOK.
  */
 export const OPEN_WORLD_BODY_ASSET = "quaternius-character-animated/cuerpo";
 export const OPEN_WORLD_CLIPS_ASSET = "quaternius-character-animated/animaciones";
-/** La gorra del jugador del mundo abierto, de la maqueta (accesorio por código, no un token: es el rojo de la maqueta). */
+/** The open-world player's cap, from the mockup (accessory by code, not a token: it is the mockup's red). */
 export const CAP_COLOR = 0xd6342c;

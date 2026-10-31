@@ -1,7 +1,7 @@
-// @lg/art palette.ts: la paleta del mundo de la propuesta C §6 (D-207), única fuente de los hex. Dato puro:
-// sin three, sin DOM. La importan world/ (materiales, pintura, etiquetas), scripts/a11y/contrast.ts (pares de las
-// etiquetas de nombre, A14) y scripts/assets/ (repintado de glTF). Movida desde world/materials/ en M2 sin reescribirse
-// (plan estetica-c §10, pregunta 3).
+// @lg/art palette.ts: the world palette of proposal C §6 (D-207), the single source of the hex values. Pure data:
+// no three, no DOM. Imported by world/ (materials, painting, labels), scripts/a11y/contrast.ts (the name
+// label pairs, A14) and scripts/assets/ (glTF repainting). Moved from world/materials/ in M2 without rewriting
+// (plan estetica-c §10, question 3).
 
 export const PALETTE = {
   pasto: "#93C25B",
@@ -26,7 +26,7 @@ export const PALETTE = {
   "casa-3": "#9ED8B8",
   "casa-4": "#9CC7E8",
   "casa-5": "#B9A6DB",
-  /** `casa-6` del GDD: el mismo hex que `muro` (propuesta C §6); como ropa es la remera clara (plan estetica-c M3). */
+  /** `casa-6` from the GDD: the same hex as `muro` (proposal C §6); as clothing it is the light T-shirt (plan estetica-c M3). */
   "casa-6": "#F4EDE2",
   techo: "#C9624B",
   cumbrera: "#A84E3B",
@@ -39,10 +39,10 @@ export const PALETTE = {
   "tinta-suave": "#5B5664",
   "ámbar": "#F2A93B",
   "ámbar-osc": "#B86E12",
-  /** Texto del chip sobre `ámbar` (propuesta C §6, contraste 8,42:1). */
+  /** Chip text over `ámbar` (proposal C §6, contrast 8.42:1). */
   "chip-texto": "#2A1A05",
   "luz-bicho": "#FFD27A",
-  // Tonos de apoyo del mockup (no son tokens de la tabla, pero salen de la misma biblia):
+  // Supporting tones from the mockup (not tokens of the table, but they come from the same bible):
   piedra: "#C7BBA6",
   zocalo: "#B9A891",
   piel: "#E8B48F",
@@ -58,9 +58,9 @@ export const PALETTE = {
   "papel-borde": "#E6DCC8",
   "flor-centro": "#F7F2E6",
   chimenea: "#B98A6A",
-  // Open-world-3d T6 (D-819, D-823): el suelo del mundo abierto (color por vértice bajo el splat; del mockup V6, con el
-  // alto y el alterno más verdes: AC41 pide menos amarillo que V6) y el cielo. `cielo-horizonte` es la niebla del
-  // mundo abierto (world/sky: el horizonte de la cúpula ES el color de la niebla, AC38).
+  // Open-world-3d T6 (D-819, D-823): the open world's ground (per-vertex color under the splat; from the V6 mockup, with the
+  // high and the alternate ones greener: AC41 asks for less yellow than V6) and the sky. `cielo-horizonte` is the open
+  // world's fog (world/sky: the dome's horizon IS the fog color, AC38).
   "suelo-bajo": "#4F9A35",
   "suelo-alto": "#7FB944",
   "suelo-alterno": "#93BE4A",
@@ -70,7 +70,7 @@ export const PALETTE = {
   "cielo-cenit": "#2F86D6",
   "cielo-medio": "#68B6EA",
   "cielo-horizonte": "#CFE7EE",
-  // Luces de la propuesta C §5 (no se pintan, pero sus hex también viven acá):
+  // Lights from proposal C §5 (they are not painted, but their hex values also live here):
   sol: "#FFF1D6",
   "luz-cielo": "#D6ECF2",
   "luz-suelo": "#6E8B4A",
@@ -78,16 +78,16 @@ export const PALETTE = {
 
 export type PaletteToken = keyof typeof PALETTE;
 
-/** Las fachadas y la ropa (`casa-1..5`). */
+/** The facades and clothing (`casa-1..5`). */
 export const HOUSE_TOKENS = ["casa-1", "casa-2", "casa-3", "casa-4", "casa-5"] as const satisfies readonly PaletteToken[];
 
-/** La ropa de los personajes: `casa-1..6` (D-153 releída por D-207, plan estetica-c M3). */
+/** Character clothing: `casa-1..6` (D-153 reread by D-207, plan estetica-c M3). */
 export const SHIRT_TOKENS = ["casa-1", "casa-2", "casa-3", "casa-4", "casa-5", "casa-6"] as const satisfies readonly PaletteToken[];
 
-/** Pares de texto de las etiquetas de nombre (A14): los lee check:contrast desde acá, sin copiarlos en tokens.css. */
+/** Name label text pairs (A14): check:contrast reads them from here, without copying them into tokens.css. */
 export const LABEL_CONTRAST_PAIRS = [
   { name: "etiqueta: tinta sobre papel", fg: PALETTE.tinta, bg: PALETTE.papel },
   { name: "etiqueta resaltada: chip-texto sobre ámbar", fg: PALETTE["chip-texto"], bg: PALETTE["ámbar"] },
 ] as const;
-/** Mínimo de las etiquetas (A14: AAA, como el diálogo). */
+/** Minimum for the labels (A14: AAA, like the dialogue). */
 export const LABEL_CONTRAST_MIN = 7;

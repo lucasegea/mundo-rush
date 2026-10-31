@@ -1,7 +1,7 @@
-# Lenguaje inapropiado (02 §3.2 S4-S5; 01 §2.17.1; 03 §7.7). En runtime: entrada del jugador o salida del NPC con uno
-# de estos términos → corte + línea segura + safety_event (F4.2). Como lint de contenido (aplica_a: todo) garantiza
-# que ninguna línea del juego los tenga. PROVISORIA (la amplía la revisión de F13). Sin términos ambiguos del campo
-# (rapeseed, cock, forro, concha): un falso positivo corta una charla inocente.
+# Inappropriate language (02 §3.2 S4-S5; 01 §2.17.1; 03 §7.7). At runtime: player input or NPC output with one
+# of these terms → cut + safe line + safety_event (F4.2). As a content lint (aplica_a: todo) it guarantees
+# that no line of the game has them. PROVISIONAL (the F13 review expands it). No ambiguous terms of the field
+# (rapeseed, cock, forro, concha): a false positive cuts an innocent chat.
 id: inapropiado
 regla: inapropiado
 fuente: "02 §3.2 S4-S5; 01 §2.17.1; 03 §7.7"

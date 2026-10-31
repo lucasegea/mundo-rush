@@ -1,16 +1,16 @@
-// Curvas del layout de diorama (plan estetica-c M5, propuesta C §2): caminos y ríos se escriben como curvas catmull-rom
-// por sus puntos de control. El núcleo las muestrea UNA vez al cargar el diorama y deja la polilínea en el runtime: la
-// grilla (ríos que bloquean) y world/ (terreno que se aplana o se hunde, color del camino) leen la misma línea.
+// Diorama layout curves (plan estetica-c M5, proposal C §2): paths and rivers are written as catmull-rom curves
+// through their control points. The core samples them ONCE when loading the diorama and leaves the polyline in the runtime: the
+// grid (rivers that block) and world/ (terrain that flattens or sinks, path color) read the same line.
 import type { Point } from "../movement";
 
 type Vec2 = readonly [number, number];
 
-/** Muestras por tramo entre dos puntos de control. */
+/** Samples per segment between two control points. */
 export const CURVE_SAMPLES_PER_SPAN = 8;
 
 /**
- * Catmull-rom uniforme que pasa por todos los puntos de control (los extremos se repiten como tangente). Dos puntos dan
- * el segmento recto; puntos alineados dan una recta.
+ * Uniform catmull-rom that passes through all the control points (the ends are repeated as tangent). Two points give
+ * the straight segment; collinear points give a straight line.
  */
 export function sampleCatmullRom(points: readonly Vec2[], samplesPerSpan = CURVE_SAMPLES_PER_SPAN): Point[] {
   if (points.length === 0) return [];

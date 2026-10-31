@@ -1,22 +1,22 @@
-// world/lighting/params.ts — la sombra del sol y su geometría (plan estetica-c M1 ítem 12, D-208), como dato puro para
-// testearlos sin GPU. Open-world-3d T7b (D-838, D-839): los valores de luz, niebla, fondo y tono de la propuesta C §5
-// (SUN, HEMI, FOG, TONE, BACKGROUND) pasaron al look (`WorldLook.light`, `fog`, `background` de @lg/art) y Lighting.tsx y
-// GameCanvas los leen del look del diorama; la `fogFor` de distancia de D-208 (sin llamadas desde T5) se fundió en la de
-// world/sky. Acá queda lo del núcleo: la caja de sombra por tier y la dirección hacia el sol.
+// world/lighting/params.ts — the sun shadow and its geometry (plan estetica-c M1 item 12, D-208), as pure data to
+// test them without GPU. Open-world-3d T7b (D-838, D-839): the light, fog, background and tone values from proposal C §5
+// (SUN, HEMI, FOG, TONE, BACKGROUND) moved to the look (`WorldLook.light`, `fog`, `background` from @lg/art) and Lighting.tsx and
+// GameCanvas read them from the diorama look; the distance `fogFor` from D-208 (uncalled since T5) was merged into the one in
+// world/sky. What remains here is the core: the shadow box per tier and the sun direction.
 
-/** Sombra direccional del tier alto (03 §2.7.1): mapa de 1024 en una caja de 44 × 44 m que sigue al objetivo. */
+/** Directional shadow of the high tier (03 §2.7.1): 1024 map in a 44 × 44 m box that follows the target. */
 export const SUN_SHADOW = { mapSize: 1024, half: 22, near: 1, far: 90, bias: -0.0004, normalBias: 0.03, distance: 40 } as const;
 
 /**
- * Caja de sombra para una distancia de cámara (D-208): la de 44 × 44 m hasta la referencia y, más lejos, la caja, la
- * distancia del sol al objetivo y los planos escalan juntos, así la sombra cubre lo que se ve y la profundidad alcanza.
+ * Shadow box for a camera distance (D-208): the 44 × 44 m one up to the reference and, farther, the box, the
+ * distance from the sun to the target and the planes scale together, so the shadow covers what is seen and the depth suffices.
  */
 export function sunShadowFor(scale: number): { half: number; distance: number; near: number; far: number } {
   const k = Math.max(1, scale);
   return { half: SUN_SHADOW.half * k, distance: SUN_SHADOW.distance * k, near: SUN_SHADOW.near, far: SUN_SHADOW.far * k };
 }
 
-/** Dirección unitaria hacia el sol (elevación sobre el horizonte, azimut alrededor de +y desde +z hacia +x), del look. */
+/** Unit direction toward the sun (elevation above the horizon, azimuth around +y from +z toward +x), from the look. */
 export function sunDirection(elevationDeg: number, azimuthDeg: number): [number, number, number] {
   const e = (elevationDeg * Math.PI) / 180;
   const a = (azimuthDeg * Math.PI) / 180;

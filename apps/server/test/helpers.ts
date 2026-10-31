@@ -1,5 +1,5 @@
-// Ayudas de los tests de escena: contenido real compilado en memoria (sin escribir la salida), temporizadores y reloj
-// manuales, y una sesión con evidencia en memoria que junta lo que el servidor manda.
+// Scene test helpers: real content compiled in memory (without writing the output), manual timers and clock,
+// and a session with in-memory evidence that collects what the server sends.
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compilarContenido } from "@lg/content-schema";
@@ -23,8 +23,8 @@ import type { MissionReset } from "../src/scene-runtime/progress.ts";
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 let cached: ServerContent | null = null;
-/** El contenido real de content/, compilado en memoria (modo dev). */
-/** Valor presente o falla el test con un mensaje claro (en lugar de `x!`, que el lint prohíbe). */
+/** The real content from content/, compiled in memory (dev mode). */
+/** Present value or the test fails with a clear message (instead of `x!`, which lint forbids). */
 export function must<T>(v: T | null | undefined, what = "valor"): T {
   if (v === null || v === undefined) throw new Error(`falta ${what}`);
   return v;
@@ -40,7 +40,7 @@ export function realContent(): ServerContent {
 }
 
 export interface ManualScheduler extends Scheduler {
-  /** Avanza el reloj y dispara, en orden, lo que venció. */
+  /** Advances the clock and fires, in order, whatever came due. */
   advance(ms: number): void;
   readonly pendingCount: number;
 }
@@ -74,9 +74,9 @@ export function manualScheduler(clock: ManualClock): ManualScheduler {
 export interface Harness {
   session: SceneSession;
   sent: ServerMessage[];
-  /** Audio del NPC que salió hacia el cliente (F5.1a). */
+  /** NPC audio that went out towards the client (F5.1a). */
   audioOut: Int16Array[];
-  /** Clips de turno creados (vista de solo lectura). */
+  /** Turn clips created (read-only view). */
   clips: TurnClipView[];
   alerts: CostAlert[];
   costErrors: string[];
@@ -87,11 +87,11 @@ export interface Harness {
   clock: ManualClock;
   scheduler: ManualScheduler;
   models: ModelsConfig;
-  /** Mensajes de un tipo. */
+  /** Messages of a type. */
   of<T extends ServerMessage["type"]>(type: T): Extract<ServerMessage, { type: T }>[];
-  /** Estados por los que pasó la escena ("playerTurn.waiting"). */
+  /** States the scene went through ("playerTurn.waiting"). */
   steps(): string[];
-  /** Una sesión nueva sobre la misma evidencia (como una conexión nueva). */
+  /** A new session over the same evidence (like a new connection). */
   reconnect(): SceneSession;
 }
 
@@ -99,21 +99,21 @@ export interface HarnessOptions {
   rules?: readonly CriteriaRule[];
   observe?: Parameters<typeof fakeObserverModel>[0];
   replies?: readonly string[];
-  /** open-world-3d T1: un modelo de NPC propio (p. ej. uno que rechaza) en lugar del falso de guion. */
+  /** open-world-3d T1: an NPC model of its own (e.g. one that rejects) instead of the scripted fake. */
   npcModel?: TextModelProvider;
   evidence?: EvidenceStore;
   content?: () => ServerContent;
-  /** F4.2: clasificador de moderación falso y registro de safety_events. */
+  /** F4.2: fake moderation classifier and safety_events log. */
   moderation?: ModerationProvider;
   safety?: SafetyEventStore;
-  /** F5.1a: adaptador de voz (referencia en memoria o Live contra el servidor falso), libro de costos y config. */
+  /** F5.1a: voice adapter (in-memory reference or Live against the fake server), cost ledger and config. */
   voice?: VoiceProviderFactory | null;
   ledger?: CostLedger;
   models?: ModelsConfig;
   observerModel?: FakeModel & { observed: { turnId: string; playerText: string; attempt: number }[] };
-  /** F5.2: ganchos de conversación. */
+  /** F5.2: conversation hooks. */
   conversation?: ConversationHooks;
-  /** A2: reinicios de desarrollo de misiones. */
+  /** A2: development resets of missions. */
   resets?: () => readonly MissionReset[];
 }
 
@@ -148,7 +148,7 @@ export function harness(opts: HarnessOptions = {}): Harness {
   };
 }
 
-/** Juega una escena: abre con `npcId` y manda los turnos de texto en orden. */
+/** Plays a scene: opens with `npcId` and sends the text turns in order. */
 export async function play(h: Harness, npcId: string | null, turns: readonly string[], session: SceneSession = h.session): Promise<void> {
   await session.receive({ type: "scene.start", npcId });
   for (const text of turns) await session.receive({ type: "turn.text", text });

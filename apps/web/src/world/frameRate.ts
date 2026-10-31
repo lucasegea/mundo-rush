@@ -1,29 +1,29 @@
-// world/frameRate.ts — el tope de cuadros del canvas (plan estetica-c M6, 03 §2.7.1 y §2.7.4), en funciones puras para
-// testearlas sin GPU: con una escena de conversación arriba el canvas dibuja a 30 FPS como máximo (libera CPU para el
-// audio y el WebSocket); fuera de la charla manda el `targetFps` del tier. FrameRegulator.tsx las aplica cada cuadro
-// del navegador. Mientras dura el tope de la charla no se mide rendimiento: si PerformanceMonitor viera esos 30 FPS los
-// tomaría por una caída y bajaría el tier por un límite propio.
+// world/frameRate.ts — the canvas frame cap (plan estetica-c M6, 03 §2.7.1 and §2.7.4), in pure functions so they can
+// be tested without GPU: with a conversation scene on top the canvas draws at 30 FPS at most (frees CPU for
+// audio and the WebSocket); outside the chat the tier's `targetFps` rules. FrameRegulator.tsx applies them every browser
+// frame. While the chat cap lasts, performance is not measured: if PerformanceMonitor saw those 30 FPS it would
+// take them for a drop and lower the tier because of a limit of its own.
 //
-// Reloj de plazos: cada cuadro dibujado corre el plazo un intervalo exacto (1000 / tope), así en cualquier ventana se
-// dibujan a lo sumo los plazos que vencieron más uno (nunca se pasa del tope en promedio) y la fase no deriva en
-// pantallas cuyo período no divide al intervalo (75 o 144 Hz). Si el navegador se trabó y el plazo quedó atrás, se
-// vuelve a sincronizar en vez de dibujar una ráfaga para ponerse al día.
+// Deadline clock: each drawn frame advances the deadline by an exact interval (1000 / cap), so in any window at most
+// the deadlines that expired plus one are drawn (the cap is never exceeded on average) and the phase does not drift on
+// displays whose period does not divide the interval (75 or 144 Hz). If the browser stalled and the deadline fell behind, it
+// resynchronizes instead of drawing a burst to catch up.
 
-/** Margen contra el temblor de requestAnimationFrame: a 60 Hz con tope 60 no se saltea ningún cuadro. */
+/** Margin against requestAnimationFrame jitter: at 60 Hz with a 60 cap no frame is skipped. */
 export const FRAME_SLACK_MS = 2;
 
-/** El tope que manda: el menor entre el de la charla y el del tier (null = sin tope). */
+/** The cap that rules: the lesser of the chat's and the tier's (null = no cap). */
 export function frameCap(conversationFps: number | null, tierFps: number | null): number | null {
   const caps = [conversationFps, tierFps].filter((x): x is number => x !== null && Number.isFinite(x) && x > 0);
   return caps.length > 0 ? Math.min(...caps) : null;
 }
 
-/** ¿Toca dibujar? `now` y `deadline` en ms del mismo reloj (el plazo del próximo cuadro). */
+/** Is it time to draw? `now` and `deadline` in ms of the same clock (the next frame's deadline). */
 export const frameDue = (now: number, deadline: number): boolean => now >= deadline - FRAME_SLACK_MS;
 
 /**
- * El plazo siguiente después de dibujar en `now`: un intervalo después del anterior; si así quedaría en el pasado (el
- * navegador se trabó más de un intervalo), un intervalo después de ahora.
+ * The next deadline after drawing at `now`: one interval after the previous one; if that would land in the past (the
+ * browser stalled for more than an interval), one interval after now.
  */
 export function nextDeadline(deadline: number, now: number, maxFps: number): number {
   const interval = 1000 / maxFps;
@@ -31,39 +31,39 @@ export function nextDeadline(deadline: number, now: number, maxFps: number): num
   return next <= now ? now + interval : next;
 }
 
-/** PerformanceMonitor mide solo fuera del tope de la charla (nunca baja ni sube el tier mientras se habla, §2.7.2.2). */
+/** PerformanceMonitor measures only outside the chat cap (it never lowers or raises the tier while talking, §2.7.2.2). */
 export const monitorActive = (conversationFps: number | null): boolean => conversationFps === null;
 
-/** Los bounds por defecto de drei PerformanceMonitor (los que se usan sin tope que muerda). */
+/** drei PerformanceMonitor's default bounds (the ones used when no cap bites). */
 export const DREI_DEFAULT_BOUNDS = (refreshrate: number): [number, number] => (refreshrate > 100 ? [60, 100] : [40, 60]);
 
 /**
- * Bounds de PerformanceMonitor según el tope de cuadros (nota 2 de QA en M6). drei declina cuando el promedio cae
- * debajo de `lower`, y su `refreshrate` es el máximo de FPS que midió, que con tope es el tope mismo: con los bounds por
- * defecto un tope de 30 da [40, 60] y el monitor tomaría su propio tope por una caída cada ~2,5 s. Con tope, los bounds
- * salen del tope (no de lo medido, para que una PC que no llega al tope siga declinando) con la proporción del default
- * de 60 Hz: 2/3 abajo, el tope arriba. A 30 FPS, [20, 30]; a 60, [40, 60] (el default). Sin tope, el default de drei.
+ * PerformanceMonitor bounds according to the frame cap (QA's note 2 in M6). drei declines when the average drops
+ * below `lower`, and its `refreshrate` is the maximum FPS it measured, which with a cap is the cap itself: with the default
+ * bounds a 30 cap gives [40, 60] and the monitor would take its own cap for a drop every ~2.5 s. With a cap, the bounds
+ * come from the cap (not from what was measured, so a PC that does not reach the cap keeps declining) with the 60 Hz default's
+ * proportion: 2/3 down, the cap up. At 30 FPS, [20, 30]; at 60, [40, 60] (the default). Without a cap, drei's default.
  */
 export function monitorBounds(cap: number | null): (refreshrate: number) => [number, number] {
   return (refreshrate) => (cap === null ? DREI_DEFAULT_BOUNDS(refreshrate) : [(cap * 2) / 3, cap]);
 }
 
-/** Lo que el canvas hace con el bucle de cuadros: modo de R3F, tope del regulador y PerformanceMonitor. */
+/** What the canvas does with the frame loop: R3F mode, regulator cap and PerformanceMonitor. */
 export interface CanvasLoop {
-  /** "demand" con un panel que pausa o con tope (el regulador pide los cuadros); "always" sin tope. */
+  /** "demand" with a pausing panel or with a cap (the regulator requests the frames); "always" without a cap. */
   frameloop: "always" | "demand";
-  /** Tope que aplica FrameRegulator; null = no se monta (pausado o sin tope). */
+  /** Cap that FrameRegulator applies; null = not mounted (paused or uncapped). */
   regulatorFps: number | null;
-  /** PerformanceMonitor con sus bounds; null = no se monta (durante la charla). */
+  /** PerformanceMonitor with its bounds; null = not mounted (during the chat). */
   monitor: { bounds: (refreshrate: number) => [number, number] } | null;
 }
 
 /**
- * El bucle de cuadros del canvas como función pura (nota 1 de QA en M6): GameCanvas solo aplica lo que esto devuelve,
- * así un cambio que monte el monitor en la charla o deje el canvas en "always" con tope rompe un test.
+ * The canvas frame loop as a pure function (QA's note 1 in M6): GameCanvas only applies what this returns,
+ * so a change that mounts the monitor in the chat or leaves the canvas on "always" with a cap breaks a test.
  */
 export function canvasLoop(render: { paused: boolean; conversationFps: number | null }, tierFps: number | null, uncapped = false): CanvasLoop {
-  // open-world-3d T2(g), D-833: la sonda de rendimiento (solo desarrollo) mide sin tope: "always" y sin regulador.
+  // open-world-3d T2(g), D-833: the performance probe (development only) measures uncapped: "always" and no regulator.
   const cap = uncapped ? null : frameCap(render.conversationFps, tierFps);
   return {
     frameloop: render.paused || cap !== null ? "demand" : "always",
@@ -73,8 +73,8 @@ export function canvasLoop(render: { paused: boolean; conversationFps: number | 
 }
 
 /**
- * Cuadros dibujados en `durationMs` con una pantalla de `displayHz` y un tope `maxFps` (simulación del regulador, para
- * los tests y para razonar el margen). `jitterMs(i)` corre el i-ésimo cuadro del navegador.
+ * Frames drawn in `durationMs` with a `displayHz` screen and a `maxFps` cap (regulator simulation, for
+ * the tests and to reason about the margin). `jitterMs(i)` shifts the browser's i-th frame.
  */
 export function simulateFrames(displayHz: number, maxFps: number, durationMs: number, jitterMs: (i: number) => number = () => 0): number {
   const vsync = 1000 / displayHz;

@@ -1,14 +1,14 @@
-// check:contrast (F1.3 A4; GDD §5.4, §2.19): contraste WCAG de los tokens de color del HUD en
-// apps/web/src/styles/tokens.css, en el tema normal y en alto contraste. Pares de texto ≥ 4,5:1 (AA);
-// componentes no textuales (foco, bordes de controles) ≥ 3:1 (WCAG 1.4.11). Además, los pares de las etiquetas de
-// nombre del mundo (plan estetica-c M1 A14, D-207) ≥ 7:1 (AAA), leídos de la paleta del mundo (una sola fuente de hex,
-// sin copiarlos a tokens.css; desde M2 vienen de @lg/art).
-// Plan estetica-c M4 (HUD "papel y tinta"): los pares del diálogo que piden AAA (≥ 7:1: tinta sobre papel, texto del
-// chip sobre ámbar, botón primario papel sobre tinta), los no textuales nuevos (borde ámbar oscuro de los segmentos,
-// punto de "tu turno") y la sincronía de hex: los tokens de tokens.css que vienen de la paleta de arte tienen que ser
-// iguales a los de @lg/art (una sola fuente de los hex, revisión de arquitectura M1 A14). Un token desalineado hace salir 1.
+// check:contrast (F1.3 A4; GDD §5.4, §2.19): WCAG contrast of the HUD color tokens in
+// apps/web/src/styles/tokens.css, in the normal and high-contrast themes. Text pairs ≥ 4.5:1 (AA);
+// non-text components (focus, control borders) ≥ 3:1 (WCAG 1.4.11). Also, the pairs of the world's name
+// labels (plan estetica-c M1 A14, D-207) ≥ 7:1 (AAA), read from the world palette (a single source of hex,
+// not copied to tokens.css; since M2 they come from @lg/art).
+// Plan estetica-c M4 (HUD "paper and ink"): the dialogue pairs that ask for AAA (≥ 7:1: ink on paper, chip
+// text on amber, primary button paper on ink), the new non-text ones (dark amber border of the segments,
+// "your turn" dot) and hex sync: the tokens.css tokens that come from the art palette must be
+// equal to those of @lg/art (a single source of hex, architecture review M1 A14). A misaligned token makes it exit 1.
 //
-// Uso: node scripts/a11y/contrast.ts [--tokens <archivo.css>]   Sale con 1 si un par no llega.
+// Usage: node scripts/a11y/contrast.ts [--tokens <file.css>]   Exits with 1 if a pair falls short.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -19,25 +19,25 @@ export const TOKENS_PATH = resolve(ROOT, "apps/web/src/styles/tokens.css");
 
 export const TEXT_MIN = 4.5;
 export const NON_TEXT_MIN = 3;
-/** AAA (GDD: objetivo del diálogo). */
+/** AAA (GDD: dialogue target). */
 export const AAA_MIN = 7;
 
-/** [primer plano, fondo] por nombre de token (sin el prefijo --lg-color-). Son los pares que usa ui/. */
+/** [foreground, background] by token name (without the --lg-color- prefix). These are the pairs ui/ uses. */
 export const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["ink", "paper"], ["ink", "surface"], ["ink-muted", "paper"], ["ink-muted", "surface"],
   ["on-accent", "accent"], ["ink", "accent-soft"], ["ink-muted", "accent-soft"], ["danger", "paper"], ["danger", "surface"],
 ];
 export const NON_TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["focus", "paper"], ["focus", "surface"], ["focus", "accent-soft"], ["border", "paper"], ["border", "surface"], ["accent", "surface"],
-  // M4: borde oscuro de los segmentos del medidor y punto verde de "tu turno", sobre la tarjeta de papel.
+  // M4: dark border of the meter segments and green "your turn" dot, over the paper card.
   ["amber-strong", "paper"], ["amber-strong", "surface"], ["turn", "paper"], ["turn", "surface"],
 ];
-/** M4 (propuesta C §6): pares del HUD de diálogo que piden ≥ 7:1. */
+/** M4 (proposal C §6): dialogue HUD pairs that ask for ≥ 7:1. */
 export const AAA_PAIRS: readonly (readonly [string, string])[] = [
   ["ink", "paper"], ["on-amber", "amber"], ["paper", "ink"],
 ];
 
-/** Token de tokens.css (sin --lg-color-) → token de la paleta de arte con el mismo hex (tema normal). */
+/** tokens.css token (without --lg-color-) → art palette token with the same hex (normal theme). */
 export const PALETTE_TOKENS: Readonly<Record<string, PaletteToken>> = {
   paper: "papel",
   ink: "tinta",
@@ -52,7 +52,7 @@ export type Theme = Record<string, string>;
 
 const TOKEN_RE = /--lg-color-([\w-]+):\s*(#[0-9a-fA-F]{6})\b/g;
 
-/** Tokens de un bloque de reglas cuyo selector es exactamente `selector`. */
+/** Tokens of a rule block whose selector is exactly `selector`. */
 function block(css: string, selector: string): Theme {
   const start = css.indexOf(`${selector} {`);
   if (start < 0) return {};
@@ -60,7 +60,7 @@ function block(css: string, selector: string): Theme {
   return Object.fromEntries([...body.matchAll(TOKEN_RE)].map((m) => [m[1] ?? "", (m[2] ?? "").toLowerCase()]));
 }
 
-/** Tema normal (`:root`) y alto contraste (`:root[data-contrast="high"]`, que pisa al normal). */
+/** Normal theme (`:root`) and high contrast (`:root[data-contrast="high"]`, which overrides the normal one). */
 export function parseThemes(css: string): { normal: Theme; high: Theme } {
   const normal = block(css, ":root");
   return { normal, high: { ...normal, ...block(css, ':root[data-contrast="high"]') } };
@@ -71,7 +71,7 @@ const channel = (c: number): number => {
   return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 };
 
-/** Luminancia relativa WCAG de un #rrggbb. */
+/** WCAG relative luminance of a #rrggbb. */
 export function luminance(hex: string): number {
   const n = Number.parseInt(hex.slice(1), 16);
   return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
@@ -91,7 +91,7 @@ export interface PairResult {
   ok: boolean;
 }
 
-/** Chequea los pares en los dos temas. Un token que falta es un fallo (no un par salteado). */
+/** Checks the pairs in both themes. A missing token is a failure (not a skipped pair). */
 export function checkContrast(css: string): PairResult[] {
   const themes = parseThemes(css);
   const out: PairResult[] = [];
@@ -108,14 +108,14 @@ export function checkContrast(css: string): PairResult[] {
   return out;
 }
 
-/** Un par de la paleta del mundo: hex directos, no tokens de tokens.css. */
+/** A pair of the world palette: direct hex, not tokens.css tokens. */
 export interface WorldPair {
   name: string;
   fg: string;
   bg: string;
 }
 
-/** Los pares de las etiquetas de nombre (A14) contra su mínimo (7:1). */
+/** The name-label pairs (A14) against their minimum (7:1). */
 export function checkWorldLabels(pairs: readonly WorldPair[] = LABEL_CONTRAST_PAIRS, min: number = LABEL_CONTRAST_MIN): PairResult[] {
   return pairs.map((p) => {
     const valid = /^#[0-9a-fA-F]{6}$/.test(p.fg) && /^#[0-9a-fA-F]{6}$/.test(p.bg);
@@ -132,7 +132,7 @@ export interface SyncResult {
   ok: boolean;
 }
 
-/** Los tokens de tokens.css que vienen de la paleta de arte, contra @lg/art (tema normal; mayúsculas no importan). */
+/** The tokens.css tokens that come from the art palette, against @lg/art (normal theme; case does not matter). */
 export function checkPaletteSync(css: string, palette: Readonly<Record<string, string>> = PALETTE): SyncResult[] {
   const { normal } = parseThemes(css);
   return Object.entries(PALETTE_TOKENS).map(([token, name]) => {

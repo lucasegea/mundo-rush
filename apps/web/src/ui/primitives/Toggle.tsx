@@ -1,4 +1,4 @@
-// Interruptor = checkbox nativo con su etiqueta (lectores de pantalla y teclado sin código extra).
+// Switch = native checkbox with its label (screen readers and keyboard with no extra code).
 export interface ToggleProps {
   id: string;
   label: string;

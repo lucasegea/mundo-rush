@@ -1,2 +1,2 @@
-// world/terrain/ — terreno por alturas de la propuesta C (plan estetica-c M1 ítem 8). Marcador de zona.
+// world/terrain/ — terrain by heights from proposal C (plan estetica-c M1 item 8). Zone marker.
 export * from "./buildTerrain";

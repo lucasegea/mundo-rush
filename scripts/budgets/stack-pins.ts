@@ -1,5 +1,5 @@
-// Guarda de pines del stack 3D (open-world-3d T2(b), PA-8, lección F0.2): @react-three/fiber necesita react < 19.4 y
-// postprocessing necesita three < 0.187. Hasta acá solo el lockfile protegía el pin; esta guarda lee lo instalado.
+// 3D stack pin guard (open-world-3d T2(b), PA-8, lesson F0.2): @react-three/fiber needs react < 19.4 and
+// postprocessing needs three < 0.187. Until now only the lockfile protected the pin; this guard reads what is installed.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -13,7 +13,7 @@ const parse = (v: string): [number, number, number] | null => {
   return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
 };
 
-/** Problemas de pin (vacío = bien): react 19.3.x y three 0.186.x exactos en major.minor. */
+/** Pin problems (empty = fine): react 19.3.x and three 0.186.x exact on major.minor. */
 export const stackPinProblems = ({ react, three }: StackVersions): string[] => {
   const out: string[] = [];
   const r = parse(react);
@@ -23,7 +23,7 @@ export const stackPinProblems = ({ react, three }: StackVersions): string[] => {
   return out;
 };
 
-/** Versiones instaladas, leídas de node_modules (three no exporta su package.json, así que va por ruta). */
+/** Installed versions, read from node_modules (three does not export its package.json, so it goes by path). */
 export const installedStackVersions = (root: string): StackVersions => {
   const version = (pkg: string): string => (JSON.parse(readFileSync(join(root, "node_modules", pkg, "package.json"), "utf8")) as { version: string }).version;
   return { react: version("react"), three: version("three") };

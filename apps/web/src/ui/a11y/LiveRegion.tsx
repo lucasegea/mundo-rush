@@ -1,5 +1,5 @@
-// Región aria-live del shell (GDD §2.19): lee el anuncio vigente del store y lo dice. `key={seq}` hace que el
-// mismo texto dos veces seguidas se vuelva a anunciar.
+// Shell aria-live region (GDD §2.19): reads the current announcement from the store and speaks it. `key={seq}` makes
+// the same text twice in a row get announced again.
 import { tDynamic } from "../../i18n";
 import { selectAnnouncement, useGameView } from "../../state/selectors";
 

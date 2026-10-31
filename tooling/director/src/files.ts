@@ -1,9 +1,9 @@
-// Rutas y escrituras del modo director (03 §6.5.1-§6.5.2). Todo vive en `.director/` (gitignored): nada sale de la máquina.
+// Paths and writes of director mode (03 §6.5.1-§6.5.2). Everything lives in `.director/` (gitignored): nothing leaves the machine.
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Raíz del repo (tooling/director/src → ../../..). */
+/** Repo root (tooling/director/src → ../../..). */
 export const REPO_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 export const directorDir = (root: string): string => join(root, ".director");
@@ -11,7 +11,7 @@ export const statePath = (root: string): string => join(directorDir(root), "stat
 export const journalDir = (root: string): string => join(directorDir(root), "journal");
 export const journalPath = (root: string, sessionId: string): string => join(journalDir(root), `${sessionId}.jsonl`);
 
-/** Las operaciones de disco de la escritura atómica (inyectables para probar el orden). */
+/** The disk operations of the atomic write (injectable to test the order). */
 export interface AtomicFs {
   writeFileSync(path: string, data: string): void;
   renameSync(from: string, to: string): void;
@@ -30,8 +30,8 @@ const pause = (ms: number): void => {
 };
 
 /**
- * Escritura atómica: temporal en la MISMA carpeta (el rename no cruza discos) + rename. Quien lee (CLI, MCP) nunca ve
- * un JSON a medias. En Windows el rename falla con EPERM/EBUSY si alguien tiene el archivo abierto: reintenta.
+ * Atomic write: temp file in the SAME folder (rename does not cross disks) + rename. Whoever reads (CLI, MCP) never sees
+ * half a JSON. On Windows rename fails with EPERM/EBUSY if someone has the file open: it retries.
  */
 export function writeJsonAtomic(path: string, data: unknown, fs: AtomicFs = nodeFs): void {
   mkdirSync(dirname(path), { recursive: true });

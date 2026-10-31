@@ -1,7 +1,7 @@
-// Chequeos del registro de licencias de assets (03 §6.4.2, D-153; plan estetica-c M2). Puro: la lista de archivos
-// servidos llega como dato (la arma scripts/content/build.ts). Falla el build si un archivo servido no tiene registro, si
-// una licencia no está en la lista cerrada (M3, nota N1: CC0-1.0 y CC-BY-4.0 con atribución), si un registro con
-// atribución obligatoria no está en los créditos, o si un diorama usa un `modelo/*` sin registro.
+// Checks of the asset license registry (03 §6.4.2, D-153; plan estetica-c M2). Pure: the list of served files
+// arrives as data (built by scripts/content/build.ts). The build fails if a served file has no registry entry, if
+// a license is not in the closed list (M3, note N1: CC0-1.0 and CC-BY-4.0 with attribution), if a registry entry with
+// mandatory attribution is not in the credits, or if a diorama uses a `modelo/*` with no registry entry.
 import { archivoDeModelo, CARPETAS_CON_REGISTRO, LICENCIAS_CON_ATRIBUCION, LICENCIAS_PERMITIDAS, licenciaPermitida, PREFIJO_MODELO } from "../schemas/assets.ts";
 import type { Conjunto } from "./conjunto.ts";
 import type { Hallazgo } from "./tipos.ts";
@@ -11,12 +11,12 @@ const RUTA_CODIGO = "content/code-registry.yaml";
 const RUTA_CREDITOS = "content/creditos.yaml";
 const FUERA_DE_LISTA = `fuera de la lista permitida (${LICENCIAS_PERMITIDAS.join(", ")}): no comercial, sin derivadas, compartir igual, GPL, uso personal o desconocida no se puede usar (D-153, D-831)`;
 
-/** ¿Este archivo servido necesita registro? (models, textures, audio, sprites; 03 §6.4.2). */
+/** Does this served file need a registry entry? (models, textures, audio, sprites; 03 §6.4.2). */
 export const necesitaRegistro = (ruta: string): boolean => CARPETAS_CON_REGISTRO.some((c) => ruta.startsWith(c));
 
 /**
- * `publicos`: rutas desde la raíz del repo de los archivos servidos en apps/web/public (sin el contenido generado).
- * Sin la lista (tests del compilador con contenido sintético) se saltean solo los cruces contra disco.
+ * `publicos`: paths from the repo root of the files served in apps/web/public (without the generated content).
+ * Without the list (compiler tests with synthetic content) only the cross-checks against disk are skipped.
  */
 export const chequearAssets = (c: Conjunto, h: Hallazgo[], publicos?: readonly string[]): void => {
   const err = (archivo: string, clave: string, mensaje: string): void => {
@@ -35,7 +35,7 @@ export const chequearAssets = (c: Conjunto, h: Hallazgo[], publicos?: readonly s
   if (reg) {
     const packs = new Map(reg.packs.map((p) => [p.id, p]));
     reg.packs.forEach((p, i) => {
-      // Un pack descartado, diferido o pendiente es el registro de una evaluación: puede nombrar una licencia que no sirve.
+      // A discarded, deferred or pending pack is the record of an evaluation: it may name a license that is unusable.
       if (p.estado === "usado" && !licenciaPermitida(p.licencia)) {
         err(RUTA_REGISTRO, `packs[${i}].licencia`, `el pack "${p.id}" tiene licencia "${p.licencia}", ${FUERA_DE_LISTA}`);
       }
@@ -61,7 +61,7 @@ export const chequearAssets = (c: Conjunto, h: Hallazgo[], publicos?: readonly s
     });
   }
 
-  // Código de terceros (D-831): misma lista cerrada; un archivo registrado dos veces es un error.
+  // Third-party code (D-831): same closed list; a file registered twice is an error.
   const codigo = c.registroCodigo?.data.codigo ?? [];
   const vistosCodigo = new Set<string>();
   codigo.forEach((x, i) => {

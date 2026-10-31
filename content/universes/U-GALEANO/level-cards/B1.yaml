@@ -1,4 +1,4 @@
-# Tarjeta de nivel B1 (02 §3.3). Solo servidor.
+# Level card B1 (02 §3.3). Server only.
 banda: B1
 palabras_por_oracion: { min: 8, max: 18 }
 oraciones_por_turno: { min: 2, max: 3, nota: null }

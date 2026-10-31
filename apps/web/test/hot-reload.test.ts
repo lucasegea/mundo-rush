@@ -1,5 +1,5 @@
-// FD0 A6 (lado del cliente): `lg:content:updated` → services/content vuelve a pedir el JSON compilado → contentReloaded.
-// Con una escena abierta el cambio espera: aplica en la PRÓXIMA escena. Un diorama tocado re-deriva grilla y capas.
+// FD0 A6 (client side): `lg:content:updated` → services/content requests the compiled JSON again → contentReloaded.
+// With a scene open the change waits: it applies on the NEXT scene. A touched diorama re-derives grid and layers.
 import { describe, expect, test, vi } from "vitest";
 import { isWalkable, type DioramaLayout } from "@lg/core";
 import { pickDiorama, type FetchJson } from "../src/services/content";
@@ -11,7 +11,7 @@ import { compiledClientContent } from "./helpers";
 const BASE = compiledClientContent();
 const LAYOUT = pickDiorama(BASE["dioramas.json"], "test") as DioramaLayout;
 
-/** Contenido "recompilado": Nell cambia de nombre y el diorama suma un bloque que tapa el spawn. */
+/** "Recompiled" content: Nell changes name and the diorama adds a block that covers the spawn. */
 const edited = (): Record<string, unknown> => {
   const npcs = (BASE["npcs.json"] as { id: string; nombre: string }[]).map((n) => (n.id === "NPC-NELL" ? { ...n, nombre: "Nell Editada" } : n));
   const layout = structuredClone(LAYOUT) as DioramaLayout & { props?: unknown[] };
@@ -53,7 +53,7 @@ describe("A6: recarga en caliente en el cliente", () => {
     await vi.waitFor(() => expect(t.spy).toHaveBeenCalledTimes(1));
     expect(t.spy.mock.calls[0]?.[0]).toEqual(["NPC-NELL"]);
     expect(nellName(t.store)).toBe("Nell Editada");
-    // El diorama no estaba entre los ids: no se vuelve a pedir ni cambia.
+    // The diorama was not among the ids: it is not requested again and does not change.
     expect(t.spy.mock.calls[0]?.[1].diorama).toBeNull();
     t.stop();
     expect(t.listening()).toBe(false);

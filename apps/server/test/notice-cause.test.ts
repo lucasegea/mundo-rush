@@ -1,5 +1,5 @@
-// open-world-3d T1 (AC1 a AC3): un `model_unavailable` del NPC en texto dice por qué, con una causa estructurada que
-// sale solo de `ProviderError.code` y `status`. La escena sigue abierta para el próximo turno.
+// open-world-3d T1 (AC1 to AC3): a `model_unavailable` from the NPC in text says why, with a structured cause that
+// comes only from `ProviderError.code` and `status`. The scene stays open for the next turn.
 import { describe, expect, test } from "vitest";
 import { createGeminiTextProvider } from "../src/providers/gemini-text.ts";
 import { ProviderError, type TextModelProvider } from "../src/providers/text.ts";
@@ -8,7 +8,7 @@ import { harness } from "./helpers.ts";
 
 const rejecting = (err: unknown): TextModelProvider => ({ id: "rejecting", generate: () => Promise.reject(err) });
 
-/** Abre M0.1 con Inés y manda un turno que no cumple criterios: el NPC tiene que contestar (y falla). */
+/** Opens M0.1 with Inés and sends a turn that doesn't meet the criteria: the NPC has to answer (and fails). */
 async function failedTurn(npcModel: TextModelProvider) {
   const h = harness({ rules: M01_RULES, npcModel });
   await h.session.receive({ type: "scene.start", npcId: "NPC-INES" });

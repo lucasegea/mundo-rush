@@ -1,6 +1,6 @@
-// A* sobre la grilla de caminabilidad (03 §2.4 #3): 8 vecinos, sin cortar esquinas (una diagonal solo vale si
-// las dos celdas ortogonales que roza están libres), heurística octil y desempate fijo, así el mismo pedido
-// devuelve siempre el mismo camino. Después, suavizado por línea de visión con el radio del personaje.
+// A* over the walkability grid (03 §2.4 #3): 8 neighbors, no corner cutting (a diagonal is only valid if
+// the two orthogonal cells it grazes are free), octile heuristic and fixed tie-breaking, so the same request
+// always returns the same path. Then, line-of-sight smoothing with the character's radius.
 import { segmentClear } from "./collision";
 import { cellCenter, isWalkable, type Cell, type Point, type WalkGrid } from "./grid";
 
@@ -15,7 +15,7 @@ const octile = (dc: number, dr: number): number => {
   return Math.max(a, b) + (SQRT2 - 1) * Math.min(a, b);
 };
 
-/** Montículo binario mínimo por (f, h, índice): el desempate por índice hace el resultado determinístico. */
+/** Minimal binary heap by (f, h, index): the tie-break by index makes the result deterministic. */
 class OpenSet {
   private readonly items: { i: number; f: number; h: number }[] = [];
   get size(): number { return this.items.length; }
@@ -61,8 +61,8 @@ class OpenSet {
 }
 
 /**
- * Camino de celdas de `start` a `goal`, ambas incluidas. null si alguna está bloqueada o si el objetivo no
- * es alcanzable (otra región de la grilla).
+ * Cell path from `start` to `goal`, both included. null if either is blocked or if the goal is not
+ * reachable (another region of the grid).
  */
 export function findPath(g: WalkGrid, start: Cell, goal: Cell): Cell[] | null {
   if (!isWalkable(g, start[0], start[1]) || !isWalkable(g, goal[0], goal[1])) return null;
@@ -88,7 +88,7 @@ export function findPath(g: WalkGrid, start: Cell, goal: Cell): Cell[] | null {
       const nc = c + dc;
       const nr = r + dr;
       if (!isWalkable(g, nc, nr)) continue;
-      // Sin cortar esquinas: la diagonal exige las dos ortogonales libres (también evita el "apretón" diagonal).
+      // No corner cutting: the diagonal requires both orthogonals free (it also avoids the diagonal "squeeze").
       if (dc !== 0 && dr !== 0 && (!isWalkable(g, c + dc, r) || !isWalkable(g, c, r + dr))) continue;
       const ni = idx(nc, nr);
       if (closed[ni] === 1) continue;
@@ -112,8 +112,8 @@ export function findPath(g: WalkGrid, start: Cell, goal: Cell): Cell[] | null {
 }
 
 /**
- * Suavizado por línea de visión: desde cada ancla se salta a la celda más lejana del camino que se ve sin
- * chocar (círculo de radio r). Devuelve puntos de paso en metros, sin el punto de partida.
+ * Line-of-sight smoothing: from each anchor it jumps to the farthest cell of the path that can be seen without
+ * colliding (circle of radius r). Returns waypoints in meters, without the starting point.
  */
 export function smoothPath(g: WalkGrid, from: Point, cells: readonly Cell[], r: number): Point[] {
   const points = cells.map(([c, row]) => cellCenter(g, c, row));

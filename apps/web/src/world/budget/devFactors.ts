@@ -1,48 +1,48 @@
-// world/budget/devFactors.ts — factores de medición de desarrollo (open-world-3d T10 (b), D-846). SOLO DESARROLLO:
-// un registro con una entrada por factor y un único lector puro de la query (`?factor=grass-off,post-off`, o el
-// parámetro repetido). GameCanvas lo lee bajo `import.meta.env.DEV`; en `vite build` la condición es falsa, la rama se
-// elimina y el atributo `data-lg-dev-factors` que la marca no llega al dist (check:dev-only lo busca).
+// world/budget/devFactors.ts — development measurement factors (open-world-3d T10 (b), D-846). DEVELOPMENT ONLY:
+// a registry with one entry per factor and a single pure reader of the query (`?factor=grass-off,post-off`, or the
+// repeated parameter). GameCanvas reads it under `import.meta.env.DEV`; in `vite build` the condition is false, the branch is
+// eliminated and the `data-lg-dev-factors` attribute that marks it does not reach the dist (check:dev-only looks for it).
 //
-// Sin imports a propósito: scripts/dev/perf-probe.ts lo importa desde node para validar `--factor=<nombre>`, y los
-// tipos de acá son estructurales (encajan en WorldTierParams, PostComposer y SceneKnobs sin nombrarlos).
-// Cada factor mueve una perilla que ya existe; ninguno cambia un número de TIER_PARAMS ni de los presupuestos (AC65).
+// No imports on purpose: scripts/dev/perf-probe.ts imports it from node to validate `--factor=<name>`, and the
+// types here are structural (they fit WorldTierParams, PostComposer and SceneKnobs without naming them).
+// Each factor moves a knob that already exists; none changes a number of TIER_PARAMS or of the budgets (AC65).
 
-/** Parámetro de la query que lee `parseDevFactors`. */
+/** Query parameter that `parseDevFactors` reads. */
 export const DEV_FACTOR_PARAM = "factor";
-/** Atributo del contenedor del mapa con los factores activos (marcador de check:dev-only y lectura de la sonda). */
+/** Attribute of the map container with the active factors (marker for check:dev-only and read by the probe). */
 export const DEV_FACTORS_ATTR = "data-lg-dev-factors";
 
-/** Lo que un factor cambia. Lo que no nombra queda como lo deja el tier. */
+/** What a factor changes. What it does not name stays as the tier leaves it. */
 export interface FactorEffect {
-  /** TIER_PARAMS.post del tier en curso (solo apagar). */
+  /** TIER_PARAMS.post of the current tier (turn off only). */
   post?: "none";
-  /** EffectComposer.frameBufferType: 8 bits (UnsignedByte) en lugar del HalfFloat por defecto. */
+  /** EffectComposer.frameBufferType: 8 bits (UnsignedByte) instead of the default HalfFloat. */
   composer8bit?: boolean;
-  /** EffectComposer.multisampling (hoy 0 en todos los niveles de post). */
+  /** EffectComposer.multisampling (today 0 at all post levels). */
   multisampling?: 0 | 4;
-  /** `antialias` del contexto WebGL del Canvas (hoy false). Con post encendido el composer dibuja en su propio buffer. */
+  /** The Canvas WebGL context's `antialias` (today false). With post on, the composer draws into its own buffer. */
   antialias?: boolean;
-  /** TIER_PARAMS.shadows del tier en curso. */
+  /** TIER_PARAMS.shadows of the current tier. */
   shadows?: "none" | "directional";
-  /** maxDpr del tier en curso (el tope del `dpr` del Canvas). */
+  /** maxDpr of the current tier (the cap of the Canvas `dpr`). */
   maxDpr?: number;
-  /** Pasto V6 (T8): false = la escena se arma sin pasto. */
+  /** V6 grass (T8): false = the scene is built without grass. */
   grass?: boolean;
-  /** Mapas normales del suelo (OPEN_WORLD_DENSITY.groundNormals): false = el suelo sin normales, ni las baja. */
+  /** Ground normal maps (OPEN_WORLD_DENSITY.groundNormals): false = ground without normals, nor does it download them. */
   groundNormals?: boolean;
-  /** Bandas de árboles: "light" = sin completos (livianos e impostores), "impostor" = solo impostores. */
+  /** Tree bands: "light" = no full ones (light ones and impostors), "impostor" = impostors only. */
   treeBand?: "light" | "impostor";
 }
 
 export interface DevFactor {
   effect: FactorEffect;
-  /** La perilla que mueve (para el informe y para quien agregue un factor). */
+  /** The knob it moves (for the report and for whoever adds a factor). */
   knob: string;
 }
 
 /**
- * El registro (T10 (b)): un factor por fila de la tabla de medición. Para agregar uno: una entrada acá con su efecto,
- * y si el efecto es nuevo, su campo en FactorEffect y su lectura en el aplicador correspondiente de abajo.
+ * The registry (T10 (b)): one factor per row of the measurement table. To add one: an entry here with its effect,
+ * and if the effect is new, its field in FactorEffect and its reading in the corresponding applier below.
  */
 export const DEV_FACTORS = {
   "post-off": { effect: { post: "none" }, knob: "TIER_PARAMS.post" },
@@ -52,8 +52,8 @@ export const DEV_FACTORS = {
   "aa-on": { effect: { antialias: true }, knob: "Canvas gl.antialias" },
   "aa-off": { effect: { antialias: false }, knob: "Canvas gl.antialias" },
   "shadows-none": { effect: { shadows: "none" }, knob: "TIER_PARAMS.shadows" },
-  // Los árboles proyectan sombra solo en `high` (buildNature): en `medium` la luz direccional tiene mapa de sombra pero
-  // los árboles no la proyectan; mide el costo del mapa y de recibirla, no un `high` completo.
+  // Trees cast shadows only on `high` (buildNature): on `medium` the directional light has a shadow map but
+  // the trees do not cast it; it measures the cost of the map and of receiving it, not a full `high`.
   "shadows-directional": { effect: { shadows: "directional" }, knob: "TIER_PARAMS.shadows" },
   "grass-off": { effect: { grass: false }, knob: "buildDioramaScene knobs.grass" },
   "trees-light": { effect: { treeBand: "light" }, knob: "buildNature treeLod (full 0)" },
@@ -69,15 +69,15 @@ export const DEV_FACTOR_NAMES = Object.keys(DEV_FACTORS) as DevFactorName[];
 export const isDevFactor = (name: string): name is DevFactorName => Object.hasOwn(DEV_FACTORS, name);
 
 export interface DevFactorSet {
-  /** Los factores reconocidos, sin repetir, en el orden de la query. */
+  /** The recognized factors, without repeats, in query order. */
   names: readonly DevFactorName[];
-  /** Sus efectos mezclados: si dos tocan la misma perilla, gana el último. */
+  /** Their merged effects: if two touch the same knob, the last wins. */
   effect: Readonly<FactorEffect>;
 }
 
 export const NO_DEV_FACTORS: DevFactorSet = Object.freeze({ names: Object.freeze([]), effect: Object.freeze({}) });
 
-/** Lee la query. Fuera de desarrollo no hay factores; un nombre desconocido se ignora. */
+/** Reads the query. Outside development there are no factors; an unknown name is ignored. */
 export function parseDevFactors(search: string, dev: boolean): DevFactorSet {
   if (!dev) return NO_DEV_FACTORS;
   const raw = new URLSearchParams(search).getAll(DEV_FACTOR_PARAM).flatMap((v) => v.split(",")).map((v) => v.trim());
@@ -88,9 +88,9 @@ export function parseDevFactors(search: string, dev: boolean): DevFactorSet {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Aplicadores puros: cada uno lleva el efecto a la perilla que ya existe.
+// Pure appliers: each carries the effect to the knob that already exists.
 
-/** Los parámetros del tier con los factores de tier (post, sombras, maxDpr). Sin factores, el mismo objeto. */
+/** The tier parameters with the tier factors (post, shadows, maxDpr). Without factors, the same object. */
 export function tierWithFactors<T extends { maxDpr: number | null; post: string; shadows: string }>(params: T, e: Readonly<FactorEffect>): T {
   if (e.post === undefined && e.shadows === undefined && e.maxDpr === undefined) return params;
   return {
@@ -101,11 +101,11 @@ export function tierWithFactors<T extends { maxDpr: number | null; post: string;
   };
 }
 
-/** El composer del post (Post.tsx): multisampling y frame buffer de 8 bits. */
+/** The post composer (Post.tsx): multisampling and 8-bit frame buffer. */
 export const composerWithFactors = (e: Readonly<FactorEffect>): { multisampling: number; eightBit: boolean } =>
   ({ multisampling: e.multisampling ?? 0, eightBit: e.composer8bit === true });
 
-/** Las perillas de la escena (buildDioramaScene). Sin factores de escena, ninguna (la escena del tier). */
+/** The scene's knobs (buildDioramaScene). Without scene factors, none (the tier's scene). */
 export function sceneWithFactors(e: Readonly<FactorEffect>): { grass?: boolean; groundNormals?: boolean; treeBand?: "light" | "impostor" } {
   return {
     ...(e.grass !== undefined ? { grass: e.grass } : {}),

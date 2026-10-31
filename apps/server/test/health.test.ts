@@ -1,4 +1,4 @@
-// /health en un puerto efímero (F1.1b A4): fetch nativo contra node:http, sin supertest.
+// /health on an ephemeral port (F1.1b A4): native fetch against node:http, no supertest.
 import { spawn, type ChildProcess } from "node:child_process";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
@@ -74,7 +74,7 @@ describe("listenOptions", () => {
   });
 });
 
-// El proceso real (src/main.ts con type stripping de Node) arranca, responde y se apaga.
+// The real process (src/main.ts with Node's type stripping) starts, responds and shuts down.
 describe("proceso src/main.ts", () => {
   const SERVER_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   let child: ChildProcess | undefined;

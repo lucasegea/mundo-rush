@@ -1,7 +1,7 @@
-// world/props/gltf.ts: cargador de los modelos del pipeline de assets (plan estetica-c M2, 03 §6.4.1). GLTFLoader de
-// three/addons con el decodificador meshopt autoalojado en public/decoders/ (03 §4.2: nada de CDN; el archivo es la
-// copia exacta del de three, un test lo compara byte a byte). Todo glTF cargado pasa al material toon compartido
-// (A4: las superficies del mundo siguen siendo como mucho 2 instancias) y entra en la caja `tam` de su prop del layout.
+// world/props/gltf.ts: loader of the asset pipeline models (plan estetica-c M2, 03 §6.4.1). GLTFLoader from
+// three/addons with the self-hosted meshopt decoder in public/decoders/ (03 §4.2: no CDN; the file is the
+// exact copy of three one, a test compares it byte by byte). Every loaded glTF goes to the shared toon material
+// (A4: the world surfaces remain at most 2 instances) and fits into the `tam` box of its layout prop.
 import { Box3, Mesh, Vector3, type Material, type Object3D } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
@@ -9,25 +9,25 @@ import { toonMaterial } from "../materials/registry";
 
 export type MeshoptDecoderModule = typeof MeshoptDecoder;
 
-/** Prefijo de los props del layout que son glTF del pipeline (los `codigo/*` son constructores por código). */
+/** Prefix of the layout props that are pipeline glTFs (the `codigo/*` ones are code builders). */
 export const MODEL_PREFIX = "modelo/";
 export const isModelAsset = (asset: string): boolean => asset.startsWith(MODEL_PREFIX);
 
 const base = (): string => import.meta.env.BASE_URL;
 
-/** `modelo/<pack>/<pieza>` → url del .glb servido (apps/web/public/models/<pack>/<pieza>.glb). */
+/** `modelo/<pack>/<piece>` → url of the served .glb (apps/web/public/models/<pack>/<piece>.glb). */
 export const modelUrl = (asset: string): string => `${base()}models/${asset.slice(MODEL_PREFIX.length)}.glb`;
 
-/** El decodificador meshopt autoalojado (copia de three/addons/libs/meshopt_decoder.module.js). */
+/** The self-hosted meshopt decoder (copy of three/addons/libs/meshopt_decoder.module.js). */
 export const meshoptDecoderUrl = (): string => `${base()}decoders/meshopt_decoder.module.js`;
 
 let decoder: Promise<MeshoptDecoderModule> | null = null;
 
-/** Baja el decodificador una sola vez y solo cuando el diorama tiene modelos (no pesa en el chunk 3D). */
+/** Downloads the decoder only once and only when the diorama has models (it does not weigh in the 3D chunk). */
 export function loadMeshoptDecoder(url = meshoptDecoderUrl()): Promise<MeshoptDecoderModule> {
-  // open-world-3d T3: en `vite dev` un import dinámico de una ruta que empieza con "/" recibe `?import` y Vite lo
-  // rechaza por ser de public/ (el overlay de error tapaba la página). Con la url absoluta Vite no la toca y el archivo
-  // se sirve tal cual, igual que en el build.
+  // open-world-3d T3: in `vite dev` a dynamic import of a path that starts with "/" gets `?import` and Vite
+  // rejects it for being from public/ (the error overlay covered the page). With the absolute url Vite leaves it alone and the file
+  // is served as is, just like in the build.
   const href = typeof location === "undefined" ? url : new URL(url, location.href).href;
   decoder ??= (import(/* @vite-ignore */ href) as Promise<{ MeshoptDecoder: MeshoptDecoderModule }>).then(async (m) => {
     await m.MeshoptDecoder.ready;
@@ -37,8 +37,8 @@ export function loadMeshoptDecoder(url = meshoptDecoderUrl()): Promise<MeshoptDe
 }
 
 /**
- * Cambia cada material del modelo por el toon compartido. Un modelo sin color por vértice no salió del pipeline:
- * falla nombrando la pieza (se vería negro con el toon).
+ * Swaps each model material for the shared toon. A model without vertex color did not come out of the pipeline:
+ * it fails naming the piece (it would look black with the toon).
  */
 export function toonify(root: Object3D, name: string): Object3D {
   const old = new Set<Material>();
@@ -53,7 +53,7 @@ export function toonify(root: Object3D, name: string): Object3D {
   return root;
 }
 
-/** Parsea un .glb del pipeline (sin red) y lo deja con el material toon. */
+/** Parses a pipeline .glb (no network) and leaves it with the toon material. */
 export async function parseModel(data: ArrayBuffer, name: string, meshopt: MeshoptDecoderModule): Promise<Object3D> {
   const gltf = await new GLTFLoader().setMeshoptDecoder(meshopt).parseAsync(data, "");
   return toonify(gltf.scene, name);
@@ -66,13 +66,13 @@ export interface ModelBox {
   w: number;
   h: number;
   d: number;
-  /** Giro alrededor del eje vertical (radianes, plan estetica-c M5): la caja `tam` gira con el modelo. */
+  /** Rotation around the vertical axis (radians, plan estetica-c M5): the `tam` box rotates with the model. */
   rotY?: number;
 }
 
 /**
- * Escala uniforme para que el modelo entre en la caja `tam` del prop (la misma huella que bloquea la grilla), apoyado
- * en `y` y centrado en x, z; con `rotY`, girado alrededor de ese centro. Devuelve el mismo objeto.
+ * Uniform scale so the model fits in the prop `tam` box (the same footprint that blocks the grid), resting
+ * on `y` and centered in x, z; with `rotY`, rotated around that center. Returns the same object.
  */
 export function fitToBox(model: Object3D, box: ModelBox): Object3D {
   model.position.set(0, 0, 0);
@@ -86,7 +86,7 @@ export function fitToBox(model: Object3D, box: ModelBox): Object3D {
   model.position.set(box.x - center.x * s, box.y - bb.min.y * s, box.z - center.z * s);
   const rot = box.rotY ?? 0;
   if (rot !== 0) {
-    // Gira alrededor del centro de la caja: x' = x cos + z sin, z' = -x sin + z cos (el giro de three sobre +y).
+    // Rotates around the box center: x' = x cos + z sin, z' = -x sin + z cos (three rotation about +y).
     const dx = model.position.x - box.x;
     const dz = model.position.z - box.z;
     model.rotation.y = rot;
@@ -99,13 +99,13 @@ export function fitToBox(model: Object3D, box: ModelBox): Object3D {
 
 const cache = new Map<string, Promise<Object3D>>();
 
-/** Carga un modelo por url (una vez) y devuelve un clon (comparte geometría y material) listo para la escena. */
+/** Loads a model by url (once) and returns a clone (shares geometry and material) ready for the scene. */
 export function loadModel(asset: string): Promise<Object3D> {
   const url = modelUrl(asset);
   let p = cache.get(url);
   if (!p) {
     p = loadMeshoptDecoder().then(async (meshopt) => toonify((await new GLTFLoader().setMeshoptDecoder(meshopt).loadAsync(url)).scene, asset));
-    p.catch(() => cache.delete(url)); // un fallo de red se puede reintentar al volver a montar
+    p.catch(() => cache.delete(url)); // a network failure can be retried on remount
     cache.set(url, p);
   }
   return p.then((m) => m.clone());

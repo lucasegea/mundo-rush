@@ -1,12 +1,12 @@
-// world/camera/CameraRig.tsx — la ÚNICA cámara del juego (R11; lint: cámaras solo en world/camera/). Open-world-3d T5
-// (D-820, PD-5): en el mapa es `thirdPerson`, detrás del personaje (FOV 50°, 74° en vertical), con el yaw y la inclinación
-// del jugador y un zoom continuo de 2,5 m al mapa entero (zoom.ts): de lejos la inclinación sube a 82°, el pivote va al
-// centro del mapa, la niebla y el plano lejano crecen. Se acerca si algo tapa al personaje y nunca baja del terreno
-// (rig.ts `solveThirdPerson`). Yaw, inclinación y zoom se leen del store con `readGame` dentro de useFrame (D-820: nada de
-// props por arrastre); todo suavizado usa el tiempo del cuadro. Con "reducir movimiento" el zoom, la inclinación y el
-// pivote cortan. Durante la charla con un NPC del diorama, `dialogueFrame` (plano de a dos en 3/4 con test de oclusión,
-// transición a 3/s); al volver, la tercera persona retoma el mismo yaw y el mismo t (están en el store). Avisa al store la
-// distancia del mapa entero (`bridge.cameraFit`) cuando cambia el aspecto o el yaw.
+// world/camera/CameraRig.tsx — the game's ONLY camera (R11; lint: cameras only in world/camera/). Open-world-3d T5
+// (D-820, PD-5): on the map it is `thirdPerson`, behind the character (FOV 50°, 74° in portrait), with the player's yaw and tilt
+// and a continuous zoom from 2.5 m to the whole map (zoom.ts): from afar the tilt rises to 82°, the pivot goes to the
+// map center, the fog and far plane grow. It moves closer if something blocks the character and never goes below the terrain
+// (rig.ts `solveThirdPerson`). Yaw, tilt and zoom are read from the store with `readGame` inside useFrame (D-820: no
+// prop drilling); all smoothing uses frame time. With "reduce motion" the zoom, tilt and
+// pivot snap. During a chat with a diorama NPC, `dialogueFrame` (two-person 3/4 shot with occlusion test,
+// transition at 3/s); on return, the third person resumes the same yaw and the same t (they are in the store). It tells the store the
+// whole-map distance (`bridge.cameraFit`) when the aspect or the yaw changes.
 import { PerspectiveCamera } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
@@ -24,17 +24,17 @@ interface Props {
   conversation: ConversationFrame | null;
   obstacles: readonly Obstacle[];
   heightAt: ((x: number, z: number) => number) | null;
-  /** Límites caminables del diorama: el mapa entero que encuadra t = 1. */
+  /** Walkable bounds of the diorama: the whole map that t = 1 frames. */
   bounds: Bounds | null;
 }
 
 type V3 = [number, number, number];
 
-/** Suavizados de la tercera persona (1/s), los del mockup V6. */
+/** Third-person smoothing (1/s), the V6 mockup's. */
 const RATE = { zoom: 9, pitch: 10, pivot: 16, yaw: 20, fov: 6 } as const;
-/** El acercamiento por obstáculos solo vale de cerca (mockup: t < 0,35); de lejos nada tapa al personaje. */
+/** The approach for obstacles only applies up close (mockup: t < 0.35); from afar nothing blocks the character. */
 const PULL_IN_MAX_T = 0.35;
-/** Se avisa una distancia del mapa entero nueva cuando cambió más de esto (fracción). */
+/** A new whole-map distance is reported when it changed by more than this (fraction). */
 const FIT_REPORT_DELTA = 0.005;
 
 interface RigState {
@@ -45,7 +45,7 @@ interface RigState {
   pos: V3;
   look: V3;
   fov: number;
-  /** Viene de otra cámara (charla o al revés): posición y mira se acercan a 3/s hasta llegar. */
+  /** Comes from another camera (chat or the reverse): position and look-at approach at 3/s until they arrive. */
   blending: boolean;
   wasDialogue: boolean;
   fitKey: string;
@@ -74,14 +74,14 @@ export function CameraRig({ preset, motion, conversation, obstacles, heightAt, b
     const cut = motion === "cut" || v.reduceMotion;
     const ground = (x: number, z: number): number => (heightAt ? heightAt(x, z) : 0);
 
-    // La distancia del mapa entero para el yaw del store y el aspecto; se recalcula solo si cambiaron.
+    // The whole-map distance for the store's yaw and the aspect; recomputed only if they changed.
     const fitKey = `${Math.round(v.yawDeg * 2)}|${aspect.toFixed(3)}|${bounds ? `${bounds.minX},${bounds.maxX},${bounds.minZ},${bounds.maxZ}` : "-"}`;
     const prev = st.current;
     const fit = prev && prev.fitKey === fitKey ? prev.fit : bounds ? fitDistance(v.yawDeg, aspect, bounds, 0) : v.fitDistance;
     const reportedFit = prev?.reportedFit ?? v.fitDistance;
     if (bounds && Math.abs(fit - reportedFit) > reportedFit * FIT_REPORT_DELTA) bridge.cameraFit(fit);
 
-    // ---------- tercera persona ----------
+    // ---------- third person ----------
     const wantDist = v.overview ? fit : Math.min(Math.max(v.zoomDistance, THIRD_PERSON_VIEW.minDistance), fit);
     const first = !prev || !followTarget.ready;
     const logDist = first ? Math.log(wantDist) : approach(prev.logDist, Math.log(wantDist), delta, RATE.zoom, cut);
@@ -99,7 +99,7 @@ export function CameraRig({ preset, motion, conversation, obstacles, heightAt, b
     });
     if (heightAt) shot.position[1] = Math.max(shot.position[1], heightAt(shot.position[0], shot.position[2]) + 0.6);
 
-    // ---------- plano de a dos (charla) ----------
+    // ---------- two-person shot (chat) ----------
     let wantPos: V3 = shot.position;
     let wantLook: V3 = shot.lookAt;
     let wantFov = thirdPersonFov(aspect);
@@ -151,6 +151,6 @@ export function CameraRig({ preset, motion, conversation, obstacles, heightAt, b
     }
   });
 
-  // near/far/fov no van como props: los fija el cuadro (si fueran props, cada render los pisaría).
+  // near/far/fov are not passed as props: the frame sets them (as props, every render would overwrite them).
   return <PerspectiveCamera ref={cam} makeDefault />;
 }

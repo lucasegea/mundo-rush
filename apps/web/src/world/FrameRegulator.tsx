@@ -1,12 +1,12 @@
-// world/FrameRegulator.tsx — aplica el tope de cuadros (plan estetica-c M6, frameRate.ts): con el canvas en
-// frameloop="demand", en cada cuadro del navegador decide si venció el plazo y, si venció, pide uno con invalidate(). R3F
-// lo dibuja en el cuadro siguiente; el `delta` de useFrame es el tiempo real entre cuadros dibujados, así la animación
-// sigue a su velocidad aunque el tope baje los cuadros.
+// world/FrameRegulator.tsx — applies the frame cap (plan estetica-c M6, frameRate.ts): with the canvas on
+// frameloop="demand", on each browser frame it decides whether the deadline expired and, if so, requests one with invalidate(). R3F
+// draws it on the next frame; useFrame's `delta` is the real time between drawn frames, so the animation
+// keeps its speed even if the cap lowers the frames.
 import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import { frameDue, nextDeadline } from "./frameRate";
 
-/** Reguladores montados ahora (open-world-3d T2(g)): la sonda de rendimiento comprueba que sin tope es 0. */
+/** Regulators mounted now (open-world-3d T2(g)): the performance probe checks that without a cap it is 0. */
 let mounted = 0;
 export const frameRegulatorsMounted = (): number => mounted;
 

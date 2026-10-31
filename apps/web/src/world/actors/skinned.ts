@@ -1,10 +1,10 @@
-// world/actors/skinned.ts — el personaje con esqueleto (plan estetica-c M3): clona un cuerpo base del pipeline con su
-// esqueleto propio (SkeletonUtils), repinta remera y pantalón con los tokens de su apariencia (los vértices marcados con
-// `_ROPA` en scripts/assets/characters.ts), le cuelga del hueso `head` la cabeza por código (head.ts, una malla) y la
-// boca, y arma el mezclador con los clips compartidos. `driveCharacter` aplica la elección de animState.ts: cruza los
-// clips de base, suma el gesto procedural (gestures.ts) y, con "reducir movimiento", deja la cadera a su altura.
-// Open-world-3d T7 (AC47): el esqueleto llega como `RigSpec` (rigs.ts). Con el de Quaternius no hay cabeza por código:
-// el modelo trae pelo y cara, y los accesorios (gorra, sombrero, bufanda: accessories.ts) cuelgan de sus huesos.
+// world/actors/skinned.ts — the skeleton character (plan estetica-c M3): clones a base body from the pipeline with its own
+// skeleton (SkeletonUtils), repaints shirt and trousers with its appearance's tokens (the vertices marked with
+// `_ROPA` in scripts/assets/characters.ts), hangs the code-built head (head.ts, one mesh) from the `head` bone and the
+// mouth, and builds the mixer with the shared clips. `driveCharacter` applies the animState.ts choice: it crossfades the
+// base clips, adds the procedural gesture (gestures.ts) and, with "reduce motion", keeps the hip at its height.
+// Open-world-3d T7 (AC47): the skeleton arrives as a `RigSpec` (rigs.ts). With Quaternius's there is no code-built head:
+// the model ships hair and face, and the accessories (cap, hat, scarf: accessories.ts) hang from its bones.
 import {
   AnimationMixer, BufferAttribute, BufferGeometry, Euler, Group, LoopOnce, LoopRepeat, Mesh, PropertyBinding, Quaternion, SkinnedMesh, Vector3,
   type AnimationAction, type AnimationClip, type Bone, type Object3D,
@@ -20,38 +20,38 @@ import { characterHeadGeometry, mouthGeometry } from "./head";
 import type { CharacterLook } from "./looks";
 import { KAYKIT_RIG, rigBoneName, type RigSpec } from "./rigs";
 
-/** Escala del personaje con esqueleto: el hueso de la cabeza a 1,24 + la cabeza por código da ~2,3 m (como el de M1). */
+/** Skeleton character scale: the head bone at 1.24 + the code-built head gives ~2.3 m (like M1's). */
 export const CHARACTER_SCALE = KAYKIT_RIG.scale;
-/** Centro de la cabeza por código sobre el hueso `head` (unidades del esqueleto). */
+/** Center of the code-built head over the `head` bone (skeleton units). */
 export const HEAD_OFFSET = 0.4;
-/** Valores de `_ROPA` (los de scripts/assets/characters.ts). */
+/** Values of `_ROPA` (those of scripts/assets/characters.ts). */
 export const ROPA = { fija: 0, remera: 1, pantalon: 2 } as const;
-/** El atributo `_ROPA` como lo deja GLTFLoader (los atributos propios van en minúscula). */
+/** The `_ROPA` attribute as GLTFLoader leaves it (custom attributes go in lowercase). */
 export const ROPA_ATTRIBUTE = "_ropa";
 const CROSSFADE = 0.25;
 
-/** Nombre de un hueso del glTF como lo deja GLTFLoader (`upperarm.r` → `upperarmr`). */
+/** Name of a glTF bone as GLTFLoader leaves it (`upperarm.r` → `upperarmr`). */
 export const boneKey = (name: string): string => PropertyBinding.sanitizeNodeName(name);
 
 export interface SkinnedCharacter {
   root: Group;
   body: SkinnedMesh;
-  /** La cabeza por código (KayKit) o el accesorio de la cabeza (Quaternius; sin sombrero, una malla vacía oculta). */
+  /** The code-built head (KayKit) or the head accessory (Quaternius; without a hat, a hidden empty mesh). */
   head: Mesh;
   mouth: Mesh;
   rig: RigSpec;
   headBone: Bone;
-  /** Los accesorios por código (Quaternius): se ocultan de lejos (rigs.ts, NPC_ACCESSORY_M). */
+  /** The code-built accessories (Quaternius): hidden from afar (rigs.ts, NPC_ACCESSORY_M). */
   accessories: Mesh[];
   bones: ReadonlyMap<string, Bone>;
   mixer: AnimationMixer;
   actions: ReadonlyMap<string, AnimationAction>;
-  /** Estado del cruce de clips y del gesto (lo lleva driveCharacter). */
+  /** State of the clip crossfade and the gesture (driven by driveCharacter). */
   state: { base: string | null; overlay: string | null; overlayT: number; hipsY: number };
   meshes: Mesh[];
 }
 
-/** Repinta las prendas marcadas: remera y pantalón con los tokens de la apariencia (devuelve la geometría nueva). */
+/** Repaints the marked garments: shirt and trousers with the appearance's tokens (returns the new geometry). */
 export function repaintClothes(geo: BufferGeometry, look: CharacterLook, seed = 0): BufferGeometry {
   const out = geo.clone();
   const ropa = out.getAttribute(ROPA_ATTRIBUTE);
@@ -74,7 +74,7 @@ export function repaintClothes(geo: BufferGeometry, look: CharacterLook, seed = 
   return out;
 }
 
-/** Solo las pistas que mueven huesos de este esqueleto (three avisa por cada pista sin destino). */
+/** Only the tracks that move bones of this skeleton (three warns for each track without a target). */
 export function clipsFor(clips: readonly AnimationClip[], bones: ReadonlyMap<string, Bone>): AnimationClip[] {
   return clips.map((c) => {
     const k = c.clone();
@@ -83,17 +83,17 @@ export function clipsFor(clips: readonly AnimationClip[], bones: ReadonlyMap<str
   });
 }
 
-/** El hueso `name` (nombre de KayKit) del personaje, traducido a su esqueleto. */
+/** The bone `name` (KayKit name) of the character, translated to its skeleton. */
 export const characterBone = (c: Pick<SkinnedCharacter, "bones" | "rig">, name: string): Bone | undefined => c.bones.get(boneKey(rigBoneName(c.rig, name)));
 
 /**
- * Arma el personaje de `look` sobre la escena glTF de su cuerpo (no la modifica: clona esqueleto y malla) y los clips
- * del archivo compartido. Una malla de cuerpo, una de cabeza (o el accesorio de la cabeza) y la boca (oculta hasta que
- * habla).
+ * Builds the `look` character over the glTF scene of its body (does not modify it: clones skeleton and mesh) and the clips
+ * from the shared file. One body mesh, one head mesh (or the head accessory) and the mouth (hidden until it
+ * talks).
  */
 /**
- * `cast` (open-world-3d T7b, D-840): el juego de accesorios y la gorra del look, que necesita un esqueleto sin cabeza por
- * código (Quaternius); con KayKit no se usa.
+ * `cast` (open-world-3d T7b, D-840): the look's accessory set and cap, which needs a skeleton without a code-built
+ * head (Quaternius); with KayKit it is not used.
  */
 export function buildSkinnedCharacter(
   bodyScene: Object3D, clips: readonly AnimationClip[], look: CharacterLook, seed = 0, rig: RigSpec = KAYKIT_RIG, cast: AccessoryCast | null = null,
@@ -115,7 +115,7 @@ export function buildSkinnedCharacter(
   skinned.material = toonMaterial();
   skinned.castShadow = true;
   skinned.receiveShadow = true;
-  skinned.frustumCulled = false; // la caja de la malla en reposo no sigue al esqueleto animado
+  skinned.frustumCulled = false; // the rest-pose mesh box does not follow the animated skeleton
 
   const root = new Group();
   root.add(model);
@@ -126,10 +126,10 @@ export function buildSkinnedCharacter(
   root.scale.setScalar(rig.scale * look.scale);
   root.updateMatrixWorld(true);
 
-  // La cabeza por código, en el marco del personaje aunque el hueso tenga escala o giro de reposo.
+  // The code-built head, in the character's frame even if the bone has rest scale or rotation.
   const ws = headBone.getWorldScale(new Vector3()).x / root.scale.x;
   const restQ = root.getWorldQuaternion(new Quaternion()).invert().multiply(headBone.getWorldQuaternion(new Quaternion()));
-  // La cabeza no proyecta sombra: el sombrero no ensombrece la cara (propuesta C §3).
+  // The head casts no shadow: the hat does not shade the face (proposal C §3).
   const head = new Mesh(characterHeadGeometry(look, seed), toonMaterial());
   head.receiveShadow = true;
   head.position.set(0, HEAD_OFFSET / ws, 0);
@@ -150,12 +150,12 @@ export function buildSkinnedCharacter(
   };
 }
 
-/** Boca del personaje de Quaternius en unidades del modelo (bajo los ojos, sobre la cara que mira a +z). */
+/** Quaternius character's mouth in model units (under the eyes, over the face looking toward +z). */
 const MODEL_MOUTH = { y: 2.08, z: 0.43 } as const;
 
 /**
- * El personaje con la cabeza del modelo (Quaternius): los accesorios se arman en unidades del modelo, se cuelgan con
- * `attach` (conservan su lugar) antes de escalar, y la cabeza se achica como en la maqueta.
+ * The character with the model's head (Quaternius): the accessories are built in model units, hung with
+ * `attach` (they keep their place) before scaling, and the head shrinks as in the diorama.
  */
 function withAccessories(
   root: Group, model: Object3D, skinned: SkinnedMesh, headBone: Bone, hips: Bone, bones: Map<string, Bone>,
@@ -174,10 +174,10 @@ function withAccessories(
   const head = hang(acc.head ?? new BufferGeometry(), headBone) as Mesh;
   if (!acc.head) {
     head.visible = false;
-    head.userData["hidden"] = true; // sin sombrero: la regla de distancia no la prende
+    head.userData["hidden"] = true; // without a hat: the distance rule does not turn it on
   }
   const neck = hang(acc.neck, characterBone({ bones, rig }, "neck"));
-  // La boca: la misma de head.ts (centrada en una cabeza de radio 0,42), corrida a la cara del modelo.
+  // The mouth: the same as head.ts's (centered on a head of radius 0.42), shifted to the model's face.
   const mouth = new Mesh(mouthGeometry(), toonMaterial());
   mouth.position.set(0, MODEL_MOUTH.y + 0.2, MODEL_MOUTH.z - 0.392);
   mouth.visible = false;
@@ -212,16 +212,16 @@ const va = new Vector3();
 const vb = new Vector3();
 const euler = new Euler();
 
-/** Lleva el hueso a apuntar a `dir` (espacio del personaje) con peso `w`, desde la pose que dejó el clip. */
+/** Brings the bone to point at `dir` (character space) with weight `w`, from the pose the clip left. */
 function aimBone(c: SkinnedCharacter, bone: Bone, dir: readonly [number, number, number], w: number): void {
   const child = bone.children.find((o) => (o as Bone).isBone);
   if (!child || child.position.lengthSq() < 1e-10) return;
   const rootInv = c.root.getWorldQuaternion(qc).invert();
-  const boneQ = qa.copy(rootInv).multiply(bone.getWorldQuaternion(qb)); // giro del hueso en el espacio del personaje
+  const boneQ = qa.copy(rootInv).multiply(bone.getWorldQuaternion(qb)); // bone rotation in character space
   const from = va.copy(child.position).normalize().applyQuaternion(boneQ);
   const to = vb.set(dir[0], dir[1], dir[2]).normalize();
   const delta = qb.setFromUnitVectors(from, to);
-  const target = delta.multiply(boneQ); // giro deseado en el espacio del personaje
+  const target = delta.multiply(boneQ); // desired rotation in character space
   const parentQ = bone.parent ? c.root.getWorldQuaternion(qc).invert().multiply(bone.parent.getWorldQuaternion(qd)) : qc.identity();
   const local = parentQ.invert().multiply(target);
   bone.quaternion.slerp(local, w);
@@ -253,13 +253,13 @@ function play(c: SkinnedCharacter, clip: string, loop: boolean, fade: number): A
 }
 
 /**
- * Un cuadro del personaje: cruza al clip de base que eligió la máquina, arranca o sigue el gesto, avanza el mezclador
- * (solo si `animate`: los congelados conservan su última pose) y mueve la boca. `t` es el reloj, para la boca.
+ * One character frame: crossfades to the base clip the machine chose, starts or continues the gesture, advances the mixer
+ * (only if `animate`: frozen ones keep their last pose) and moves the mouth. `t` is the clock, for the mouth.
  */
 export function driveCharacter(c: SkinnedCharacter, choice: AnimChoice, dt: number, t: number, animate: boolean, cut: boolean): void {
   const s = c.state;
   const fade = cut ? 0 : CROSSFADE;
-  // Un gesto de archivo (dar algo) es de cuerpo entero: mientras dura, reemplaza al clip de base en vez de promediarse.
+  // A file gesture (give something) is full-body: while it lasts, it replaces the base clip instead of being averaged.
   const fileOverlay = choice.overlay ? fileClip(c.rig, choice.overlay) : null;
   if (choice.overlay !== s.overlay) {
     const prev = s.overlay ? fileClip(c.rig, s.overlay as ClipId) : null;
@@ -281,7 +281,7 @@ export function driveCharacter(c: SkinnedCharacter, choice: AnimChoice, dt: numb
   if (choice.mouth) c.mouth.scale.y = 0.35 + 0.65 * Math.abs(Math.sin(t * 11));
   if (!animate) return;
   c.mixer.update(dt);
-  if (c.rig.headScale !== 1) c.headBone.scale.setScalar(c.rig.headScale); // un clip con escala en la cabeza no la agranda
+  if (c.rig.headScale !== 1) c.headBone.scale.setScalar(c.rig.headScale); // a clip with head scale does not enlarge it
   if (s.overlay && isProcedural(s.overlay)) applyGesture(c, s.overlay, s.overlayT);
   if (choice.bounce === 0) {
     const hips = characterBone(c, "hips");
@@ -289,13 +289,13 @@ export function driveCharacter(c: SkinnedCharacter, choice: AnimChoice, dt: numb
   }
 }
 
-/** Libera lo propio del personaje (la geometría repintada y la cabeza; los clips y el material son compartidos). */
+/** Frees the character's own resources (the repainted geometry and the head; clips and material are shared). */
 export function disposeSkinnedCharacter(c: SkinnedCharacter): void {
   c.mixer.stopAllAction();
   c.mixer.uncacheRoot(c.mixer.getRoot());
   for (const m of c.meshes) m.geometry.dispose();
-  // Open-world-3d M3 (fuga al cambiar de tier, medida con perf:probe): la textura de huesos del esqueleto (16 × 16 en la
-  // GPU) no se liberaba; cada cambio de tier, que rearma los personajes, dejaba las viejas.
+  // Open-world-3d M3 (leak on tier change, measured with perf:probe): the skeleton's bone texture (16 × 16 on the
+  // GPU) was not freed; each tier change, which rebuilds the characters, left the old ones behind.
   c.body.skeleton.dispose();
 }
 

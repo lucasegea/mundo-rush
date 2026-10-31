@@ -1,12 +1,12 @@
-// services/persistence — copia local de los ajustes (03 §3.3: "servidor + copia local"; la parte de servidor
-// llega con F7). Pasa por la interfaz Platform (R15), nunca por localStorage directo. Lo que se lee se sanea
-// con applySettingsPatch del núcleo (un guardado viejo o roto no rompe nada).
+// services/persistence — local copy of the settings (03 §3.3: "server + local copy"; the server part
+// arrives with F7). Goes through the Platform interface (R15), never through localStorage directly. What is read is sanitized
+// with the core's applySettingsPatch (an old or broken save breaks nothing).
 import { persistableSettings, type Settings, type SettingsPatch } from "@lg/core";
 import type { Platform } from "../platform";
 
 export const SETTINGS_KEY = "settings.v1";
 
-/** Ajustes guardados en el dispositivo, o null si no hay, si están rotos o si el almacenamiento no anda. */
+/** Settings saved on the device, or null if there are none, they are broken or storage does not work. */
 export async function loadSavedSettings(platform: Pick<Platform, "storage">): Promise<SettingsPatch | null> {
   let raw: string | null;
   try {
@@ -29,8 +29,8 @@ export interface SettingsSource {
 }
 
 /**
- * Guarda los ajustes cada vez que cambian. Si el almacenamiento falla, avisa UNA vez (`onUnavailable`) y deja
- * de intentar: los ajustes siguen valiendo en memoria. Devuelve la función para desuscribirse.
+ * Saves the settings every time they change. If storage fails, it warns ONCE (`onUnavailable`) and stops
+ * trying: the settings remain valid in memory. Returns the function to unsubscribe.
  */
 export function persistSettings(source: SettingsSource, platform: Pick<Platform, "storage">, onUnavailable: () => void): () => void {
   let failed = false;

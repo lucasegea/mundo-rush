@@ -1,34 +1,34 @@
-// world/labels/bubbleSprite.ts: la burbuja ámbar de pedido (propuesta C §3, plan estetica-c M5): un globo ámbar con
-// tres puntos claros sobre la etiqueta de nombre del NPC que tiene un pedido abierto. Es un Sprite de la clase
-// `etiqueta` (mismo material que el chip de nombre: tamaño constante en pantalla, siempre visible), así que no suma
-// una clase de material nueva. Flota apenas arriba y abajo; con "reducir movimiento" queda quieta. Qué NPC la muestra
-// lo decide `selectRequestBubbles` (state/selectors/world.ts), no este archivo.
+// world/labels/bubbleSprite.ts: the amber request bubble (proposal C §3, plan estetica-c M5): an amber balloon with
+// three light dots above the name label of the NPC that has an open request. It is a Sprite of class
+// `etiqueta` (same material as the name chip: constant screen size, always visible), so it adds no
+// new material class. It floats slightly up and down; with "reduce motion" it stays still. Which NPC shows it
+// is decided by `selectRequestBubbles` (state/selectors/world.ts), not this file.
 import { PALETTE } from "@lg/art";
 import { CanvasTexture, DataTexture, RGBAFormat, SRGBColorSpace, Sprite, type Texture } from "three";
 import { PERSPECTIVE } from "../camera/rig";
 import { labelMaterial } from "../materials/registry";
 import { LABEL_SCREEN_FRACTION } from "./labels";
 
-/** Medidas del globo dibujado a 2x (px del canvas): cuerpo redondeado y una colita abajo al centro. */
+/** Balloon measurements drawn at 2x (canvas px): rounded body and a little tail at the bottom center. */
 export const BUBBLE_LAYOUT = { width: 96, height: 72, body: 56, tail: 14, dotR: 7, dotGap: 22, border: 4 } as const;
-/** Colores del globo: los mismos tokens de la etiqueta resaltada (el ámbar es "acá hay algo para vos"). */
+/** Balloon colors: the same tokens as the highlighted label (amber is "there is something here for you"). */
 export const BUBBLE_STYLE = { fill: PALETTE["ámbar"], border: PALETTE["ámbar-osc"], dots: PALETTE.papel } as const;
-/** Alto en pantalla del globo, en altos de etiqueta. */
+/** Balloon screen height, in label heights. */
 export const BUBBLE_LABEL_RATIO = 1.25;
-/** Hueco entre la etiqueta y el globo, en altos del globo. */
+/** Gap between the label and the balloon, in balloon heights. */
 const GAP = 0.25;
-/** Flote: amplitud (en altos del globo) y período (s). */
+/** Float: amplitude (in balloon heights) and period (s). */
 export const BUBBLE_FLOAT = { amplitude: 0.12, periodS: 1.8 } as const;
 
-/** Escala del Sprite (sin atenuación) para el fov dado: alto = BUBBLE_LABEL_RATIO alturas de etiqueta. */
+/** Sprite scale (no attenuation) for the given fov: height = BUBBLE_LABEL_RATIO label heights. */
 export function bubbleScale(fovDeg: number): [number, number] {
   const h = 2 * LABEL_SCREEN_FRACTION * BUBBLE_LABEL_RATIO * Math.tan(((fovDeg * Math.PI) / 180) / 2);
   return [h * (BUBBLE_LAYOUT.width / BUBBLE_LAYOUT.height), h];
 }
 
 /**
- * `center.y` del Sprite en el instante `t` (s): el globo se ancla en el mismo punto que la etiqueta y se corre hacia
- * arriba en unidades del propio sprite (la etiqueta mide 1/BUBBLE_LABEL_RATIO de alto de globo). Quieto si `still`.
+ * Sprite `center.y` at instant `t` (s): the balloon is anchored at the same point as the label and shifted
+ * up in the sprite's own units (the label is 1/BUBBLE_LABEL_RATIO of a balloon tall). Still if `still`.
  */
 export function bubbleCenterY(t: number, still: boolean): number {
   const base = -(1 / BUBBLE_LABEL_RATIO + GAP);
@@ -88,7 +88,7 @@ function bubbleTexture(): Texture {
   return texture;
 }
 
-/** El Sprite del globo, anclado en el punto de la etiqueta y corrido hacia arriba; encima de la etiqueta. */
+/** The balloon Sprite, anchored at the label's point and shifted up; above the label. */
 export function createRequestBubble(): Sprite {
   const sprite = new Sprite(labelMaterial(bubbleTexture()));
   sprite.center.set(0.5, bubbleCenterY(0, true));
