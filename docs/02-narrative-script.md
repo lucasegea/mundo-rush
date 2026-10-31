@@ -1,7 +1,7 @@
 # 02 — Narrative bible and script for Region 1 (mode 1)
 
 **Project:** learning-game (working title *Mundo Rush*, D-031) · **Document:** Narrative and script **v0.2** · **Date:** 2026-10-06 (v0.1: 2026-10-05) · **Author role:** narrative design
-**v0.2 (2026-10-06):** full rewrite for the new premise the operator set in the project brief (section "Script v2 + director mode", 2026-10-06), which **supersedes** the *Lantern Bay* and lighthouse premise. Everything structural from v0.1 that still applies is kept (Lumi and his feedback rules, the TBLT mission format, YAML templates, the curated glossary flow, safety rails, tier cards, line-by-line onboarding, `M0.x`/`M1.x` ids). The world, the cast, the map, the meta-mystery and the content of the 11 missions change; three new pieces are added: **the network** (§1.7), **founding** (§1.8) and **verifiable real knowledge items** (§1.5).
+**v0.2 (2026-10-06):** full rewrite for the new premise the operator set in the project brief (section "Script v2 + director mode", 2026-10-06), which **supersedes** the *Lantern Bay* and lighthouse premise. Everything structural from v0.1 that still applies is kept (Lumi's feedback rules, the TBLT mission format, YAML templates, the curated glossary flow, safety rails, tier cards, line-by-line onboarding, `M0.x`/`M1.x` ids). The world, the cast, the map, the meta-mystery and the content of the 11 missions change; three new pieces are added: **the network** (§1.7), **founding** (§1.8) and **verifiable real knowledge items** (§1.5).
 **Status:** draft pending operator approval. Binding for the **writing** of Region 1's narrative content once approved; until then, a headless run uses the defaults of each `DECISION-PENDING` (`D-164` onward, §7).
 **Language:** the document is in Spanish (Rioplatense, voseo in Lumi's lines). NPC lines are in English (the target language of the first ES→EN pair) with a Spanish gloss in parentheses. NPC *system prompts* are in English because the model consumes them.
 
@@ -61,7 +61,7 @@
 | Board requests | 6 instances written (§4.5) on top of the GDD §3.7 templates |
 | Neighbors | 14 (§3.1), 4 of them field owners with different stances, plus the airplane pilot and a county official. Recurring animal: Clover, Maya's goat |
 | What gets founded or advances on the map | Crossing board, mail stop, community garden, windsock with warning flag, hedgerow with flower strip, monitoring traps in Ruth's grove, Crossing Table and **sign with the village's name** (§4.1.3) |
-| Close | First assembly under the tree; the Crossing chooses its name and Noor paints the sign; the official explains what it takes to become a village `[FICCIÓN]`; Lumi sees **other little lights** and says his first whole sentence in English |
+| Close | First assembly under the tree; the Crossing chooses its name and Noor paints the sign; the official explains what it takes to become a village `[FICCIÓN]`; Lumi sees **other little lights** and says its first whole sentence in English |
 | Play time | 3-5 h (prologue ~10 min; chapter 1 in 8-14 short sessions) |
 
 ### 0.4 Tags specific to this document
@@ -85,7 +85,7 @@ The structural parts of v0.1 have a direct equivalent, so that F3, F8 and FP do 
 | **Pier** diorama | **The Fields** diorama | Same asset budget (`03` §2.7.3) |
 | **Plaza** diorama | **The Crossing** diorama | Same budget |
 | Arrival ferry | Harvest bus | Arrival cutscene |
-| Little lantern (Lumi) | Light bug in a jar (Lumi) | "Lumi's Jar" is now literally his jar |
+| Little lantern (Lumi) | Light bug in a jar (Lumi) | "Lumi's Jar" is now literally Lumi's jar |
 | Windows that light up | Visible **foundings** + **light bugs** over the network's paths | §1.8, §1.9 |
 | Plaza lantern (close) | Village sign + Crossing Table (close) | M1.8 |
 | Lantern notes (`NOTA-0`…`3`) | Seed packets (`SOBRE-0`…`3`) | §1.6; inherits the intent of D-054 |
@@ -150,7 +150,7 @@ The protagonist arrives with the harvest crew. In his hometown in Argentina he s
 
 1. **It is the valley's language.** Everything is in English: the foreman, the owners, the plot signs, the labels, the mail carrier. To get anything (a key, seeds, the plane giving notice) you have to speak English: it is a **real need of his life there**, not a school assignment [GDD §1.4.7; the references research §4.2.1]. Inés, the foreman, knows a handful of Spanish words her mother taught her and uses them as a wink, **one per chapter**, never as a crutch (D-184).
 2. **Everyone knows he is learning.** The crew has people from many places; in the valley they are used to speaking slowly, repeating and offering options. This **justifies all the scaffolding in the fiction** (slow speed, repeating, "simpler", hints) without the NPC seeming condescending.
-3. **Lumi is the exception, and there is a reason.** Lumi is a light bug from his hometown: he speaks the language of home. The valley's adults cannot hear him (if they see him, they see a little bug). That is why Lumi can explain in Spanish without breaking the valley's rule, and why he **cannot speak for the player**: the neighbors do not hear him. If he wants something, he has to say it himself (D-165).
+3. **Lumi is the exception, and there is a reason.** Lumi is a light bug from the protagonist's hometown: it speaks the language of home. The valley's adults cannot hear Lumi (if they see it, they see a little bug). That is why Lumi can explain in Spanish without breaking the valley's rule, and why it **cannot speak for the player**: the neighbors do not hear it. If the player wants something, the player has to say it (D-165).
 4. **When the player speaks Spanish:** the NPC does not understand and says so kindly, in very simple English ("Sorry, I don't understand. In English?"), and Lumi offers a hint. The player is never scolded.
 
 ### 1.4 Tone
@@ -184,7 +184,7 @@ The player learns English **and** real general knowledge. This is not decoration
 3. **No figures.** No statistics, no percentages, no doses, no distances in meters, no "X times more". If an idea needs a figure to be true, it does not go in.
 4. **No real names:** no product, active ingredient, brand, company or person. "The spray", "farm chemicals", "a product" are enough.
 5. **The NPC says only what their sheet allows** (rule K1 of the base prompt, §3.2). If the player asks something outside the sheet, the NPC redirects ("I'm not sure. Ask June!") or says "I don't know!". They never improvise science.
-6. **Lumi is not an expert.** Lumi does not explain science on his own; he only says templates that point to the sheet ("Eso lo anoté en tu cuaderno de saberes") or "Eso no lo sé. Preguntale a June" (§2.7).
+6. **Lumi is not an expert.** Lumi does not explain science on its own; it only says templates that point to the sheet ("Eso lo anoté en tu cuaderno de saberes") or "Eso no lo sé. Preguntale a June" (§2.7).
 7. **Fiction separate from facts:** the county's rules for founding a village and the ordinance path in the valley are `[FICCIÓN]`; the corresponding sheet says "in the game" and, if there is a real general fact behind it (for example, that municipalities can enact ordinances), that fact goes separately as an `HV`.
 8. **No knowledge item gives potions for reading it.** Potions come from language evidence [GDD §2.7]. Knowledge items are **reused**: the player can use them as arguments in later conversations (chapters 3-4: the assembly builds its list of arguments from the knowledge items the player collected, as v0.1 built the arguments from the completed missions).
 9. **Who told you:** each sheet records which neighbor said it. The knowledge notebook shows "Me lo contó June" and connects with the network (§1.7).
@@ -337,17 +337,17 @@ Progress is seen **in the world**, not in numbers [GDD §2.7.4, §5.4]. In Regio
 
 ## 2. The companion: Lumi
 
-> Provisional name: D-032 (GDD DP-02; default Lumi). New form: light bug in a jar (D-165, supersedes the "paper lantern" default of D-032). This chapter expands GDD §2.4 and **does not change its rules** (when he speaks, feedback modes, density, signal ladder, templates with id).
+> Provisional name: D-032 (GDD DP-02; default Lumi). New form: light bug in a jar (D-165, supersedes the "paper lantern" default of D-032). This chapter expands GDD §2.4 and **does not change its rules** (when Lumi speaks, feedback modes, density, signal ladder, templates with id).
 
 ### 2.1 Biography
 
-- **What Lumi is:** a light bug (firefly) from the protagonist's town, on the Argentine plains. As a kid, the protagonist used to collect light bugs in a jar on summer nights and let them go before bed. One never left: Lumi. He traveled hidden in the jar, in the backpack, all the way to *Kestrel Valley*. The GDD's "Lumi's Jar" is, literally, that jar.
-- **What he knows:** he can name almost everything in both languages (he speaks "with light" and understands everything), knows the valley from watching it from the backpack and has known the protagonist forever. He **does not know** agronomy, chemistry or law: he learns along with him. That is why, when the player asks him something technical, Lumi says "Eso no lo sé. Preguntale a June: sabe más que yo" (`LUMI-SABER-02`).
-- **What he does not know (mystery, layer B):** why he shines so little here and whether there are others like him in the valley. At first he believes he is the only one.
-- **What he wants:** to find other lights. For that, he says, "hace falta un lugar donde la gente se junte de noche sin miedo a nada". He cares that the player talks, but **he does not care that they talk perfectly**.
-- **Arc in Region 1:** he starts quiet in the jar and a bit nostalgic ("Hace mucho que nadie me pide que nombre algo"). Midway through chapter 1 he comes out more and becomes jokier. At the close of M1.8 he sees **other little lights** over the new hedgerow and for the first time says a whole sentence in English on his own: "***I see… other lights.***" (D-185). A memory of home (replaces the v0.1 memory fragment, D-075): a sepia image of the plaza of the protagonist's Argentine town, neighbors with mate under the trees, and Lumi says: "Me acuerdo… de tu pueblo. Hablaban todos."
-- **Who sees him (D-165):** the player, always. **Maya** sees him as a light bug that shines by day ("A firefly! In the day?") and greets him; it seems normal to him. Adults neither see nor hear him (Nell says things that sound like he suspects: "Fireflies like gardens, you know.").
-- **Grammatical gender:** masculine ("el bicho de luz"), avoiding gendered adjectives in his lines (inherits D-064).
+- **What Lumi is:** a light bug (firefly) from the protagonist's town, on the Argentine plains. As a kid, the protagonist used to collect light bugs in a jar on summer nights and let them go before bed. One never left: Lumi. Lumi traveled hidden in the jar, in the backpack, all the way to *Kestrel Valley*. The GDD's "Lumi's Jar" is, literally, that jar.
+- **What Lumi knows:** it can name almost everything in both languages (it speaks "with light" and understands everything), knows the valley from watching it from the backpack and has known the protagonist forever. He **does not know** agronomy, chemistry or law: it learns along with the protagonist. That is why, when the player asks it something technical, Lumi says "Eso no lo sé. Preguntale a June: sabe más que yo" (`LUMI-SABER-02`).
+- **What Lumi does not know (mystery, layer B):** why it shines so little here and whether there are others like it in the valley. At first it believes it is the only one.
+- **What Lumi wants:** to find other lights. For that, it says, "hace falta un lugar donde la gente se junte de noche sin miedo a nada". Lumi cares that the player talks, but **it does not care that they talk perfectly**.
+- **Arc in Region 1:** Lumi starts quiet in the jar and a bit nostalgic ("Hace mucho que nadie me pide que nombre algo"). Midway through chapter 1 it comes out more and becomes jokier. At the close of M1.8 it sees **other little lights** over the new hedgerow and for the first time says a whole sentence in English on his own: "***I see… other lights.***" (D-185). A memory of home (replaces the v0.1 memory fragment, D-075): a sepia image of the plaza of the protagonist's Argentine town, neighbors with mate under the trees, and Lumi says: "Me acuerdo… de tu pueblo. Hablaban todos."
+- **Who sees Lumi (D-165):** the player, always. **Maya** sees Lumi as a light bug that shines by day ("A firefly! In the day?") and greets it; it seems normal to her. Adults neither see nor hear it (Nell says things that sound like Nell suspects something: "Fireflies like gardens, you know.").
+- **Grammatical gender:** masculine ("el bicho de luz"), avoiding gendered adjectives in Lumi's lines (inherits D-064).
 
 ### 2.2 Voice
 
@@ -357,7 +357,7 @@ Progress is seen **in the world**, not in numbers [GDD §2.7.4, §5.4]. In Regio
 | Timbre | Warm, clear, neither childish nor robotic; speed 0.9x by default [GDD §2.4.2] |
 | Length | Sentences of 6-14 words. One idea per bubble. Never more than 2 sentences in a row during a scene |
 | In English | When he models a phrase, he switches to the L2 voice (same timbre if the engine allows) and says it **more slowly**, with the key word slightly stressed |
-| Grammatical person | He addresses the player as "vos". He does not include herself when celebrating: the achievement is the player's ("Lo lograste. Yo solo miraba.", never "Lo logramos") |
+| Grammatical person | Lumi addresses the player as "vos". It does not include itself when celebrating: the achievement is the player's ("Lo lograste. Yo solo miraba.", never "Lo logramos") |
 
 **Verbal tics (at most one per intervention, never the same one twice in a row):**
 
@@ -365,10 +365,10 @@ Progress is seen **in the world**, not in numbers [GDD §2.7.4, §5.4]. In Regio
 |---|---|---|
 | Thoughtful "Mmm…" | "Mmm… ¿*a* goat o *the* goat?" | Before a correction signal (softens it) |
 | Light metaphors | "Eso me hizo brillar un poquito." | When distilling a potion |
-| "¿Cómo se dice…?" as if he were learning | "¿Cómo se dice *vaquita de San Antonio*? ¡*Ladybug*! Me encanta esa." | When naming objects; to model curiosity |
+| "¿Cómo se dice…?" as if it were learning | "¿Cómo se dice *vaquita de San Antonio*? ¡*Ladybug*! Me encanta esa." | When naming objects; to model curiosity |
 | Admiration for the neighbors | "Nell se acuerda del nombre de todos sus alumnos, ¿viste?" | In pre-task, to introduce an NPC |
 | Pause with "bueno" | "Bueno. Cuando quieras." | When handing the turn back |
-| Favorite English words | He happily repeats sonorous words: *firefly*, *ladybug*, *windsock* | Humor moments, never in the middle of a signal |
+| Favorite English words | Lumi happily repeats sonorous words: *firefly*, *ladybug*, *windsock* | Humor moments, never in the middle of a signal |
 | Light nostalgia for home | "Esto huele a mi pueblo. Bueno, a tu pueblo." | At most once per session, never sad |
 
 **What Lumi never says** (blocklist that `validate:content` applies to the templates in §2.7):
@@ -376,7 +376,7 @@ Progress is seen **in the world**, not in numbers [GDD §2.7.4, §5.4]. In Regio
 
 ### 2.3 Intervention rules
 
-Lumi is governed by GDD §2.4.3 (when he speaks), §2.4.4 (feedback modes) and the **density rule** (at most one corrective intervention every 3 player turns; never two in a row about the same error). This section turns that into a **decision tree**; it is implemented by `decideCompanion` (`03-architecture.md` §3.5.2), which picks a template with id from §2.7.
+Lumi is governed by GDD §2.4.3 (when Lumi speaks), §2.4.4 (feedback modes) and the **density rule** (at most one corrective intervention every 3 player turns; never two in a row about the same error). This section turns that into a **decision tree**; it is implemented by `decideCompanion` (`03-architecture.md` §3.5.2), which picks a template with id from §2.7.
 
 ```
 Turno del jugador terminado
@@ -403,12 +403,12 @@ Turno del jugador terminado
 
 **Additional rules for coexisting with the NPC:**
 
-1. **Lumi never talks over the NPC.** He waits for the NPC's audio to finish.
+1. **Lumi never talks over the NPC.** Lumi waits for the NPC's audio to finish.
 2. **Step 1 (clarification request) is done by the NPC inside the fiction** ("Sorry? Big or small?"). Lumi comes in from step 2. That way the error has a consequence in the world (prediction error [Probable, E37]) and Lumi is not "the one who corrects everything".
 3. **The NPC never corrects grammar explicitly.** They only ask for clarification or naturally rephrase when answering (implicit recast). Explicit correction is Lumi's alone.
 4. **Lumi does not translate what the NPC said** unless the player taps the line (glossary translation) or asks for a level 2-3 hint.
 5. **Steps at A0:** it starts at step 1 (NPC) and jumps to 5 (recast) if it doesn't come out; the player is not required to self-correct something never seen [GDD §2.4.4].
-6. **Pronunciation:** Lumi only invites to the scripted moments (`LUMI-PRON-01`) and gives the feedback that FP defines with its templates; he never interrupts free chat over pronunciation [GDD §2.4.7].
+6. **Pronunciation:** Lumi only invites to the scripted moments (`LUMI-PRON-01`) and gives the feedback that FP defines with its templates; it never interrupts free chat over pronunciation [GDD §2.4.7].
 
 ### 2.4 Sample lines by feedback mode
 
@@ -487,7 +487,7 @@ Rationale: **informational** competence feedback increases intrinsic motivation;
 | "Desbloqueaste: Pedir con cortesía" | "Ahora Wes te escucha. Sabe que pedís con cuidado." *(the skill's name appears in the tree, not as a trophy)* |
 | "¡Tu red tiene 10 personas!" | "Kofi y Bea ya se saludan por el nombre. Antes no." |
 
-**Physical celebration (wordless):** Lumi makes a slow loop outside the jar, his light goes up a notch, he blinks twice. The NPC thanks in the fiction. No confetti, no big numbers, no fanfare [GDD §2.7.3].
+**Physical celebration (wordless):** Lumi makes a slow loop outside the jar, its light goes up a notch, it blinks twice. The NPC thanks in the fiction. No confetti, no big numbers, no fanfare [GDD §2.7.3].
 
 ### 2.6 OFFLINE prompt for drafting variants of Lumi's templates (never at runtime)
 
@@ -856,7 +856,7 @@ About the seed envelopes: "Not mine! I don't write notes. I shout!" Nothing more
 - **Register:** very short sentences, many questions, exclamations; speaks fast but articulately; calms down if the player asks her to slow down ("Okay! Slow! Like a turtle!").
 - **Band:** A0-A1.
 - **What she needs:** for Clover to stop escaping (M0.3, M1.2), to sow her own sunflower in the garden (M1.4), for the hedgerow to have yellow flowers (M1.6), for the Crossing to be named "Firefly Crossing" (M1.8). Long arc: an open school at the Crossing.
-- **Particularity:** she **sees Lumi** as a light bug that shines by day (D-165) and greets him ("Hi, little firefly!"). Complicity with the player, never secrets with an adult.
+- **Particularity:** she **sees Lumi** as a light bug that shines by day (D-165) and greets it ("Hi, little firefly!"). Complicity with the player, never secrets with an adult.
 - **Language functions:** yes/no, locating, describing (color, size), likes (*I like*), simple directions.
 - **Signature phrases:** "Again? AGAIN?" (about Clover), "Like a turtle!" (slowly), "Pinky promise!"
 - **Facts she can state:** `SAB-CABRAS` (M0.3).
@@ -1489,7 +1489,7 @@ Conventions: `[GUIONADA]` verbatim with cached audio; `[EJEMPLO IA]` style sampl
 3. The player points and asks; Lumi names it in L2 and L1, and writes it down.
 4. Optional: the player repeats it aloud.
 5. Kofi waves from the corn.
-6. Lumi teaches that you can also ask her **in English**: "What's this?"; and teaches *Marcar* (Mark).
+6. Lumi teaches that you can also ask it **in English**: "What's this?"; and teaches *Marcar* (Mark).
 
 **Dialogue skeleton:** not applicable (no real-time NPC; Kofi says a single cached ambient line). All lines are in **`[GUIONADA]` lines**, below.
 
@@ -1507,7 +1507,7 @@ Conventions: `[GUIONADA]` verbatim with cached audio; `[EJEMPLO IA]` style sampl
 
 **Success criteria:** the player asked for the name of the 3 objects (action, not speech). Oral repetition is optional.
 
-**Exit if it does not converge:** not applicable (if the player walks toward the Crossing without asking, Lumi names the objects on her own, once, and moves on).
+**Exit if it does not converge:** not applicable (if the player walks toward the Crossing without asking, Lumi names the objects on its own, once, and moves on).
 
 **Potions and unlocks:** 1/3 of sky-blue for each word repeated aloud (maximum 1 potion); Amber 1 if they ask "What's this?" in English. **`HAB-BASE-NOMBRAR` is activated.** If the player already has Amber 2, `HAB-VINC-1` (Introduce myself) opens: Lumi (`LUMI-M0.2-VINC1`): "Desde ahora los vecinos te van a saludar por tu nombre."
 
