@@ -24,9 +24,10 @@ speaker of any of them learns either of the others); the pair playable today is 
 > commit history is the real one, with its original dates, authorship and order. Internal planning documents
 > (decision log, roadmap, task plans, reports and research notes) were removed from it, and internal tool and
 > reviewer names in comments were replaced by their role, so commit hashes differ from the private repository.
-> For this public version, the documentation and the commit messages were translated from Spanish to English; code
-> comments remain in Spanish, and the game's Spanish texts are part of the product (the interface for Spanish
-> speakers). Nothing else was changed. Access to the private repository can be given on request.
+> For this public version, the documentation and the commit messages were translated from Spanish to English. Code
+> comments are in English in both repositories (translated on 2026-10-31; older commits keep the Spanish ones). The
+> game's Spanish texts are part of the product (the interface for Spanish speakers). Nothing else was changed.
+> Access to the private repository can be given on request.
 
 ## What makes it different
 
