@@ -89,6 +89,8 @@ export interface DialogueState {
   outbox: OutboxItem[];
   outboxSeq: number;
   blocked: "notIntroduced" | "noScene" | null;
+  /** J-2: the server refused to start the scene (an `error` before `scene.opened`); null otherwise. */
+  failure: SceneFailure | null;
   outcome: SceneOutcome | null;
   /** Containment (D-112): out-of-fiction line + resource; `provisional` while the texts are not reviewed. */
   containment: { line: string; resource: { label: string; detail: string } | null; provisional: boolean } | null;
@@ -109,6 +111,9 @@ export const DIALOGUE_PERSIST = "none" as const;
 export const initialLexicon = (): Lexicon => ({ status: "idle", glossaryDisplay: null, glossary: [], lumi: {} });
 
 /** State of a new scene (keeps the request and the already loaded lexicon). */
+/** Why a scene could not start (J-2): the protocol codes the HUD explains, the rest as `other`. */
+export type SceneFailure = "unknown_npc" | "scene_busy" | "no_scene" | "other";
+
 export const freshScene = (d: DialogueState): DialogueState => ({ ...initialDialogue(), request: d.request, lexicon: d.lexicon, outboxSeq: d.outboxSeq });
 
 export const initialDialogue = (): DialogueState => ({
@@ -134,6 +139,7 @@ export const initialDialogue = (): DialogueState => ({
   outbox: [],
   outboxSeq: 0,
   blocked: null,
+  failure: null,
   outcome: null,
   containment: null,
   notice: null,

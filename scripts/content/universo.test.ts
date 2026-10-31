@@ -1,13 +1,13 @@
 // book-mode slice-1 M1 (D-804/D-805): universe namespacing in the reader and the build.
 // Proves that the reader with --universe normalizes to canonical paths, that the legacy reader is not contaminated with
 // content/universes/, and that a head-only universe compiles as a scaffold (AC2).
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compilarContenido } from "@lg/content-schema";
 import { afterAll, describe, expect, test } from "vitest";
-import { construir, leerContenido } from "./build.ts";
+import { construir, leerContenido, vaciarSalida } from "./build.ts";
 
 const REPO = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -82,5 +82,31 @@ describe("M1 build: scaffold de un universo con solo cabeza (AC2)", () => {
     const r = compilarContenido(leerContenido(REPO, "U-GALEANO"), "dev");
     expect(r.errores).toEqual([]);
     expect(r.conjunto.universo?.id).toBe("U-GALEANO");
+  });
+});
+
+describe("J-1: the default build keeps the other universes' output", () => {
+  const salida = (): string => {
+    const dir = mkdtempSync(join(tmpdir(), "lg-salida-"));
+    temporales.push(dir);
+    writeFileSync(join(dir, "misiones.json"), "[]");
+    mkdirSync(join(dir, "viejo"));
+    mkdirSync(join(dir, "U-GALEANO"));
+    writeFileSync(join(dir, "U-GALEANO", "dioramas.json"), "[]");
+    return dir;
+  };
+
+  test("without universe: removes its own files and keeps U-* folders", () => {
+    const dir = salida();
+    vaciarSalida(dir);
+    expect(readdirSync(dir)).toEqual(["U-GALEANO"]);
+    expect(readdirSync(join(dir, "U-GALEANO"))).toEqual(["dioramas.json"]);
+  });
+
+  test("with universe: empties only that universe's folder", () => {
+    const dir = salida();
+    vaciarSalida(join(dir, "U-GALEANO"), "U-GALEANO");
+    expect(readdirSync(join(dir, "U-GALEANO"))).toEqual([]);
+    expect(readdirSync(dir).sort()).toEqual(["U-GALEANO", "misiones.json", "viejo"]);
   });
 });

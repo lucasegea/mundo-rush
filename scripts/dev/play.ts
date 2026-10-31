@@ -31,9 +31,12 @@ export const parseUniverse = (argv: readonly string[]): string | undefined => {
   return valor === undefined || valor === "" ? undefined : valor;
 };
 
-/** Children's environment: the process's (already with .env loaded), operator mode and, if chosen, the universe (D-806). */
+/**
+ * Children's environment: the process's (already with .env loaded), operator mode and, if chosen, the universe (D-806):
+ * `LG_UNIVERSE` for the server and `VITE_LG_UNIVERSE` for the client, so a URL without `?universe=` still plays it (J-3).
+ */
 export const playEnv = (env: NodeJS.ProcessEnv, universe?: string): NodeJS.ProcessEnv =>
-  ({ ...env, LG_OPERATOR_MODE: "1", ...(universe ? { LG_UNIVERSE: universe } : {}) });
+  ({ ...env, LG_OPERATOR_MODE: "1", ...(universe ? { LG_UNIVERSE: universe, VITE_LG_UNIVERSE: universe } : {}) });
 
 /** Diagnostic line: only "yes/no" per variable. */
 export const presenceLine = (env: NodeJS.ProcessEnv, envFileFound: boolean): string =>

@@ -104,6 +104,7 @@ function phaseText(view: DialogueHudView): string {
     case "yourTurn": return t("scene.phase.yourTurn");
     case "passMenu": return t("scene.phase.passMenu");
     case "offline": return t("scene.offline");
+    case "failed": return t(`scene.failed.${view.failure ?? "other"}`);
     case "blocked": return t(view.blocked === "notIntroduced" ? "scene.blocked.notIntroduced" : "scene.blocked.noScene");
     case "ended": return t(`scene.end.${view.outcome ?? "aborted"}` as MessageKey);
   }
@@ -284,7 +285,7 @@ export function DialogueHud({ surface }: { surface: HudSurface }) {
   };
 
   const title = view.npcName ? t("scene.title", { name: view.npcName }) : t("scene.titleStory");
-  const finished = view.phase === "ended" || view.phase === "blocked" || view.phase === "offline";
+  const finished = view.phase === "ended" || view.phase === "blocked" || view.phase === "offline" || view.phase === "failed";
 
   return (
     <section aria-labelledby="scene-title" data-surface={surface} data-testid="dialogue-hud" className={FRAME[surface]} onKeyDown={onKeyDown}>

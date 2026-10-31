@@ -16,4 +16,14 @@ export const universeContentBase = (baseUrl: string, universeId?: string): strin
 };
 
 /** The universe requested by the url (`?universe=<id>`, S4/D-806); without the param, undefined (the farmer universe). */
-export const universeFromSearch = (search: string): string | undefined => new URLSearchParams(search).get("universe") ?? undefined;
+/**
+ * The universe the server runs, as `dev:play` passes it to Vite (`VITE_LG_UNIVERSE`, J-3); undefined outside dev:play.
+ */
+export const serverUniverse = (): string | undefined => (import.meta.env["VITE_LG_UNIVERSE"] as string | undefined) || undefined;
+
+/**
+ * The universe to play: `?universe=<id>` first; without it, the one the server was started with (J-3: a bare URL used to
+ * play the farmer universe against a Galeano server, and every NPC was unknown to it); without either, undefined.
+ */
+export const universeFromSearch = (search: string, fallback: string | undefined = serverUniverse()): string | undefined =>
+  new URLSearchParams(search).get("universe") ?? fallback;

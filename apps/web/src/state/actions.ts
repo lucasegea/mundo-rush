@@ -89,8 +89,12 @@ export function reduceSceneMessage(d: DialogueState, msg: ServerMessage): Dialog
         conversation: { npcName: msg.npcName, activeMeter: msg.activeMeter, meters: msg.meters, facts: msg.facts, stalled: msg.stalled, notice: msg.notice, help: msg.help, completed: msg.completed },
       };
     }
-    case "scene.effects":
     case "error":
+      // J-2: an error before `scene.opened` means the scene will never start (unknown NPC, busy, no scene): the HUD
+      // says so instead of waiting forever. Errors inside an open scene (not your turn, not voice) do not end it.
+      if (d.sceneRunId !== null) return d;
+      return { ...d, failure: msg.code === "unknown_npc" || msg.code === "scene_busy" || msg.code === "no_scene" ? msg.code : "other" };
+    case "scene.effects":
       return d;
   }
 }

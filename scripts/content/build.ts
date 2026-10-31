@@ -90,6 +90,27 @@ const conRegistroGlobal = (root: string, archivos: readonly ArchivoFuente[]): Ar
   return [...archivos, ...extra];
 };
 
+/** An output subfolder that belongs to a namespaced universe (`U-GALEANO`, …). */
+export const DIR_UNIVERSO = /^U-[A-Z0-9-]+$/;
+
+/**
+ * Empties an output folder before writing it. A universe build owns its whole `<id>/` folder. The default (farmer)
+ * build owns the root but NOT the `U-*` subfolders next to it: wiping them left a running universe without its map
+ * (J-1, 2026-10-30).
+ */
+export const vaciarSalida = (abs: string, universe?: string): void => {
+  if (universe) {
+    rmSync(abs, { recursive: true, force: true });
+  } else {
+    mkdirSync(abs, { recursive: true });
+    for (const e of readdirSync(abs, { withFileTypes: true })) {
+      if (e.isDirectory() && DIR_UNIVERSO.test(e.name)) continue;
+      rmSync(join(abs, e.name), { recursive: true, force: true });
+    }
+  }
+  mkdirSync(abs, { recursive: true });
+};
+
 /**
  * Writes both outputs from scratch (deletes the old to leave no orphan JSON). Only called without errors.
  * Without `universe`: farmer universe → `apps/.../content/` (verbatim, what the loader reads with universeId unset, D-806).
@@ -100,8 +121,7 @@ const escribirSalida = (root: string, r: Resultado, modo: Modo, universe?: strin
   const ids = Object.fromEntries([...r.conjunto.idsPorArchivo].map(([archivo, lista]) => [archivo, lista]));
   for (const [dir, archivos] of [[SALIDA_CLIENTE, r.salida.cliente], [SALIDA_SERVIDOR, r.salida.servidor]] as const) {
     const abs = universe ? join(root, dir, universe) : join(root, dir);
-    rmSync(abs, { recursive: true, force: true });
-    mkdirSync(abs, { recursive: true });
+    vaciarSalida(abs, universe);
     for (const [nombre, data] of Object.entries(archivos)) writeFileSync(join(abs, nombre), `${JSON.stringify(data, null, 2)}\n`);
     const indice = dir === SALIDA_SERVIDOR ? { modo, ids } : { modo };
     writeFileSync(join(abs, "indice.json"), `${JSON.stringify(indice, null, 2)}\n`);

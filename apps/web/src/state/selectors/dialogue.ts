@@ -39,7 +39,7 @@ export interface HudLine {
   tokens: LineToken[] | null;
 }
 
-export type HudPhase = "connecting" | "offline" | "starting" | "npcSpeaking" | "yourTurn" | "passMenu" | "ended" | "blocked";
+export type HudPhase = "connecting" | "offline" | "starting" | "npcSpeaking" | "yourTurn" | "passMenu" | "ended" | "blocked" | "failed";
 
 /** F5.2: what is happening with the voice ("I'm listening / thinking" indicator). */
 export type VoicePhase = "asking" | "yourTurn" | "listening" | "thinking" | "npcSpeaking";
@@ -76,6 +76,7 @@ export interface DialogueHudView {
   lines: HudLine[];
   outcome: string | null;
   blocked: "notIntroduced" | "noScene" | null;
+  failure: GameState["dialogue"]["failure"];
   containment: { line: string; resource: { label: string; detail: string } | null; provisional: boolean } | null;
   notice: string | null;
   /** Cause of the `model_unavailable` notice (open-world-3d T1); null without a cause. */
@@ -166,6 +167,7 @@ const voiceView = (d: GameState["dialogue"]): VoiceHudView | null => {
 
 const phaseOf = (d: GameState["dialogue"]): HudPhase => {
   if (d.connection === "error" || (d.connection === "closed" && d.outcome === null && d.blocked === null)) return "offline";
+  if (d.failure) return "failed";
   if (d.blocked) return "blocked";
   if (d.outcome) return "ended";
   if (d.connection !== "open") return "connecting";
@@ -194,6 +196,7 @@ export const selectDialogueHudView = createViewSelector(
       lines: d.history.map((l) => hudLine(l, d.lexicon, name)).filter((l): l is HudLine => l !== null),
       outcome: d.outcome,
       blocked: d.blocked,
+      failure: d.failure,
       containment: d.containment,
       notice: d.notice,
       noticeCause: d.noticeCause,
