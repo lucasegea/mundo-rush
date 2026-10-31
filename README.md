@@ -16,7 +16,9 @@ actually achieve something in the conversation, not when you pick the right opti
 For teenagers and adults. The first fully supported languages will be **Spanish, English and Portuguese** (a native
 speaker of any of them learns either of the others); the pair playable today is Spanish → English.
 
-> Status: working prototype, in active development. Built and played on PC in the browser.
+> Status: working prototype, in active development. Built and played on PC in the browser. Development started in
+> June 2026 with an earlier voice-tutor prototype (real-time voice conversation and correction); this repository
+> starts in October 2026, when that work became the game.
 
 ## What makes it different
 
@@ -36,6 +38,32 @@ speaker of any of them learns either of the others); the pair playable today is 
   validated at build time. A new universe is new content, not new code.
 - **Safety built in.** Model output goes through moderation (in text mode, before it is shown), with containment
   rules for sensitive topics, because the audience includes teenagers.
+
+## Roadmap
+
+### Done
+
+| When | Milestone |
+|---|---|
+| Jun 2026 | Voice-tutor prototype: real-time spoken conversation with an AI and correction of what the learner says |
+| Oct 2026 | Game design: vision, learning method, narrative and architecture |
+| Oct 2026 | Engine foundation: monorepo, pure game core, content pipeline with schema validation, quality gates |
+| Oct 2026 | Conversations: scene server, AI characters by voice and text, moderation, evaluation by meters |
+| Oct 2026 | Art direction and quality tiers that run on integrated GPUs |
+| Oct 2026 | Universes: the universe contract, and a test universe built from a book, played on the same engine |
+| Oct 2026 | 3D open world: third-person camera, terrain, vegetation, characters, minimap |
+
+### Next
+
+1. **Playable MVP.** The full single-player loop, end to end, and the universe pipeline running on its own:
+   research of the chosen book or film, world definition, the player questionnaire, and the world built from it.
+   Playtesting with real learners.
+2. **Three languages.** Spanish, English and Portuguese fully supported, in every direction.
+3. **Teachers in the loop.** The AI's teaching and correction methods enriched with real material from language
+   teachers, so the game keeps improving with human expertise.
+4. **Multiplayer.** Players who chose the same universe can share it, meet, and join conversation rooms to practice
+   together, with AI tutoring.
+5. **Later.** More languages, and a children's edition with adapted content and safety.
 
 ## What is built today
 
@@ -99,3 +127,7 @@ The design documents are in Spanish:
 Copyright © 2026 Lucas Egea. **All rights reserved.** The source is published for evaluation only; no license is
 granted to copy, modify or distribute it. Third-party assets and code keep their own licenses (CC0, MIT and
 others), listed in `content/assets-registry.yaml`, `content/code-registry.yaml` and `docs/licencias/`.
+
+---
+
+Made by Lucas Egea · [lucasegea.dev](https://lucasegea.dev)
