@@ -1,198 +1,198 @@
-# Jugar por voz en tu compu (modo operador)
+# Play by voice on your computer (operator mode)
 
-Cómo levantar el juego, caminar hasta un NPC y **hablarle por voz** (micrófono → servidor propio → Gemini Live →
-voz del NPC). Estado F5.2-lite: voz del cliente + transporte por el WebSocket de escena; ver "Límites conocidos".
+How to start the game, walk up to an NPC and **talk to it by voice** (microphone → our own server → Gemini Live →
+the NPC's voice). F5.2-lite status: client-side voice + transport over the scene WebSocket; see "Known limits".
 
-## 1. Arrancar
+## 1. Start
 
-Requisitos: Node 22.18+, `npm ci` hecho una vez, y un `.env` en la raíz del repo con `LG_GEMINI_API_KEY` (el archivo
-está en `.gitignore`; `.env.example` tiene los nombres).
+Requirements: Node 22.18+, `npm ci` run once, and an `.env` at the repo root with `LG_GEMINI_API_KEY` (the file
+is in `.gitignore`; `.env.example` has the names).
 
 ```bash
 npm run dev:play
 ```
 
-Eso compila el contenido (`build:content`) y levanta dos procesos:
+That builds the content (`build:content`) and starts two processes:
 
-| Proceso | Dirección | Qué hace |
+| Process | Address | What it does |
 |---|---|---|
-| `apps/server` | `http://127.0.0.1:8787` | servidor de escenas en **modo operador** (`LG_OPERATOR_MODE=1`, lo pone el script): token sin login, cuenta `op-local`, solo loopback |
-| Vite (`apps/web`) | `http://127.0.0.1:5173` | el juego; hace de proxy de `/scene-token` y del WebSocket `/scene` al servidor |
+| `apps/server` | `http://127.0.0.1:8787` | scene server in **operator mode** (`LG_OPERATOR_MODE=1`, set by the script): token without login, `op-local` account, loopback only |
+| Vite (`apps/web`) | `http://127.0.0.1:5173` | the game; proxies `/scene-token` and the `/scene` WebSocket to the server |
 
-Abrí **http://127.0.0.1:5173** en Chrome o Edge (usá `127.0.0.1` o `localhost`: el micrófono necesita un origen
-seguro). `Ctrl+C` en la terminal para los dos procesos; si uno se cae, el script para el otro.
+Open **http://127.0.0.1:5173** in Chrome or Edge (use `127.0.0.1` or `localhost`: the microphone needs a secure
+origin). `Ctrl+C` in the terminal stops both processes; if one dies, the script stops the other.
 
-La primera línea del script dice qué variables encontró, **solo presencia** (nunca valores):
-`[play] .env leído · LG_GEMINI_API_KEY presente · …`. El servidor repite lo mismo y termina con `voz: live`.
+The script's first line says which variables it found, **presence only** (never values):
+`[play] .env leído · LG_GEMINI_API_KEY presente · …`. The server repeats the same and ends with `voz: live`.
 
-## 1b. Jugar un libro (universo `U-GALEANO`)
+## 1b. Play a book (universe `U-GALEANO`)
 
 ```bash
 npm run dev:play -- --universe=U-GALEANO
 ```
 
-Compila `content/universes/U-GALEANO/` y abre el cliente en `http://127.0.0.1:5173/?universe=U-GALEANO` (servidor y
-cliente leen el mismo universo). Sin `--universe` se juega la campesino, igual que siempre. El progreso del libro se
-guarda aparte (`apps/server/data/evidence.U-GALEANO.jsonl`, `safety.U-GALEANO.jsonl`, `encounters.U-GALEANO.json`), asi que no
-pisa el de la campesino.
+Builds `content/universes/U-GALEANO/` and opens the client at `http://127.0.0.1:5173/?universe=U-GALEANO` (server and
+client read the same universe). Without `--universe` you play the campesino one, as always. The book's progress is
+saved separately (`apps/server/data/evidence.U-GALEANO.jsonl`, `safety.U-GALEANO.jsonl`, `encounters.U-GALEANO.json`), so it does not
+overwrite the campesino's.
 
-1. En el menu: **Jugar en el mapa** (queda deshabilitado un instante hasta que carga el catalogo).
-2. El mapa es el Cerro Rico: camino de tierra, piedra, arbustos y una bocamina. Tres personas: **El mitayo**, **El Cerro Rico**
-   y **El contador de la corona**. El orden lo fija el motor: primero el mitayo, despues el cerro, y recien
-   ahi el contador te recibe (antes dice que todavia no se conocen). Click sobre la persona o **T** / **E** cerca.
-3. Con el contador se juega la conversacion por medidores hasta el cierre ("The milk was never ours").
-4. Texto: abri la URL con `&voz=0`. Voz con Gemini Live: con `LG_GEMINI_API_KEY` en `.env`, como en la campesino.
+1. In the menu: **Jugar en el mapa** (it stays disabled for a moment until the catalog loads).
+2. The map is the Cerro Rico: dirt road, stone, bushes and a mine entrance. Three people: **El mitayo**, **El Cerro Rico**
+   and **El contador de la corona**. The engine sets the order: first the mitayo, then the cerro, and only
+   then does the contador receive you (before that he says you do not know each other yet). Click on the person or **T** / **E** nearby.
+3. With the contador you play the conversation by meters until the closing ("The milk was never ours").
+4. Text: open the URL with `&voz=0`. Voice with Gemini Live: with `LG_GEMINI_API_KEY` in `.env`, as in the campesino.
 
-## 1c. Caminata de navegador a pedido (excepcion acotada a D-016)
+## 1c. On-demand browser walk (narrow exception to D-016)
 
 ```bash
 npm run walk:browser
 ```
 
-Un script (`scripts/dev/browser-walk.ts`), fuera de `npm run verify`, que levanta servidor y Vite propios en puertos
-libres (modo operador, modelos guionados, almacenes en memoria: nunca toca `apps/server/data`), abre el Chromium que ya
-esta en la cache de Playwright (no descarga nada; `LG_CHROMIUM=<ruta>` para elegir otro) y recorre el juego: Galeano
-(AC12..AC16) y la campesino (AC17). Las capturas quedan en
-`_(documento interno). Termina con codigo distinto de cero si algo falla.
+A script (`scripts/dev/browser-walk.ts`), outside `npm run verify`, that starts its own server and Vite on free
+ports (operator mode, scripted models, in-memory stores: it never touches `apps/server/data`), opens the Chromium that is already
+in the Playwright cache (it downloads nothing; `LG_CHROMIUM=<path>` to pick another) and walks through the game: Galeano
+(AC12..AC16) and the campesino (AC17). Screenshots are left in
+`_(internal document). It exits with a non-zero code if anything fails.
 
-- **El navegador siempre se cierra al terminar** (exito, falla o error lanzado); solo se matan los procesos que el script
-  arranco. `npm run walk:browser -- --fail-on-purpose` falla a proposito con el navegador abierto, para comprobar que no
-  queda ningun chromium vivo.
-- `LG_WALK_HEADED=1` abre la ventana; `LG_WALK_DEBUG=1` imprime los mensajes del WebSocket.
-- Sin Chromium en la cache avisa y sale con 2.
+- **The browser always closes when done** (success, failure or thrown error); only the processes the script
+  started are killed. `npm run walk:browser -- --fail-on-purpose` fails on purpose with the browser open, to check that no
+  chromium is left alive.
+- `LG_WALK_HEADED=1` opens the window; `LG_WALK_DEBUG=1` prints the WebSocket messages.
+- Without Chromium in the cache it warns and exits with 2.
 
-## 2. Llegar al NPC
+## 2. Reach the NPC
 
-1. En el menú: **Jugar en el mapa**.
-2. Caminá con **WASD** o las **flechas** (o hacé click en el piso). **Inés** (M0.1, la capataz) está a la derecha y un
-   poco hacia arriba de donde aparecés. Un click sobre ella hace que el personaje camine hasta su lado. Ya cerca,
-   **T** (o **E**, o otro click sobre ella) abre la escena.
-3. Sin WebGL, o si preferís: **Modo solo diálogo** → elegí el lugar de Inés → **Hablar con Inés Calder**.
+1. In the menu: **Jugar en el mapa**.
+2. Walk with **WASD** or the **arrow keys** (or click on the floor). **Inés** (M0.1, the foreman) is to the right and a
+   bit up from where you spawn. A click on her makes the character walk to her side. Once close,
+   **T** (or **E**, or another click on her) opens the scene.
+3. Without WebGL, or if you prefer: **Modo solo diálogo** → pick Inés's place → **Hablar con Inés Calder**.
 
-### Controles del mapa (tercera persona, D-209)
+### Map controls (third person, D-209)
 
-La cámara va detrás del personaje. Si nunca la tocás, se recentra sola.
+The camera follows behind the character. If you never touch it, it recenters by itself.
 
-| Control | Qué hace |
+| Control | What it does |
 |---|---|
-| **WASD** o **flechas** | caminar, relativo a la cámara (W = hacia adelante de la vista) |
-| **Shift** (mantenido) | correr |
-| **Q** / **R** (mantenidas) | girar la vista a la izquierda / derecha |
-| **Arrastrar** con el mouse | mirar alrededor (horizontal gira, vertical sube o baja la cámara); un arrastre no camina, aunque lo sueltes sobre el piso |
-| **Click** en el piso o en una persona | caminar hasta ahí |
-| **Rueda**, **`+`** / **`-`** o los botones de zoom | acercar y alejar sin saltos, desde 2,5 m hasta el mapa entero (`+` y `-` andan también en teclado español) |
-| **V** | ver el mapa entero; otra V vuelve a la distancia anterior |
-| **T** o **E** cerca de una persona | abrir la escena |
-| **Minimapa** (abajo a la derecha) | 60 m alrededor, con el rumbo hacia arriba; los anillos rojos son las personas con las que todavía no cerraste la escena, y una flecha roja en el borde marca a las que están más lejos. Se oculta durante la charla |
+| **WASD** or **arrows** | walk, relative to the camera (W = forward in the view) |
+| **Shift** (held) | run |
+| **Q** / **R** (held) | turn the view left / right |
+| **Drag** with the mouse | look around (horizontal turns, vertical raises or lowers the camera); a drag does not walk, even if you release it over the floor |
+| **Click** on the floor or on a person | walk there |
+| **Wheel**, **`+`** / **`-`** or the zoom buttons | zoom in and out smoothly, from 2.5 m up to the whole map (`+` and `-` also work on a Spanish keyboard) |
+| **V** | see the whole map; another V returns to the previous distance |
+| **T** or **E** near a person | open the scene |
+| **Minimap** (bottom right) | 60 m around, heading up; red rings are the people whose scene you have not yet closed, and a red arrow on the edge marks those farther away. It is hidden during the chat |
 
-Al abrir la escena el navegador **pide permiso para el micrófono** (la primera vez). Aceptalo.
+When the scene opens the browser **asks for microphone permission** (the first time). Accept it.
 
-## 3. Hablar
+## 3. Talk
 
-La escena es por turnos lentos: **nadie te interrumpe** y el NPC no habla encima tuyo.
+The scene runs in slow turns: **nobody interrupts you** and the NPC does not talk over you.
 
-| Control | Qué hace |
+| Control | What it does |
 |---|---|
-| **Mantener apretado "Hablar"** | pulsar-para-hablar: hablás mientras lo mantenés; al soltar se cierra tu turno |
-| **Tocar "Hablar"** y después **"Terminé"** | abre tu turno y lo cerrás cuando quieras (sin apuro, aunque hagas silencio) |
-| **Espacio / Enter** con el foco en "Hablar" | abre el turno; otra vez, lo cierra |
-| **Pasar el turno** | las 4 opciones de siempre (pista, repetir, más simple, seguí vos) |
-| **Escape** | sale de la escena |
+| **Hold down "Hablar"** | push-to-talk: you talk while you hold it; on release your turn closes |
+| **Tap "Hablar"** and then **"Terminé"** | opens your turn and you close it whenever you want (no rush, even if you stay silent) |
+| **Space / Enter** with focus on "Hablar" | opens the turn; again, it closes it |
+| **Pasar el turno** | the usual 4 options (hint, repeat, simpler, you go on) |
+| **Escape** | leaves the scene |
 
-Lo que vas a ver:
+What you will see:
 
-- **"Tu turno…"** (punto de color): podés hablar. El **medidor de nivel** se mueve cuando hablás: sirve para chequear
-  el micrófono antes de empezar.
-- **"Te escucho…"**: tu turno está abierto. Abajo aparece **"Te oigo: …"** con lo que el servidor va entendiendo.
-- **"Inés está pensando…"**: cerraste el turno; el NPC prepara la respuesta.
-- **"Habla Inés…"**: suena su voz. Hasta que termine de sonar no se puede abrir otro turno.
-- Tu frase (como la entendió el servidor) y la respuesta del NPC quedan escritas en el historial.
+- **"Tu turno…"** (colored dot): you can talk. The **level meter** moves when you talk: use it to check
+  the microphone before starting.
+- **"Te escucho…"**: your turn is open. Below appears **"Te oigo: …"** with what the server is understanding.
+- **"Inés está pensando…"**: you closed the turn; the NPC is preparing the reply.
+- **"Habla Inés…"**: her voice is playing. Until it finishes you cannot open another turn.
+- Your sentence (as the server understood it) and the NPC's reply are written in the history.
 
-Hablá en inglés. En M0.1 la escena se cumple cuando saludás **y** decís tu nombre ("Hello! I'm Nico."); si querés
-charlar más, demorá el nombre.
+Speak in English. In M0.1 the scene is completed when you greet **and** say your name ("Hello! I'm Nico."); if you want to
+chat more, hold back the name.
 
-## 3b. Charlar con Harlan, el granjero (conversación libre, A2)
+## 3b. Chat with Harlan, the farmer (free conversation, A2)
 
-Una escena **sin guion**: Harlan Moss tiene su propia vida (una ficha con hechos, secretos y lo que quiere), vos
-tenés la tuya (la de tu personaje), y ninguno sabe qué quiere el otro. Diseño: `docs/adr/ADR-027-conversacion-por-medidores.md`.
+An **unscripted** scene: Harlan Moss has his own life (a sheet with facts, secrets and what he wants), you
+have yours (your character's), and neither knows what the other wants. Design: `docs/adr/ADR-027-conversation-by-meters.md`.
 
-**Cómo llegar.** En el mapa, Harlan está **a la derecha y hacia abajo** de donde aparecés, junto al galpón (el bloque
-grande). Acercate y **T** / **E** / click, igual que con Inés. En **Modo solo diálogo**: lugar **Granero de Harlan** →
-**Hablar con Harlan Moss**. No necesita presentación ni misiones previas.
+**How to get there.** On the map, Harlan is **to the right and down** from where you spawn, next to the shed (the big
+block). Get close and **T** / **E** / click, same as with Inés. In **Modo solo diálogo**: place **Granero de Harlan** →
+**Hablar con Harlan Moss**. It needs no introduction or earlier missions.
 
-**Qué vas a ver.** Arriba del historial, el panel de la charla:
+**What you will see.** Above the history, the chat panel:
 
-- **"Conocer a Harlan"**: la barra se llena solo si hay **ida y vuelta**. Preguntale por su vida, repreguntá sobre lo
-  que te cuenta (una repregunta vale más que cambiar de tema) y **contale cosas de tu personaje** (inventadas: nombre
-  de juego, de dónde viene, la cuadrilla, qué le gusta). Si hacés dos preguntas seguidas sin contar nada tuyo, la
-  barra se frena y Harlan te pregunta a vos.
-- **"Lo que sabés de Harlan"**: se va llenando con lo que él te cuenta. Las cosas más personales las cuenta recién
-  cuando le tiene confianza.
-- **Ayuda**: si te trabás (o pasan 20 s en silencio), aparece una pista de Lumi; si seguís trabado (40 s), frases
-  sugeridas en inglés. En texto, tocá una frase y queda en la caja; en voz, leela en voz alta.
-- Cuando se llena la primera barra, se abre **"Conseguir lo que viniste a buscar"** y Harlan te pregunta qué te trae.
-  Ahí recién se puede hablar del recado. Contale a qué viniste, explicale para qué es y pedíselo con amabilidad.
-- Cuando lo logres: **"¡Harlan aceptó! Despedite o dale las gracias."** Tu próxima frase cierra la escena con la
-  línea guionada (los números nunca se muestran).
+- **"Conocer a Harlan"**: the bar fills only if there is **back and forth**. Ask him about his life, follow up on what
+  he tells you (a follow-up is worth more than changing topic) and **tell him things about your character** (made up: game
+  name, where they come from, the crew, what they like). If you ask two questions in a row without telling anything about yourself, the
+  bar stalls and Harlan asks you.
+- **"Lo que sabés de Harlan"**: fills up with what he tells you. The more personal things he only tells once
+  he trusts you.
+- **Help**: if you get stuck (or 20 s pass in silence), a hint from Lumi appears; if you stay stuck (40 s), suggested
+  phrases in English. In text, tap a phrase and it lands in the box; in voice, read it aloud.
+- When the first bar fills, **"Conseguir lo que viniste a buscar"** opens and Harlan asks what brings you. Only
+  then can you talk about the errand. Tell him why you came, explain what it is for and ask him politely.
+- When you succeed: **"¡Harlan aceptó! Despedite o dale las gracias."** Your next sentence closes the scene with the
+  scripted line (the numbers are never shown).
 
-**Qué probar.** Pedirle algo de entrada (no habla de negocios con un desconocido). Preguntar sin parar sin contar
-nada tuyo (frena). Hablarle en español (te pide inglés y salta la ayuda). Preguntarle por las semillas (desvía).
-Contarle algo tuyo justo después de que él te cuenta algo (suma más). A los 9 minutos Harlan se despide en su próxima respuesta (10 como tope duro). Si
-se corta antes de lograrlo, **lo que ya sabés de él queda guardado**: la próxima vez seguís desde ahí.
+**What to try.** Ask him for something right away (he does not talk business with a stranger). Keep asking without telling
+anything about yourself (it stalls). Talk to him in Spanish (he asks for English and the help kicks in). Ask him about the seeds (he deflects).
+Tell him something about yourself right after he tells you something (counts for more). At 9 minutes Harlan says goodbye in his next reply (10 as a hard cap). If
+it is cut off before you succeed, **what you already know about him is saved**: next time you continue from there.
 
-**Reiniciar la charla con Harlan** (para jugarla de nuevo desde cero):
+**Restart the chat with Harlan** (to play it again from scratch):
 
 ```bash
 npm run dev:reset-farmer
 ```
 
-Borra solo lo de Harlan (lo que sabías de él, las barras y que la misión estaba cumplida). El resto de tu progreso
-no se toca, y se puede correr con el juego andando: la próxima escena ya arranca de cero. Para otro NPC con ficha:
+It deletes only Harlan's data (what you knew about him, the bars and the fact that the mission was done). The rest of your progress
+is untouched, and it can be run while the game is running: the next scene starts from zero. For another NPC with a sheet:
 `npm run dev:reset-encounter -- --npc NPC-X`.
 
-Sin clave (`LG_FAKE_MODELS=1`) la charla anda con un juez guionado por palabras: sirve para ver las barras y el cambio
-de fase, no para evaluar. El juez real es Gemini (rol `judge` de `apps/server/config/models.yaml`).
+Without a key (`LG_FAKE_MODELS=1`) the chat works with a judge scripted by words: it is good for seeing the bars and the phase
+change, not for evaluating. The real judge is Gemini (role `judge` in `apps/server/config/models.yaml`).
 
-## 4. Si algo no anda
+## 4. If something does not work
 
-| Síntoma | Qué pasa / qué hacer |
+| Symptom | What is happening / what to do |
 |---|---|
-| "No hay permiso para usar el micrófono: seguimos por texto." | Lo negaste. Habilitalo para `127.0.0.1:5173` (ícono a la izquierda de la dirección) y volvé a entrar a la escena. Mientras tanto se juega por texto |
-| "No encontramos un micrófono" / "lo está usando otra aplicación" | Conectá uno o cerrá la otra app (Zoom, Meet…) y volvé a entrar |
-| "No llegó voz del micrófono…" después de un turno | El medidor no se movió: micrófono equivocado o silenciado en el sistema. Elegilo en la configuración del sitio del navegador |
-| "No te entendimos" | Live no transcribió nada: hablá más cerca o un poco más fuerte |
-| "La voz no está disponible ahora; la escena sigue por texto." | El servidor no pudo abrir la sesión Live (red, clave inválida, modelo caído). Mirá la terminal del servidor. Sin `LG_GEMINI_API_KEY` el script avisa al arrancar |
-| "No hay conexión con el servidor de escenas" | El servidor no está arriba o se cayó: mirá la terminal y volvé a correr `npm run dev:play` |
-| Puerto 5173 u 8787 ocupado | Otro proceso los usa. Para el servidor, agregá `LG_PORT=8788` al `.env` (el proxy de Vite lo sigue). 5173 es fijo: cerrá el otro Vite |
-| Inés dice que "ahora no hay nada para hacer acá" | Ya completaste M0.1: el progreso real vive en `apps/server/data/evidence.jsonl`. Para repetir la escena, **mové** ese archivo a otro nombre (no lo borres: es tu progreso) y reiniciá el servidor. Salir de una escena a la mitad no guarda nada |
-| Harlan dice que "ahora no hay nada para hacer acá" | Ya conseguiste lo que buscabas: `npm run dev:reset-farmer` y volvé a hablarle |
-| Las barras no se mueven con Harlan | El juez no respondió: mirá la terminal del servidor (dice "juez de conversación sin resultado" con el motivo, nunca tu texto). Ese intercambio no cuenta; la charla sigue |
-| Querés forzar texto | Abrí `http://127.0.0.1:5173/?voz=0` |
-| No se oye al NPC | Subí el volumen del sistema/pestaña. El audio arranca con tu primer toque a "Hablar" (política de autoplay) |
+| "No hay permiso para usar el micrófono: seguimos por texto." | You denied it. Enable it for `127.0.0.1:5173` (icon to the left of the address) and re-enter the scene. Meanwhile you play by text |
+| "No encontramos un micrófono" / "lo está usando otra aplicación" | Connect one or close the other app (Zoom, Meet…) and re-enter |
+| "No llegó voz del micrófono…" after a turn | The meter did not move: wrong or muted microphone in the system. Pick it in the browser's site settings |
+| "No te entendimos" | Live transcribed nothing: speak closer or a bit louder |
+| "La voz no está disponible ahora; la escena sigue por texto." | The server could not open the Live session (network, invalid key, model down). Look at the server terminal. Without `LG_GEMINI_API_KEY` the script warns at startup |
+| "No hay conexión con el servidor de escenas" | The server is not up or died: look at the terminal and run `npm run dev:play` again |
+| Port 5173 or 8787 busy | Another process is using them. For the server, add `LG_PORT=8788` to `.env` (the Vite proxy follows it). 5173 is fixed: close the other Vite |
+| Inés says "ahora no hay nada para hacer acá" | You already completed M0.1: the real progress lives in `apps/server/data/evidence.jsonl`. To repeat the scene, **move** that file to another name (do not delete it: it is your progress) and restart the server. Leaving a scene halfway saves nothing |
+| Harlan says "ahora no hay nada para hacer acá" | You already got what you were after: `npm run dev:reset-farmer` and talk to him again |
+| The bars do not move with Harlan | The judge did not respond: look at the server terminal (it says "juez de conversación sin resultado" with the reason, never your text). That exchange does not count; the chat continues |
+| You want to force text | Open `http://127.0.0.1:5173/?voz=0` |
+| You cannot hear the NPC | Raise the system/tab volume. Audio starts with your first tap on "Hablar" (autoplay policy) |
 
-## 5. Costos y privacidad
+## 5. Costs and privacy
 
-- Cada turno se registra en el libro de costos (`apps/server/data/cost-ledger.jsonl`). En modo operador **no hay corte
-  de presupuesto de voz**: si el promedio supera US$0,05/min, el servidor solo imprime una alerta (D-027, D-135).
-- El servidor **no guarda audio**: el clip del turno vive en memoria para el observador y se libera al terminar o a
-  los 10 s (D-108). El cliente tampoco guarda audio.
-- La clave nunca llega al navegador: el cliente habla solo con el servidor propio.
+- Each turn is recorded in the cost ledger (`apps/server/data/cost-ledger.jsonl`). In operator mode there is **no voice
+  budget cutoff**: if the average exceeds US$0.05/min, the server only prints an alert (D-027, D-135).
+- The server **does not store audio**: the turn's clip lives in memory for the observer and is released when it ends or after
+  10 s (D-108). The client does not store audio either.
+- The key never reaches the browser: the client talks only to our own server.
 
-## Límites conocidos (F5.2-lite)
+## Known limits (F5.2-lite)
 
-- Las líneas guionadas (apertura, cierre) se muestran como texto: todavía no tienen audio cacheado (F8).
-- Sin holdback de moderación en la voz de Live (F5.1b): la línea del NPC se modera antes de escribirse, pero su audio
-  suena mientras llega.
-- "Más despacio" (time-stretch OLA) y el VAD que cierra el turno solo tras 3 s de silencio están fuera de esta corrida:
-  el turno lo cierra siempre el jugador.
-- Probado con tests (servidor Live falso, motor de audio falso) y un humo corto contra la API real (la sesión abre y
-  vuelve audio). El recorrido completo con micrófono real en el navegador es la primera prueba del operador.
+- Scripted lines (opening, closing) are shown as text: they do not have cached audio yet (F8).
+- No moderation holdback on Live's voice (F5.1b): the NPC's line is moderated before it is written, but its audio
+  plays as it arrives.
+- "Slower" (OLA time-stretch) and the VAD that closes the turn only after 3 s of silence are out of this run:
+  the turn is always closed by the player.
+- Tested with tests (fake Live server, fake audio engine) and a short smoke against the real API (the session opens and
+  audio comes back). The full run with a real microphone in the browser is the operator's first test.
 
-## Para sistemas de conversación (ganchos)
+## For conversation systems (hooks)
 
-`scene-runtime` expone ganchos de conversación (`apps/server/src/scene-runtime/hooks.ts`): `onSceneStart`, `onTurn`
-(cada turno del jugador y del NPC, por texto o por voz; en voz también lo que se va oyendo con `final: false`) y
-`onSceneEnd`. Se pasan a `createGameServer({ conversation })`. Un gancho que tira (o un gancho async cuya promesa
-rechaza) no corta la escena. A2: `onSceneStart` recibe además la ficha de conversación de la escena y un `control`
-(`setNpcBrief`, `sendState`, `complete`); el sistema de medidores (`apps/server/src/conversation/`) es un sistema de
-estos, enchufado por defecto cuando el servidor tiene juez y almacén de encuentros.
+`scene-runtime` exposes conversation hooks (`apps/server/src/scene-runtime/hooks.ts`): `onSceneStart`, `onTurn`
+(each player and NPC turn, by text or voice; in voice also what is being heard with `final: false`) and
+`onSceneEnd`. They are passed to `createGameServer({ conversation })`. A hook that throws (or an async hook whose promise
+rejects) does not cut the scene. A2: `onSceneStart` also receives the scene's conversation sheet and a `control`
+(`setNpcBrief`, `sendState`, `complete`); the meters system (`apps/server/src/conversation/`) is one of
+these systems, plugged in by default when the server has a judge and an encounters store.

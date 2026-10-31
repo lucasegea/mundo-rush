@@ -1,198 +1,198 @@
-# 01 — Game Design Document (GDD) del juego objetivo
+# 01 — Game Design Document (GDD) of the target game
 
-**Proyecto:** learning-game (título provisorio *Mundo Rush*, D-031) · **Documento:** GDD v0.3 · **Fecha:** 2026-10-06 (v0.1: 2026-10-05) · **Autor:** equipo de Mundo Rush
-**v0.2 (2026-10-06):** integra las respuestas del operador (`00-decisiones.md` §1.1): título *Mundo Rush*; por ahora el juego es para el operador (D-135); arte **HD-2D** (D-139, §5); **pronunciación núcleo** (D-044, §2.4.7, revierte DP-27); mapa recorrible desde el arranque (D-020). Las filas DP de §9 que el operador decidió apuntan a su `D-NNN`; manda `00-decisiones.md`.
-**v0.3 (2026-10-06):** alinea **todo** el GDD con la premisa del brief (sección "Guion v2 + modo director", 2026-10-06), que reemplaza la de *Lantern Bay* y el faro. En la v0.2 solo el §3 estaba alineado; ahora también §1 (pitch, modos), §2 (bucle de fundar y de la red, Lumi como bicho de luz en un frasco por D-165, ejemplos de fichas, árbol de habilidades, onboarding de §2.14 con el contenido de `02` §5, estados de fracaso), §4 (puentes entre modos), §5 (arte, paleta y audio: caminitos de bichos de luz y saturación del Cruce en vez de faroles) y §9 (DP-01, DP-02, DP-10, DP-11, DP-39 apuntan a su `D-NNN`). Ningún pasaje de la premisa v0.1 queda como contrato; los nombres e ids retirados están listados en `02` §0.5.
-**Estado:** borrador de visión y especificación del modo 1. Pendiente de la revisión de arquitectura antes de que cualquier corrida headless construya a partir de él.
-**Idioma del documento:** español. Las líneas de diálogo de NPCs están en inglés porque es la lengua meta del primer par (español → inglés).
+**Project:** learning-game (working title *Mundo Rush*, D-031) · **Document:** GDD v0.3 · **Date:** 2026-10-06 (v0.1: 2026-10-05) · **Author:** the Mundo Rush team
+**v0.2 (2026-10-06):** integrates the operator's answers (`00-decisiones.md` §1.1): title *Mundo Rush*; for now the game is for the operator (D-135); **HD-2D** art (D-139, §5); **core pronunciation** (D-044, §2.4.7, reverts DP-27); map walkable from the start (D-020). The DP rows in §9 that the operator decided point to their `D-NNN`; `00-decisiones.md` governs.
+**v0.3 (2026-10-06):** aligns **the whole** GDD with the brief's premise (section "Guion v2 + modo director", 2026-10-06), which supersedes the *Lantern Bay* and lighthouse one. In v0.2 only §3 was aligned; now so are §1 (pitch, modes), §2 (the founding loop and the network loop, Lumi as a firefly in a jar per D-165, card examples, skill tree, the §2.14 onboarding with the content of `02` §5, failure states), §4 (bridges between modes), §5 (art, palette and audio: firefly trails and the Crossing's saturation instead of lanterns) and §9 (DP-01, DP-02, DP-10, DP-11, DP-39 point to their `D-NNN`). No passage of the v0.1 premise remains as a contract; the retired names and ids are listed in `02` §0.5.
+**Status:** draft of the vision and specification of mode 1. Pending the architecture review before any headless run builds from it.
+**Document language:** Spanish. The NPC dialogue lines are in English because it is the target language of the first pair (Spanish → English).
 
-> **Objetivo de este documento, en una frase:** describir el juego que queremos tener terminado (los cinco modos como visión, el modo 1 especificado al detalle con su guion) de forma tan completa que una corrida headless pueda diseñar, construir y verificar el modo 1 sin preguntarle nada a nadie, usando los defaults recomendados en cada decisión pendiente.
-
----
-
-## Índice
-
-0. Cómo usar este documento (contrato para corridas headless)
-1. Visión
-2. Modo 1, especificación completa
-3. Guion del modo 1 (mundo, personajes, arco, catálogo de misiones, escenas escritas)
-4. Modos 2 a 5 (visión)
-5. Dirección de arte, cámara, UI y audio
-6. Métricas y experimentos
-7. Glosario
-8. Fuera de alcance
-9. Preguntas abiertas y registro de decisiones pendientes (DECISION-PENDING)
-10. Fuentes citadas
+> **Purpose of this document, in one sentence:** to describe the game we want to have finished (the five modes as a vision, mode 1 specified in detail with its script) so completely that a headless run can design, build and verify mode 1 without asking anyone anything, using the recommended defaults on each pending decision.
 
 ---
 
-## 0. Cómo usar este documento (contrato para corridas headless)
+## Index
 
-### 0.1 Insumos que este GDD cita y no rehace
+0. How to use this document (contract for headless runs)
+1. Vision
+2. Mode 1, full specification
+3. Mode 1 script (world, characters, arc, mission catalog, written scenes)
+4. Modes 2 to 5 (vision)
+5. Art direction, camera, UI and audio
+6. Metrics and experiments
+7. Glossary
+8. Out of scope
+9. Open questions and register of pending decisions (DECISION-PENDING)
+10. Cited sources
 
-| Insumo | Ruta | Qué aporta |
+---
+
+## 0. How to use this document (contract for headless runs)
+
+### 0.1 Inputs this GDD cites and does not redo
+
+| Input | Path | What it provides |
 |---|---|---|
-| Brief del proyecto (decisiones del operador, vinculantes) | (documento interno) | Modos, pares de idioma, mercado, público ATP, quién paga, definición de "accesible" |
-| Análisis de negocio (interno) | (documento interno) | Costo de voz cuadrático con la duración → escenas cortas; mapa competitivo; experimentos de validación; riesgos (menores, 3D vs accesibilidad) |
-| Investigación | (documento interno) y `20-evidencia.md` | Defaults de diseño con etiqueta de evidencia (E1-E37) |
-| Referencias de juegos | (documento interno) | Qué copiar y qué evitar de Terra Alia, Influent, Noun Town y otros; cámara asistida; modo bajo; Rapier probablemente sobra |
-| Proyecto de voz reutilizado | un prototipo de voz anterior | Proxy Node.js + WebSocket a Gemini Live (voz), modelo de texto para gramática/observador/debrief, TTS Deepgram Aura, reglas de disfluencia, perfil del alumno, modos "conversation" y "correction", tope de sesión ~15 min del lado del servidor |
+| Project brief (operator decisions, binding) | (internal document) | Modes, language pairs, market, ATP audience, who pays, definition of "accessible" |
+| Business analysis (internal) | (internal document) | Voice cost quadratic in duration → short scenes; competitive map; validation experiments; risks (minors, 3D vs accessibility) |
+| Research | (internal document) and `20-evidencia.md` | Design defaults with evidence tag (E1-E37) |
+| Game references | (internal document) | What to copy and what to avoid from Terra Alia, Influent, Noun Town and others; assisted camera; low mode; Rapier is probably unnecessary |
+| Reused voice project | a previous voice prototype | Node.js proxy + WebSocket to Gemini Live (voice), text model for grammar/observer/debrief, Deepgram Aura TTS, disfluency rules, learner profile, "conversation" and "correction" modes, server-side session cap of ~15 min |
 
-En adelante se citan como **[Brief]**, **[Negocio §x]**, **[Investigación §x / Ex]**, **[Referencias §x]** y **[Prototipo de voz]**.
+From here on they are cited as **[Brief]**, **[Business §x]**, **[Research §x / Ex]**, **[References §x]** and **[Voice prototype]**.
 
-### 0.2 Etiquetas de evidencia
+### 0.2 Evidence tags
 
-Cuando una regla de diseño se apoya en investigación, lleva la etiqueta de la investigación:
+When a design rule rests on research, it carries the research's tag:
 
-| Etiqueta | Significado |
+| Tag | Meaning |
 |---|---|
-| [Probado] | certeza alta o moderada |
-| [Probable] | certeza baja |
-| [Hipótesis] | certeza muy baja o sin estudios |
-| [En disputa] | la evidencia apunta en direcciones opuestas |
+| [Proven] | high or moderate certainty |
+| [Probable] | low certainty |
+| [Hypothesis] | very low certainty or no studies |
+| [Disputed] | the evidence points in opposite directions |
 
-Una regla sin etiqueta es una **decisión de diseño** (gusto, producto, costo o seguridad), no una afirmación sobre aprendizaje. No hay que confundirlas.
+A rule without a tag is a **design decision** (taste, product, cost or safety), not a claim about learning. They must not be confused.
 
-### 0.3 Reglas para una corrida headless que lea este GDD
+### 0.3 Rules for a headless run that reads this GDD
 
-1. **Orden de autoridad:** el único vigente es el de `00-decisiones.md` §0.3 (brief y decididas > defaults de `00` > `04` > `03` > `01` > `02` para construcción; `02` > `01` solo para la redacción del contenido). Si este documento contradice un documento de mayor autoridad, gana ese y la contradicción se reporta. Los defaults de las DP de este GDD se reemplazan por los de `00-decisiones.md` (§9 traduce `DP-NN` → `D-NNN`): **si difieren, gana el registro**.
-2. **Cada `DECISION-PENDING` tiene un default recomendado.** Si el operador no la resolvió, la corrida usa el default, lo anota en su reporte y sigue. Nunca se frena por una DP.
-3. **Nunca se adopta ni se descarta en silencio** algo marcado como DP. Si una corrida necesita apartarse del default, lo reporta como desvío explícito.
-4. **Las reglas inviolables (§1.4) no son DPs.** No hay default que las relaje.
-5. **El modo 1 no tiene dinero.** Ninguna corrida agrega monedas, tiendas, precios ni economía al modo 1. La economía tipo tycoon queda como candidata del modo 2 (DP-15).
-6. **Lo que es arquitectura lo decide la revisión de arquitectura.** Este GDD describe *qué* hace el juego y *por qué*. Donde nombra tecnología (R3F, Zustand, Gemini Live) lo hace como restricción heredada o propuesta, no como diseño de arquitectura.
-7. **Los IDs son estables.** Misiones (`M1.3`), NPCs (`NPC-NELL`), habilidades (`HAB-PEDIR-1`), decisiones (`DP-07`). Una corrida que cambie contenido conserva el ID o crea uno nuevo; nunca reutiliza un ID para otra cosa.
-8. **Sin datos personales** en contenido, logs ni fixtures. Los nombres de NPCs son ficticios.
+1. **Order of authority:** the only one in force is that of `00-decisiones.md` §0.3 (brief and decided > `00` defaults > `04` > `03` > `01` > `02` for construction; `02` > `01` only for the wording of content). If this document contradicts a higher-authority document, that one wins and the contradiction is reported. The defaults of this GDD's DPs are superseded by those of `00-decisiones.md` (§9 translates `DP-NN` → `D-NNN`): **if they differ, the register wins**.
+2. **Every `DECISION-PENDING` has a recommended default.** If the operator has not resolved it, the run uses the default, notes it in its report and moves on. It never stops for a DP.
+3. **Something marked as a DP is never adopted or discarded silently.** If a run needs to depart from the default, it reports it as an explicit deviation.
+4. **The inviolable rules (§1.4) are not DPs.** No default relaxes them.
+5. **Mode 1 has no money.** No run adds coins, shops, prices or economy to mode 1. The tycoon-style economy remains a candidate for mode 2 (DP-15).
+6. **What is architecture is decided by the architecture review.** This GDD describes *what* the game does and *why*. Where it names technology (R3F, Zustand, Gemini Live) it does so as an inherited constraint or proposal, not as architecture design.
+7. **IDs are stable.** Missions (`M1.3`), NPCs (`NPC-NELL`), skills (`HAB-PEDIR-1`), decisions (`DP-07`). A run that changes content keeps the ID or creates a new one; it never reuses an ID for something else.
+8. **No personal data** in content, logs or fixtures. NPC names are fictional.
 
 ---
 
-## 1. Visión
+## 1. Vision
 
-### 1.1 Título provisional y una línea
+### 1.1 Working title and one line
 
-- **Título provisorio:** *Mundo Rush* (decidido por el operador, D-031). El mundo de la ficción es el valle agrícola de *Kestrel Valley* (D-164); el pueblo que el jugador funda en el Cruce elige su nombre en M1.8 (D-173). Antes de cualquier uso comercial se verifica la marca.
-- **Una línea:** sos un trabajador rural argentino que llega con la cuadrilla de la cosecha a un valle agrícola de habla inglesa donde las avionetas fumigan pegado a las casas; sin plata ni títulos, con la parla como único poder, hablás con vecinos y dueños de campo, armás una red y fundás un pueblo para que una ordenanza deje las fumigaciones lejos. Cada cosa se consigue hablando, y un bicho de luz que vino con vos en un frasco te acompaña sin apurarte.
-- **Una línea de producto:** el lugar donde practicar hablar una segunda lengua no da vergüenza, no cuesta pelearse con el mundo y se siente como jugar.
+- **Working title:** *Mundo Rush* (decided by the operator, D-031). The fiction's world is the agricultural valley of *Kestrel Valley* (D-164); the village the player founds at the Crossing picks its name in M1.8 (D-173). The trademark is checked before any commercial use.
+- **One line:** you are an Argentine farm worker who arrives with the harvest crew in an English-speaking agricultural valley where small planes spray right next to the houses; with no money or degrees, with the gift of gab as your only power, you talk with neighbors and landowners, build a network and found a village so that an ordinance keeps the spraying far away. Everything is achieved by talking, and a firefly that came with you in a jar accompanies you without rushing you.
+- **Product line:** the place where practicing speaking a second language is not embarrassing, does not mean fighting with the world, and feels like playing.
 
-### 1.2 El problema que resuelve
+### 1.2 The problem it solves
 
-- Aprender a **hablar** una segunda lengua requiere producir oraciones con alguien que te responda. Eso es caro (profesor, intercambio), da vergüenza (ansiedad de L2, asociada a peor logro, r = −.36 [Probado], [Investigación §1 / E1]) y muchas veces no está disponible.
-- Las apps dominantes enseñan reconocimiento y frases sueltas con mecánicas de hábito (rachas, ligas) y ya regalan conversación con IA sin mundo [Negocio §2].
-- Los juegos de idiomas que existen tienen mundo pero no conversación (Influent, Terra Alia, Noun Town con NPCs guionados) [Referencias §0, §3].
-- En Argentina y Brasil la habilidad más débil es justamente la oral (Brasil: speaking 464 vs reading 516 en EF EPI 2025) [Negocio §1.2].
+- Learning to **speak** a second language requires producing sentences with someone who answers you. That is expensive (teacher, exchange), embarrassing (L2 anxiety, associated with worse achievement, r = −.36 [Proven], [Research §1 / E1]) and often unavailable.
+- The dominant apps teach recognition and isolated phrases with habit mechanics (streaks, leagues) and already give away AI conversation without a world [Business §2].
+- The existing language games have a world but no conversation (Influent, Terra Alia, Noun Town with scripted NPCs) [References §0, §3].
+- In Argentina and Brazil the weakest skill is precisely the oral one (Brazil: speaking 464 vs reading 516 in EF EPI 2025) [Business §1.2].
 
-### 1.3 Pilares
+### 1.3 Pillars
 
-Los cuatro pilares ordenan todas las decisiones. Si dos chocan, gana el de número menor.
+The four pillars order all decisions. If two clash, the lower-numbered one wins.
 
-**P1. Accesible (en el sentido del operador).** "Accesible" es *el dispositivo y las formas de aprender*: que cualquiera pueda tener una segunda lengua sin pelear contra el mundo [Brief].
-- Corre en una PC modesta de escuela, en navegador, sin instalar nada. Hay modo gráfico bajo obligatorio [Referencias §4.4].
-- Se puede jugar sin micrófono (modo texto completo).
-- Nada de lo que es accesibilidad se desbloquea con progreso: velocidad, subtítulos, tamaño de letra, modo texto, pausas, están siempre disponibles.
-- Es pago, lo más barato posible pero sustentable; **el que paga financia al que no** (instituciones, grants) [Brief].
-- No exige saber jugar videojuegos: controles mínimos, cámara que acompaña sola desde arriba (sin órbita libre), sin reflejos.
+**P1. Accessible (in the operator's sense).** "Accessible" means *the device and the ways of learning*: anyone can have a second language without fighting against the world [Brief].
+- Runs on a modest school PC, in the browser, with nothing to install. A low graphics mode is mandatory [References §4.4].
+- It can be played without a microphone (full text mode).
+- Nothing that is accessibility is unlocked by progress: speed, subtitles, font size, text mode, pauses are always available.
+- It is paid, as cheap as possible but sustainable; **the one who pays funds the one who does not** (institutions, grants) [Brief].
+- It does not require knowing how to play videogames: minimal controls, a camera that follows on its own from above (no free orbit), no reflexes.
 
-**P2. Jugar primero, aprender adentro.** El jugador está ayudando a un vecino, no "haciendo una lección". El idioma es la herramienta para lograr algo en el mundo, nunca un examen pegado al costado.
-- Cada misión se resuelve **hablando** (o escribiendo en modo texto). Si una misión se puede completar sin usar la lengua, está mal diseñada [Referencias §4.2.1].
-- Las misiones son tareas en el sentido de TBLT: resultado no lingüístico, lengua como medio [Investigación §2.4 / E29, E7] [Probable].
+**P2. Play first, learn inside.** The player is helping a neighbor, not "doing a lesson". The language is the tool for achieving something in the world, never an exam stuck on the side.
+- Every mission is solved by **speaking** (or writing in text mode). If a mission can be completed without using the language, it is badly designed [References §4.2.1].
+- Missions are tasks in the TBLT sense: non-linguistic outcome, language as the means [Research §2.4 / E29, E7] [Probable].
 
-**P3. Hablar sin presión.** Ningún reloj, ningún castigo, ninguna humillación.
-- La baja ansiedad y el disfrute se asocian con más disposición a hablar [Probado como asociación, E1, E3].
-- El NPC no te interrumpe; el silencio es tuyo y lo cerrás vos (botón) [Hipótesis, E10], con ritmo ajustable (función de comodidad; efecto en aprendizaje [Hipótesis], E9).
-- El compañero corrige poco, breve y con respeto, y te deja autocorregirte [Probable, E31, E32].
-- No hay rachas, ni recompensas por entrar cada día, ni tablas de líderes en el modo 1 [Probado en laboratorio que las recompensas esperadas contingentes a participar socavan la motivación intrínseca, más en niños, E12, E14].
+**P3. Speaking without pressure.** No clock, no punishment, no humiliation.
+- Low anxiety and enjoyment are associated with more willingness to speak [Proven as an association, E1, E3].
+- The NPC does not interrupt you; the silence is yours and you close it (button) [Hypothesis, E10], with an adjustable pace (a comfort feature; effect on learning [Hypothesis], E9).
+- The companion corrects little, briefly and respectfully, and lets you self-correct [Probable, E31, E32].
+- There are no streaks, no rewards for logging in every day, no leaderboards in mode 1 [Proven in the lab that expected rewards contingent on participation undermine intrinsic motivation, more so in children, E12, E14].
 
-**P4. Un mundo que te recuerda.** Los vecinos recuerdan lo que hiciste y lo que dijiste; las palabras que te costaron vuelven en situaciones nuevas, más espaciadas cada vez [Probado para espaciado y evocación, E34]. Lo que conseguís hablando queda fundado en el mapa y la red de gente que te conoce se ve como caminitos de bichos de luz.
+**P4. A world that remembers you.** Neighbors remember what you did and what you said; the words that were hard for you come back in new situations, more spaced out each time [Proven for spacing and retrieval, E34]. What you achieve by talking stays founded on the map and the network of people who know you is seen as firefly trails.
 
-### 1.4 Reglas inviolables (no son decisiones pendientes)
+### 1.4 Inviolable rules (they are not pending decisions)
 
-1. **El modo 1 no tiene dinero ni economía.** La única "moneda" es la poción de conocimiento, y refleja competencia demostrada.
-2. **Sin rachas, sin premios por login diario, sin castigos por faltar, sin tablas de líderes, sin cajas de botín, sin compras dentro de la partida que den ventaja.**
-3. **Ninguna función de accesibilidad se bloquea detrás de progreso o de pago.**
-4. **No hay estado de fracaso punitivo.** Nunca se pierde progreso, pociones ni relación con un NPC por equivocarse.
-5. **Los NPCs no salen del guion de seguridad.** Cada escena tiene un tema permitido; la IA no deriva a temas inseguros, no pide datos personales y no tiene charla libre sin marco (ver §2.17).
-6. **El compañero nunca presiona:** no apura, no cuenta tiempo en voz alta, no compara con otros jugadores.
-7. **La lengua circula por la mecánica:** sin uso de la lengua no hay resolución de la misión.
-8. **El mundo 3D y la interfaz DOM no se hablan directamente.** El estado del juego es la única fuente de verdad (regla de arquitectura heredada de la propuesta de terceros; ver §1.9). La revisión de arquitectura define cómo.
+1. **Mode 1 has no money or economy.** The only "currency" is the knowledge potion, and it reflects demonstrated competence.
+2. **No streaks, no rewards for daily login, no punishment for missing, no leaderboards, no loot boxes, no in-game purchases that give an advantage.**
+3. **No accessibility feature is locked behind progress or payment.**
+4. **There is no punitive failure state.** Progress, potions or a relationship with an NPC are never lost for making a mistake.
+5. **NPCs do not leave the safety script.** Each scene has one permitted topic; the AI does not drift into unsafe topics, does not ask for personal data and has no free chat without a frame (see §2.17).
+6. **The companion never pressures:** it does not rush, does not count time out loud, does not compare with other players.
+7. **The language circulates through the mechanics:** without use of the language there is no mission resolution.
+8. **The 3D world and the DOM interface do not talk to each other directly.** Game state is the only source of truth (architecture rule inherited from the third-party proposal; see §1.9). The architecture review defines how.
 
-### 1.5 Audiencia
+### 1.5 Audience
 
-> **Por ahora (D-135, 2026-10-06):** el juego se construye **para el operador** (usuario único, adulto, hispanohablante que aprende inglés). Él decide jugando qué funciona; no hay usuarios externos, precio ni piloto en esta etapa. La audiencia de abajo es la del producto cuando se abra: sigue guiando el diseño (accesibilidad, PC modesta, datos de menores), pero ninguna fase espera validarla todavía. El primer piloto, cuando llegue, es con adultos (D-023).
+> **For now (D-135, 2026-10-06):** the game is built **for the operator** (single user, adult, a Spanish speaker learning English). He decides by playing what works; there are no external users, price or pilot at this stage. The audience below is that of the product when it opens: it still guides the design (accessibility, modest PC, minors' data), but no phase waits to validate it yet. The first pilot, when it comes, is with adults (D-023).
 
-| Eje | Decisión | Fuente |
+| Axis | Decision | Source |
 |---|---|---|
-| Edad | ATP (apto todo público). Incluye menores → cumplimiento de datos de menores desde el diseño | [Brief] |
-| Mercado | Argentina primero, luego Brasil | [Brief] |
-| Pares de idioma, en orden | ES → EN; luego ES → PT; luego PT → EN | [Brief] |
-| Quién paga | Principalmente instituciones (escuelas, institutos, ONG, gobierno); consumidor pago a precio mayor que el techo LatAm estimado, con versión gratis generosa | [Brief] |
-| Nivel | A0 (pre-A1) a B1 en la v1 del modo 1 | Tarea de este GDD |
+| Age | ATP (suitable for all audiences). Includes minors → compliance with minors' data from the design stage | [Brief] |
+| Market | Argentina first, then Brazil | [Brief] |
+| Language pairs, in order | ES → EN; then ES → PT; then PT → EN | [Brief] |
+| Who pays | Mainly institutions (schools, institutes, NGOs, government); paying consumer at a price above the estimated LatAm ceiling, with a generous free version | [Brief] |
+| Level | A0 (pre-A1) to B1 in v1 of mode 1 | Task of this GDD |
 
-**Perfiles de jugador (personas de diseño, ficticias):**
+**Player profiles (design personas, fictional):**
 
-| Persona | Edad | Contexto | Qué necesita del juego |
+| Persona | Age | Context | What they need from the game |
 |---|---|---|---|
-| "La alumna de escuela" | 11-15 | Usa la PC del laboratorio de la escuela; profesora de inglés asigna misiones con código de clase; a veces sin auriculares buenos | Que cargue rápido en PC vieja; modo texto si no hay micrófono; que no le dé vergüenza frente a compañeros; progreso visible para la docente |
-| "El adulto que necesita hablar" | 18-35 | Trabajo remoto o entrevista en inglés; sabe leer pero se traba al hablar | Práctica oral real sin juicio; sesiones cortas en la noche; feedback útil |
-| "La persona mayor curiosa" | 55+ | Quiere viajar o hablar con nietos que viven afuera; poca experiencia con videojuegos | Controles mínimos, letra grande, ritmo lento, explicación en su idioma |
-| "El docente" | adulto | Coordina un curso; necesita horas de práctica oral entre clases | Códigos de clase, asignar misiones, reportes por "puedo hacer" (can-do), sin tener que escuchar audios |
-| "El tutor o tutora (guardian)" | adulto | Responsable de un menor que juega en casa | Consentimiento, control, ver qué se guarda, borrar datos |
+| "The school student" | 11-15 | Uses the school lab PC; the English teacher assigns missions with a class code; sometimes without good headphones | That it loads fast on an old PC; text mode if there is no microphone; that it does not embarrass her in front of classmates; progress visible to the teacher |
+| "The adult who needs to speak" | 18-35 | Remote work or an interview in English; can read but freezes when speaking | Real oral practice without judgment; short sessions at night; useful feedback |
+| "The curious older person" | 55+ | Wants to travel or talk with grandchildren who live abroad; little videogame experience | Minimal controls, large font, slow pace, explanation in their language |
+| "The teacher" | adult | Coordinates a course; needs oral practice hours between classes | Class codes, assigning missions, reports by "can-do", without having to listen to audio |
+| "The guardian" | adult | Responsible for a minor who plays at home | Consent, control, seeing what is stored, deleting data |
 
-### 1.6 Plataforma
+### 1.6 Platform
 
-- **v1: PC en navegador web** (Chrome, Edge, Firefox recientes; Safari macOS como objetivo secundario). Sin instalación. Teclado + mouse; jugable solo con teclado y solo con mouse.
-- **Celular queda abierto**, no es el arranque [Brief]. El diseño evita lo que haga imposible portar después: interfaz que escala, objetivos táctiles de al menos 44 px en la capa DOM, ninguna mecánica que requiera hover o teclas múltiples simultáneas. Ver **DP-31**.
-- **Hardware objetivo mínimo (propuesta, a medir):** PC de 4 GB de RAM con gráficos integrados, conexión de 1-2 Mbps estable para voz. El benchmark de hardware es el experimento #5 de el análisis de negocio [Negocio §7].
-- Tensión nombrada: en Brasil el 87% de las clases DE accede solo por celular [Negocio §6.3]. "PC primero" sirve primero al que paga. Es secuencia, no olvido.
+- **v1: PC in a web browser** (recent Chrome, Edge, Firefox; macOS Safari as a secondary target). No installation. Keyboard + mouse; playable with keyboard only and with mouse only.
+- **Mobile stays open**, it is not the starting point [Brief]. The design avoids whatever would make porting later impossible: a scaling interface, touch targets of at least 44 px in the DOM layer, no mechanic that requires hover or multiple simultaneous keys. See **DP-31**.
+- **Minimum target hardware (proposal, to be measured):** a PC with 4 GB of RAM and integrated graphics, a stable 1-2 Mbps connection for voice. The hardware benchmark is experiment #5 of the business analysis [Business §7].
+- Named tension: in Brazil 87% of class DE accesses only by mobile phone [Business §6.3]. "PC first" serves the payer first. It is sequence, not oversight.
 
-### 1.7 Qué lo hace distinto
+### 1.7 What makes it different
 
-| Producto | Qué hace | Qué no hace (y nosotros sí) |
+| Product | What it does | What it does not do (and we do) |
 |---|---|---|
-| **Duolingo** (Super/Max) | Lecciones cortas, rachas, ligas; videollamada con personaje IA, casi gratis | No hay mundo, ni misiones con consecuencia, ni compañero que espere tu silencio. Su motor de hábito son rachas y ligas, que nosotros evitamos por diseño (P3). Nuestro diferencial no es "hablar con IA" (ya es commodity [Negocio §2.1]) sino mundo + compañero + L1 latinoamericano + accesibilidad |
-| **Noun Town** | Mundo 3D, +1.000 palabras, reconocimiento de voz con 16 NPCs **guionados**, SRS, rachas y metas diarias; herramientas docentes y licencias de grupo | Sus NPCs no conversan de verdad; usa rachas. Es el benchmark institucional a superar [Referencias §3] |
-| **Terra Alia** | RPG isométrico; palabras = magia; voz de palabras sueltas poco precisa | Combate desconectado del aprendizaje, traducciones erróneas, bugs, cámara rígida [Referencias §1.4]. Nosotros: sin combate, misiones que se resuelven hablando, glosario curado |
-| **Influent** | Departamento 3D; click en un objeto y escuchás su nombre | Sin gramática, sin habla, poco contenido [Referencias §2]. Nosotros copiamos el "nombrar en contexto espacial" (habilidad base del compañero) y le sumamos conversación |
-| **SpeakRPG** | RPG ligero con voz y un gato compañero, iOS | El concepto existe, la tracción no [Negocio §2]. Nosotros: web, PC, L1 latinoamericano, instituciones |
+| **Duolingo** (Super/Max) | Short lessons, streaks, leagues; video call with an AI character, almost free | No world, no missions with consequences, no companion that waits out your silence. Its habit engine is streaks and leagues, which we avoid by design (P3). Our differentiator is not "talking to AI" (already a commodity [Business §2.1]) but world + companion + Latin American L1 + accessibility |
+| **Noun Town** | 3D world, +1,000 words, voice recognition with 16 **scripted** NPCs, SRS, streaks and daily goals; teacher tools and group licenses | Its NPCs do not really converse; it uses streaks. It is the institutional benchmark to beat [References §3] |
+| **Terra Alia** | Isometric RPG; words = magic; imprecise voice for single words | Combat disconnected from learning, wrong translations, bugs, rigid camera [References §1.4]. Us: no combat, missions solved by speaking, curated glossary |
+| **Influent** | 3D apartment; click an object and you hear its name | No grammar, no speaking, little content [References §2]. We copy the "naming in spatial context" (the companion's base skill) and add conversation |
+| **SpeakRPG** | Light RPG with voice and a cat companion, iOS | The concept exists, the traction does not [Business §2]. Us: web, PC, Latin American L1, institutions |
 
-**Resumen del diferencial:** (a) conversación real por voz con objetivos dentro de un mundo, (b) un compañero pedagógico que corrige poco, a tiempo y sin presión, (c) silencios y ritmo en manos del alumno, (d) progreso que informa competencia en vez de pagar por participar, (e) hecho para instituciones latinoamericanas y para PCs modestas.
+**Summary of the differentiator:** (a) real voice conversation with objectives inside a world, (b) a pedagogical companion that corrects little, on time and without pressure, (c) silences and pace in the learner's hands, (d) progress that reports competence instead of paying for participation, (e) made for Latin American institutions and for modest PCs.
 
-### 1.8 Los cinco modos de un vistazo
+### 1.8 The five modes at a glance
 
-| # | Modo | Estado | Relación con el modo 1 |
+| # | Mode | Status | Relationship to mode 1 |
 |---|---|---|---|
-| 1 | **RPG del bien** (*Kestrel Valley*) | Se construye primero | Núcleo: habla, misiones prosociales, la red, fundar sin dinero, compañero, pociones |
-| 2 | **Contar y construir** (storytelling / world-building) | Visión; año 2 | Se desbloquea con habilidades narrativas del modo 1; candidato para la mecánica de construcción tipo tycoon (DP-15) |
-| 3 | **Mi día real** (calendario, notas, mail, mensajería) | En suspenso | Reutiliza el compañero fuera del juego; riesgo de privacidad alto |
-| 4 | **Media** (canciones, videos, en vivo o diferido con un agente) | Visión | La canción del Cruce (M3.6, Kofi y Noor, para la Radio del Cruce) como puente |
-| 5 | **Viaje y cultura** | Sin desarrollar | Otros valles y destinos; puerta natural para nuevos pares de idioma (ES→PT: el mismo esquema en Brasil, [Brief]) |
+| 1 | **RPG for good** (*Kestrel Valley*) | Built first | Core: speech, prosocial missions, the network, founding without money, companion, potions |
+| 2 | **Tell and build** (storytelling / world-building) | Vision; year 2 | Unlocked with mode 1's narrative skills; candidate for the tycoon-style building mechanic (DP-15) |
+| 3 | **My real day** (calendar, notes, mail, messaging) | On hold | Reuses the companion outside the game; high privacy risk |
+| 4 | **Media** (songs, videos, live or deferred with an agent) | Vision | The Crossing's song (M3.6, Kofi and Noor, for the Crossing Radio) as a bridge |
+| 5 | **Travel and culture** | Undeveloped | Other valleys and destinations; natural door for new language pairs (ES→PT: the same scheme in Brazil, [Brief]) |
 
-### 1.9 La propuesta de terceros ("prompt para Claude Code") y qué se hace con ella
+### 1.9 The third-party proposal ("prompt for Claude Code") and what is done with it
 
-El operador compartió un prompt que propone un MVP "RPG de mundo abierto + construcción tipo RollerCoaster Tycoon + negocio + narrativa" con un stack y reglas de arquitectura. Este GDD **separa lo que se adopta, lo que se difiere y lo que choca**:
+The operator shared a prompt that proposes an MVP "open-world RPG + RollerCoaster Tycoon-style building + business + narrative" with a stack and architecture rules. This GDD **separates what is adopted, what is deferred and what clashes**:
 
-| Elemento del prompt | Tratamiento en este GDD |
+| Element of the prompt | Treatment in this GDD |
 |---|---|
-| Vite + React + TS, React Three Fiber + drei, Zustand, HUD en React DOM + Tailwind | Se toma como **stack propuesto** (coincide con el [Brief]). Decide la revisión de arquitectura |
-| Rapier (físicas) | **DP-14**, default: no en el modo 1 (la investigación de referencias §4.4: el movimiento es caminar e interactuar) |
-| Código 3D declarativo como componentes | Adoptado como restricción heredada (la revisión de arquitectura confirma) |
-| "El mundo 3D y la UI nunca se comunican directamente; el estado global es la única fuente de verdad" | **Adoptado como regla inviolable** (§1.4.8). Además habilita el plan B 2D/2.5D que pide la investigación de referencias: la lógica no depende del render |
-| Estilo low-poly, correr fluido en web | "Correr fluido en web" adoptado; el estilo lo reemplazó el operador por **HD-2D** (D-139, §5) |
-| Carpetas separando lógica, UI DOM y render 3D | Adoptado como requisito; la revisión de arquitectura define la forma |
-| Mundo abierto en tercera persona | **Reducido:** un pueblo chico tipo diorama, con zonas, visto desde arriba en ángulo (D-053), no mundo abierto [Referencias §4.4.1] |
-| Construcción tycoon, desarrollo de negocios, economía | **Choca con el modo 1** (sin dinero, centrado en el habla). Se difiere como candidato del modo 2. **DP-15**. El modo 1 tiene su propia forma de construir **sin economía**: fundar con lo que se consigue hablando (§2.2.3, `02` §1.8, D-169) |
-| Fases: Setup, Movimiento y Cámara, Grid y Construcción, Diálogos DOM, Loop económico | El roadmap usa Setup, Movimiento y Cámara (a la par del diálogo, D-020) y Diálogos; "Grid y Construcción" y "Loop económico" pasan al modo 2. Las fases del modo 1 reemplazan el loop económico por "Loop de habla y pociones" |
+| Vite + React + TS, React Three Fiber + drei, Zustand, HUD in React DOM + Tailwind | Taken as the **proposed stack** (coincides with the [Brief]). The architecture review decides |
+| Rapier (physics) | **DP-14**, default: not in mode 1 (references research §4.4: movement is walking and interacting) |
+| Declarative 3D code as components | Adopted as an inherited constraint (the architecture review confirms) |
+| "The 3D world and the UI never communicate directly; global state is the only source of truth" | **Adopted as an inviolable rule** (§1.4.8). It also enables the 2D/2.5D plan B that the references research asks for: logic does not depend on the render |
+| Low-poly style, run smoothly on the web | "Run smoothly on the web" adopted; the style was replaced by the operator with **HD-2D** (D-139, §5) |
+| Folders separating logic, DOM UI and 3D render | Adopted as a requirement; the architecture review defines the form |
+| Third-person open world | **Reduced:** a small diorama-style village, with zones, seen from above at an angle (D-053), not an open world [References §4.4.1] |
+| Tycoon building, business development, economy | **Clashes with mode 1** (no money, centered on speech). Deferred as a mode 2 candidate. **DP-15**. Mode 1 has its own way of building **without economy**: founding with what is achieved by talking (§2.2.3, `02` §1.8, D-169) |
+| Phases: Setup, Movement and Camera, Grid and Building, DOM Dialogues, Economic Loop | The roadmap uses Setup, Movement and Camera (alongside dialogue, D-020) and Dialogues; "Grid and Building" and "Economic Loop" move to mode 2. Mode 1's phases replace the economic loop with "Speech and potions loop" |
 
 ---
 
-## 2. Modo 1, especificación completa: "RPG del bien" (*Kestrel Valley*)
+## 2. Mode 1, full specification: "RPG for good" (*Kestrel Valley*)
 
-### 2.1 Resumen del modo
+### 2.1 Summary of the mode
 
-El jugador es un trabajador rural argentino que llega con la cuadrilla de la cosecha a *Kestrel Valley*, un valle agrícola ficticio de habla inglesa. En un cruce de caminos de tierra (*the Crossing*) viven unas doce familias, casi todas de la cuadrilla, con el campo de al lado pegado al fondo de las casas; varias veces por temporada pasa una avioneta fumigadora. No es un pueblo: no tiene concejo ni reglas propias. El jugador quiere **fundar un pueblo** para que, por ordenanza, las aplicaciones queden lejos de las casas y la escuela. No tiene plata: su poder es **la parla**. Recorre el valle, conoce a los vecinos y a los dueños de los campos (sin villanos: cada uno tiene sus razones) y los ayuda con pedidos concretos (encontrar a la cabra de Maya, conseguir semillas y una manguera para la huerta, acordar con el piloto una bandera de aviso, convencer en la audiencia pública). Cada pedido se resuelve **hablando** con NPCs en inglés; cada conversación suma a alguien a **la red** y deja algo **fundado** en el mapa. Lumi, un bicho de luz que vino con él en un frasco, escucha, ayuda si se lo pedís, corrige poco y te recuerda lo que vale repasar. Lo que demostrás saber se destila en pociones de conocimiento que abren habilidades lingüísticas útiles; lo que conseguís hablando hace crecer el pueblo a la vista. Lo que se aprende del campo es **real y verificable** (`02` §1.5, D-170). Detalle del mundo y del elenco: §3 y `02`.
+The player is an Argentine farm worker who arrives with the harvest crew in *Kestrel Valley*, a fictional English-speaking agricultural valley. At a crossroads of dirt roads (*the Crossing*) live about twelve families, almost all from the crew, with the neighboring field right up against the back of the houses; several times a season a crop-dusting plane goes by. It is not a village: it has no council or rules of its own. The player wants to **found a village** so that, by ordinance, the applications stay far from the houses and the school. He has no money: his power is **the gift of gab**. He travels the valley, meets the neighbors and the landowners (no villains: each has their reasons) and helps them with concrete requests (finding Maya's goat, getting seeds and a hose for the garden, agreeing with the pilot on a warning flag, persuading at the public hearing). Each request is resolved by **speaking** with NPCs in English; each conversation adds someone to **the network** and leaves something **founded** on the map. Lumi, a firefly that came with him in a jar, listens, helps if you ask, corrects little and reminds you what is worth reviewing. What you demonstrate you know is distilled into knowledge potions that open useful language skills; what you achieve by talking makes the village grow before your eyes. What is learned about farming is **real and verifiable** (`02` §1.5, D-170). Detail of the world and the cast: §3 and `02`.
 
-### 2.2 Bucles de juego (core loop)
+### 2.2 Game loops (core loop)
 
-#### 2.2.1 Minuto a minuto (dentro de una escena)
+#### 2.2.1 Minute by minute (inside a scene)
 
 ```
 Escuchar al NPC (subtítulo opcional, velocidad elegida)
@@ -203,11 +203,11 @@ Escuchar al NPC (subtítulo opcional, velocidad elegida)
    → repetir hasta lograr el objetivo de la escena
 ```
 
-- **Duración de un turno:** el NPC habla en frases cortas acordes al nivel (A0: 3-6 palabras; A1: 1 oración simple; A2: 1-2 oraciones; B1: 2-3 oraciones).
-- **Proporción de turnos:** el diseño prioriza turnos de **producción** del jugador sobre turnos de escucha [Probable, la investigación §2.5 / E6]. Regla de escritura de escenas: el NPC nunca habla dos turnos seguidos sin dar lugar a que hable el jugador, salvo en la apertura guionada.
-- **Recursos de andamiaje siempre visibles** (barra inferior): `Repetir`, `Más despacio`, `Pista`, `Terminé de hablar` / `Pasar el turno`, `Escribir en vez de hablar`, `Marcar para después` (pedirle a Lumi que anote algo que querés repasar).
+- **Length of a turn:** the NPC speaks in short phrases suited to the level (A0: 3-6 words; A1: 1 simple sentence; A2: 1-2 sentences; B1: 2-3 sentences).
+- **Proportion of turns:** the design prioritizes the player's **production** turns over listening turns [Probable, research §2.5 / E6]. Scene-writing rule: the NPC never speaks two turns in a row without giving the player room to speak, except in the scripted opening.
+- **Scaffolding resources always visible** (bottom bar): `Repetir`, `Más despacio`, `Pista`, `Terminé de hablar` / `Pasar el turno`, `Escribir en vez de hablar`, `Marcar para después` (ask Lumi to note something you want to review).
 
-#### 2.2.2 Sesión (10 a 20 minutos)
+#### 2.2.2 Session (10 to 20 minutes)
 
 ```
 Entrar → (opcional) Repaso de bolsillo de 60-90 s
@@ -219,10 +219,10 @@ Entrar → (opcional) Repaso de bolsillo de 60-90 s
    → al terminar 2-4 misiones o ~20 min, Lumi sugiere un buen lugar para parar, sin culpa
 ```
 
-- La sesión está pensada para ser **corta y repetible**. Los juegos de varias sesiones superan al control y los de una sola no [Probable, E23]; espaciar mejora la retención [Probado, E34]. No hay evidencia de una duración óptima en minutos [Hipótesis, la investigación §2.6]; los 10-20 min son una decisión de diseño y de costo [Negocio §3.2].
-- **Guardado:** automático al terminar cada escena y al cerrar la pestaña. Nunca se pierde más que la escena en curso.
+- The session is designed to be **short and repeatable**. Multi-session games outperform the control and single-session ones do not [Probable, E23]; spacing improves retention [Proven, E34]. There is no evidence of an optimal duration in minutes [Hypothesis, research §2.6]; the 10-20 min are a design and cost decision [Business §3.2].
+- **Saving:** automatic at the end of each scene and when closing the tab. No more than the scene in progress is ever lost.
 
-#### 2.2.3 Meta (días y semanas)
+#### 2.2.3 Meta (days and weeks)
 
 ```
 Ayudar vecinos → demostrar competencias → pociones por rama
@@ -234,176 +234,176 @@ Ayudar vecinos → demostrar competencias → pociones por rama
    → después del final: el pueblo sigue con pedidos diarios generados por plantillas (fuera de la v1)
 ```
 
-- **Fundar no es comprar** (D-169, `02` §1.8): nada se compra ni se acelera con pociones; cada fundación necesita una idea de alguien de la red, un sitio del mapa (`SITIO-*`), algo que el jugador consiguió hablando y gente que pone las manos. Ninguna fundación se completa sin una conversación con meta.
-- **La red** (D-168, `02` §1.7): algunos vecinos solo abren su escena si otro te presenta ("Tell June: Nell sent you!"); los NPCs clave tienen dos caminos de presentación para no bloquear. La red no es un contador ni una moneda, no se pierde y no da pociones por sí misma.
-- **Por qué volver mañana:** un vecino quedó esperando una respuesta ("Come back tomorrow, the pump will be fixed!"), un ítem de repaso está listo, una habilidad recién abierta habilita una misión nueva. Ninguna razón es "perder la racha".
-- **Recordatorios:** solo si el jugador o el docente los activan, sin recompensa asociada (DP-24).
+- **Founding is not buying** (D-169, `02` §1.8): nothing is bought or sped up with potions; each foundation needs an idea from someone in the network, a site on the map (`SITIO-*`), something the player achieved by talking and people who lend a hand. No foundation is completed without a conversation with a goal.
+- **The network** (D-168, `02` §1.7): some neighbors only open their scene if another introduces you ("Tell June: Nell sent you!"); key NPCs have two introduction paths so as not to block. The network is not a counter or a currency, it is not lost and it gives no potions by itself.
+- **Why come back tomorrow:** a neighbor is left waiting for an answer ("Come back tomorrow, the pump will be fixed!"), a review item is ready, a newly opened skill enables a new mission. No reason is "losing the streak".
+- **Reminders:** only if the player or the teacher turns them on, with no associated reward (DP-24).
 
-### 2.3 Estructura de misiones como tareas (TBLT)
+### 2.3 Mission structure as tasks (TBLT)
 
-#### 2.3.1 Principio
+#### 2.3.1 Principle
 
-Cada misión es una **tarea**: un resultado no lingüístico (que el vecino consiga algo) que exige usar la lengua, con un diálogo que el sistema guía hacia una meta. La charla libre abierta no es la forma con mejor respaldo; los sistemas orientados a meta y guiados rinden más [Probable, la investigación §2.4 / E7, E29]. Mezclar modalidades (hablar + leer o escribir) rindió más [Probable, §2.4].
+Each mission is a **task**: a non-linguistic outcome (a neighbor gets something) that requires using the language, with a dialogue the system guides toward a goal. Open free chat is not the best-supported form; goal-oriented, guided systems perform better [Probable, research §2.4 / E7, E29]. Mixing modalities (speaking + reading or writing) performed better [Probable, §2.4].
 
-#### 2.3.2 Las tres fases de cada misión
+#### 2.3.2 The three phases of each mission
 
-| Fase | Qué pasa | Duración | Quién la conduce |
+| Phase | What happens | Duration | Who drives it |
 |---|---|---|---|
-| **Pre-tarea** ("Lumi te cuenta") | Lumi presenta la situación en L1 (o L2 según nivel, DP-03), muestra 2-4 "piezas útiles" (chunks) que podrían servir, sin obligar a usarlas. En A0-A1 se puede escuchar cada pieza y repetirla en voz baja (opcional). | 20-40 s | Guionada |
-| **Tarea** (escena o escenas con NPC) | Conversación con objetivo. El NPC necesita algo; el jugador tiene que obtener o dar información, pedir, negociar, explicar. El NPC reacciona en el mundo. | 2-4 min por escena, tope duro 5 min (§2.5.5) | IA con guion de escena |
-| **Post-tarea** ("Lumi destila") | Resultado en el mundo (Clover vuelve con Maya, la huerta queda fundada). Lumi nombra lo que demostraste (pociones) y hace 1-3 preguntas de evocación sobre lo marcado ("¿Cómo le pediste las semillas a June?") | 40-90 s | Guionada + datos de la escena |
+| **Pre-task** ("Lumi tells you") | Lumi presents the situation in L1 (or L2 depending on level, DP-03), shows 2-4 "useful pieces" (chunks) that could help, without forcing their use. In A0-A1 you can listen to each piece and repeat it under your breath (optional). | 20-40 s | Scripted |
+| **Task** (scene or scenes with NPC) | Conversation with a goal. The NPC needs something; the player has to obtain or give information, ask, negotiate, explain. The NPC reacts in the world. | 2-4 min per scene, hard cap 5 min (§2.5.5) | AI with scene script |
+| **Post-task** ("Lumi distills") | Outcome in the world (Clover returns to Maya, the garden is founded). Lumi names what you demonstrated (potions) and asks 1-3 retrieval questions about what was marked ("¿Cómo le pediste las semillas a June?") | 40-90 s | Scripted + scene data |
 
-#### 2.3.3 Ficha de misión (contenido como datos)
+#### 2.3.3 Mission card (content as data)
 
-Cada misión se define como un registro de contenido, no como código. Una corrida headless crea misiones llenando esta ficha. El formato concreto (YAML, JSON, TS) lo decide la revisión de arquitectura; los campos son de diseño:
+Each mission is defined as a content record, not as code. A headless run creates missions by filling in this card. The concrete format (YAML, JSON, TS) is decided by the architecture review; the fields are design fields:
 
-| Campo | Descripción | Ejemplo (M1.2) |
+| Field | Description | Example (M1.2) |
 |---|---|---|
-| `id` | Estable | `M1.2` |
-| `titulo` | En L1 para el menú | "La cabra de Maya" |
+| `id` | Stable | `M1.2` |
+| `titulo` | In L1 for the menu | "La cabra de Maya" |
 | `capitulo` | 0-4 | 1 |
-| `mcer` | Banda objetivo | A1 |
-| `can_do` | Enunciado "puedo..." en L1 | "Puedo describir un animal con color, tamaño y un detalle" |
-| `resultado_mundo` | Qué cambia si sale bien | Ollie encuentra a Clover por tu descripción; `SITIO-PARADA` → `fundado` (parada del correo); Ollie te da su mapa de buzones |
+| `mcer` | Target band | A1 |
+| `can_do` | "I can..." statement in L1 | "Puedo describir un animal con color, tamaño y un detalle" |
+| `resultado_mundo` | What changes if it goes well | Ollie finds Clover from your description; `SITIO-PARADA` → `fundado` (mail stop); Ollie gives you his map of mailboxes |
 | `npcs` | IDs | `NPC-MAYA`, `NPC-OLLIE` |
-| `escenas` | Lista de escenas con su guion (§2.5.3) | 2 escenas |
-| `lenguaje_objetivo` | Funciones y piezas | colores, tamaños, "What color is she?", "Is this your goat?", "She's small and white", "She has got a red bell" |
-| `criterios_exito` | Qué tiene que pasar en la conversación para que el NPC "entienda" | El jugador transmite al menos 2 rasgos de la cabra y una pregunta de confirmación |
-| `andamiaje` | Pistas en 3 niveles (§2.10) | P1: "Ollie wants to know: color?"; P2: dos opciones; P3: frase modelo |
-| `pociones` | Rama y evidencia | Ámbar (social) por pregunta de confirmación; azul (describir) por rasgos |
-| `items_repaso` | Qué entra al banco de repaso si se marca | "white", "She's small", "bell" |
-| `reapariciones` | En qué misiones futuras se fuerza el uso | M1.6 (colores de las flores), M2.6 (Clover en el granero) |
-| `seguridad` | Tema permitido y temas vedados | Animales, colores, el Cruce, la ruta del correo. Vedado: datos personales del jugador |
-| `modo_texto` | Equivalente escrito | Idéntico, con entrada por teclado y opciones sugeridas |
-| `duracion_objetivo` | Minutos de voz | 3 + 3 (2 escenas) |
-| `saberes`, `red`, `fundacion` | Los otros tres hilos de la misión (esquema en `02` §6.2.2) | `[SAB-PUPILAS]`; alta de `NPC-OLLIE` por `NPC-NELL`; `SITIO-PARADA` → `fundado` |
+| `escenas` | List of scenes with their script (§2.5.3) | 2 scenes |
+| `lenguaje_objetivo` | Functions and pieces | colors, sizes, "What color is she?", "Is this your goat?", "She's small and white", "She has got a red bell" |
+| `criterios_exito` | What has to happen in the conversation for the NPC to "understand" | The player conveys at least 2 traits of the goat and a confirmation question |
+| `andamiaje` | Hints on 3 levels (§2.10) | P1: "Ollie wants to know: color?"; P2: two options; P3: model phrase |
+| `pociones` | Branch and evidence | Amber (social) for a confirmation question; blue (describe) for traits |
+| `items_repaso` | What enters the review bank if marked | "white", "She's small", "bell" |
+| `reapariciones` | In which future missions use is forced | M1.6 (the flowers' colors), M2.6 (Clover in the barn) |
+| `seguridad` | Permitted topic and forbidden topics | Animals, colors, the Crossing, the mail route. Forbidden: the player's personal data |
+| `modo_texto` | Written equivalent | Identical, with keyboard input and suggested options |
+| `duracion_objetivo` | Minutes of voice | 3 + 3 (2 scenes) |
+| `saberes`, `red`, `fundacion` | The other three threads of the mission (schema in `02` §6.2.2) | `[SAB-PUPILAS]`; registration of `NPC-OLLIE` by `NPC-NELL`; `SITIO-PARADA` → `fundado` |
 
-#### 2.3.4 Tipos de tarea usados en el modo 1
+#### 2.3.4 Task types used in mode 1
 
-| Tipo de tarea (TBLT) | Ejemplo en el pueblo | Funciones de lengua |
+| Task type (TBLT) | Example in the village | Language functions |
 |---|---|---|
-| Brecha de información (info gap) | Maya sabe cómo es su cabra; Ollie vio tres cabras. Hay que juntar los datos (M1.2) | Describir, preguntar, confirmar |
-| Transacción | Conseguir semillas, una manguera y que Bea arregle la bomba para la huerta (M1.4) | Cantidades, pedir, agradecer, **sin dinero ni precios** (el jugador lleva la lista de Nell; los vecinos dan, prestan o regalan, no venden) |
-| Orientación | Guiar a Ollie por los caminos en la niebla (M2.1) | Direcciones, lugares, preposiciones |
-| Resolución de problema | Explicarle a June qué le pasa a Clover, que no come (M3.3) | Problema simple de un animal, tiempo, consejo |
-| Narración / reconstrucción | Volver a contar la historia de Harlan del año de la plaga (M3.1) | Pasado simple, secuencia |
-| Toma de decisión | Comparar con Caleb y Wes avioneta y dron (M3.5) | Opinar, comparar, acordar |
-| Persuasión / negociación | Presentar la ordenanza en la audiencia pública y responder objeciones (M4.4) | Argumentar, condicionales, cortesía |
-| Mediación (puente) | Ayudar a Ruth y Harlan a acordar un alambrado compartido (M4.3) | Reformular, resumir, suavizar |
+| Information gap | Maya knows what her goat looks like; Ollie saw three goats. The data has to be put together (M1.2) | Describing, asking, confirming |
+| Transaction | Getting seeds, a hose and having Bea fix the pump for the garden (M1.4) | Quantities, asking, thanking, **no money or prices** (the player carries Nell's list; neighbors give, lend or gift, they do not sell) |
+| Orientation | Guiding Ollie along the roads in the fog (M2.1) | Directions, places, prepositions |
+| Problem solving | Explaining to June what is wrong with Clover, who is not eating (M3.3) | Simple animal problem, time, advice |
+| Narration / reconstruction | Retelling Harlan's story of the plague year (M3.1) | Simple past, sequence |
+| Decision making | Comparing airplane and drone with Caleb and Wes (M3.5) | Giving opinions, comparing, agreeing |
+| Persuasion / negotiation | Presenting the ordinance at the public hearing and answering objections (M4.4) | Arguing, conditionals, politeness |
+| Mediation (bridge) | Helping Ruth and Harlan agree on a shared fence (M4.3) | Rephrasing, summarizing, softening |
 
-> **Nota sobre "transacción sin dinero":** en el modo 1 nadie vende ni cobra. El valle funciona por favores, préstamos y regalos. Esto respeta la regla inviolable 1 y mantiene la práctica de cantidades y pedidos.
+> **Note on "transaction without money":** in mode 1 nobody sells or charges. The valley runs on favors, loans and gifts. This respects inviolable rule 1 and keeps the practice of quantities and requests.
 
-### 2.4 El compañero flotante: Lumi
+### 2.4 The floating companion: Lumi
 
-> Nombre: **D-032** (*Lumi*, se conserva). Forma: **bicho de luz en un frasco** (D-165, reemplaza el farolito de papel del default de D-032); biografía, voz y plantillas en `02` §2. Referencia funcional: el personaje que flota sobre el corredor en un juego de carreras y aparece cuando hace falta. No se usa ninguna propiedad intelectual de terceros.
+> Name: **D-032** (*Lumi*, kept). Form: **firefly in a jar** (D-165, supersedes the paper lantern of D-032's default); biography, voice and templates in `02` §2. Functional reference: the character that floats over the runner in a racing game and appears when needed. No third-party intellectual property is used.
 
-#### 2.4.1 Quién es
+#### 2.4.1 Who it is
 
-- **Qué es:** un bicho de luz (luciérnaga) del pueblo del protagonista, en la llanura argentina, que viajó con él escondido en un frasco de vidrio (D-165). Sale del frasco y vuela a la altura del hombro del jugador, un poco detrás, con un vaivén lento; cuando no hace falta, vuelve al frasco. Su luz es más tenue al principio y crece a medida que el jugador demuestra competencias (señal visual de progreso, §2.7). El "Frasco de Lumi" (cuaderno, §2.4.5) es, literalmente, ese frasco.
-- **Personalidad:** curioso, tranquilo, un poco poético, con humor suave; extraña su casa y quiere encontrar otras luces. Admira a los vecinos. No sabe de agronomía, química ni leyes: aprende con el jugador y lo manda a preguntar a quien sabe ("Preguntale a June"). Le gusta preguntar "¿cómo se dice...?" como si él también estuviera aprendiendo. **No es un profesor que evalúa; es un compañero que sabe un poco más y te cuida.**
-- **Quién lo ve (D-165):** el jugador siempre; Maya (9) lo ve como un bicho de luz que brilla de día; los adultos no lo ven ni lo oyen. Por eso habla en español (viene de casa) y **no puede hablar por el jugador**: los vecinos no lo escuchan.
-- **Lo que nunca hace:** apurar, suspirar, decir "incorrecto", comparar con otros, hablar encima de un NPC, contar tiempo, insistir dos veces seguidas, hablar en tono infantil con adultos.
-- **Lo que sí hace:** nombrar objetos cuando se lo pedís (habilidad base tipo Influent [Referencias §4.1.1]), darte una señal breve para que te autocorrijas, anotar en silencio lo que vale repasar, recordarte lo que demostraste al cierre, sugerir parar.
+- **What it is:** a firefly from the protagonist's village, on the Argentine plains, that traveled with him hidden in a glass jar (D-165). It leaves the jar and flies at the player's shoulder height, slightly behind, with a slow sway; when not needed, it goes back into the jar. Its light is dimmer at first and grows as the player demonstrates competences (visual progress signal, §2.7). "Lumi's Jar" (notebook, §2.4.5) is, literally, that jar.
+- **Personality:** curious, calm, a bit poetic, with gentle humor; it misses home and wants to find other lights. It admires the neighbors. It knows nothing of agronomy, chemistry or law: it learns with the player and sends him to ask whoever knows ("Preguntale a June"). It likes to ask "¿cómo se dice...?" as if it were learning too. **It is not a teacher who evaluates; it is a companion who knows a little more and looks after you.**
+- **Who sees it (D-165):** the player always; Maya (9) sees it as a firefly that glows by day; adults neither see nor hear it. That is why it speaks Spanish (it comes from home) and **cannot speak for the player**: the neighbors do not hear it.
+- **What it never does:** rush, sigh, say "wrong", compare with others, talk over an NPC, count time, insist twice in a row, speak in a childish tone to adults.
+- **What it does:** name objects when you ask (a base skill like Influent's [References §4.1.1]), give you a brief signal so you self-correct, silently note what is worth reviewing, remind you at closing what you demonstrated, suggest stopping.
 
-#### 2.4.2 Cómo se ve y cómo suena
+#### 2.4.2 How it looks and sounds
 
-| Aspecto | Especificación |
+| Aspect | Specification |
 |---|---|
-| Modelo | Bicho de luz 3D de primitivas por código (D-082 leído con la forma de D-165): cuerpo chico de 2-3 volúmenes con el abdomen emisivo y un halo suave, dos alas como planos traslúcidos, dos "ojos" simples (dos rectángulos redondeados emisivos) que parpadean y cambian de forma (alegre, curioso, atento, pensativo). El frasco (cilindro de vidrio con tapa) está en la mochila del sprite del jugador y en el HUD |
-| Animación | Vuelo en ocho lento con balanceo sinusoidal (período 3-4 s); se acerca 20 cm cuando habla; baja la luz cuando escucha (no distrae); entra y sale del frasco |
-| Estado "escuchando" | Lumi gira hacia el NPC, sus ojos se achican, sin sonido |
-| Estado "anotó algo" | Un destello mínimo (sin sonido por defecto) y un punto que entra en su "frasco". Configurable a invisible para quien se pone nervioso |
-| Estado "señal de corrección" | Se acerca, un tono suave de dos notas, burbuja de texto con la señal (además de voz si está activada) |
-| Voz | TTS en la L1 del jugador para explicaciones (español rioplatense neutro en la v1, ver DP-28), timbre cálido, ni infantil ni robótico, velocidad 0,9x por defecto. Voz en L2 cuando modela una frase. Se puede silenciar la voz de Lumi y dejar solo texto |
-| Burbujas | Siempre en la capa DOM (HUD), arriba a la izquierda del personaje en pantalla o en un panel fijo según preferencia (accesibilidad: posición fija para lectores de pantalla) |
+| Model | 3D firefly built from code primitives (D-082 read with D-165's shape): small body of 2-3 volumes with an emissive abdomen and a soft halo, two wings as translucent planes, two simple "eyes" (two emissive rounded rectangles) that blink and change shape (happy, curious, attentive, thoughtful). The jar (glass cylinder with a lid) is in the player sprite's backpack and in the HUD |
+| Animation | Slow figure-eight flight with sinusoidal sway (period 3-4 s); moves 20 cm closer when it speaks; dims its light when listening (does not distract); goes in and out of the jar |
+| "Listening" state | Lumi turns toward the NPC, its eyes narrow, no sound |
+| "Noted something" state | A minimal flash (no sound by default) and a dot that goes into its "jar". Configurable to invisible for those who get nervous |
+| "Correction signal" state | It comes closer, a soft two-note tone, a text bubble with the signal (plus voice if enabled) |
+| Voice | TTS in the player's L1 for explanations (neutral Rioplatense Spanish in v1, see DP-28), warm timbre, neither childish nor robotic, 0.9x speed by default. L2 voice when it models a phrase. Lumi's voice can be muted, leaving text only |
+| Bubbles | Always in the DOM layer (HUD), at the top left of the character on screen or in a fixed panel depending on preference (accessibility: fixed position for screen readers) |
 
-#### 2.4.3 Cuándo habla Lumi
+#### 2.4.3 When Lumi speaks
 
-| Momento | Habla | Ejemplo |
+| Moment | Speaks | Example |
 |---|---|---|
-| Pre-tarea | Sí, breve | "Esa nena busca algo. ¿Te acordás de la cabrita del canal? Piezas útiles: *Yes*, *the canal*." |
-| Durante la escena, error que rompe el sentido o es el objetivo de la misión | Sí, una señal breve (prompt) | "Mmm... ¿*a* goat o *the* goat que viste vos?" |
-| Durante la escena, error que no bloquea | **No.** Lo anota en silencio | — |
-| El jugador pide `Pista` | Sí, según nivel de pista (§2.10) | "Probá con: *Is this your...?*" |
-| El jugador pide nombrar un objeto (`Q` o click derecho sobre el objeto con Lumi activa) | Sí | "*Plane*. Avioneta." (audio L2 + L1) |
-| Silencio largo sin pedido | **No habla.** Puede mostrar un chip visual "¿Querés una pista?" según DP-05 | — |
-| Post-tarea | Sí: destila pociones y hace 1-3 preguntas de evocación | "Le preguntaste '*Is this your goat?*' Eso es ámbar. ¿Te acordás cómo dijiste que era chiquita?" |
-| Fin de sesión sugerido | Sí, una vez | "Hoy la huerta quedó en marcha y June ya te conoce. Es un buen lugar para parar." |
+| Pre-task | Yes, briefly | "Esa nena busca algo. ¿Te acordás de la cabrita del canal? Piezas útiles: *Yes*, *the canal*." |
+| During the scene, error that breaks meaning or is the mission's goal | Yes, a brief signal (prompt) | "Mmm... ¿*a* goat o *the* goat que viste vos?" |
+| During the scene, error that does not block | **No.** It notes it silently | — |
+| The player asks for `Pista` | Yes, according to hint level (§2.10) | "Probá con: *Is this your...?*" |
+| The player asks to name an object (`Q` or right click on the object with Lumi active) | Yes | "*Plane*. Avioneta." (L2 + L1 audio) |
+| Long silence with no request | **It does not speak.** It may show a visual chip "¿Querés una pista?" according to DP-05 | — |
+| Post-task | Yes: distills potions and asks 1-3 retrieval questions | "Le preguntaste '*Is this your goat?*' Eso es ámbar. ¿Te acordás cómo dijiste que era chiquita?" |
+| Suggested end of session | Yes, once | "Hoy la huerta quedó en marcha y June ya te conoce. Es un buen lugar para parar." |
 
-**Regla de densidad:** como máximo **una intervención correctiva cada 3 turnos del jugador** y nunca dos seguidas sobre el mismo error dentro de una escena. Si el error se repite, se anota para el repaso. La dosis óptima de feedback correctivo en diálogo con IA está [En disputa] (Bibauw sí, Hou & Min no lo encuentran como moderador) [Investigación §2.1]; esta densidad es un default de diseño y un parámetro del experimento A/B #1.
+**Density rule:** at most **one corrective intervention every 3 player turns** and never two in a row about the same error within a scene. If the error repeats, it is noted for review. The optimal dose of corrective feedback in AI dialogue is [Disputed] (Bibauw yes, Hou & Min do not find it as a moderator) [Research §2.1]; this density is a design default and a parameter of A/B experiment #1.
 
-#### 2.4.4 Los modos de feedback
+#### 2.4.4 The feedback modes
 
-El jugador elige en Ajustes (y puede cambiar en cualquier momento, incluso dentro de una escena con un atajo):
+The player chooses in Settings (and can change at any time, even within a scene with a shortcut):
 
-| Modo | Durante la escena | Al cierre | Estado |
+| Mode | During the scene | At closing | Status |
 |---|---|---|---|
-| **Acompañado (default)** | Señal breve inmediata (prompt para autocorregirse) solo en errores **globales** (rompen el sentido) o **de objetivo** (la estructura que la misión practica). Si después de la señal el jugador no lo logra, Lumi o el NPC reformulan (recast) y siguen. El resto se anota en silencio. | Repaso de evocación de 1-3 ítems marcados | Default respaldado: inmediato es igual o más eficaz que diferido [Probable, E32]; prompts superan a recasts [Probable, E31]; el repaso por evocación convierte el diferido en recuperación espaciada [Probado, E34] |
-| **Solo anotar (para después)** | Lumi no interviene nunca. Todo se anota. | Repaso de evocación igual | Opción de comodidad (ansiedad). **No se presenta como mejor para aprender** [Investigación §2.1] |
-| **Más ayuda** | Señales también en errores locales frecuentes (sistemáticos), hasta 1 cada 2 turnos | Igual | Para quien lo pide (adultos que quieren precisión). Equivale al modo "correction" de un prototipo de voz anterior, suavizado |
+| **Accompanied (default)** | Immediate brief signal (prompt for self-correction) only on **global** errors (they break meaning) or **goal** errors (the structure the mission practices). If after the signal the player does not manage it, Lumi or the NPC rephrase (recast) and move on. The rest is noted silently. | Retrieval review of 1-3 marked items | Backed default: immediate is equal to or more effective than delayed [Probable, E32]; prompts beat recasts [Probable, E31]; retrieval review turns the delayed into spaced retrieval [Proven, E34] |
+| **Note only (for later)** | Lumi never intervenes. Everything is noted. | Same retrieval review | Comfort option (anxiety). **Not presented as better for learning** [Research §2.1] |
+| **More help** | Signals also on frequent (systematic) local errors, up to 1 every 2 turns | Same | For those who ask (adults who want precision). Equivalent to the "correction" mode of a previous voice prototype, softened |
 
-**Clasificación de errores que usa el observador** (heredada de un prototipo de voz anterior): *global* (impide entender), *local* (el sentido queda claro), *sistemático* (se repite), *desliz* (aislado). Prioridad: global > objetivo de misión > sistemático > local > desliz.
+**Error classification used by the observer** (inherited from a previous voice prototype): *global* (prevents understanding), *local* (the meaning stays clear), *systematic* (repeats), *slip* (isolated). Priority: global > mission goal > systematic > local > slip.
 
-**Regla de disfluencias** (heredada tal cual de un prototipo de voz anterior): repeticiones, arranques en falso, muletillas ("uh", "like") y autocorrecciones **no son errores**. El observador reconstruye la oración intencionada, evalúa solo esa y, si la cita, cita la versión limpia.
+**Disfluency rule** (inherited as is from a previous voice prototype): repetitions, false starts, fillers ("uh", "like") and self-corrections **are not errors**. The observer reconstructs the intended sentence, evaluates only that one and, if it quotes it, quotes the clean version.
 
-**Tipos de señal (prompts), de menor a mayor explicitud:**
+**Types of signal (prompts), from least to most explicit:**
 
-1. *Pedido de aclaración* del NPC dentro de la ficción: "Sorry? A big goat or a small goat?" (el NPC no entiende de verdad; error de predicción, [Probable, E37]).
-2. *Repetición con entonación* (Lumi): "¿*She go*...?"
-3. *Pista metalingüística* (Lumi, L1): "Ojo con *she*... ¿qué le pasa al verbo?"
-4. *Elicitación* (Lumi): "Ella... *she g...*"
-5. *Reformulación (recast)* como último paso, sin pedir repetición: "*She goes*. ¡Eso!" y la escena sigue.
+1. *Clarification request* from the NPC within the fiction: "Sorry? A big goat or a small goat?" (the NPC does not really understand; prediction error, [Probable, E37]).
+2. *Repetition with intonation* (Lumi): "¿*She go*...?"
+3. *Metalinguistic clue* (Lumi, L1): "Ojo con *she*... ¿qué le pasa al verbo?"
+4. *Elicitation* (Lumi): "Ella... *she g...*"
+5. *Reformulation (recast)* as a last step, without asking for repetition: "*She goes*. ¡Eso!" and the scene goes on.
 
-La escala sube un escalón por intento fallido y se reinicia en el siguiente error. En A0 se arranca en el escalón 1 o 5 (no se exige autocorrección de algo que nunca se vio); desde A1 se arranca en el escalón 1.
+The scale goes up one step per failed attempt and resets at the next error. In A0 it starts at step 1 or 5 (self-correction is not demanded of something never seen); from A1 it starts at step 1.
 
-**Pronunciación:** es núcleo desde la v1 (D-044, revierte DP-27) y tiene su propia especificación en §2.4.7. Dentro de la conversación libre, la regla de interrupción de un prototipo de voz anterior sigue: la pronunciación **nunca interrumpe**; si rompe el sentido, el NPC no entiende (escalón 1, pedido de aclaración dentro de la ficción) y nada más.
+**Pronunciation:** it is core from v1 (D-044, reverts DP-27) and has its own specification in §2.4.7. Within free conversation, the interruption rule of a previous voice prototype still holds: pronunciation **never interrupts**; if it breaks meaning, the NPC does not understand (step 1, clarification request within the fiction) and nothing more.
 
 #### 2.4.5 "Marcar para después"
 
-- El jugador puede pedir que Lumi anote algo: un botón (`M`) durante la escena o tocar una línea del subtítulo del NPC. Ese ítem entra al banco de repaso con prioridad alta.
-- Lumi también marca automáticamente los errores que no señaló.
-- Todo lo marcado se ve en el **Frasco de Lumi** (cuaderno), con la frase original del NPC, la versión correcta y audio.
+- The player can ask Lumi to note something: a button (`M`) during the scene or tapping a line of the NPC's subtitle. That item enters the review bank with high priority.
+- Lumi also automatically marks the errors it did not signal.
+- Everything marked is seen in **Lumi's Jar** (notebook), with the NPC's original phrase, the correct version and audio.
 
-#### 2.4.6 Lo que Lumi sabe del jugador
+#### 2.4.6 What Lumi knows about the player
 
-Usa el perfil del alumno (§2.13) en silencio, como un prototipo de voz anterior: detecta recurrencias de errores conocidos, prioriza patrones con riesgo de fosilización, construye sobre lo ya visto. **Nunca menciona el perfil** ("según tu historial...").
+It uses the learner profile (§2.13) silently, like a previous voice prototype: it detects recurrences of known errors, prioritizes patterns at risk of fossilization, builds on what has already been seen. **It never mentions the profile** ("according to your history...").
 
-#### 2.4.7 Pronunciación (núcleo, D-044)
+#### 2.4.7 Pronunciation (core, D-044)
 
-El juego detecta **cómo** dijo el jugador lo que quiso decir, no solo qué quiso decir, sin presión y sin falsas alarmas. Fuente: `research/pronunciacion-2026-10-06.md` (la investigación de referencias); arquitectura: `03-arquitectura.md` §5.12.
+The game detects **how** the player said what they meant to say, not just what they meant to say, without pressure and without false alarms. Source: `research/pronunciacion-2026-10-06.md` (the references research); architecture: `03-architecture.md` §5.12.
 
-**Las tres piezas:**
+**The three pieces:**
 
-| Pieza | Qué ve el jugador | Cómo se detecta | Cuándo |
+| Piece | What the player sees | How it is detected | When |
 |---|---|---|---|
-| **Momentos guionados** | El NPC o Lumi propone decir algo concreto: *repetir después de mí* (shadowing), *leer en voz alta* (carteles del valle, cartas, la lista de Nell), *frase clave* (el nombre del valle, *Kestrel Valley*, o el del pueblo votado en M1.8) o *par mínimo con consecuencia* ("pedile a June *beans*, no *bins*": el mundo responde a lo que **sonó**). Feedback **inmediato y amable**: la palabra coloreada, ≤ 1-2 sonidos marcados por vez, "así lo dijiste vos / así suena" (su clip y el modelo) y reintento sin límite. La consecuencia es narrativa ("¿cómo? no te escuché bien"), nunca un castigo | Evaluación guionada por fonema contra el texto esperado (Azure Pronunciation Assessment; D-150) | Momentos marcados en el contenido de la escena (bloque `pronunciacion`), sobre líneas que ya existen en el guion |
-| **Detección en segundo plano** | Nada durante la charla. Al cierre de la misión, si corresponde, "tu sonido de la semana": su propio clip, el modelo y un drill | Reconocedor de fonemas de decodificación libre + tabla de confusiones del español (D-150), solo con alta confianza | En la charla libre. **Nunca interrumpe.** Un error entra al repaso solo si es **recurrente**: ≥ 3 ocurrencias de alta confianza en ≥ 2 escenas |
-| **Drills de pares mínimos** | Primero **percepción** (escuchar y elegir entre *ship* / *sheep*), después producción | Percepción: sin detector (audio pre-generado). Producción: detector solo si el tipo está habilitado | En el repaso espaciado (§2.9) y a pedido desde el Frasco |
+| **Scripted moments** | The NPC or Lumi proposes saying something specific: *repeat after me* (shadowing), *read aloud* (valley signs, letters, Nell's list), *key phrase* (the valley's name, *Kestrel Valley*, or the name of the village voted in M1.8) or *minimal pair with consequence* ("pedile a June *beans*, no *bins*": the world responds to what **sounded**). **Immediate and kind** feedback: the word colored, ≤ 1-2 sounds marked at a time, "así lo dijiste vos / así suena" (their clip and the model) and unlimited retry. The consequence is narrative ("¿cómo? no te escuché bien"), never a punishment | Scripted per-phoneme evaluation against the expected text (Azure Pronunciation Assessment; D-150) | Moments marked in the scene content (`pronunciacion` block), on lines that already exist in the script |
+| **Background detection** | Nothing during the chat. At mission close, if applicable, "tu sonido de la semana": their own clip, the model and a drill | Free-decoding phoneme recognizer + Spanish confusion table (D-150), only with high confidence | In free chat. **It never interrupts.** An error enters the review only if it is **recurrent**: ≥ 3 high-confidence occurrences in ≥ 2 scenes |
+| **Minimal-pair drills** | First **perception** (listen and choose between *ship* / *sheep*), then production | Perception: no detector (pre-generated audio). Production: detector only if the type is enabled | In spaced review (§2.9) and on request from the Jar |
 
-**Reglas que no se negocian:**
-1. **Solo se muestra un tipo de error si pasó la vara de F0.1** (D-151): precisión ≥ 0,90 y falsas alarmas ≤ 3 % por palabra en guionado; ≥ 0,80 de precisión en el repaso desde charla libre. Los tipos que no pasan quedan en percepción y autocomparación, **sin juicio automático**. El diagnóstico explícito ("sonó /i/, va /ɪ/") solo si la herramienta acierta el sonido realizado ≥ 70 % de las veces; si no, Lumi dice "esa palabra no sonó del todo como *ship*, escuchá" y reproduce los dos clips.
-2. **Nunca interrumpe** la charla libre. La única consecuencia en vivo es que el NPC no entienda cuando el sentido se rompe (escalón 1 de §2.4.4).
-3. **Lenguaje tentativo y sin números:** Lumi dice "me pareció escuchar…", nunca "dijiste mal"; la confianza baja no se muestra; no hay puntajes, porcentajes ni rankings de pronunciación.
-4. **Lumi habla por plantillas** (como en todo el juego): un modelo de lenguaje nunca juzga fonemas ni inventa el feedback.
-5. **Cruce con gramática:** *she work* puede ser concordancia o una /s/ final omitida. Si el jugador produce /s/ final en otras palabras (*cats*, *bus*, *it's*), es gramática (va al observador gramatical); si la omite en todas, es pronunciación.
-6. **Privacidad:** el servidor nunca guarda audio; el clip de "así lo dijiste vos" se guarda solo en el dispositivo del jugador, como máximo 20, y se borra al usarse o a los 7 días (D-155); hay un botón para borrarlos.
-7. **Sin micrófono**, los momentos de pronunciación se saltean sin penalidad; los drills de percepción siguen disponibles.
+**Non-negotiable rules:**
+1. **An error type is shown only if it passed the F0.1 bar** (D-151): precision ≥ 0.90 and false alarms ≤ 3 % per word in scripted; ≥ 0.80 precision in review from free chat. Types that do not pass remain in perception and self-comparison, **with no automatic judgment**. The explicit diagnosis ("sonó /i/, va /ɪ/") only if the tool gets the realized sound right ≥ 70 % of the time; otherwise Lumi says "esa palabra no sonó del todo como *ship*, escuchá" and plays the two clips.
+2. **It never interrupts** free chat. The only live consequence is that the NPC does not understand when meaning breaks (step 1 of §2.4.4).
+3. **Tentative language and no numbers:** Lumi says "me pareció escuchar…", never "dijiste mal"; low confidence is not shown; there are no pronunciation scores, percentages or rankings.
+4. **Lumi speaks through templates** (as in the whole game): a language model never judges phonemes or invents the feedback.
+5. **Crossover with grammar:** *she work* can be agreement or an omitted final /s/. If the player produces final /s/ in other words (*cats*, *bus*, *it's*), it is grammar (goes to the grammar observer); if they omit it in all of them, it is pronunciation.
+6. **Privacy:** the server never stores audio; the "así lo dijiste vos" clip is stored only on the player's device, at most 20, and is deleted when used or after 7 days (D-155); there is a button to delete them.
+7. **Without a microphone**, pronunciation moments are skipped without penalty; perception drills remain available.
 
-**Los 14 tipos de error que se miden (E1-E14, hispanohablante con foco rioplatense):** vocal tensa/laxa /ɪ/→/i/ (*ship*→*sheep*); /æ/, /ʌ/, /ɑ/→/a/ (*cat*/*cut*); falta de reducción a /ə/; /v/→/b/; /θ/→/t/, /s/, /f/; /ð/→/d/; epéntesis antes de s+consonante (*eschool*); /z/→/s/; /ʃ/→/s/ y /tʃ/↔/ʃ/; sheísmo /j/, /dʒ/→[ʃ]; /h/→[x] u omitida; consonante final o grupo reducido y *-ed* como /ɪd/; acento léxico mal ubicado; falta de aspiración y /r/ vibrante. **Peso alto** (los que más afectan la comprensión): E1, E2, E12, E13. Detalle y qué herramienta ve cada uno: `research/pronunciacion-2026-10-06.md` §4.
+**The 14 error types that are measured (E1-E14, Spanish speaker with a Rioplatense focus):** tense/lax vowel /ɪ/→/i/ (*ship*→*sheep*); /æ/, /ʌ/, /ɑ/→/a/ (*cat*/*cut*); lack of reduction to /ə/; /v/→/b/; /θ/→/t/, /s/, /f/; /ð/→/d/; epenthesis before s+consonant (*eschool*); /z/→/s/; /ʃ/→/s/ and /tʃ/↔/ʃ/; sheísmo /j/, /dʒ/→[ʃ]; /h/→[x] or omitted; final consonant or reduced cluster and *-ed* as /ɪd/; misplaced lexical stress; lack of aspiration and trilled /r/. **High weight** (those that most affect comprehension): E1, E2, E12, E13. Detail and which tool sees each one: `research/pronunciacion-2026-10-06.md` §4.
 
-**Evidencia y progreso (D-156):** en la v1 no hay nodo `HAB-*` de pronunciación. Lo que se logra (un sonido que pasa de "recurrente" a "resuelto", un drill superado) se registra en el modelo del alumno y se ve en una página **"Sonidos"** del Frasco, con frases "puedo…" y sin números. La pronunciación no da pociones por sí sola (las pociones siguen saliendo de la evidencia de cada escena), salvo el 1/3 por intento del prólogo A0 (M0.2).
+**Evidence and progress (D-156):** in v1 there is no pronunciation `HAB-*` node. What is achieved (a sound going from "recurrent" to "resolved", a drill passed) is recorded in the learner model and seen on a **"Sonidos"** page of the Jar, with "puedo…" phrases and no numbers. Pronunciation gives no potions by itself (potions keep coming from each scene's evidence), except the 1/3 per attempt of the A0 prologue (M0.2).
 
-### 2.5 Sistema de conversación con NPCs
+### 2.5 NPC conversation system
 
-#### 2.5.1 Principios
+#### 2.5.1 Principles
 
-1. **Escenas cortas, contexto que se reinicia.** El costo de voz crece de forma cuadrática con la duración de una conversación porque el contexto se re-factura por turno [Negocio §3.2]. Por eso el modo 1 es un rosario de escenas de 2-4 minutos con NPCs distintos, y entre escenas se guarda un **resumen**, no el historial.
-2. **Guion de escena + IA.** Apertura y cierre guionados (audio TTS pre-generado y cacheado), parte central abierta con IA dentro de un marco (objetivo, temas, vocabulario, nivel).
-3. **El NPC quiere algo.** Cada escena tiene una necesidad del NPC y criterios de éxito verificables.
-4. **El NPC no interrumpe.** El turno del jugador termina cuando el jugador lo decide (§2.6).
-5. **Coherencia del mundo.** El NPC sabe solo lo que su ficha y el estado del mundo le dicen; no inventa lugares, personas ni eventos fuera del guion.
+1. **Short scenes, context that resets.** Voice cost grows quadratically with the duration of a conversation because the context is re-billed per turn [Business §3.2]. That is why mode 1 is a string of 2-4 minute scenes with different NPCs, and between scenes a **summary** is saved, not the history.
+2. **Scene script + AI.** Scripted opening and closing (pre-generated, cached TTS audio), open central part with AI within a frame (goal, topics, vocabulary, level).
+3. **The NPC wants something.** Each scene has an NPC need and verifiable success criteria.
+4. **The NPC does not interrupt.** The player's turn ends when the player decides (§2.6).
+5. **World coherence.** The NPC knows only what its card and the world state tell it; it does not invent places, people or events outside the script.
 
-#### 2.5.2 Arquitectura conceptual (la revisión de arquitectura decide la técnica)
+#### 2.5.2 Conceptual architecture (the architecture review decides the technique)
 
 ```
 [Navegador]                                   [Servidor (reuso de un prototipo de voz anterior)]
@@ -416,367 +416,367 @@ HUD ← transcripciones (subtítulos) ←───────────
                                               moderación de entrada y salida (§2.17)
 ```
 
-- **Reuso de un prototipo de voz anterior [Brief]:** proxy Node.js + WebSocket a Gemini Live (voz), modelo de texto para gramática, observador y debrief, reglas de disfluencia, perfil del alumno, TTS Deepgram Aura. Lo nuevo es: guiones de escena, ficha de NPC, criterios de éxito, eventos hacia el juego, moderación para menores, presupuesto de minutos.
-- **Tope de ~15 min del lado del servidor** en Gemini Live: deja de ser problema porque ninguna escena llega a 5 min [Negocio §3.2].
-- **Alternativa en cascada** (STT + LLM de texto + TTS) para el modo texto y como plan B de costo: ~US$0,025-0,03/min con control fino del ritmo y los silencios [Negocio §3.2]. **El experimento #1 de el análisis de negocio (sonda de costo) decide cuál es la vía principal.** DP-36.
+- **Reuse of a previous voice prototype [Brief]:** Node.js proxy + WebSocket to Gemini Live (voice), text model for grammar, observer and debrief, disfluency rules, learner profile, Deepgram Aura TTS. What is new: scene scripts, NPC card, success criteria, events toward the game, moderation for minors, minutes budget.
+- **~15 min server-side cap** in Gemini Live: stops being a problem because no scene reaches 5 min [Business §3.2].
+- **Cascade alternative** (STT + text LLM + TTS) for text mode and as a cost plan B: ~US$0.025-0.03/min with fine control of pace and silences [Business §3.2]. **Experiment #1 of the business analysis (cost probe) decides which is the main route.** DP-36.
 
-#### 2.5.3 Guion de escena (formato de contenido)
+#### 2.5.3 Scene script (content format)
 
-Cada escena se escribe con estos bloques. La corrida que escriba escenas nuevas debe llenarlos todos:
+Each scene is written with these blocks. The run that writes new scenes must fill in all of them:
 
-| Bloque | Contenido |
+| Block | Content |
 |---|---|
 | `escena_id` | `M1.2-E1` |
 | `npc` | `NPC-MAYA` |
 | `lugar` | El Cruce, junto al corral |
-| `situacion` (para el modelo) | "Maya (9) lost her goat Clover again. She is half laughing, half annoyed. She gives one feature at a time, only when the player asks." |
-| `necesidad_npc` | Que el jugador averigüe cómo es Clover para buscarla con Ollie |
-| `apertura_guionada` | 1-2 líneas en L2, con audio cacheado |
-| `criterios_exito` | Lista verificable por el observador (ej.: "player asks about at least 2 attributes among color/size/bell"; "player restates the attributes to confirm") |
-| `andamiaje_npc` | Qué hace el NPC si el jugador se traba: reformular la pregunta más simple, ofrecer dos opciones, mostrar con gestos |
-| `vocabulario_nivel` | Banda de palabras permitida para el NPC (lista + nivel MCER) |
-| `temas_permitidos` | Cabras, colores, tamaños, el Cruce, el canal |
-| `temas_vedados` (además de la lista global) | Ninguno extra |
-| `cierre_guionado` | Línea de cierre y evento de mundo |
-| `salida_si_no_converge` | Si a los 4 min no se cumplieron los criterios: el NPC propone el camino más corto ("She's small and white, with a red bell! Go ask Ollie!") y la escena termina con resultado parcial, sin castigo |
+| `situacion` (for the model) | "Maya (9) lost her goat Clover again. She is half laughing, half annoyed. She gives one feature at a time, only when the player asks." |
+| `necesidad_npc` | That the player finds out what Clover looks like so as to look for her with Ollie |
+| `apertura_guionada` | 1-2 lines in L2, with cached audio |
+| `criterios_exito` | List verifiable by the observer (e.g.: "player asks about at least 2 attributes among color/size/bell"; "player restates the attributes to confirm") |
+| `andamiaje_npc` | What the NPC does if the player gets stuck: rephrase the simpler question, offer two options, show with gestures |
+| `vocabulario_nivel` | Word band allowed for the NPC (list + CEFR level) |
+| `temas_permitidos` | Goats, colors, sizes, the Crossing, the canal |
+| `temas_vedados` (besides the global list) | None extra |
+| `cierre_guionado` | Closing line and world event |
+| `salida_si_no_converge` | If at 4 min the criteria were not met: the NPC proposes the shortest path ("She's small and white, with a red bell! Go ask Ollie!") and the scene ends with a partial result, without punishment |
 | `eventos` | `clover_features_known`, `maya_trust+1` |
-| `resumen_para_siguiente` | Qué se guarda para la próxima escena (2-3 líneas) |
+| `resumen_para_siguiente` | What is saved for the next scene (2-3 lines) |
 
-#### 2.5.4 Ficha de NPC (formato de contenido)
+#### 2.5.4 NPC card (content format)
 
-| Campo | Ejemplo |
+| Field | Example |
 |---|---|
 | `id` | `NPC-NELL` |
 | `nombre` | Nell Ashby |
-| `rol` | Maestra jubilada de la escuela cerrada del Cruce; conectora de la red |
-| `personalidad` | Cálida, organizadora, conoce a todos los que pasaron por su escuela |
-| `forma_de_hablar` | Clara, pausada, de maestra; repite las palabras clave; pregunta por el mate del jugador (puente cultural de M1.1) |
+| `rol` | Retired teacher of the Crossing's closed school; network connector |
+| `personalidad` | Warm, organizer, knows everyone who passed through her school |
+| `forma_de_hablar` | Clear, unhurried, like a teacher; repeats the key words; asks about the player's mate (cultural bridge of M1.1) |
 | `bandas_mcer` | A1-B1 |
-| `voz` | Voz femenina madura y cálida, ritmo pausado (DP-20) |
-| `sabe` | Quién es quién en el valle, la historia de la escuela y del Cruce, dónde está cada cosa |
-| `no_sabe` | Agronomía, química ni salud (deriva a June, Ruth o Grace); no opina de política partidaria, religión ni temas adultos |
-| `relacion` | Valores de confianza con el jugador (0-5), solo para variar el saludo y desbloquear misiones; nunca baja |
-| `memoria` | Lista corta de hechos del jugador (nombre de juego, misiones hechas con él, una preferencia elegida en juego) |
+| `voz` | Mature, warm female voice, unhurried pace (DP-20) |
+| `sabe` | Who is who in the valley, the history of the school and the Crossing, where everything is |
+| `no_sabe` | Agronomy, chemistry or health (defers to June, Ruth or Grace); gives no opinion on partisan politics, religion or adult topics |
+| `relacion` | Trust values with the player (0-5), only to vary the greeting and unlock missions; never goes down |
+| `memoria` | Short list of facts about the player (game name, missions done with them, a preference chosen in game) |
 
-#### 2.5.5 Duración y presupuesto de una escena
+#### 2.5.5 Duration and budget of a scene
 
-| Parámetro | Default | Razón |
+| Parameter | Default | Reason |
 |---|---|---|
-| Duración objetivo | 2-4 min de voz | Costo [Negocio §3.2]; ritmo de sesión |
-| Tope duro | 5 min | El NPC cierra con gracia ("I have to go water the garden! Thanks!") |
-| Turnos objetivo del jugador | 4-10 | Producción > escucha [Probable, E6] |
-| Contexto | Se reinicia por escena; se inyecta ficha del NPC + guion + resumen previo + perfil mínimo | Costo |
-| Presupuesto de voz | Minutos de voz por semana según plan del usuario/institución (DP-22). Al agotarse, la misma escena sigue en modo texto, sin cortar | Accesibilidad y costo |
+| Target duration | 2-4 min of voice | Cost [Business §3.2]; session pace |
+| Hard cap | 5 min | The NPC closes gracefully ("I have to go water the garden! Thanks!") |
+| Target player turns | 4-10 | Production > listening [Probable, E6] |
+| Context | Resets per scene; NPC card + script + previous summary + minimal profile are injected | Cost |
+| Voice budget | Minutes of voice per week according to the user's/institution's plan (DP-22). When exhausted, the same scene continues in text mode, without cutting | Accessibility and cost |
 
-> **Las pociones no son minutos de voz.** El análisis de negocio sugirió usar la poción también como moneda de minutos [Negocio §3.3]. Este GDD recomienda **no** hacerlo: convertiría la XP en pago por participar, que es justo lo que socava la motivación intrínseca [Probado en laboratorio, E12]. El presupuesto de voz se muestra aparte, en lenguaje llano ("Te quedan 18 minutos de voz esta semana; el modo texto no tiene límite"). **DP-08.**
+> **Potions are not voice minutes.** The business analysis suggested using the potion also as a currency of minutes [Business §3.3]. This GDD recommends **not** doing so: it would turn XP into payment for participating, which is exactly what undermines intrinsic motivation [Proven in the lab, E12]. The voice budget is shown separately, in plain language ("Te quedan 18 minutos de voz esta semana; el modo texto no tiene límite"). **DP-08.**
 
-#### 2.5.6 Modo texto (sin micrófono o por preferencia)
+#### 2.5.6 Text mode (without microphone or by preference)
 
-- Toda escena tiene equivalente escrito: el jugador escribe; el NPC responde en texto y, si el jugador quiere, también en audio (TTS).
-- En A0-A1 el modo texto ofrece **opciones sugeridas** (2-3 respuestas tocables) además del campo libre; elegir una opción vale menos evidencia que producirla (pociones de menor peso) pero nunca bloquea.
-- Hablar y escribir son modalidades distintas; la evidencia sugiere que mezclar modalidades rinde [Probable] y que practicar en la misma modalidad que se evalúa rinde más [Probable, E6]. Por eso el juego **invita** a hablar (Lumi: "¿Querés probar decirlo en voz alta?") pero nunca obliga.
-- El modo texto es también el modo gratuito ilimitado (DP-22) y el modo de respaldo si la red no aguanta la voz.
+- Every scene has a written equivalent: the player writes; the NPC responds in text and, if the player wants, in audio too (TTS).
+- In A0-A1 text mode offers **suggested options** (2-3 tappable answers) besides the free field; choosing an option is worth less evidence than producing it (lower-weight potions) but never blocks.
+- Speaking and writing are different modalities; the evidence suggests that mixing modalities pays off [Probable] and that practicing in the same modality that is evaluated pays off more [Probable, E6]. That is why the game **invites** speaking (Lumi: "¿Querés probar decirlo en voz alta?") but never forces it.
+- Text mode is also the unlimited free mode (DP-22) and the fallback mode if the network cannot sustain voice.
 
-#### 2.5.7 Líneas guionadas vs generadas
+#### 2.5.7 Scripted vs generated lines
 
-| Tipo | Uso | Audio |
+| Type | Use | Audio |
 |---|---|---|
-| Guionadas | Aperturas, cierres, momentos de historia, pistas de nivel 3, nombres de objetos | TTS pre-generado y cacheado (o voz humana si hay presupuesto, DP-21) |
-| Generadas | Cuerpo de la escena | Voz en tiempo real |
-| Plantilla | Saludos según relación y hora del día, reacciones genéricas | TTS cacheado por variante |
+| Scripted | Openings, closings, story moments, level 3 hints, object names | Pre-generated, cached TTS (or human voice if there is budget, DP-21) |
+| Generated | Body of the scene | Real-time voice |
+| Template | Greetings by relationship and time of day, generic reactions | TTS cached per variant |
 
-**Glosario curado:** todo nombre de objeto, traducción y frase modelo que muestra la interfaz sale de un glosario revisado por humanos, no de la IA en vivo. Las traducciones erróneas destruyen la confianza (segunda queja de Terra Alia) [Referencias §4.2.2]. La IA genera conversación; no genera traducciones que se muestren como verdad.
+**Curated glossary:** every object name, translation and model phrase the interface shows comes from a human-reviewed glossary, not from the live AI. Wrong translations destroy trust (Terra Alia's second complaint) [References §4.2.2]. The AI generates conversation; it does not generate translations that are shown as truth.
 
-### 2.6 Control del ritmo: más despacio y silencios que cierra el jugador
+### 2.6 Pace control: slower and silences that the player closes
 
-#### 2.6.1 Más despacio
+#### 2.6.1 Slower
 
-- **Tres velocidades del NPC:** Natural, Más lenta, Muy lenta. Default según nivel: A0 = Muy lenta, A1 = Más lenta, A2+ = Natural. El jugador cambia cuando quiere (botón y atajo `S`).
-- **Qué cambia:** velocidad de habla, pausas entre frases, longitud de frase. La técnica (instrucción al modelo, ajuste de reproducción sin cambiar tono, o TTS con parámetro de velocidad) la decide la revisión de arquitectura. **DP-07.**
-- **Evidencia:** los aprendices prefieren el habla lenta, pero en el único experimento abierto no comprendieron más (n = 26) [Hipótesis para el efecto en aprendizaje, E9]. Se mantiene por **comodidad y baja presión** [Probable por cadena E4 + E3], no como palanca de aprendizaje.
-- `Repetir` reproduce la última línea del NPC exactamente (audio cacheado de la sesión), sin costo de modelo.
+- **Three NPC speeds:** Natural, Slower, Very slow. Default by level: A0 = Very slow, A1 = Slower, A2+ = Natural. The player changes whenever they want (button and shortcut `S`).
+- **What changes:** speech rate, pauses between phrases, phrase length. The technique (instruction to the model, playback adjustment without changing pitch, or TTS with a speed parameter) is decided by the architecture review. **DP-07.**
+- **Evidence:** learners prefer slow speech, but in the only open experiment they did not comprehend more (n = 26) [Hypothesis for the effect on learning, E9]. It is kept for **comfort and low pressure** [Probable via chain E4 + E3], not as a learning lever.
+- `Repetir` replays the NPC's last line exactly (session-cached audio), at no model cost.
 
-#### 2.6.2 Silencios que termina el jugador
+#### 2.6.2 Silences that the player ends
 
-**El silencio es del jugador.** Cuando el NPC termina de hablar, el NPC espera. No hay temporizador visible, no hay "¿hola? ¿estás ahí?".
+**The silence belongs to the player.** When the NPC finishes speaking, the NPC waits. There is no visible timer, no "hello? are you there?".
 
-- **Cómo termina el turno el jugador (default, DP-06):** detección de fin de habla con umbral largo (2,5-4 s de silencio, configurable) **más** un botón/tecla `Terminé` (Espacio o Enter) que cierra el turno de inmediato. Opción de accesibilidad: *pulsar para hablar* (mantener una tecla mientras se habla), útil en aulas ruidosas.
-- **Qué ofrece el botón de silencio** (`Pasar el turno`, tecla `Tab` o click): un menú de 4 opciones grandes:
-  1. *Pista* (Lumi da una pista del nivel siguiente).
-  2. *Repetir* (el NPC repite).
-  3. *Más simple* (el NPC reformula con palabras más simples o da dos opciones).
-  4. *Seguí vos* (el NPC continúa la conversación sin esperar respuesta, sin penalización).
-- **Riesgo de diseño:** si el silencio nunca se cierra solo, el jugador puede quedar sin empuje para producir [Hipótesis, la investigación §2.2]. Mitigación por defecto: a los **10 s** de silencio aparece un chip visual discreto "¿Querés una pista?" (sin sonido, sin animación llamativa, desactivable). El NPC no habla.
-- **Experimento A/B #3** (§6.3): botón de silencio vs andamiaje automático tras X segundos. **DP-05.**
-- **Evidencia:** el botón de silencio no tiene ningún estudio [Hipótesis, E10]. Es una función de comodidad y un experimento propio.
+- **How the player ends the turn (default, DP-06):** end-of-speech detection with a long threshold (2.5-4 s of silence, configurable) **plus** a `Terminé` button/key (Space or Enter) that closes the turn immediately. Accessibility option: *push to talk* (hold a key while speaking), useful in noisy classrooms.
+- **What the silence button offers** (`Pasar el turno`, `Tab` key or click): a menu of 4 large options:
+  1. *Pista* (Lumi gives a hint of the next level).
+  2. *Repetir* (the NPC repeats).
+  3. *Más simple* (the NPC rephrases with simpler words or gives two options).
+  4. *Seguí vos* (the NPC continues the conversation without waiting for an answer, without penalty).
+- **Design risk:** if the silence never closes by itself, the player may be left without a push to produce [Hypothesis, research §2.2]. Default mitigation: after **10 s** of silence a discreet visual chip "¿Querés una pista?" appears (no sound, no flashy animation, can be turned off). The NPC does not speak.
+- **A/B experiment #3** (§6.3): silence button vs automatic scaffolding after X seconds. **DP-05.**
+- **Evidence:** the silence button has no study at all [Hypothesis, E10]. It is a comfort feature and an experiment of our own.
 
-### 2.7 Pociones de conocimiento (XP) diseñadas contra la sobrejustificación
+### 2.7 Knowledge potions (XP) designed against overjustification
 
-#### 2.7.1 Regla central
+#### 2.7.1 Central rule
 
-**La poción informa competencia; no paga por participar.** Las pociones se destilan solo cuando el jugador **demuestra** algo (usó una estructura para lograr algo, se autocorrigió tras una señal, recuperó un ítem marcado días después). Nunca por completar una misión, por tiempo jugado, por entrar cada día ni por elegir respuestas al azar.
+**The potion reports competence; it does not pay for participating.** Potions are distilled only when the player **demonstrates** something (used a structure to achieve something, self-corrected after a signal, retrieved a marked item days later). Never for completing a mission, for time played, for logging in every day or for choosing answers at random.
 
-- Mecanismo de daño: recompensas esperadas y contingentes a participar o completar socavan la motivación intrínseca (d = −0,28 a −0,40), más en niños; el feedback informativo de competencia la aumenta (d = 0,33) [Probado en laboratorio, E12, E13, E14].
-- La transferencia a XP de un juego de L2 está [En disputa] (E16): Mekler no encontró daño con puntos y niveles en adultos, pero tampoco mejora de calidad (solo cantidad) [Probable, E15]. Por eso la XP no se usa para empujar volumen; se usa para **decir qué ya sabés hacer**.
-- El experimento A/B #2 (§6.3) mide esto en el propio juego (XP informativa vs XP por completar, midiendo libre elección).
+- Harm mechanism: expected rewards contingent on participating or completing undermine intrinsic motivation (d = −0.28 to −0.40), more so in children; informative competence feedback increases it (d = 0.33) [Proven in the lab, E12, E13, E14].
+- Transfer to the XP of an L2 game is [Disputed] (E16): Mekler found no harm with points and levels in adults, but no improvement in quality either (only quantity) [Probable, E15]. That is why XP is not used to push volume; it is used to **say what you can already do**.
+- A/B experiment #2 (§6.3) measures this in the game itself (informative XP vs XP for completing, measuring free choice).
 
-#### 2.7.2 Ramas y colores
+#### 2.7.2 Branches and colors
 
-| Rama | Color | Qué demuestra | Ejemplos de evidencia |
+| Branch | Color | What it demonstrates | Examples of evidence |
 |---|---|---|---|
-| **Vincular** (social) | Ámbar | Saludar, presentarse, agradecer, preguntar por el otro, cortesía | Usó "Nice to meet you" al conocer a un NPC; preguntó "How are you?" y respondió a la respuesta |
-| **Pedir y ofrecer** (transacción) | Verde | Pedir cosas, cantidades, ofrecer ayuda, aceptar y rechazar | "Can I have three packets of beans, please?" logró el pedido |
-| **Describir y ubicar** | Azul | Describir personas, objetos, lugares; direcciones | Describió la cabra con dos rasgos; guió a Ollie en la niebla |
-| **Contar** (narrar) | Violeta | Pasado, secuencias, planes | Contó lo que pasó con "first... then..." en pasado |
-| **Opinar y convencer** | Rojo coral | Opinar, comparar, argumentar, negociar, condicionales | Dio una razón con "because" y propuso una alternativa |
-| **Entender** (comprensión) | Celeste | Seguir instrucciones o información del NPC y actuar en el mundo | Siguió las indicaciones de Ruth hasta las trampas sin la ruta visible (D-076) |
+| **Bonding** (social) | Amber | Greeting, introducing oneself, thanking, asking about the other, courtesy | Used "Nice to meet you" on meeting an NPC; asked "How are you?" and responded to the answer |
+| **Asking and offering** (transaction) | Green | Asking for things, quantities, offering help, accepting and refusing | "Can I have three packets of beans, please?" achieved the request |
+| **Describing and locating** | Blue | Describing people, objects, places; directions | Described the goat with two traits; guided Ollie in the fog |
+| **Telling** (narrating) | Violet | Past, sequences, plans | Told what happened with "first... then..." in the past |
+| **Opining and persuading** | Coral red | Opining, comparing, arguing, negotiating, conditionals | Gave a reason with "because" and proposed an alternative |
+| **Understanding** (comprehension) | Light blue | Following the NPC's instructions or information and acting in the world | Followed Ruth's directions to the traps without the route visible (D-076) |
 
-#### 2.7.3 Cómo se gana una poción
+#### 2.7.3 How a potion is earned
 
-| Evento | Pociones | Notas |
+| Event | Potions | Notes |
 |---|---|---|
-| Uso exitoso de una estructura objetivo para cumplir un criterio de éxito | 1 de la rama | Lo detecta el observador |
-| Autocorrección tras una señal de Lumi | 1 de la rama + "gota brillante" (marca visual de autocorrección) | La autocorrección es la conducta que más queremos reforzar con información [Probable, E31] |
-| Recuperación correcta de un ítem marcado en una misión posterior (repaso espaciado) | 1 de la rama + el ítem sube de nivel en el banco | [Probado, E34] |
-| Elegir una opción sugerida (modo texto A0-A1) | 1/3 de poción | Reconoce el paso sin igualarlo a producir |
-| Completar una misión | **0** | Completar no paga. El resultado en el mundo es la recompensa narrativa |
-| Entrar al juego, días seguidos | **0** | Regla inviolable 2 |
+| Successful use of a target structure to meet a success criterion | 1 of the branch | Detected by the observer |
+| Self-correction after a Lumi signal | 1 of the branch + "bright drop" (visual self-correction mark) | Self-correction is the behavior we most want to reinforce with information [Probable, E31] |
+| Correct retrieval of a marked item in a later mission (spaced review) | 1 of the branch + the item goes up a level in the bank | [Proven, E34] |
+| Choosing a suggested option (text mode A0-A1) | 1/3 of a potion | Acknowledges the step without equating it to producing |
+| Completing a mission | **0** | Completing does not pay. The outcome in the world is the narrative reward |
+| Entering the game, consecutive days | **0** | Inviolable rule 2 |
 
-**El momento de destilar** (post-tarea) es **feedback informativo**: Lumi nombra la conducta concreta ("Le pediste la manguera a Bea con *could you*; eso es pedir con cortesía") y la poción cae en el frasco de su color. No hay sonido de tragamonedas, ni confeti, ni números grandes. El sonido es un "gluc" suave y una nota.
+**The distilling moment** (post-task) is **informative feedback**: Lumi names the concrete behavior ("Le pediste la manguera a Bea con *could you*; eso es pedir con cortesía") and the potion falls into the jar of its color. There is no slot-machine sound, no confetti, no big numbers. The sound is a soft "gluc" and a note.
 
-#### 2.7.4 Qué se hace con las pociones
+#### 2.7.4 What is done with potions
 
-- Las pociones se acumulan por rama y **nunca se pierden ni se gastan del todo**. Abrir una habilidad del árbol pide "verter" pociones de ciertos colores: quedan visibles dentro del nodo abierto (como un frasco que se llenó de luz). La metáfora es invertir lo que sabés en lo que querés poder hacer, no pagar. **DP-09.**
-- El brillo de Lumi refleja el total de evidencia; lo fundado y la red (caminitos de bichos de luz) muestran en el mapa lo que se consiguió hablando (progreso visible, que acompaña a la adaptación [Probable, E36]).
-- **No hay tienda.** No hay ítems cosméticos comprables con pociones en el modo 1. Los cosméticos (ropa del avatar, decoración) se ganan como regalos narrativos de los vecinos al resolver misiones, sin estar anunciados de antemano (los regalos inesperados no producen el efecto de socavamiento de los esperados [Probado en laboratorio, E12, que se limita a recompensas esperadas]).
+- Potions accumulate by branch and are **never lost or fully spent**. Opening a skill in the tree asks to "pour" potions of certain colors: they remain visible inside the opened node (like a jar that filled with light). The metaphor is investing what you know in what you want to be able to do, not paying. **DP-09.**
+- Lumi's glow reflects the total evidence; what is founded and the network (firefly trails) show on the map what was achieved by talking (visible progress, which accompanies adaptation [Probable, E36]).
+- **There is no shop.** There are no cosmetic items purchasable with potions in mode 1. Cosmetics (avatar clothing, decoration) are earned as narrative gifts from neighbors on resolving missions, without being announced beforehand (unexpected gifts do not produce the undermining effect of expected ones [Proven in the lab, E12, which is limited to expected rewards]).
 
-### 2.8 Árbol de habilidades
+### 2.8 Skill tree
 
-#### 2.8.1 Principios
+#### 2.8.1 Principles
 
-- Las habilidades son **lingüísticas y útiles en la siguiente misión**: nuevas opciones de diálogo, NPCs que antes no hablaban con vos, lugares, tipos de misión [Probable, la investigación §2.3 / E18].
-- **Ninguna habilidad es de accesibilidad.** Velocidad, subtítulos, modo texto, pistas: siempre disponibles (regla inviolable 3).
-- Abrir una habilidad requiere (a) pociones de la rama y (b) haber demostrado al menos una vez la competencia específica (evento del observador). Esto evita "comprar" habilidades sin la competencia.
-- El jugador **elige** qué abrir cuando tiene opciones (autonomía [Probable, E18]).
+- Skills are **linguistic and useful in the next mission**: new dialogue options, NPCs who previously did not talk to you, places, mission types [Probable, research §2.3 / E18].
+- **No skill is an accessibility skill.** Speed, subtitles, text mode, hints: always available (inviolable rule 3).
+- Opening a skill requires (a) potions of the branch and (b) having demonstrated the specific competence at least once (observer event). This avoids "buying" skills without the competence.
+- The player **chooses** what to open when they have options (autonomy [Probable, E18]).
 
-#### 2.8.2 Árbol de la v1 (ejemplos completos)
+#### 2.8.2 v1 tree (complete examples)
 
-| ID | Habilidad | Rama | Requiere | Qué habilita en el juego |
+| ID | Skill | Branch | Requires | What it enables in the game |
 |---|---|---|---|---|
-| `HAB-BASE-NOMBRAR` | Preguntarle a Lumi "¿cómo se dice?" | — | Inicio | Inspeccionar objetos y escuchar su nombre (estilo Influent) |
-| `HAB-VINC-1` | Presentarme | Ámbar 2 | M0.2 | Los vecinos te saludan por tu nombre de juego; aparecen saludos en el tablero |
-| `HAB-VINC-2` | Charla de vereda (small talk) | Ámbar 5 | Preguntó "How are you?" en 2 escenas | 3 NPCs tímidos u ocupados que solo saludaban (Harlan, Grace y Vance, `02` §3.5) ahora conversan; misiones cortas de charla con objetivo (P-R1.1, P-R1.2) |
-| `HAB-VINC-3` | Hablar a distancia (radio, teléfono) | Ámbar 8 + Celeste 4 | Cap. 2 (M2.2) | La Radio del Cruce: hablar con Nell y Bea por radio y misiones a distancia sin apoyo visual |
-| `HAB-PEDIR-1` | Pedir con cortesía | Verde 3 | Usó "please" + "can I" | Opciones de diálogo amables; Wes acepta escuchar tu pedido de favor (requisito de M1.5) |
-| `HAB-PEDIR-2` | Cantidades y listas | Verde 6 | M1.4 | Tablero del Cruce con listas; pedidos de materiales para las fundaciones (prestados o regalados, nunca comprados) |
-| `HAB-PEDIR-3` | Ofrecer y negociar favores | Verde 10 + Coral 3 | Cap. 3 | Intercambios entre vecinos (trueque de favores, sin dinero) |
-| `HAB-DESC-1` | Describir cosas | Azul 3 | M1.2 | Misiones de "objetos perdidos" del tablero |
-| `HAB-DESC-2` | Dar y seguir direcciones | Azul 6 + Celeste 3 | M2.1 | Ollie te lleva en la camioneta del correo (traslado rápido entre zonas hablando con Ollie) |
-| `HAB-DESC-3` | Describir personas | Azul 9 | M2.4 | Misiones de "¿quién es quién?" en la feria del sábado; reconocer vecinos nuevos |
-| `HAB-CONT-1` | Contar lo que pasó (pasado simple) | Violeta 3 | M3.1 | Harlan cuenta la historia del año de la plaga y te pide que se la cuentes a otros; la Radio del Cruce abre su "rincón de historias" |
-| `HAB-CONT-2` | Hacer planes (going to / will) | Violeta 6 | M3.4 | Planificar con los vecinos la salita y la estación meteorológica |
-| `HAB-OPIN-1` | Opinar y dar razones | Coral 3 | M3.5 | Caleb y Wes te consultan entre avioneta y dron; opciones de diálogo con "I think... because..." |
-| `HAB-OPIN-2` | Convencer (condicionales, propuestas) | Coral 7 | M4.2 | Desbloquea la audiencia pública (M4.4) |
-| `HAB-OPIN-3` | Mediar entre vecinos | Coral 9 + Ámbar 10 | M4.3 | Misiones de mediación: dos NPCs en desacuerdo |
-| `HAB-ENT-1` | Oído de cuadrilla | Celeste 5 | — | Los NPCs con acentos distintos (A2+) aparecen con misiones (exposición a variantes; la cuadrilla viene de muchos lugares) |
-| `HAB-ENT-2` | Leer carteles | Celeste 3 + Azul 3 | — | Los carteles del valle se vuelven interactivos y dan pistas o misiones ocultas (mezcla de modalidades [Probable]) |
+| `HAB-BASE-NOMBRAR` | Asking Lumi "¿cómo se dice?" | — | Start | Inspect objects and hear their name (Influent style) |
+| `HAB-VINC-1` | Introducing myself | Amber 2 | M0.2 | Neighbors greet you by your game name; greetings appear on the board |
+| `HAB-VINC-2` | Sidewalk chat (small talk) | Amber 5 | Asked "How are you?" in 2 scenes | 3 shy or busy NPCs who only greeted (Harlan, Grace and Vance, `02` §3.5) now converse; short chat missions with a goal (P-R1.1, P-R1.2) |
+| `HAB-VINC-3` | Speaking at a distance (radio, phone) | Amber 8 + Light blue 4 | Ch. 2 (M2.2) | The Crossing Radio: talking with Nell and Bea by radio and remote missions without visual support |
+| `HAB-PEDIR-1` | Asking politely | Green 3 | Used "please" + "can I" | Polite dialogue options; Wes agrees to listen to your request for a favor (requirement of M1.5) |
+| `HAB-PEDIR-2` | Quantities and lists | Green 6 | M1.4 | Crossing board with lists; requests for materials for the foundations (lent or gifted, never bought) |
+| `HAB-PEDIR-3` | Offering and negotiating favors | Green 10 + Coral 3 | Ch. 3 | Exchanges between neighbors (barter of favors, no money) |
+| `HAB-DESC-1` | Describing things | Blue 3 | M1.2 | "Lost objects" missions on the board |
+| `HAB-DESC-2` | Giving and following directions | Blue 6 + Light blue 3 | M2.1 | Ollie takes you in the mail truck (fast travel between zones by talking with Ollie) |
+| `HAB-DESC-3` | Describing people | Blue 9 | M2.4 | "Who's who?" missions at the Saturday fair; recognizing new neighbors |
+| `HAB-CONT-1` | Telling what happened (simple past) | Violet 3 | M3.1 | Harlan tells the story of the plague year and asks you to tell it to others; the Crossing Radio opens its "stories corner" |
+| `HAB-CONT-2` | Making plans (going to / will) | Violet 6 | M3.4 | Planning the little clinic and the weather station with the neighbors |
+| `HAB-OPIN-1` | Opining and giving reasons | Coral 3 | M3.5 | Caleb and Wes consult you between airplane and drone; dialogue options with "I think... because..." |
+| `HAB-OPIN-2` | Persuading (conditionals, proposals) | Coral 7 | M4.2 | Unlocks the public hearing (M4.4) |
+| `HAB-OPIN-3` | Mediating between neighbors | Coral 9 + Amber 10 | M4.3 | Mediation missions: two disagreeing NPCs |
+| `HAB-ENT-1` | Crew's ear | Light blue 5 | — | NPCs with different accents (A2+) appear with missions (exposure to variants; the crew comes from many places) |
+| `HAB-ENT-2` | Reading signs | Light blue 3 + Blue 3 | — | The valley's signs become interactive and give hints or hidden missions (modality mixing [Probable]) |
 
-### 2.9 Repaso espaciado dentro de las misiones
+### 2.9 Spaced review inside missions
 
-- **Banco de repaso:** cada ítem marcado (por Lumi o por el jugador) tiene: forma correcta, contexto de origen, rama, nivel de dominio (0-5) y próxima fecha.
-- **Intervalos default:** 1, 3, 7, 14 y 30 días (**ver ADR-020 / D-088: la implementación usa las cajas Leitner `[0, 1, 3, 7, 14, 30]` días, donde la caja 0 vence el mismo día, `03-arquitectura.md` §3.5.4; gana el registro**); sube un nivel con recuperación correcta en producción, baja uno con error (sin castigo visible; solo vuelve antes). Algoritmo concreto: decide la revisión de arquitectura (Leitner o SM-2 simplificado). Espaciar y evocar mejora la retención [Probado, E34].
-- **Dónde reaparece el ítem:**
-  1. **Dentro de misiones nuevas** (lo principal): el generador de escenas recibe "ítems vencidos" y el NPC crea una situación que los pide en contexto nuevo. Ej.: "white" marcado en M1.2 → en M1.6 Caleb pregunta "What color are the flowers Maya likes?". El jugador tiene que **producirlo**, no reconocerlo [Probado para espaciado y recuperación].
-  2. **Preguntas de evocación de Lumi** al cierre de la misión ("¿Cómo dirías...?").
-  3. **Repaso de bolsillo** opcional de 60-90 s al entrar: 3-5 palabras sueltas con imagen y audio, producción oral o escrita. El sueño consolida vocabulario aislado pero no el contextual [Probado, condicional, E35]; por eso el repaso de palabras sueltas complementa el uso en contexto.
-  4. **Juego de búsqueda** (opcional, estilo "Time Attack" de Influent pero **sin reloj**): Lumi dice una palabra y el jugador encuentra el objeto en la escena [Referencias §4.1.4].
-- **Error de predicción:** ante un error de sentido, el NPC puede reaccionar de forma inesperada pero amable (trae una manzana en vez de una pera), lo que puede ayudar [Probable en L2, E37]. Nunca humillante, nunca con risa del NPC hacia el jugador.
+- **Review bank:** each marked item (by Lumi or by the player) has: correct form, source context, branch, mastery level (0-5) and next date.
+- **Default intervals:** 1, 3, 7, 14 and 30 days (**see ADR-020 / D-088: the implementation uses the Leitner boxes `[0, 1, 3, 7, 14, 30]` days, where box 0 is due the same day, `03-architecture.md` §3.5.4; the register wins**); goes up a level with correct retrieval in production, goes down one with an error (no visible punishment; it just returns sooner). Concrete algorithm: decided by the architecture review (Leitner or simplified SM-2). Spacing and retrieval improve retention [Proven, E34].
+- **Where the item reappears:**
+  1. **Inside new missions** (the main one): the scene generator receives "due items" and the NPC creates a situation that asks for them in a new context. E.g.: "white" marked in M1.2 → in M1.6 Caleb asks "What color are the flowers Maya likes?". The player has to **produce** it, not recognize it [Proven for spacing and retrieval].
+  2. **Lumi's retrieval questions** at mission close ("¿Cómo dirías...?").
+  3. Optional **pocket review** of 60-90 s on entry: 3-5 isolated words with image and audio, oral or written production. Sleep consolidates isolated vocabulary but not contextual [Proven, conditional, E35]; that is why isolated-word review complements use in context.
+  4. **Search game** (optional, Influent "Time Attack" style but **without a clock**): Lumi says a word and the player finds the object in the scene [References §4.1.4].
+- **Prediction error:** facing a meaning error, the NPC may react in an unexpected but kind way (brings an apple instead of a pear), which can help [Probable in L2, E37]. Never humiliating, never with the NPC laughing at the player.
 
-### 2.10 Dificultad adaptativa
+### 2.10 Adaptive difficulty
 
-- **Qué se adapta:** el **andamiaje del NPC**, no el contenido de la misión: velocidad de habla, longitud de frase, banda de vocabulario, cantidad de opciones ofrecidas, nivel de pista inicial, proporción de L1 de Lumi, umbral de chip de pista [Probable, la investigación §2.7].
-- **Señales que usa** (ventana móvil de las últimas 3 escenas): tasa de criterios de éxito alcanzados sin pista, pedidos de repetir/más despacio, tasa de autocorrección tras señal, latencia de respuesta (sin penalizar, solo como señal), cantidad de turnos para cumplir el objetivo.
-- **Niveles de andamiaje (1 a 5):**
+- **What adapts:** the **NPC's scaffolding**, not the mission content: speech rate, phrase length, vocabulary band, number of options offered, initial hint level, proportion of Lumi's L1, hint-chip threshold [Probable, research §2.7].
+- **Signals it uses** (sliding window of the last 3 scenes): rate of success criteria reached without hints, requests to repeat/slower, self-correction rate after a signal, response latency (without penalizing, only as a signal), number of turns to meet the goal.
+- **Scaffolding levels (1 to 5):**
 
-| Nivel | NPC | Lumi | Pistas |
+| Level | NPC | Lumi | Hints |
 |---|---|---|---|
-| 1 (máximo apoyo) | Muy lenta, 3-6 palabras, gestos, repite clave | L1, señal desde recast | Opciones visibles desde el inicio |
-| 2 | Lenta, 1 oración simple | L1 | Chip de pista a los 8 s |
-| 3 | Lenta/natural, 1-2 oraciones | L1 con frases modelo en L2 | Chip a los 10 s |
-| 4 | Natural, 2 oraciones, alguna palabra nueva | Mezcla L1/L2 | Chip a los 15 s |
-| 5 (mínimo apoyo) | Natural, 2-3 oraciones, idioms simples | L2 salvo explicaciones | Solo a pedido |
+| 1 (maximum support) | Very slow, 3-6 words, gestures, repeats key | L1, signal from recast | Options visible from the start |
+| 2 | Slow, 1 simple sentence | L1 | Hint chip at 8 s |
+| 3 | Slow/natural, 1-2 sentences | L1 with model phrases in L2 | Chip at 10 s |
+| 4 | Natural, 2 sentences, some new word | L1/L2 mix | Chip at 15 s |
+| 5 (minimum support) | Natural, 2-3 sentences, simple idioms | L2 except explanations | Only on request |
 
-- **Regla de cambio:** sube un nivel si en 3 escenas seguidas cumplió los criterios sin pistas y con ≤1 señal; baja un nivel si en 2 escenas seguidas pidió 3+ pistas o no convergió. El jugador ve "Lumi ajustó la ayuda" en el cuaderno, nunca "bajaste de nivel".
-- **Acompañado de progreso visible:** la adaptación sin componente motivacional no mejoró el aprendizaje en el único RCT del corpus (tarea no lingüística) [Probable, E36]; por eso la adaptación va siempre junto con la destilación de pociones y con lo fundado y la red visibles en el mapa.
-- **Control del jugador:** en Ajustes puede fijar el nivel de ayuda (desactiva la adaptación automática).
+- **Change rule:** goes up one level if in 3 scenes in a row the player met the criteria without hints and with ≤1 signal; goes down one level if in 2 scenes in a row they asked for 3+ hints or did not converge. The player sees "Lumi ajustó la ayuda" in the notebook, never "bajaste de nivel".
+- **Accompanied by visible progress:** adaptation without a motivational component did not improve learning in the corpus's only RCT (non-linguistic task) [Probable, E36]; that is why adaptation always goes together with the distilling of potions and with what is founded and the network visible on the map.
+- **Player control:** in Settings they can fix the help level (disables automatic adaptation).
 
-### 2.11 Mapa MCER (A0 a B1 en la v1)
+### 2.11 CEFR map (A0 to B1 in v1)
 
-| Banda | Capítulo | "Puedo..." (can-do, resumen) | Funciones y estructuras | Vocabulario (aprox. acumulado) |
+| Band | Chapter | "I can..." (can-do, summary) | Functions and structures | Vocabulary (approx. cumulative) |
 |---|---|---|---|---|
-| **A0 (pre-A1)** | Prólogo | Saludar, decir mi nombre de juego, entender sí/no, nombrar objetos cercanos | Hello/Hi, I'm..., yes/no, please/thank you, this/that, colores básicos | 60-100 |
-| **A1** | Capítulo 1 | Presentarme, describir cosas con color y tamaño, pedir cosas simples, preguntar dónde está algo, decir qué me gusta | to be, have got/have, can (pedido), there is/are, preguntas wh- simples, números 1-20, like | 300-400 |
-| **A1→A2** | Capítulo 2 | Dar y seguir direcciones, comprar/pedir cantidades, describir personas, hablar de rutinas, llamar por teléfono | presente simple y continuo, preposiciones de lugar, some/any, how much/many, could you, imperativos | 600-800 |
-| **A2** | Capítulo 3 | Contar algo que pasó, dar consejos simples, comparar, hacer planes | pasado simple (regular e irregulares frecuentes), comparativos, should, going to, first/then/after that | 1.000-1.200 |
-| **A2→B1** | Capítulo 4 | Dar opiniones con razones, proponer y convencer, explicar un problema, mediar | I think/because, if + presente (1er condicional), would like, could we..., what about...?, reformular | 1.500-1.800 |
+| **A0 (pre-A1)** | Prologue | Greet, say my game name, understand yes/no, name nearby objects | Hello/Hi, I'm..., yes/no, please/thank you, this/that, basic colors | 60-100 |
+| **A1** | Chapter 1 | Introduce myself, describe things with color and size, ask for simple things, ask where something is, say what I like | to be, have got/have, can (request), there is/are, simple wh- questions, numbers 1-20, like | 300-400 |
+| **A1→A2** | Chapter 2 | Give and follow directions, buy/ask for quantities, describe people, talk about routines, phone | simple and continuous present, prepositions of place, some/any, how much/many, could you, imperatives | 600-800 |
+| **A2** | Chapter 3 | Tell something that happened, give simple advice, compare, make plans | simple past (regular and frequent irregulars), comparatives, should, going to, first/then/after that | 1,000-1,200 |
+| **A2→B1** | Chapter 4 | Give opinions with reasons, propose and persuade, explain a problem, mediate | I think/because, if + present (1st conditional), would like, could we..., what about...?, rephrasing | 1,500-1,800 |
 
-- Para el jugador menor de edad se muestran **solo los "puedo..."**, no las etiquetas MCER; para adultos y docentes se muestran ambas (DP-33).
-- La correspondencia fina misión → descriptores MCER oficiales queda para el diseño de contenido (tarea del roadmap). Alinear con BNCC (Brasil) y diseños curriculares argentinos es una tarea B2B posterior.
+- For the underage player **only the "puedo..."** are shown, not the CEFR labels; for adults and teachers both are shown (DP-33).
+- The fine correspondence mission → official CEFR descriptors is left for content design (roadmap task). Aligning with BNCC (Brazil) and Argentine curricular designs is a later B2B task.
 
-### 2.12 Nivelación inicial
+### 2.12 Initial placement
 
-- Sin examen de entrada (genera ansiedad y abandono temprano). Default **DP-25**: el jugador autodeclara su nivel con 4 opciones en L1 ("Nunca estudié inglés" / "Sé algunas palabras" / "Me defiendo con frases simples" / "Puedo charlar pero me trabo") y la primera escena del prólogo ajusta el andamiaje con las señales de §2.10.
-- Quien declara "Puedo charlar" igual juega el prólogo (es corto) y puede saltar el capítulo 1 al terminar el prólogo si Lumi detectó desempeño de nivel 4+ ("¿Querés ir directo al capítulo 2? Nell igual te va a extrañar"). Las misiones saltadas quedan disponibles.
+- No entrance exam (it generates anxiety and early dropout). Default **DP-25**: the player self-declares their level with 4 options in L1 ("Nunca estudié inglés" / "Sé algunas palabras" / "Me defiendo con frases simples" / "Puedo charlar pero me trabo") and the first scene of the prologue adjusts the scaffolding with the signals of §2.10.
+- Whoever declares "Puedo charlar" still plays the prologue (it is short) and can skip chapter 1 after finishing the prologue if Lumi detected level 4+ performance ("¿Querés ir directo al capítulo 2? Nell igual te va a extrañar"). Skipped missions remain available.
 
-### 2.13 Perfil del alumno
+### 2.13 Learner profile
 
-| Dato | Para qué | Quién lo ve | Retención (default, DP-13) |
+| Data | What for | Who sees it | Retention (default, DP-13) |
 |---|---|---|---|
-| Nombre de juego (no real), avatar | Que los NPCs te nombren | Jugador, docente (si es de una clase) | Vida de la cuenta |
-| Par de idioma, nivel declarado, nivel de andamiaje actual | Adaptación | Jugador, docente | Vida de la cuenta |
-| Preferencias de accesibilidad | Aplicarlas | Jugador | Vida de la cuenta |
-| Can-do demostrados y pociones por rama | Progreso | Jugador, docente, tutor | Vida de la cuenta |
-| Banco de repaso (ítems, nivel, fechas) | Repaso espaciado | Jugador | Vida de la cuenta |
-| Patrones de error (tipo, frecuencia, sistemáticos) | Lumi y adaptación (uso silencioso, como un prototipo de voz anterior) | Jugador (en el cuaderno, en lenguaje amable); docente en agregado | Vida de la cuenta |
-| Transcripciones de escenas | Observador y repaso | Jugador (las suyas, 30 días) | 30 días, luego se borran; solo quedan ítems extraídos |
-| Audio crudo | — | — | **No se guarda** (default). Se procesa en tiempo real y se descarta |
-| Edad o banda de edad | Reglas de seguridad y consentimiento | Sistema, tutor, institución | Vida de la cuenta |
+| Game name (not real), avatar | So NPCs name you | Player, teacher (if from a class) | Life of the account |
+| Language pair, declared level, current scaffolding level | Adaptation | Player, teacher | Life of the account |
+| Accessibility preferences | Applying them | Player | Life of the account |
+| Demonstrated can-dos and potions by branch | Progress | Player, teacher, guardian | Life of the account |
+| Review bank (items, level, dates) | Spaced review | Player | Life of the account |
+| Error patterns (type, frequency, systematic) | Lumi and adaptation (silent use, like a previous voice prototype) | Player (in the notebook, in kind language); teacher in aggregate | Life of the account |
+| Scene transcripts | Observer and review | Player (their own, 30 days) | 30 days, then deleted; only extracted items remain |
+| Raw audio | — | — | **Not stored** (default). Processed in real time and discarded |
+| Age or age band | Safety and consent rules | System, guardian, institution | Life of the account |
 
-- **Minimización de datos:** no se pide nombre real, email de menores, ubicación, foto ni contactos. Las cuentas de menores se crean vía institución (código de clase) o tutor.
-- **Exportar y borrar:** el jugador adulto o el tutor puede exportar el progreso y borrar la cuenta desde Ajustes.
+- **Data minimization:** no real name, minors' email, location, photo or contacts are requested. Minors' accounts are created via an institution (class code) or guardian.
+- **Export and delete:** the adult player or the guardian can export progress and delete the account from Settings.
 
-### 2.14 Onboarding: los primeros 10 minutos, paso a paso
+### 2.14 Onboarding: the first 10 minutes, step by step
 
-> Objetivo de los 10 minutos: que el jugador **diga algo en inglés a alguien y logre algo en el mundo** antes del minuto 5, que sepa que el silencio es suyo y que termine la sesión con ganas, no cansado.
+> Goal of the 10 minutes: that the player **says something in English to someone and achieves something in the world** before minute 5, knows that the silence is theirs and ends the session wanting more, not tired.
 
-| Tiempo | Pantalla / escena | Qué hace el jugador | Qué hace el juego | Notas de diseño |
+| Time | Screen / scene | What the player does | What the game does | Design notes |
 |---|---|---|---|---|
-| 0:00-0:20 | Carga | Nada | Pantalla de carga con un frasco que se llena de luz ("Despertando al bicho de luz…"); detecta GPU/memoria y elige calidad gráfica (bajo/medio/alto). Precarga solo Los Campos (diorama `muelle`, D-180) | Objetivo: interactivo en < 15 s en PC objetivo (criterio de muerte de el análisis de negocio #5) |
-| 0:20-1:00 | Bienvenida (DOM, sin 3D) | Elige idioma de interfaz (default español), banda de edad (si no viene de institución) | Si es menor sin código de clase ni tutor: flujo de tutor (§2.17). Si viene con código de clase: entra directo | Sin formularios largos |
-| 1:00-1:40 | Accesibilidad de entrada | Elige: tamaño de letra (3 opciones con vista previa), subtítulos sí/no (default sí), "¿Tenés micrófono?" con prueba de 3 s | Si no hay micrófono o lo rechaza: modo texto, sin culpa ("Podés jugar todo escribiendo; si un día querés hablar, está en Ajustes"). No se guarda el audio de la prueba | Todo cambiable después |
-| 1:40-2:10 | Nivel declarado y avatar | Elige 1 de 4 frases de nivel; arma el avatar (cuerpo, piel, pelo, ropa, 4-6 opciones cada uno; libre, D-167) y elige nombre de juego (**lista curada** que excluye los nombres del elenco, ver D-074; gana el registro) | Fija andamiaje inicial | Nombre de juego: para menores, solo de una lista de sugerencias (evita nombres reales) |
-| 2:10-2:40 | El colectivo de la cosecha llega (escena del mapa HD-2D) y el frasco | Mira | La cámara, desde arriba, muestra los campos de maíz al amanecer, el valle apagado y polvoriento y una avioneta lejos. Kofi: "Kestrel Valley! Last stop!". Toma breve de una cabrita blanca con campanita roja junto al canal (siembra M0.3). En el albergue, el jugador deja la mochila en la cucheta; asoma el frasco con una luz tenue y, sobre la almohada, el sobre de semillas `SOBRE-0`. Lumi sale del frasco | Sin texto largo. Música entra suave |
-| 2:40-3:20 | Lumi se presenta (L1) y el sobre | Escucha; aprende 2 botones: `Terminé` y `Pasar el turno`; elige quién lee la nota del sobre | Lumi: "¡Hola! Perdón, me quedé dormido en el frasco. Soy Lumi. Vine con vos desde casa. Acá todos hablan inglés; yo te ayudo, pero no puedo hablar por vos: no me escuchan." Contrato de no-presión (el silencio es tuyo; *Terminé*; *Pasar el turno*). El sobre: "*Plant me where people meet.*" Se crea la página "Misterios" del Frasco, sin anunciarla | Enseña el contrato de no-presión antes de la primera interacción. Líneas textuales en `02` §5 |
-| 3:20-4:40 | **M0.1 "Hola, Inés"**: la capataz de la cuadrilla | Dice "Hello" y su nombre de juego ("I'm ...") | Inés (muy lenta): "Hello! Welcome to Kestrel Valley. I'm Inés. And you?" El observador acepta cualquier saludo + nombre. Si se traba: Inés ofrece "I'm... ?" con gesto. Cierre: le da la llave de la cucheta y un mapa ("Maya lives at the Crossing"). Lumi destila la primera poción ámbar | **Primera producción antes del minuto 5** |
-| 4:40-5:40 | Caminar por Los Campos | Aprende a moverse (click en el suelo o WASD); la cámara se acomoda sola | Tutorial contextual en la capa DOM (2 líneas). Sendero de tierra hacia el galpón de la cuadrilla | Sin pruebas de destreza |
-| 5:40-6:40 | **M0.2 "¿Cómo se dice?"**: nombrar 3 objetos | Pide a Lumi el nombre de 3 objetos (la avioneta lejana, el maíz, un bicho de luz) y los repite en voz alta si quiere; Kofi se suma | Lumi nombra en L2 + L1 (*plane*, *corn*, *firefly*), con audio cacheado. Repetir en voz alta da 1/3 poción celeste (si lo dice); sin presión si no | Copia lo más elogiado de Influent [Referencias §4.1.1] |
-| 6:40-9:00 | **M0.3 "Clover"** (primer favor): Maya, en el Cruce, busca a su cabra, que el jugador vio junto al canal al llegar | Responde a "Did you see my goat?" con "Yes" + "the canal" (señala con click si hace falta) | Maya (muy lenta) ve a Lumi ("A firefly! In the day?") y pregunta sí/no y dónde. Si el jugador se traba, Maya ofrece dos opciones. Maya vuelve con Clover y te presenta a Nell | Primer resultado en el mundo logrado con lengua. Precursora de M1.2 |
-| 9:00-9:40 | Destilar | Mira | Lumi: "Le dijiste dónde estaba Clover: *the canal*. Eso es azul: ubicar cosas." Poción azul cae. Pregunta de evocación: "¿Te acordás cómo se decía *maíz*?" (respuesta oral o escrita, cualquier respuesta es bienvenida; si no sale, Lumi la dice y la marca para mañana) | Feedback informativo + primera evocación |
-| 9:40-10:00 | El primer bicho de luz | Elige: seguir o parar | Atardecer; Maya y Clover caminan hacia el Cruce; en el árbol grande se enciende un bicho de luz. Lumi: "Mirá: un bicho de luz en el Cruce. Mañana Maya te presenta a Nell. ¿Seguimos un poco o lo dejamos acá?" | Fin de sesión sugerido sin culpa; gancho narrativo, no recompensa por volver. Los dos botones con el mismo peso visual |
+| 0:00-0:20 | Loading | Nothing | Loading screen with a jar filling with light ("Despertando al bicho de luz…"); detects GPU/memory and picks graphics quality (low/medium/high). Preloads only Los Campos (`muelle` diorama, D-180) | Goal: interactive in < 15 s on the target PC (kill criterion of business analysis #5) |
+| 0:20-1:00 | Welcome (DOM, no 3D) | Chooses interface language (default Spanish), age band (if not coming from an institution) | If a minor without class code or guardian: guardian flow (§2.17). If coming with class code: goes straight in | No long forms |
+| 1:00-1:40 | Entry accessibility | Chooses: font size (3 options with preview), subtitles yes/no (default yes), "¿Tenés micrófono?" with a 3 s test | If there is no microphone or they refuse: text mode, without guilt ("Podés jugar todo escribiendo; si un día querés hablar, está en Ajustes"). The test audio is not stored | Everything changeable later |
+| 1:40-2:10 | Declared level and avatar | Chooses 1 of 4 level phrases; builds the avatar (body, skin, hair, clothes, 4-6 options each; free, D-167) and chooses game name (**curated list** that excludes the cast's names, see D-074; the register wins) | Sets initial scaffolding | Game name: for minors, only from a list of suggestions (avoids real names) |
+| 2:10-2:40 | The harvest bus arrives (HD-2D map scene) and the jar | Watches | The camera, from above, shows the cornfields at dawn, the dull, dusty valley and a plane far away. Kofi: "Kestrel Valley! Last stop!". Brief shot of a little white goat with a red bell by the canal (seeds M0.3). In the lodge, the player leaves the backpack on the bunk; the jar peeks out with a dim light and, on the pillow, the seed envelope `SOBRE-0`. Lumi leaves the jar | No long text. Music enters softly |
+| 2:40-3:20 | Lumi introduces itself (L1) and the envelope | Listens; learns 2 buttons: `Terminé` and `Pasar el turno`; chooses who reads the envelope's note | Lumi: "¡Hola! Perdón, me quedé dormido en el frasco. Soy Lumi. Vine con vos desde casa. Acá todos hablan inglés; yo te ayudo, pero no puedo hablar por vos: no me escuchan." No-pressure contract (the silence is yours; *Terminé*; *Pasar el turno*). The envelope: "*Plant me where people meet.*" The Jar's "Misterios" page is created, without announcing it | Teaches the no-pressure contract before the first interaction. Verbatim lines in `02` §5 |
+| 3:20-4:40 | **M0.1 "Hola, Inés"**: the crew foreman | Says "Hello" and their game name ("I'm ...") | Inés (very slow): "Hello! Welcome to Kestrel Valley. I'm Inés. And you?" The observer accepts any greeting + name. If stuck: Inés offers "I'm... ?" with a gesture. Close: she gives the key to the bunk and a map ("Maya lives at the Crossing"). Lumi distills the first amber potion | **First production before minute 5** |
+| 4:40-5:40 | Walking through Los Campos | Learns to move (click on the ground or WASD); the camera settles by itself | Contextual tutorial in the DOM layer (2 lines). Dirt path to the crew's shed | No dexterity tests |
+| 5:40-6:40 | **M0.2 "¿Cómo se dice?"**: naming 3 objects | Asks Lumi for the name of 3 objects (the distant plane, the corn, a firefly) and repeats them aloud if they want; Kofi joins | Lumi names in L2 + L1 (*plane*, *corn*, *firefly*), with cached audio. Repeating aloud gives 1/3 light-blue potion (if they say it); no pressure if not | Copies Influent's most praised feature [References §4.1.1] |
+| 6:40-9:00 | **M0.3 "Clover"** (first favor): Maya, at the Crossing, looks for her goat, which the player saw by the canal on arrival | Answers "Did you see my goat?" with "Yes" + "the canal" (points with a click if needed) | Maya (very slow) sees Lumi ("A firefly! In the day?") and asks yes/no and where. If the player gets stuck, Maya offers two options. Maya returns with Clover and introduces you to Nell | First outcome in the world achieved with language. Precursor of M1.2 |
+| 9:00-9:40 | Distill | Watches | Lumi: "Le dijiste dónde estaba Clover: *the canal*. Eso es azul: ubicar cosas." Blue potion falls. Retrieval question: "¿Te acordás cómo se decía *maíz*?" (oral or written answer, any answer is welcome; if it does not come out, Lumi says it and marks it for tomorrow) | Informative feedback + first retrieval |
+| 9:40-10:00 | The first firefly | Chooses: continue or stop | Dusk; Maya and Clover walk toward the Crossing; in the big tree a firefly lights up. Lumi: "Mirá: un bicho de luz en el Cruce. Mañana Maya te presenta a Nell. ¿Seguimos un poco o lo dejamos acá?" | Suggested end of session without guilt; narrative hook, not a reward for coming back. Both buttons with the same visual weight |
 
-> Las líneas textuales, ramas e ids de plantilla (`LUMI-ONB-*`, `LUMI-SOBRE0-*`) están en `02` §5; para la **redacción**, `02` > `01`. Los tiempos y objetivos de esta tabla son los que valen para construir y verificar (F9).
+> The verbatim lines, branches and template ids (`LUMI-ONB-*`, `LUMI-SOBRE0-*`) are in `02` §5; for the **wording**, `02` > `01`. The times and goals in this table are the ones that count for building and verifying (F9).
 
-### 2.15 Duración de sesión (objetivos)
+### 2.15 Session duration (goals)
 
-| Unidad | Objetivo | Tope | Fuente/razón |
+| Unit | Goal | Cap | Source/reason |
 |---|---|---|---|
-| Escena de voz | 2-4 min | 5 min | Costo [Negocio §3.2] |
-| Misión | 4-8 min (1-3 escenas + pre y post) | 12 min | Diseño |
-| Sesión | 10-20 min (2-4 misiones) | No hay tope duro; sugerencia de pausa a los ~20 min y después cada 15 min | Muchas sesiones cortas [Probable, E23]; minutos óptimos [Hipótesis] |
-| Frecuencia objetivo | 3-5 sesiones por semana | — | Espaciado [Probado, E34] |
-| Arco completo del modo 1 (v1) | 25-40 h de juego en 3-5 meses | — | Evita el "poco contenido" de Influent y Terra Alia [Referencias §4.2.6] |
+| Voice scene | 2-4 min | 5 min | Cost [Business §3.2] |
+| Mission | 4-8 min (1-3 scenes + pre and post) | 12 min | Design |
+| Session | 10-20 min (2-4 missions) | No hard cap; break suggestion at ~20 min and then every 15 min | Many short sessions [Probable, E23]; optimal minutes [Hypothesis] |
+| Target frequency | 3-5 sessions per week | — | Spacing [Proven, E34] |
+| Full arc of mode 1 (v1) | 25-40 h of play in 3-5 months | — | Avoids the "little content" of Influent and Terra Alia [References §4.2.6] |
 
-### 2.16 Estados de fracaso (ninguno punitivo)
+### 2.16 Failure states (none punitive)
 
-| Situación | Qué pasa | Qué **no** pasa |
+| Situation | What happens | What does **not** happen |
 |---|---|---|
-| El jugador no logra los criterios de éxito en la escena | A los 4 min el NPC ofrece el camino corto ("Can you show me?") y la misión termina con resultado parcial: el mundo avanza igual; la misión queda marcada "se puede mejorar" con un brote vacío opcional para repetir | No se pierde nada; no hay "misión fallida" |
-| Error que rompe el sentido | El NPC no entiende dentro de la ficción y reacciona (error de predicción amable); Lumi da una señal | No hay sonido de error, no hay vidas |
-| El jugador se queda en silencio mucho tiempo | Nada. Chip visual opcional (DP-05) | El NPC no presiona ni se va |
-| El jugador dice algo fuera de tema | El NPC lo reconduce con amabilidad dentro de la ficción ("Ha! Maybe later. Now, about Clover...") | No se reprende |
-| El jugador dice algo inapropiado | El NPC no lo repite, cambia de tema; si se repite, Lumi recuerda las reglas del valle en L1, una vez. Evento de seguridad para institución si aplica (§2.17) | No hay humillación pública |
-| Se corta la conexión o se acaba la voz | La escena sigue en modo texto desde el último turno | No se pierde la escena |
-| El jugador abandona a mitad de misión | Se retoma desde el inicio de la escena en curso | — |
-| El jugador no juega en días o semanas | Lumi lo recibe con alegría y un resumen ("Nell preguntó por vos"). Los ítems vencidos se priorizan sin acumular "deuda" visible | No hay racha perdida, no hay "te extrañamos" culposo |
+| The player does not meet the success criteria in the scene | At 4 min the NPC offers the short path ("Can you show me?") and the mission ends with a partial result: the world advances anyway; the mission is marked "se puede mejorar" with an optional empty sprout to repeat | Nothing is lost; there is no "failed mission" |
+| Error that breaks meaning | The NPC does not understand within the fiction and reacts (kind prediction error); Lumi gives a signal | No error sound, no lives |
+| The player stays silent a long time | Nothing. Optional visual chip (DP-05) | The NPC does not pressure or leave |
+| The player says something off-topic | The NPC kindly steers back within the fiction ("Ha! Maybe later. Now, about Clover...") | No reprimand |
+| The player says something inappropriate | The NPC does not repeat it, changes the subject; if it repeats, Lumi recalls the valley's rules in L1, once. Safety event for the institution if applicable (§2.17) | No public humiliation |
+| The connection drops or the voice runs out | The scene continues in text mode from the last turn | The scene is not lost |
+| The player abandons mid-mission | Resumes from the start of the scene in progress | — |
+| The player does not play for days or weeks | Lumi receives them with joy and a summary ("Nell preguntó por vos"). Due items are prioritized without accumulating visible "debt" | No lost streak, no guilt-tripping "we missed you" |
 
-### 2.17 Seguridad para menores y moderación
+### 2.17 Safety for minors and moderation
 
-> Esto describe requisitos de diseño. **No es asesoramiento legal.** El cumplimiento concreto (Argentina: Ley 25.326 de datos personales; Brasil: ECA Digital, Lei 15.211/2025, vigente desde 2026-03-17, y LGPD; EE.UU.: COPPA si se entra) requiere revisión legal antes del primer piloto con menores [Brief; el análisis de negocio §6.5].
+> This describes design requirements. **It is not legal advice.** Concrete compliance (Argentina: Law 25.326 on personal data; Brazil: ECA Digital, Lei 15.211/2025, in force since 2026-03-17, and LGPD; US: COPPA if entered) requires legal review before the first pilot with minors [Brief; business analysis §6.5].
 
-#### 2.17.1 Conversaciones con NPCs
+#### 2.17.1 Conversations with NPCs
 
-1. **Marco cerrado por escena:** cada escena tiene temas permitidos; existe una **lista global de temas vedados** (violencia gráfica, sexualidad, drogas, autolesión, odio, política partidaria, religión como debate, datos personales, contacto fuera del juego, compras, citas/romance). El modelo recibe esa lista en el system prompt y además se filtra la salida.
-2. **Moderación doble:** (a) entrada: la transcripción del jugador pasa por un clasificador antes de llegar al NPC; (b) salida: la respuesta del NPC se clasifica antes de mostrarse/reproducirse (en voz en tiempo real, la revisión de arquitectura debe resolver cómo filtrar sin latencia excesiva: p. ej. clasificar el texto paralelo y cortar audio si se dispara). DP-37.
-3. **Sin charla libre sin marco en la v1** (DP-30). Ni siquiera para adultos.
-4. **El NPC nunca pide datos personales** (nombre real, escuela, dirección, edad, fotos, redes) y si el jugador los da, el NPC no los repite ni los guarda; el observador los elimina del resumen.
-5. **Respuestas de contención:** si un jugador expresa algo que sugiere riesgo (autolesión, abuso), el NPC sale de la ficción con una línea guionada y amable que sugiere hablar con un adulto de confianza, y se muestra un recurso de ayuda local (lista curada por país). Evento de seguridad registrado según política de la institución/tutor. Contenido y protocolo: revisión de especialistas (DP-38).
-6. **Personajes:** los NPCs adultos nunca tienen relación de intimidad con el jugador; los NPCs menores (hoy Maya, 9, y Noor, 16; los marca el campo `es_menor: true` de la ficha, `02` §6.2.1, no el nombre) solo aparecen en situaciones cotidianas y lugares públicos.
+1. **Closed frame per scene:** each scene has permitted topics; there is a **global list of forbidden topics** (graphic violence, sexuality, drugs, self-harm, hatred, partisan politics, religion as debate, personal data, contact outside the game, purchases, dating/romance). The model receives that list in the system prompt and the output is also filtered.
+2. **Double moderation:** (a) input: the player's transcript goes through a classifier before reaching the NPC; (b) output: the NPC's response is classified before being shown/played (in real-time voice, the architecture review must resolve how to filter without excessive latency: e.g. classify the text in parallel and cut audio if triggered). DP-37.
+3. **No free chat without a frame in v1** (DP-30). Not even for adults.
+4. **The NPC never asks for personal data** (real name, school, address, age, photos, social networks) and if the player gives them, the NPC does not repeat or store them; the observer removes them from the summary.
+5. **Containment responses:** if a player expresses something that suggests risk (self-harm, abuse), the NPC steps out of the fiction with a scripted, kind line that suggests talking to a trusted adult, and a local help resource is shown (list curated by country). Safety event recorded according to the institution's/guardian's policy. Content and protocol: specialist review (DP-38).
+6. **Characters:** adult NPCs never have an intimate relationship with the player; minor NPCs (currently Maya, 9, and Noor, 16; marked by the card's `es_menor: true` field, `02` §6.2.1, not by name) appear only in everyday situations and public places.
 
-#### 2.17.2 Cuentas y roles
+#### 2.17.2 Accounts and roles
 
-| Rol | Qué puede | Qué no puede |
+| Role | What they can do | What they cannot do |
 |---|---|---|
-| Jugador menor | Jugar, ajustar accesibilidad, ver su cuaderno | Crear cuenta sola/o (requiere código de clase o tutor); chat entre jugadores (no existe en la v1) |
-| Jugador adulto | Todo lo anterior; cuenta propia; exportar/borrar | — |
-| Tutor/a (guardian) | Dar consentimiento, ver progreso del menor, ver qué datos se guardan, borrar la cuenta, limitar minutos de voz o forzar modo texto | Escuchar audio (no se guarda) |
-| Docente | Crear clases y códigos, asignar misiones, ver reportes por can-do, ver alertas de seguridad según política de la institución | Ver transcripciones crudas de menores (default; DP-29) |
-| Administrador institucional | Gestionar docentes, licencias y presupuesto de voz de la institución | — |
+| Minor player | Play, adjust accessibility, see their notebook | Create an account on their own (requires class code or guardian); chat between players (does not exist in v1) |
+| Adult player | All of the above; own account; export/delete | — |
+| Guardian | Give consent, see the minor's progress, see what data is stored, delete the account, limit voice minutes or force text mode | Listen to audio (not stored) |
+| Teacher | Create classes and codes, assign missions, see can-do reports, see safety alerts according to the institution's policy | See minors' raw transcripts (default; DP-29) |
+| Institutional administrator | Manage teachers, licenses and the institution's voice budget | — |
 
-- **Age gate** (DP-12): default de lanzamiento: cuentas directas solo 18+; menores entran por institución (código de clase) o por invitación de un tutor con consentimiento verificable. Se diseña el cumplimiento desde el día uno porque un juego colorido con compañero es "de probable acceso" por menores aunque apunte a adultos [Negocio §6.5].
+- **Age gate** (DP-12): launch default: direct accounts only 18+; minors enter through an institution (class code) or by invitation from a guardian with verifiable consent. Compliance is designed from day one because a colorful game with a companion is "likely to be accessed" by minors even if it targets adults [Business §6.5].
 
-### 2.18 Funciones institucionales (B2B), a nivel de concepto
+### 2.18 Institutional (B2B) features, at concept level
 
-| Función | Descripción | Prioridad |
+| Feature | Description | Priority |
 |---|---|---|
-| Clases y códigos de clase | El docente crea una clase, obtiene un código corto; los alumnos entran sin email | v1 piloto |
-| Roster | Alta de alumnos por lista (CSV) con nombres de juego generados | v1 piloto |
-| Asignar misiones | El docente marca misiones o capítulos como "para esta semana" (no obligatorias dentro del juego; aparecen destacadas en el tablero) | v1 piloto |
-| Reporte de progreso por can-do | Por alumno y por clase: can-do demostrados, pociones por rama, minutos de habla, autocorrecciones, ítems más difíciles de la clase | v1 piloto |
-| Presupuesto de voz por institución | Pool de minutos de voz que la institución reparte; el modo texto no consume | v1 piloto |
-| Alertas de seguridad | Según política acordada con la institución | v1 piloto |
-| Modo aula | Pulsar para hablar por defecto, sugerencia de auriculares, volumen de NPC controlado | v1 piloto |
-| Exportar reportes | CSV/PDF | Después |
-| Integraciones LMS (Google Classroom, Moodle) | — | Después |
-| Alineación curricular (BNCC, diseños jurisdiccionales argentinos, MCER) | Mapa misiones → contenidos curriculares | Después |
-| Creación de misiones por docentes | Puente con el modo 2 | Año 2 |
+| Classes and class codes | The teacher creates a class, gets a short code; students enter without email | v1 pilot |
+| Roster | Student registration by list (CSV) with generated game names | v1 pilot |
+| Assign missions | The teacher marks missions or chapters as "for this week" (not mandatory inside the game; they appear highlighted on the board) | v1 pilot |
+| Progress report by can-do | Per student and per class: demonstrated can-dos, potions by branch, speaking minutes, self-corrections, the class's hardest items | v1 pilot |
+| Voice budget per institution | Pool of voice minutes the institution distributes; text mode does not consume | v1 pilot |
+| Safety alerts | According to the policy agreed with the institution | v1 pilot |
+| Classroom mode | Push to talk by default, headphone suggestion, controlled NPC volume | v1 pilot |
+| Export reports | CSV/PDF | Later |
+| LMS integrations (Google Classroom, Moodle) | — | Later |
+| Curricular alignment (BNCC, Argentine jurisdictional curricula, CEFR) | Missions → curricular contents map | Later |
+| Mission creation by teachers | Bridge to mode 2 | Year 2 |
 
-**Benchmark:** Noun Town ya vende a instituciones con herramientas docentes [Referencias §3]; la v1 institucional tiene que igualar lo básico (clases, licencias, reportes) y diferenciarse en reportes de habla y control de privacidad.
+**Benchmark:** Noun Town already sells to institutions with teacher tools [References §3]; the institutional v1 has to match the basics (classes, licenses, reports) and differentiate itself in speech reports and privacy control.
 
-### 2.19 Funciones de accesibilidad
+### 2.19 Accessibility features
 
-| Área | Función | Default |
+| Area | Feature | Default |
 |---|---|---|
-| Lectura | Subtítulos del NPC en L2 (siempre) y traducción L1 bajo demanda (tocar la línea) | Subtítulos sí; traducción a demanda |
-| Lectura | Tamaño de texto 4 pasos (100-200%), fuente legible sin serif, opción de fuente para dislexia, interlineado ajustable | 125% |
-| Lectura | Resaltado palabra por palabra sincronizado con el audio (karaoke) | Apagado en A2+, encendido en A0-A1 |
-| Audio | Volúmenes separados (NPC, Lumi, música, ambiente, efectos); voz de Lumi apagable | — |
-| Ritmo | Tres velocidades de NPC; `Repetir`; silencio sin límite; botón de pasar turno | §2.6 |
-| Entrada | Modo texto completo; pulsar para hablar; umbral de fin de habla configurable; opciones sugeridas | — |
-| Visión | Modos para daltonismo (protanopia, deuteranopia, tritanopia) — las ramas de pociones tienen **forma** además de color (ámbar = círculo, verde = hoja, azul = gota, violeta = estrella, coral = triángulo, celeste = onda); alto contraste en HUD | — |
-| Visión | Compatible con lector de pantalla en todo el HUD DOM (menús, diálogos, cuaderno) | — |
-| Motor | Jugable solo con mouse (click para mover y elegir) o solo con teclado (tabulación por objetos interactivos); sin combinaciones de teclas simultáneas; sin acciones con tiempo límite; teclas remapeables | — |
-| Cognitivo | Objetivo actual siempre visible en una línea; resumen "¿qué estaba haciendo?" al volver; sin información solo en audio | — |
-| Movimiento | Sin movimientos bruscos de cámara; opción de reducir animación; sin parpadeos | — |
-| Rendimiento | Modo gráfico bajo (sin sombras, DPR 1, resolución interna reducida, distancia de dibujo corta, sin postprocesado); modo "solo diálogo" (2D estático con ilustración del NPC) para PCs que no corren el 3D | Auto-detección |
-| Red | Modo texto como respaldo automático si la latencia o el ancho de banda no sostienen la voz | — |
-| Neurodiversidad | Sin evidencia cuantitativa abierta (dislexia, TDAH) [Investigación §5.5]: se aplican buenas prácticas (fuentes, ritmo, objetivos claros) y se marca como pregunta abierta | — |
+| Reading | NPC subtitles in L2 (always) and L1 translation on demand (tap the line) | Subtitles yes; translation on demand |
+| Reading | Text size in 4 steps (100-200%), legible sans-serif font, dyslexia font option, adjustable line spacing | 125% |
+| Reading | Word-by-word highlighting synchronized with the audio (karaoke) | Off at A2+, on at A0-A1 |
+| Audio | Separate volumes (NPC, Lumi, music, ambience, effects); Lumi's voice can be turned off | — |
+| Pace | Three NPC speeds; `Repetir`; unlimited silence; pass-turn button | §2.6 |
+| Input | Full text mode; push to talk; configurable end-of-speech threshold; suggested options | — |
+| Vision | Color-blindness modes (protanopia, deuteranopia, tritanopia) — the potion branches have a **shape** besides color (amber = circle, green = leaf, blue = drop, violet = star, coral = triangle, light blue = wave); high contrast in the HUD | — |
+| Vision | Screen-reader compatible across the whole DOM HUD (menus, dialogues, notebook) | — |
+| Motor | Playable with mouse only (click to move and choose) or keyboard only (tabbing through interactive objects); no simultaneous key combinations; no time-limited actions; remappable keys | — |
+| Cognitive | Current goal always visible in one line; "what was I doing?" summary on return; no audio-only information | — |
+| Motion | No abrupt camera movements; option to reduce animation; no flicker | — |
+| Performance | Low graphics mode (no shadows, DPR 1, reduced internal resolution, short draw distance, no post-processing); "dialogue only" mode (static 2D with NPC illustration) for PCs that cannot run the 3D | Auto-detection |
+| Network | Text mode as an automatic fallback if latency or bandwidth cannot sustain voice | — |
+| Neurodiversity | No open quantitative evidence (dyslexia, ADHD) [Research §5.5]: good practices (fonts, pace, clear goals) are applied and it is marked as an open question | — |
 
-**Reglas:** ninguna de estas funciones se desbloquea con progreso ni con pago. El modo gráfico bajo es un requisito de salida de cualquier hito, no una mejora posterior [Referencias §4.4.5].
+**Rules:** none of these features is unlocked by progress or payment. The low graphics mode is an exit requirement of any milestone, not a later improvement [References §4.4.5].
 
-### 2.20 Persistencia y reanudación
+### 2.20 Persistence and resumption
 
-- Guardado automático en servidor (cuenta) con copia local para modo sin conexión parcial (la parte 3D y el cuaderno funcionan sin red; las escenas con NPC necesitan red).
-- Al volver: "¿Qué estaba haciendo?" en una línea + vecino que espera.
+- Automatic saving on the server (account) with a local copy for partial offline mode (the 3D part and the notebook work without network; NPC scenes need network).
+- On return: "¿Qué estaba haciendo?" in one line + neighbor who is waiting.
 
 ---
 
-## 3. Guion del modo 1 (Kestrel Valley)
+## 3. Mode 1 script (Kestrel Valley)
 
-> Todo lo de esta sección es contenido de ficción propuesto, alineado con la premisa del brief (sección "Guion v2 + modo director", 2026-10-06), que reemplaza la de *Lantern Bay*. El detalle completo (fichas, prompts, las 11 misiones guionadas, onboarding, plantillas) está en `02-narrativa-guion.md` v0.2; para la **redacción** del contenido, `02` > `01` (`00` §0.3). Nombres de lugar y de personajes son ficticios y no se refieren a personas reales (D-164, D-166). Los ids de misión `M0.x`…`M4.x` se conservan; su contenido cambia.
+> Everything in this section is proposed fiction content, aligned with the brief's premise (section "Guion v2 + modo director", 2026-10-06), which supersedes the *Lantern Bay* one. The full detail (cards, prompts, the 11 scripted missions, onboarding, templates) is in `02-narrative-script.md` v0.2; for the **wording** of the content, `02` > `01` (`00` §0.3). Place and character names are fictional and do not refer to real people (D-164, D-166). The mission ids `M0.x`…`M4.x` are kept; their content changes.
 
-### 3.1 Premisa
+### 3.1 Premise
 
-*Kestrel Valley* es un valle agrícola ficticio de habla inglesa: campos de maíz, trigo y soja, un monte de manzanos, una granja chica diversificada, un canal de riego y una pista de pasto de donde sale una avioneta fumigadora. En medio del valle, en un cruce de caminos de tierra (*the Crossing*), viven unas doce familias, casi todas de trabajadores rurales, junto a un árbol enorme, una escuela de una sola aula cerrada y un lote vacío. No es un pueblo: no tiene concejo ni reglas propias, y el campo de al lado llega hasta el fondo de las casas.
+*Kestrel Valley* is a fictional English-speaking agricultural valley: fields of corn, wheat and soy, an apple orchard, a small diversified farm, an irrigation canal and a grass airstrip from which a crop-dusting plane takes off. In the middle of the valley, at a crossroads of dirt roads (*the Crossing*), live about twelve families, almost all rural workers, next to an enormous tree, a closed one-room school and an empty lot. It is not a village: it has no council or rules of its own, and the neighboring field reaches the back of the houses.
 
-El jugador es **un trabajador rural argentino** que llega con la cuadrilla de la cosecha. En su pueblo vio a los vecinos conseguir, hablando, una ordenanza que deja las fumigaciones lejos de las casas y la escuela. Acá reconoce la situación y se propone algo grande con lo único que tiene: **la parla**. Para que una ordenanza fije una zona de resguardo, hace falta un concejo; para un concejo, un pueblo; y para un pueblo (en la ficción del valle, D-171) hace falta **gente, un nombre, un lugar de reunión y servicios que funcionen entre todos**. No tiene plata ni títulos: convence, presenta gente, consigue cosas y **funda** cosas, y cada cosa fundada aparece construida en el mapa HD-2D. Es construir sin economía (el tycoon con dinero es del modo 2, D-018).
+The player is **an Argentine farm worker** who arrives with the harvest crew. In their hometown they saw neighbors achieve, by talking, an ordinance that keeps spraying away from the houses and the school. Here they recognize the situation and set themselves something big with the only thing they have: **the gift of gab**. For an ordinance to set a buffer zone, a council is needed; for a council, a village; and for a village (in the valley's fiction, D-171) you need **people, a name, a meeting place and services that work among everyone**. They have no money or degrees: they persuade, introduce people, get things and **found** things, and each founded thing appears built on the HD-2D map. It is building without an economy (the tycoon with money belongs to mode 2, D-018).
 
-Con él viajó **Lumi**, un bicho de luz de su pueblo que vivía en un frasco de vidrio (D-165). Lumi habla español porque viene de casa; los adultos del valle no lo oyen, así que no puede hablar por el jugador.
+**Lumi** traveled with them, a firefly from their village who lived in a glass jar (D-165). Lumi speaks Spanish because it comes from home; the valley's adults cannot hear it, so it cannot speak for the player.
 
-**Tema:** hablar construye. Cada conversación consigue algo, suma a alguien a la red y deja algo fundado. El idioma no es un examen: es la herramienta con la que se arma un pueblo.
+**Theme:** talking builds. Each conversation gets something, adds someone to the network and leaves something founded. Language is not an exam: it is the tool with which a village is put together.
 
-**Tono:** cálido, curioso, cotidiano, con humor suave. **Sin villanos:** cada dueño de campo tiene sus razones (Caleb cambia rápido; Ruth necesita datos y confianza; Harlan quizás no cambia nunca, pero cumple y es generoso); el piloto, Wes, es una persona que ama volar y mira el viento; el funcionario del condado, Vance, es prudente y justo. El tema es serio, el tono no es de miedo: la salud se trata con hechos simples de prevención, sin nada gráfico (D-176). Lo que el juego enseña sobre el campo es **real y verificable** y está marcado `[FUENTE-PENDIENTE]` hasta que una persona lo chequee (D-170); el protagonista no es experto: los vecinos le enseñan. Inspiración de tono: la calidez de *A Short Hike*, no la épica ni el panfleto.
+**Tone:** warm, curious, everyday, with gentle humor. **No villains:** each landowner has their reasons (Caleb changes fast; Ruth needs data and trust; Harlan may never change, but he keeps his word and is generous); the pilot, Wes, is a person who loves flying and watches the wind; the county official, Vance, is prudent and fair. The topic is serious, the tone is not fearful: health is handled with simple prevention facts, nothing graphic (D-176). What the game teaches about farming is **real and verifiable** and is marked `[FUENTE-PENDIENTE]` until a person checks it (D-170); the protagonist is not an expert: the neighbors teach them. Tonal inspiration: the warmth of *A Short Hike*, not the epic or the pamphlet.
 
-### 3.2 El mundo: mapa y zonas
+### 3.2 The world: map and zones
 
 ```
                          [Monte de Ruth]  (norte; cap. 1 escena, cap. 3)
@@ -791,590 +791,590 @@ Con él viajó **Lumi**, un bicho de luz de su pueblo que vivía en un frasco de
                          [Granja de June]  (sur, pasando el canal; escena)
 ```
 
-| Zona | Diorama (`04` F3) | Capítulo | Lugares interactivos | Banda |
+| Zone | Diorama (`04` F3) | Chapter | Interactive places | Band |
 |---|---|---|---|---|
-| **Los Campos** (*the Fields*) | id `muelle` (mismo presupuesto, D-180) | Prólogo + cap. 1 (escenas) + cap. 3 | Albergue de la cuadrilla, mesa de Inés, granero y casa de Harlan, canal, tanque, galpón de empaque, pista y hangar de Wes | A0, A1→A2 |
-| **El Cruce** (*the Crossing*) | id `plaza` (D-180) | Cap. 1 (+ todo el arco) | Árbol y tablero, lote (huerta), escuela, casa de Nell, taller de Bea, casa de Inés y Maya, buzones, borde con el campo de Caleb | A1 |
-| **Monte de Ruth y granja de June** | Escenas en la Región 1; diorama propio en el cap. 3 | Caps. 1 y 3 | Manzanos, trampas, colmenas, canteros, cabras | A1, A2 |
-| **Todo el valle** (camino a Larkford) | Cap. 4 | Cap. 4 | Escuela/concejo, anillo verde, pista | A2→B1 |
+| **Los Campos** (*the Fields*) | id `muelle` (same budget, D-180) | Prologue + ch. 1 (scenes) + ch. 3 | Crew lodge, Inés's table, Harlan's barn and house, canal, tank, packing shed, Wes's airstrip and hangar | A0, A1→A2 |
+| **El Cruce** (*the Crossing*) | id `plaza` (D-180) | Ch. 1 (+ the whole arc) | Tree and board, lot (garden), school, Nell's house, Bea's workshop, Inés and Maya's house, mailboxes, edge with Caleb's field | A1 |
+| **Ruth's orchard and June's farm** | Scenes in Region 1; own diorama in ch. 3 | Chs. 1 and 3 | Apple trees, traps, beehives, garden beds, goats | A1, A2 |
+| **The whole valley** (road to Larkford) | Ch. 4 | Ch. 4 | School/council, green ring, airstrip | A2→B1 |
 
-- **Escala:** cada zona se recorre a pie en 1-2 minutos; cada diorama se carga por separado (§5.4). No es mundo abierto [Referencias §4.4.1].
-- **Hora del día y clima:** ciclo simple de 4 momentos (mañana, tarde, atardecer, noche) por sesión o por avance. Viento y niebla como estados guionados (M2.1 niebla, M4.2 viento).
-- **El Cruce se funda:** lo que el jugador consigue hablando aparece construido en sitios fijos del mapa (`SITIO-*`: tablero, parada del correo, huerta, manga y bandera, cerco con flores, trampas, Mesa del Cruce, cartel; después radio, escuela, banco de semillas, salita, estación meteorológica, concejo y el anillo verde de la zona de resguardo). Estados visibles: idea → en marcha → fundado → crece. Además, cada vínculo de la red se ve al atardecer como un caminito de bichos de luz. Es el principal feedback de progreso visible.
-- **Carteles en inglés** en todo el valle (*Bunkhouse*, *Garage – Open*, *Mail stop*, *Sprayed field – Keep out until Thursday*); con `HAB-ENT-2` se vuelven interactivos.
+- **Scale:** each zone is walked in 1-2 minutes; each diorama loads separately (§5.4). It is not an open world [References §4.4.1].
+- **Time of day and weather:** simple cycle of 4 moments (morning, afternoon, dusk, night) per session or per progress. Wind and fog as scripted states (M2.1 fog, M4.2 wind).
+- **The Crossing gets founded:** what the player achieves by talking appears built at fixed sites on the map (`SITIO-*`: board, mail stop, garden, windsock and flag, flower fence, traps, Crossing Table, sign; later radio, school, seed bank, clinic, weather station, council and the green ring of the buffer zone). Visible states: idea → underway → founded → grows. In addition, each link of the network is seen at dusk as a little trail of fireflies. It is the main visible-progress feedback.
+- **Signs in English** throughout the valley (*Bunkhouse*, *Garage – Open*, *Mail stop*, *Sprayed field – Keep out until Thursday*); with `HAB-ENT-2` they become interactive.
 
-### 3.3 Personajes
+### 3.3 Characters
 
-#### 3.3.1 Jugador
+#### 3.3.1 Player
 
-- Trabajador/a rural argentino/a en la ficción (D-167); avatar personalizable (cuerpo, tono de piel, pelo, ropa), nombre de juego y pronombres opcionales (he/she/they). Sin género obligatorio.
-- **No tiene voz propia grabada** ni líneas impuestas: lo que dice es lo que el jugador dice.
-- Lleva una mochila, su **mate** (puente cultural de M1.1), una libreta y **el frasco de Lumi**, que es también el cuaderno del jugador (pociones, red, saberes, misterios).
-- Es experto en comunicar y en armar redes, no en agronomía ni en leyes: lo técnico se lo enseñan los vecinos.
+- Argentine farm worker in the fiction (D-167); customizable avatar (body, skin tone, hair, clothes), game name and optional pronouns (he/she/they). No mandatory gender.
+- **Has no recorded voice of their own** and no imposed lines: what they say is what the player says.
+- Carries a backpack, their **mate** (cultural bridge of M1.1), a notebook and **Lumi's jar**, which is also the player's notebook (potions, network, knowledge items, mysteries).
+- Is an expert in communicating and building networks, not in agronomy or law: the technical part is taught by the neighbors.
 
-#### 3.3.2 Lumi (compañero)
+#### 3.3.2 Lumi (companion)
 
-Ver §2.4 y `02` §2. Bicho de luz del pueblo del protagonista, que viajó en un frasco (D-165). Maya, la nena, lo ve; los adultos no. Arco propio: empieza tenue y con nostalgia de casa, se vuelve más brillante y bromista, y al cerrar la Región 1 ve **otras lucecitas** sobre el cerco nuevo y dice su primera frase entera en inglés: "*I see… other lights.*" (D-185). Cierre del arco: "No era el único. Donde la gente se habla, hay luz."
+See §2.4 and `02` §2. Firefly from the protagonist's village, who traveled in a jar (D-165). Maya, the girl, sees it; the adults do not. Own arc: starts dim and homesick, becomes brighter and jokier, and on closing Region 1 sees **other little lights** over the new fence and says its first whole sentence in English: "*I see… other lights.*" (D-185). Arc closing: "No era el único. Donde la gente se habla, hay luz."
 
-#### 3.3.3 Vecinos de la Región 1 (14 NPCs, D-166)
+#### 3.3.3 Neighbors of Region 1 (14 NPCs, D-166)
 
-| ID | Nombre | Rol / lugar | Edad | Postura / personalidad | Forma de hablar | Bandas | Lo que necesita (arco) |
+| ID | Name | Role / place | Age | Stance / personality | Way of speaking | Bands | What they need (arc) |
 |---|---|---|---|---|---|---|---|
-| `NPC-INES` | Inés Calder | Capataz de la cuadrilla, Los Campos | 50s | Calma, paciente, organizada | Muy clara, lenta, gestos; un "¡Hola!" en español una vez por capítulo (D-184) | A0-A2 | Que la cuadrilla trabaje segura y la nieta crezca en un pueblo |
-| `NPC-MAYA` | Maya | Nieta de Inés, El Cruce; dueña de la cabra Clover | 9 | Curiosa, impaciente, pregunta todo | Frases cortas, preguntas, entusiasmo; "Pinky promise!" | A0-A1 | Que Clover no se escape; flores amarillas; un pueblo con nombre |
-| `NPC-KOFI` | Kofi Mensah | Compañero de cuadrilla, Los Campos | 30s | Alegre, solidario; aprendió inglés de grande | Simple, alentador | A0-A2 | Que la cuadrilla tenga voz en el pueblo |
-| `NPC-NELL` | Nell Ashby | Maestra jubilada, El Cruce (usa silla de ruedas) | 70s | Cálida, organizadora; conoce a todos | Clara, pausada, de maestra | A1-B1 | Que el Cruce vuelva a hablarse y la escuela reabra |
-| `NPC-OLLIE` | Ollie Pratt | Cartero rural en camioneta, todo el valle | 20s | Despistado, optimista | Rápido cuando se entusiasma; pide perdón y repite | A1-A2 | Que alguien lo espere en su ruta |
-| `NPC-BEA` | Bea Lund | Mecánica, taller del Cruce | 40s | Práctica, bromista ("Old but gold!") | Directa, corta | A1-B1 | Que lo viejo vuelva a andar (la bomba, la radio) |
-| `NPC-JUNE` | June Takeda | Granja chica diversificada · **ya cambió** | 40s | Serena, generosa, no juzga ("Every farm is different") | Clara, con ejemplos que se ven | A1-B1 | Compartir semillas y saberes |
-| `NPC-WES` | Wes Carver | **Piloto** de la avioneta, pista | 40s | Ama volar; cuidadoso con el viento; teme quedarse sin trabajo | Amable, técnico simple | A1-B1 | Hacer bien su trabajo sin dañar a nadie |
-| `NPC-CALEB` | Caleb Hart | Dueño joven del campo pegado al Cruce · **cambia rápido** | 20s | Entusiasta de lo nuevo; no veía las casas desde el tractor | Rápido, "Let's try it!" | A1-B1 | Hacer las cosas bien con tecnología nueva |
-| `NPC-RUTH` | Ruth Brandt | Dueña del monte de manzanos · **cambia con datos y relación** | 50s | Cuidadosa, científica; ex alumna de Nell | Precisa, "Data first." | A1-B1 | No perder la cosecha; decidir con evidencia |
-| `NPC-HARLAN` | Harlan Moss | Dueño del campo de maíz más grande · **quizás nunca cambia** (D-177) | 70s | Parco, tradicional, generoso; tímido (`HAB-VINC-2`) | Frases muy cortas ("Morning.") | A1-A2 | Que se respete lo que hizo su familia |
-| `NPC-NOOR` | Noor Haddad | Adolescente que dibuja, El Cruce | 16 | Tímida, creativa | Pocas palabras; se suelta hablando de dibujo | A1-B1 | Que alguien mire lo que dibuja |
-| `NPC-GRACE` | Grace Adeyemi | Enfermera rural (única voz de salud, D-176) | 40s | Precisa, amable, siempre ocupada (`HAB-VINC-2`) | Una pregunta a la vez; prevención factual | A1-B1 | Que la gente se cuide antes de preocuparse |
-| `NPC-VANCE` | Theo Vance | Enlace del condado (cameo en la Región 1) | 60s | Prudente, formal, justo | Formal, condiciones ("If…, then…") | A2-B1 | Que todo se haga bien y nadie salga perjudicado |
+| `NPC-INES` | Inés Calder | Crew foreman, Los Campos | 50s | Calm, patient, organized | Very clear, slow, gestures; one "¡Hola!" in Spanish once per chapter (D-184) | A0-A2 | That the crew work safely and her granddaughter grow up in a village |
+| `NPC-MAYA` | Maya | Inés's granddaughter, El Cruce; owner of the goat Clover | 9 | Curious, impatient, asks everything | Short phrases, questions, enthusiasm; "Pinky promise!" | A0-A1 | That Clover not run away; yellow flowers; a village with a name |
+| `NPC-KOFI` | Kofi Mensah | Crew companion, Los Campos | 30s | Cheerful, supportive; learned English as an adult | Simple, encouraging | A0-A2 | That the crew have a voice in the village |
+| `NPC-NELL` | Nell Ashby | Retired teacher, El Cruce (uses a wheelchair) | 70s | Warm, organizer; knows everyone | Clear, unhurried, like a teacher | A1-B1 | That the Crossing talk to each other again and the school reopen |
+| `NPC-OLLIE` | Ollie Pratt | Rural mail carrier in a van, whole valley | 20s | Absent-minded, optimistic | Fast when excited; apologizes and repeats | A1-A2 | That someone wait for him on his route |
+| `NPC-BEA` | Bea Lund | Mechanic, Crossing workshop | 40s | Practical, joker ("Old but gold!") | Direct, short | A1-B1 | That the old things work again (the pump, the radio) |
+| `NPC-JUNE` | June Takeda | Small diversified farm · **has already changed** | 40s | Serene, generous, non-judgmental ("Every farm is different") | Clear, with examples you can see | A1-B1 | Sharing seeds and knowledge |
+| `NPC-WES` | Wes Carver | **Pilot** of the plane, airstrip | 40s | Loves flying; careful with the wind; fears losing his job | Friendly, simple technical | A1-B1 | Doing his job well without harming anyone |
+| `NPC-CALEB` | Caleb Hart | Young owner of the field next to the Crossing · **changes fast** | 20s | Enthusiast of the new; did not see the houses from the tractor | Fast, "Let's try it!" | A1-B1 | Doing things right with new technology |
+| `NPC-RUTH` | Ruth Brandt | Owner of the apple orchard · **changes with data and relationship** | 50s | Careful, scientific; Nell's former student | Precise, "Data first." | A1-B1 | Not losing the harvest; deciding with evidence |
+| `NPC-HARLAN` | Harlan Moss | Owner of the biggest cornfield · **may never change** (D-177) | 70s | Terse, traditional, generous; shy (`HAB-VINC-2`) | Very short phrases ("Morning.") | A1-A2 | That what his family did be respected |
+| `NPC-NOOR` | Noor Haddad | Teenager who draws, El Cruce | 16 | Shy, creative | Few words; loosens up talking about drawing | A1-B1 | That someone look at what she draws |
+| `NPC-GRACE` | Grace Adeyemi | Rural nurse (only health voice, D-176) | 40s | Precise, kind, always busy (`HAB-VINC-2`) | One question at a time; factual prevention | A1-B1 | That people take care of themselves before worrying |
+| `NPC-VANCE` | Theo Vance | County liaison (cameo in Region 1) | 60s | Prudent, formal, fair | Formal, conditions ("If…, then…") | A2-B1 | That everything be done right and nobody be harmed |
 
-**Animal:** Clover (cabra chiquita blanca con campanita roja, se escapa siempre: gag moderado y vehículo de repaso, D-174).
+**Animal:** Clover (small white goat with a red bell, always escapes: moderate gag and review vehicle, D-174).
 
-**La red:** algunos vecinos solo inician misión si otro te presenta ("Tell him Ollie sent you"); su primera línea reconoce al presentador. Los NPCs clave tienen dos caminos de presentación para no bloquear (D-168).
+**The network:** some neighbors only start a mission if another introduces you ("Tell him Ollie sent you"); their first line acknowledges the introducer. Key NPCs have two introduction paths so as not to block (D-168).
 
-**Reglas de representación:** diversidad de edades, orígenes y cuerpos sin estereotipos; ningún acento ni rasgo cultural se usa como chiste; la silla de Nell nunca es tema de escena; Maya y Noor (menores) solo aparecen en situaciones cotidianas y lugares públicos; ningún dueño, el piloto ni el funcionario se presenta como malo.
+**Representation rules:** diversity of ages, origins and bodies without stereotypes; no accent or cultural trait is used as a joke; Nell's chair is never a scene topic; Maya and Noor (minors) appear only in everyday situations and public places; no owner, the pilot or the official is presented as bad.
 
-### 3.4 Arco y estructura de capítulos
+### 3.4 Arc and chapter structure
 
-| Capítulo | Título | Zona | Banda | Pregunta dramática | Se funda | Cierre |
+| Chapter | Title | Zone | Band | Dramatic question | Founded | Close |
 |---|---|---|---|---|---|---|
-| Prólogo | Llegada al valle | Los Campos → El Cruce | A0 | ¿Me animo a decir algo? | (camino de luz al Cruce) | Primer bicho de luz en el Cruce |
-| 1 | El Cruce | El Cruce (+ Los Campos) | A1 | ¿Me dejan entrar a su vida? ¿Se anima el Cruce a ser algo? | Tablero, parada del correo, huerta, manga y bandera, cerco con flores, trampas, Mesa, cartel | El Cruce elige su nombre (D-173); Vance trae la lista del condado `[FICCIÓN]` |
-| 2 | La red | El Cruce + caminos | A1→A2 | ¿Puedo orientarme y conectar a la gente entre sí? | Radio del Cruce, escuela abierta, banco de semillas, aviso de aplicaciones | Primera emisión de la radio; firmas reunidas |
-| 3 | Datos y vuelos | Monte de Ruth, granja de June, pista | A2 | ¿Puedo contar lo que pasó y comparar opciones con datos? | Salita de Grace, estación meteorológica, prueba del dron | El condado reconoce el pueblo; se elige el concejo |
-| 4 | La ordenanza | Todo el valle | A2→B1 | ¿Puedo convencer y unir a los que no piensan igual? | Concejo en la escuela, zona de resguardo (anillo verde, sin metros, D-186) | Audiencia pública; ordenanza aprobada; Día del Pueblo |
-| Epílogo | El pueblo sigue | Todo | Todas | — | — | Pedidos diarios del pueblo (fuera de la v1) |
+| Prologue | Arrival in the valley | Los Campos → El Cruce | A0 | Do I dare say something? | (light trail to the Crossing) | First firefly at the Crossing |
+| 1 | The Crossing | El Cruce (+ Los Campos) | A1 | Will they let me into their lives? Does the Crossing dare to be something? | Board, mail stop, garden, windsock and flag, flower fence, traps, Table, sign | The Crossing picks its name (D-173); Vance brings the county's list `[FICCIÓN]` |
+| 2 | The network | El Cruce + roads | A1→A2 | Can I find my way around and connect people to each other? | Crossing Radio, open school, seed bank, spraying notice | First radio broadcast; signatures gathered |
+| 3 | Data and flights | Ruth's orchard, June's farm, airstrip | A2 | Can I tell what happened and compare options with data? | Grace's clinic, weather station, drone test | The county recognizes the village; the council is chosen |
+| 4 | The ordinance | The whole valley | A2→B1 | Can I persuade and unite those who don't think alike? | Council at the school, buffer zone (green ring, no meters, D-186) | Public hearing; ordinance approved; Village Day |
+| Epilogue | The village goes on | Everything | All | — | — | Daily village requests (outside v1) |
 
-Cada capítulo: 8 misiones principales + 4-8 pedidos del tablero (§3.7). Las misiones principales se desbloquean en grupos para que el jugador **elija** el orden dentro del capítulo (autonomía [Probable, E18]); solo la última misión de cada capítulo exige haber hecho al menos 6 de las 7 anteriores. **Cada misión cruza cuatro hilos:** consigue algo hablando, suma o usa la red, funda o avanza algo visible y enseña un saber real (`02` §1.5, §6.3).
+Each chapter: 8 main missions + 4-8 board requests (§3.7). The main missions unlock in groups so that the player **chooses** the order within the chapter (autonomy [Probable, E18]); only the last mission of each chapter requires having done at least 6 of the previous 7. **Each mission crosses four threads:** gets something by talking, adds or uses the network, founds or advances something visible and teaches a real knowledge item (`02` §1.5, §6.3).
 
-### 3.5 Catálogo de misiones
+### 3.5 Mission catalog
 
-Columnas: ID · título · NPC(s) · can-do · resultado en el mundo (lo que se consigue / funda) · lenguaje objetivo · rama de poción principal · reapariciones (repaso). Los saberes y hechos verificables de cada misión del prólogo y la Región 1 están en `02` §4.4 y §8; los de los capítulos 2-4 se escriben con la plantilla `SAB-*` de `02` §6.2.7.
+Columns: ID · title · NPC(s) · can-do · outcome in the world (what is obtained / founded) · target language · main potion branch · reappearances (review). The knowledge items and verifiable facts of each mission of the prologue and Region 1 are in `02` §4.4 and §8; those of chapters 2-4 are written with the `SAB-*` template of `02` §6.2.7.
 
-#### Prólogo: Llegada al valle (A0)
+#### Prologue: Arrival in the valley (A0)
 
-| ID | Título | NPC | Can-do | Resultado | Lenguaje objetivo | Rama | Reaparece en |
+| ID | Title | NPC | Can-do | Outcome | Target language | Branch | Reappears in |
 |---|---|---|---|---|---|---|---|
-| M0.1 | Hola, Inés | Inés | Puedo saludar y decir mi nombre | Inés te da la llave de la cucheta y el mapa; saber: la avioneta | Hello / Hi, I'm..., Nice to meet you, Thank you | Ámbar | M1.1, M2.3 |
-| M0.2 | ¿Cómo se dice? | Lumi (+ Kofi) | Puedo preguntar y repetir nombres de cosas | Se activa `HAB-BASE-NOMBRAR`; Kofi se suma a la red | plane, corn, firefly, "What's this?" | Celeste | Repaso de bolsillo |
-| M0.3 | Clover | Maya | Puedo responder sí/no y decir dónde está algo | Clover vuelve con Maya; Maya te presenta a Nell; primer bicho de luz en el Cruce | Yes/No, the canal, the field, here/there | Azul | M1.2, M2.6 |
+| M0.1 | Hola, Inés | Inés | I can greet and say my name | Inés gives you the bunk key and the map; knowledge item: the plane | Hello / Hi, I'm..., Nice to meet you, Thank you | Amber | M1.1, M2.3 |
+| M0.2 | ¿Cómo se dice? | Lumi (+ Kofi) | I can ask for and repeat names of things | `HAB-BASE-NOMBRAR` is activated; Kofi joins the network | plane, corn, firefly, "What's this?" | Light blue | Pocket review |
+| M0.3 | Clover | Maya | I can answer yes/no and say where something is | Clover returns to Maya; Maya introduces you to Nell; first firefly at the Crossing | Yes/No, the canal, the field, here/there | Blue | M1.2, M2.6 |
 
-#### Capítulo 1: El Cruce (A1)
+#### Chapter 1: The Crossing (A1)
 
-| ID | Título | NPC | Can-do | Resultado | Lenguaje objetivo | Rama | Reaparece en |
+| ID | Title | NPC | Can-do | Outcome | Target language | Branch | Reappears in |
 |---|---|---|---|---|---|---|---|
-| M1.1 | Buenos días, Nell | Nell | Puedo presentarme y decir de dónde vengo | Llave del tablero → **Tablero del Cruce** fundado; Nell te presenta a Ollie | Good morning, I'm from..., How are you? / I'm fine, and you? | Ámbar | Todas (saludos) |
-| M1.2 | La cabra de Maya | Maya, Ollie | Puedo describir un animal con color, tamaño y un detalle | Ollie encuentra a Clover por tu descripción; **parada del correo** fundada; mapa de buzones | She's small/white, red bell, Is this your goat?, has got | Azul | M1.6, M2.6 |
-| M1.3 | La lista de Nell | Nell | Puedo entender una lista simple y preguntar dónde está algo | Lista de la huerta; **huerta en marcha**; Nell te presenta a June, Bea y Ruth | Where is...?, It's next to / opposite / behind..., There is/are | Celeste | M1.7, M2.1 |
-| M1.4 | Semillas y una manguera | June, Bea, Maya | Puedo pedir cosas con cantidades | Semillas, manguera y bomba arreglada (sin dinero); **huerta fundada**; Bea te presenta a Wes | Can I have...?, two/three..., some, please, How many? | Verde | M1.5, M2.3 |
-| M1.5 | La bandera de Wes | Wes | Puedo preguntar horarios y días, y pedir un favor con cortesía | Acuerdo de bandera amarilla el día antes; **manga de viento** fundada | What time...?, at six, on Mondays, Can you..., please?, Thank you very much | Verde / Celeste | M2.5, M2.1 |
-| M1.6 | Flores para el borde | Caleb, Maya | Puedo decir qué le gusta a alguien y elegir colores | Caleb planta **cerco con flores** entre su campo y las casas | She likes..., Does she like...?, colors, favorite | Ámbar / Azul | M3.6 |
-| M1.7 | Las trampas de Ruth | Ruth | Puedo preguntar por lugares y seguir indicaciones simples | Tres **trampas** puestas; Ruth acepta contar antes de fumigar | Where's the...?, Go straight, turn left/right, first/second/third, next to | Celeste / Azul | M2.1 |
-| M1.8 | El cartel del Cruce | Noor; Maya, Nell, Kofi; Vance (cameo) | Puedo hablar de gustos y preguntar por los del otro | Noor pinta el **cartel**; el Cruce vota su nombre; **Mesa del Cruce**; Vance trae la lista del condado | I like / I don't like, What do you like to draw?, me too / me neither, Can you paint...? | Ámbar | M3.6, M4.5 |
+| M1.1 | Buenos días, Nell | Nell | I can introduce myself and say where I'm from | Key to the board → **Crossing Board** founded; Nell introduces you to Ollie | Good morning, I'm from..., How are you? / I'm fine, and you? | Amber | All (greetings) |
+| M1.2 | La cabra de Maya | Maya, Ollie | I can describe an animal with color, size and a detail | Ollie finds Clover from your description; **mail stop** founded; map of mailboxes | She's small/white, red bell, Is this your goat?, has got | Blue | M1.6, M2.6 |
+| M1.3 | La lista de Nell | Nell | I can understand a simple list and ask where something is | Garden list; **garden underway**; Nell introduces you to June, Bea and Ruth | Where is...?, It's next to / opposite / behind..., There is/are | Light blue | M1.7, M2.1 |
+| M1.4 | Semillas y una manguera | June, Bea, Maya | I can ask for things with quantities | Seeds, hose and repaired pump (no money); **garden founded**; Bea introduces you to Wes | Can I have...?, two/three..., some, please, How many? | Green | M1.5, M2.3 |
+| M1.5 | La bandera de Wes | Wes | I can ask about times and days, and ask a favor politely | Agreement on a yellow flag the day before; **windsock** founded | What time...?, at six, on Mondays, Can you..., please?, Thank you very much | Green / Light blue | M2.5, M2.1 |
+| M1.6 | Flores para el borde | Caleb, Maya | I can say what someone likes and choose colors | Caleb plants a **flower fence** between his field and the houses | She likes..., Does she like...?, colors, favorite | Amber / Blue | M3.6 |
+| M1.7 | Las trampas de Ruth | Ruth | I can ask about places and follow simple directions | Three **traps** set; Ruth agrees to count before spraying | Where's the...?, Go straight, turn left/right, first/second/third, next to | Light blue / Blue | M2.1 |
+| M1.8 | El cartel del Cruce | Noor; Maya, Nell, Kofi; Vance (cameo) | I can talk about likes and ask about the other's | Noor paints the **sign**; the Crossing votes its name; **Crossing Table**; Vance brings the county's list | I like / I don't like, What do you like to draw?, me too / me neither, Can you paint...? | Amber | M3.6, M4.5 |
 
-> **Cambio de objetivo respecto de la v0.1:** M1.5 ya no es "atender un mostrador" (*What would you like? / Here you are / numbers*): el valle no tiene tienda y fundar no usa dinero. Adelanta *What time…? / on Mondays* (que M2.5 profundiza) y mantiene la rama Verde por el pedido de favor. *Here you are* sigue en M1.4. Si `04`/`06-grafo.yaml` dependen del objetivo viejo de M1.5, la corrida lo reporta.
+> **Change of objective with respect to v0.1:** M1.5 is no longer "tending a counter" (*What would you like? / Here you are / numbers*): the valley has no shop and founding uses no money. It brings forward *What time…? / on Mondays* (which M2.5 deepens) and keeps the Green branch for the favor request. *Here you are* stays in M1.4. If `04`/`06-grafo.yaml` depend on M1.5's old objective, the run reports it.
 
-#### Capítulo 2: La red (A1→A2)
+#### Chapter 2: The network (A1→A2)
 
-| ID | Título | NPC | Can-do | Resultado | Lenguaje objetivo | Rama | Reaparece en |
+| ID | Title | NPC | Can-do | Outcome | Target language | Branch | Reappears in |
 |---|---|---|---|---|---|---|---|
-| M2.1 | Niebla en los caminos | Ollie | Puedo dar direcciones | Ollie llega al Cruce en la niebla con el equipo de la radio; desbloquea `HAB-DESC-2` | prepositions, imperatives, landmarks, past the..., until you see... | Azul | M2.6, M4.6 |
-| M2.2 | La radio de Bea | Bea, Nell (por radio) | Puedo hablar por radio y contar qué estoy haciendo | **Radio del Cruce** fundada; primera prueba; desbloquea `HAB-VINC-3` | Hello, it's..., I'm (doing)..., Can you hear me?, presente continuo | Ámbar / Celeste | M3.4, M4.5 |
-| M2.3 | El banco de semillas | June | Puedo preguntar por cantidades y disponibilidad | **Banco de semillas** fundado (se presta y se devuelve) | Is there any...?, How much/many?, some/any, a lot of | Verde | M4.6 |
-| M2.4 | ¿Quién es quién? | Ollie, vecinos de la feria del sábado | Puedo describir personas y lo que están haciendo | Encontrás a los tres vecinos de otros campos que faltaban para las firmas | She's wearing..., He has got..., the man who is..., presente continuo | Azul | M4.4 |
-| M2.5 | Un día de Wes | Wes | Puedo hablar de rutinas y horarios | **Aviso de aplicaciones** en la radio, acordado con Wes | What time...?, usually, every day, at/on/in, presente simple | Celeste / Verde | M4.2 |
-| M2.6 | Clover en el granero | Maya, Harlan | Puedo dar instrucciones precisas | Clover sale del granero de Harlan sin romper nada; Harlan se ríe por primera vez | Stop!, Come here, under/behind/between, Don't... | Azul | — |
-| M2.7 | Firmas para el condado | Ollie, Nell | Puedo escribir una nota corta y leer direcciones (mezcla de modalidades) | Notas en cada buzón y firmas juntadas `[FICCIÓN]` | *Dear [nombre],* **solo como encabezado de carta escrita** (excepción explícita del lint de apelativos, F1.2; nunca dicho por un NPC), See you at..., direcciones escritas | Verde / Ámbar | M4.5 |
-| M2.8 | La primera emisión | Nell, Bea, Kofi, Maya, Noor | Puedo sostener charla breve con varias personas | **Escuela abierta** (sala de lectura) y primera emisión de la radio desde el aula; firmas reunidas | small talk: weather, plans, How was your day?, That's great! | Ámbar | Todas |
+| M2.1 | Niebla en los caminos | Ollie | I can give directions | Ollie reaches the Crossing in the fog with the radio equipment; unlocks `HAB-DESC-2` | prepositions, imperatives, landmarks, past the..., until you see... | Blue | M2.6, M4.6 |
+| M2.2 | La radio de Bea | Bea, Nell (by radio) | I can speak on the radio and tell what I'm doing | **Crossing Radio** founded; first test; unlocks `HAB-VINC-3` | Hello, it's..., I'm (doing)..., Can you hear me?, present continuous | Amber / Light blue | M3.4, M4.5 |
+| M2.3 | El banco de semillas | June | I can ask about quantities and availability | **Seed bank** founded (lent and returned) | Is there any...?, How much/many?, some/any, a lot of | Green | M4.6 |
+| M2.4 | ¿Quién es quién? | Ollie, neighbors at the Saturday fair | I can describe people and what they are doing | You find the three neighbors from other fields who were missing for the signatures | She's wearing..., He has got..., the man who is..., present continuous | Blue | M4.4 |
+| M2.5 | Un día de Wes | Wes | I can talk about routines and schedules | **Spraying notice** on the radio, agreed with Wes | What time...?, usually, every day, at/on/in, simple present | Light blue / Green | M4.2 |
+| M2.6 | Clover en el granero | Maya, Harlan | I can give precise instructions | Clover comes out of Harlan's barn without breaking anything; Harlan laughs for the first time | Stop!, Come here, under/behind/between, Don't... | Blue | — |
+| M2.7 | Firmas para el condado | Ollie, Nell | I can write a short note and read addresses (modality mixing) | Notes in every mailbox and signatures collected `[FICCIÓN]` | *Dear [nombre],* **only as a written-letter header** (explicit exception to the forms-of-address lint, F1.2; never spoken by an NPC), See you at..., written addresses | Green / Amber | M4.5 |
+| M2.8 | La primera emisión | Nell, Bea, Kofi, Maya, Noor | I can hold a short chat with several people | **Open school** (reading room) and first radio broadcast from the classroom; signatures gathered | small talk: weather, plans, How was your day?, That's great! | Amber | All |
 
-#### Capítulo 3: Datos y vuelos (A2)
+#### Chapter 3: Data and flights (A2)
 
-| ID | Título | NPC | Can-do | Resultado | Lenguaje objetivo | Rama | Reaparece en |
+| ID | Title | NPC | Can-do | Outcome | Target language | Branch | Reappears in |
 |---|---|---|---|---|---|---|---|
-| M3.1 | El año de la plaga | Harlan, Noor | Puedo entender un relato en pasado y volver a contarlo | Noor dibuja la historia de Harlan para la radio (capa C del misterio) | past simple (regular + was/were, went, saw, lost), first/then/after that | Violeta | M3.2, M4.4 |
-| M3.2 | El cuaderno de Ruth | Ruth, Nell | Puedo hacer preguntas en pasado para encontrar algo | Aparecen los conteos viejos del monte: datos para comparar | When did you...?, Where did you put...?, Did you...? | Violeta / Azul | M3.4 |
-| M3.3 | Clover no come | Maya, June | Puedo explicar un problema de salud simple (de un animal) | June ayuda a Clover; Maya tranquila | She doesn't eat, since yesterday, She looks tired, What should I do?, should | Azul / Coral | M4.7 |
-| M3.4 | Planes para la salita | Grace, Bea, Nell (por radio) | Puedo hablar de planes | **Salita** de Grace en marcha; **estación meteorológica** planeada en el techo de la escuela | going to, will (decisión en el momento), first we'll... | Violeta | M4.6 |
-| M3.5 | ¿Avioneta o dron? | Caleb, Wes | Puedo comparar opciones y dar mi preferencia | Caleb y Wes eligen probar un dron en el lote lejos de las casas; desbloquea `HAB-OPIN-1` | bigger/quieter/more precise (comparativos sin ningún término monetario), better than, the best, I prefer... because... | Coral | M4.1 |
-| M3.6 | La canción del Cruce | Kofi, Noor | Puedo contar una historia breve para que otro la use | Kofi y Noor hacen la canción del Cruce para la radio (puente con modo 4) | past simple, adjetivos, feelings, It was... | Violeta / Ámbar | M4.8 |
-| M3.7 | Noor tiene miedo | Noor | Puedo dar consejos y animar | Noor acepta mostrar su mural en el Día del Pueblo | You should..., Why don't you...?, Don't worry, You can do it | Coral / Ámbar | M4.8 |
-| M3.8 | La prueba del dron | Caleb, Wes, Ruth, Lumi | Puedo contar lo que hicimos en el capítulo | Prueba del dron; **salita y estación fundadas**; el condado reconoce el pueblo y se elige el concejo `[FICCIÓN]` | recap en pasado, We fixed..., It worked! | Violeta | — |
+| M3.1 | El año de la plaga | Harlan, Noor | I can understand a story in the past and retell it | Noor draws Harlan's story for the radio (layer C of the mystery) | past simple (regular + was/were, went, saw, lost), first/then/after that | Violet | M3.2, M4.4 |
+| M3.2 | El cuaderno de Ruth | Ruth, Nell | I can ask questions in the past to find something | The orchard's old counts appear: data to compare | When did you...?, Where did you put...?, Did you...? | Violet / Blue | M3.4 |
+| M3.3 | Clover no come | Maya, June | I can explain a simple health problem (of an animal) | June helps Clover; Maya is calm | She doesn't eat, since yesterday, She looks tired, What should I do?, should | Blue / Coral | M4.7 |
+| M3.4 | Planes para la salita | Grace, Bea, Nell (by radio) | I can talk about plans | Grace's **clinic** underway; **weather station** planned on the school roof | going to, will (on-the-spot decision), first we'll... | Violet | M4.6 |
+| M3.5 | ¿Avioneta o dron? | Caleb, Wes | I can compare options and give my preference | Caleb and Wes choose to test a drone on the lot far from the houses; unlocks `HAB-OPIN-1` | bigger/quieter/more precise (comparatives without any monetary term), better than, the best, I prefer... because... | Coral | M4.1 |
+| M3.6 | La canción del Cruce | Kofi, Noor | I can tell a brief story for someone else to use | Kofi and Noor make the Crossing's song for the radio (bridge to mode 4) | past simple, adjectives, feelings, It was... | Violet / Amber | M4.8 |
+| M3.7 | Noor tiene miedo | Noor | I can give advice and encourage | Noor agrees to show her mural on Village Day | You should..., Why don't you...?, Don't worry, You can do it | Coral / Amber | M4.8 |
+| M3.8 | La prueba del dron | Caleb, Wes, Ruth, Lumi | I can tell what we did in the chapter | Drone test; **clinic and station founded**; the county recognizes the village and the council is chosen `[FICCIÓN]` | recap in the past, We fixed..., It worked! | Violet | — |
 
-#### Capítulo 4: La ordenanza (A2→B1)
+#### Chapter 4: The ordinance (A2→B1)
 
-| ID | Título | NPC | Can-do | Resultado | Lenguaje objetivo | Rama | Reaparece en |
+| ID | Title | NPC | Can-do | Outcome | Target language | Branch | Reappears in |
 |---|---|---|---|---|---|---|---|
-| M4.1 | ¿Dónde va el anillo? | June, Ruth | Puedo dar mi opinión con razones | Propuesta de zona de resguardo (casas, escuela, huerta) | I think... because..., In my opinion, I agree/disagree | Coral | M4.3 |
-| M4.2 | Si sopla el viento... | Wes, Ruth | Puedo hacer planes con condiciones | Plan de aviso y viento para la ordenanza; desbloquea `HAB-OPIN-2` | If the wind blows to the houses, we'll..., What if...?, unless (opcional) | Coral / Violeta | M4.4 |
-| M4.3 | El alambrado de Ruth y Harlan | Ruth, Harlan | Puedo mediar entre dos personas | Ruth y Harlan acuerdan un cerco compartido; desbloquea `HAB-OPIN-3` | So you mean..., What about...?, Both of you..., Could we...? | Coral / Ámbar | M4.6 |
-| M4.4 | La audiencia pública | Vance, concejo, vecinos, dueños | Puedo presentar un argumento y responder objeciones | El concejo aprueba la ordenanza (con condiciones); Harlan acepta cumplirla | If..., then..., we have already..., safety, Could we agree...? | Coral | — |
-| M4.5 | Invitaciones | Ollie, Noor, Inés, Harlan (por radio) | Puedo invitar y confirmar detalles | Todo el valle invitado al Día del Pueblo | Would you like to...?, It starts at..., Can you bring...? | Ámbar / Verde | — |
-| M4.6 | Manos a la obra | Varios | Puedo coordinar tareas entre personas | **Anillo verde** plantado y señalizado (`SITIO-RESGUARDO`) | Can you..., while I..., Who is going to...? | Celeste / Verde | — |
-| M4.7 | La manga rota | Bea, Wes, Grace | Puedo explicar un problema imprevisto y proponer una solución | Un ventarrón rompe la manga y la antena; se arreglan a tiempo | The problem is..., We could..., Let's... | Coral / Azul | — |
-| M4.8 | El Día del Pueblo | Todos | Puedo hablar unos segundos frente a otros y charlar en una fiesta | Fiesta del pueblo; revelación de los sobres; bichos de luz por toda la red | Discurso breve preparado (3-5 oraciones, puede leerse), small talk | Todas | Epílogo |
+| M4.1 | ¿Dónde va el anillo? | June, Ruth | I can give my opinion with reasons | Buffer zone proposal (houses, school, garden) | I think... because..., In my opinion, I agree/disagree | Coral | M4.3 |
+| M4.2 | Si sopla el viento... | Wes, Ruth | I can make plans with conditions | Notice and wind plan for the ordinance; unlocks `HAB-OPIN-2` | If the wind blows to the houses, we'll..., What if...?, unless (optional) | Coral / Violet | M4.4 |
+| M4.3 | El alambrado de Ruth y Harlan | Ruth, Harlan | I can mediate between two people | Ruth and Harlan agree on a shared fence; unlocks `HAB-OPIN-3` | So you mean..., What about...?, Both of you..., Could we...? | Coral / Amber | M4.6 |
+| M4.4 | La audiencia pública | Vance, council, neighbors, owners | I can present an argument and answer objections | The council approves the ordinance (with conditions); Harlan agrees to comply | If..., then..., we have already..., safety, Could we agree...? | Coral | — |
+| M4.5 | Invitaciones | Ollie, Noor, Inés, Harlan (by radio) | I can invite and confirm details | The whole valley invited to Village Day | Would you like to...?, It starts at..., Can you bring...? | Amber / Green | — |
+| M4.6 | Manos a la obra | Several | I can coordinate tasks among people | **Green ring** planted and marked (`SITIO-RESGUARDO`) | Can you..., while I..., Who is going to...? | Light blue / Green | — |
+| M4.7 | La manga rota | Bea, Wes, Grace | I can explain an unexpected problem and propose a solution | A gale breaks the windsock and the antenna; they are fixed in time | The problem is..., We could..., Let's... | Coral / Blue | — |
+| M4.8 | El Día del Pueblo | Everyone | I can speak for a few seconds in front of others and chat at a party | Village party; reveal of the envelopes; fireflies across the whole network | Brief prepared speech (3-5 sentences, may be read), small talk | All | Epilogue |
 
-### 3.6 Escenas escritas (guion detallado)
+### 3.6 Written scenes (detailed script)
 
-> Formato: **[Apertura guionada]** se graba/cachea. **[Cuerpo IA]** describe objetivo y comportamiento; las líneas son **ejemplos** del estilo y nivel, no un guion fijo. **[Cierre guionado]** se graba/cachea. Lumi habla en L1 (rioplatense) salvo cuando modela una frase. Versión completa de las escenas del prólogo y del capítulo 1 (beat sheet, esqueleto de diálogo, criterios, salida si no converge, pociones, repaso, pronunciación, hechos verificables): `02` §4.4.
+> Format: **[Scripted opening]** is recorded/cached. **[AI body]** describes goal and behavior; the lines are **examples** of the style and level, not a fixed script. **[Scripted closing]** is recorded/cached. Lumi speaks in L1 (Rioplatense) except when it models a phrase. Full version of the prologue and chapter 1 scenes (beat sheet, dialogue skeleton, criteria, exit if it does not converge, potions, review, pronunciation, verifiable facts): `02` §4.4.
 
 #### M0.1 · Hola, Inés (A0)
 
-- **Lugar:** Los Campos, junto al colectivo de la cosecha, frente al albergue. Mañana. Viento en el maíz.
-- **Necesidad del NPC:** Inés quiere saber quién sos para anotarte en la lista de la cuadrilla.
-- **Criterios de éxito:** (1) el jugador saluda; (2) dice su nombre de juego con o sin "I'm". Opcional: "Nice to meet you" / "Thank you".
-- **[Apertura guionada]**
-  - INÉS: "Hello! Welcome to Kestrel Valley." *(saluda con la mano)* "I'm Inés." *(se señala)* "And you?" *(te señala)*
-- **[Cuerpo IA]** — Banda A0, andamiaje 1. Inés usa máximo 5 palabras por frase y gestos. Si el jugador no responde o pasa el turno: "I'm Inés." *(se señala)* "You are...?" Si dice solo el nombre: "Nice to meet you, [nombre]!" Si dice algo en español: "¡Hola!" *(su única palabra en español del capítulo)* "In English: Hello!" y espera. Si pregunta por la avioneta que pasa lejos: "A plane. It sprays the fields." (saber `SAB-AVIONETA`).
-- **[Cierre guionado]**
+- **Place:** Los Campos, next to the harvest bus, in front of the lodge. Morning. Wind in the corn.
+- **NPC need:** Inés wants to know who you are to put you on the crew list.
+- **Success criteria:** (1) the player greets; (2) says their game name with or without "I'm". Optional: "Nice to meet you" / "Thank you".
+- **[Scripted opening]**
+  - INÉS: "Hello! Welcome to Kestrel Valley." *(waves)* "I'm Inés." *(points to herself)* "And you?" *(points to you)*
+- **[AI body]** — Band A0, scaffolding 1. Inés uses at most 5 words per phrase and gestures. If the player does not respond or passes the turn: "I'm Inés." *(points to herself)* "You are...?" If they say only the name: "Nice to meet you, [nombre]!" If they say something in Spanish: "¡Hola!" *(her only word in Spanish of the chapter)* "In English: Hello!" and waits. If they ask about the plane passing far away: "A plane. It sprays the fields." (knowledge item `SAB-AVIONETA`).
+- **[Scripted closing]**
   - INÉS: "Nice to meet you, [nombre]! Here's your key. And a map. Maya lives at the Crossing. Bye!"
   - LUMI: "¡Primer día y ya te presentaste! Le dijiste *I'm [nombre]*. Eso va al frasco ámbar: presentarse."
-- **Evento:** `map_received`, `key_received`, `ines_trust+1`. **Repaso marcado:** "Nice to meet you" si no apareció.
+- **Event:** `map_received`, `key_received`, `ines_trust+1`. **Review marked:** "Nice to meet you" if it did not appear.
 
 #### M0.2 · ¿Cómo se dice? (A0)
 
-- **Lugar:** camino del albergue al galpón de la cuadrilla.
-- **Mecánica:** el jugador apunta a un objeto resaltado y pide a Lumi el nombre (tecla `Q` o botón "¿Cómo se dice?"). Tres objetos guiados: *plane* (la avioneta lejana), *corn*, *firefly* (Lumi, en broma). Lumi dice la palabra en L2 (audio cacheado), luego en L1, y la muestra escrita. Kofi pasa y se suma a la red.
-- **Producción opcional:** "¿Lo decís vos?" — es el primer **momento de pronunciación guionado** (§2.4.7, *repetir después de mí*): si el jugador lo dice, se evalúa contra la palabra y Lumi da feedback amable solo sobre tipos de error habilitados por F0.1 (D-151); si ningún tipo está habilitado, solo verifica que haya intentado la palabra y ofrece "así lo dijiste vos / así suena". 1/3 de poción celeste por intento. (El momento se arma como dato sobre la línea existente de `02` §4.4 M0.2; la lectura de D-019 como "guion vigente" está en D-182.)
-- **Línea de Lumi al terminar:** "Podés preguntarme cómo se dice cualquier cosa que brille así. Y si querés que me acuerde de una palabra, tocá *Marcar*."
+- **Place:** path from the lodge to the crew's shed.
+- **Mechanic:** the player points at a highlighted object and asks Lumi for the name (`Q` key or "¿Cómo se dice?" button). Three guided objects: *plane* (the distant plane), *corn*, *firefly* (Lumi, as a joke). Lumi says the word in L2 (cached audio), then in L1, and shows it written. Kofi passes by and joins the network.
+- **Optional production:** "¿Lo decís vos?" — it is the first **scripted pronunciation moment** (§2.4.7, *repeat after me*): if the player says it, it is evaluated against the word and Lumi gives kind feedback only on error types enabled by F0.1 (D-151); if no type is enabled, it only verifies that they attempted the word and offers "así lo dijiste vos / así suena". 1/3 light-blue potion per attempt. (The moment is built as data on the existing line of `02` §4.4 M0.2; the reading of D-019 as "script in force" is in D-182.)
+- **Lumi's line at the end:** "Podés preguntarme cómo se dice cualquier cosa que brille así. Y si querés que me acuerde de una palabra, tocá *Marcar*."
 
 #### M0.3 · Clover (A0)
 
-- **Lugar:** Los Campos, junto al canal. Maya mira para todos lados.
-- **Contexto:** al bajar del colectivo, una cámara breve mostró una cabrita blanca con campanita junto al canal.
-- **Necesidad:** Maya quiere saber si viste a su cabra y dónde.
-- **Criterios:** (1) responde "yes" (o equivalente); (2) indica un lugar (the canal / the field / there + click en el mapa).
-- **[Apertura guionada]**
-  - MAYA: "Hi! Oh! A firefly! In the day?" *(Lumi parpadea)* "My goat… Clover! Did you see my goat?" *(muestra un dibujo con tiza)*
-- **[Cuerpo IA]** — Maya repite "Did you see her?" si hay silencio y el jugador pasa el turno; con "Más simple": "Clover. Goat. Yes? No?" Si dice "yes" sin lugar: "Where? The canal? The field?" Si dice "no": "Oh no..." y Lumi susurra en L1: "¿No la viste junto al canal?" (señal de comprensión, no corrección).
-- **[Cierre guionado]**
-  - MAYA: *(vuelve con Clover)* "Clover! Thank you! Thank you!" "Clover eats weeds! Good goat!" "Come to the Crossing! Nell knows everybody!"
-  - LUMI: "Le dijiste dónde estaba Clover: *the canal*. Eso es azul: ubicar cosas. ¿Te acordás cómo se decía *maíz*?" *(evocación)*
-- **Evento:** `goat_found`, `intro:NPC-NELL<-NPC-MAYA`, primer bicho de luz en el Cruce. Saber: `SAB-CABRAS`.
+- **Place:** Los Campos, next to the canal. Maya looks in all directions.
+- **Context:** on getting off the bus, a brief camera shot showed a little white goat with a bell by the canal.
+- **Need:** Maya wants to know whether you saw her goat and where.
+- **Criteria:** (1) answers "yes" (or equivalent); (2) indicates a place (the canal / the field / there + click on the map).
+- **[Scripted opening]**
+  - MAYA: "Hi! Oh! A firefly! In the day?" *(Lumi blinks)* "My goat… Clover! Did you see my goat?" *(shows a chalk drawing)*
+- **[AI body]** — Maya repeats "Did you see her?" if there is silence and the player passes the turn; with "Más simple": "Clover. Goat. Yes? No?" If they say "yes" without a place: "Where? The canal? The field?" If they say "no": "Oh no..." and Lumi whispers in L1: "¿No la viste junto al canal?" (comprehension signal, not correction).
+- **[Scripted closing]**
+  - MAYA: *(returns with Clover)* "Clover! Thank you! Thank you!" "Clover eats weeds! Good goat!" "Come to the Crossing! Nell knows everybody!"
+  - LUMI: "Le dijiste dónde estaba Clover: *the canal*. Eso es azul: ubicar cosas. ¿Te acordás cómo se decía *maíz*?" *(retrieval)*
+- **Event:** `goat_found`, `intro:NPC-NELL<-NPC-MAYA`, first firefly at the Crossing. Knowledge item: `SAB-CABRAS`.
 
 #### M1.1 · Buenos días, Nell (A1)
 
-- **Lugar:** porche de Nell, junto a la escuela cerrada, mañana.
-- **Necesidad:** Nell quiere saber quién es el nuevo que mandó Maya y si se va a quedar a ayudar.
-- **Criterios:** (1) saludo apropiado a la hora; (2) nombre; (3) de dónde viene (cualquier lugar vale; no se guarda como dato personal); (4) responde a "How are you?" y devuelve la pregunta (opcional; poción ámbar).
-- **[Apertura guionada]**
+- **Place:** Nell's porch, next to the closed school, morning.
+- **Need:** Nell wants to know who the newcomer Maya sent is and whether they will stay to help.
+- **Criteria:** (1) greeting appropriate to the time; (2) name; (3) where they come from (any place is valid; not stored as personal data); (4) responds to "How are you?" and returns the question (optional; amber potion).
+- **[Scripted opening]**
   - NELL: "Good morning! You're the new worker! Maya told me. I'm Nell. I was the teacher here."
-- **[Cuerpo IA]** — Banda A1, andamiaje 2. Preguntas en orden flexible: "Where are you from?", "How are you today?". Reacciona con calidez ("Argentina? Far away!"). "I from Argentina" (falta el verbo; local) → recast, Lumi lo anota; si el error es el objetivo y se repite → Lumi escalón 2: "¿*I from*...?". Saber: "That was our school. One room, all the children." Rama cultural opcional si aparece el mate: "Argentina! Mate, right? A tea in a gourd!" (una por capítulo, D-066).
-- **[Cierre guionado]**
+- **[AI body]** — Band A1, scaffolding 2. Questions in flexible order: "Where are you from?", "How are you today?". Reacts warmly ("Argentina? Far away!"). "I from Argentina" (missing verb; local) → recast, Lumi notes it; if the error is the goal and repeats → Lumi step 2: "¿*I from*...?". Knowledge item: "That was our school. One room, all the children." Optional cultural branch if mate appears: "Argentina! Mate, right? A tea in a gourd!" (one per chapter, D-066).
+- **[Scripted closing]**
   - NELL: "Here's the key to the board. Write what the Crossing needs. Ollie knows every mailbox. Talk to him! Tell him Nell sent you."
   - LUMI: "Le dijiste de dónde venís: *I'm from…* Eso es ámbar. Y el tablero del Cruce vuelve a estar abierto."
-- **Desbloquea:** el tablero de pedidos del Cruce (`SITIO-TABLERO` fundado).
+- **Unlocks:** the Crossing's request board (`SITIO-TABLERO` founded).
 
-#### M1.2 · La cabra de Maya (A1) — tarea de brecha de información
+#### M1.2 · La cabra de Maya (A1) — information-gap task
 
-- **Escena 1 (El Cruce, Maya):** Clover se escapó otra vez. Maya sabe cómo es; el jugador pregunta.
-  - **[Apertura]** MAYA: "Clover ran away AGAIN! Can you help me?"
-  - **[Cuerpo IA]** Maya da rasgos solo si el jugador pregunta ("What color is she?", "Is she big?") o si pasa el turno (entonces da uno). Criterio: obtiene ≥2 de 3 rasgos (small, white, red bell).
-- **Escena 2 (Los Campos, Ollie, junto a la camioneta):** Ollie vio tres cabras (grande negra, chica marrón, chica blanca con campanita).
-  - **[Apertura]** OLLIE: "Nell sent you? Great! A goat? I saw three goats today! What is your goat like?"
-  - **[Cuerpo IA]** El jugador describe. Si da un rasgo equivocado ("big"), Ollie señala la cabra grande (error de predicción amable): "This one?" — el jugador corrige. Criterio: transmite 2 rasgos correctos.
-  - **[Cierre]** OLLIE: "The small white one with the red bell? She's in my van!" — Clover asoma por la ventanilla. "Look at her eyes! Long lines!" (saber `SAB-PUPILAS`). Ollie da su mapa de buzones, presenta a Caleb y decide parar en el Cruce (`SITIO-PARADA`).
-- **Lumi (post):** destila azul por describir y ámbar por preguntar. Evocación: "¿Cómo le dijiste a Ollie que era chiquita?"
+- **Scene 1 (El Cruce, Maya):** Clover escaped again. Maya knows what she looks like; the player asks.
+  - **[Opening]** MAYA: "Clover ran away AGAIN! Can you help me?"
+  - **[AI body]** Maya gives traits only if the player asks ("What color is she?", "Is she big?") or if they pass the turn (then she gives one). Criterion: obtains ≥2 of 3 traits (small, white, red bell).
+- **Scene 2 (Los Campos, Ollie, next to the van):** Ollie saw three goats (big black, small brown, small white with a bell).
+  - **[Opening]** OLLIE: "Nell sent you? Great! A goat? I saw three goats today! What is your goat like?"
+  - **[AI body]** The player describes. If they give a wrong trait ("big"), Ollie points to the big goat (kind prediction error): "This one?" — the player corrects. Criterion: conveys 2 correct traits.
+  - **[Closing]** OLLIE: "The small white one with the red bell? She's in my van!" — Clover peeks out the window. "Look at her eyes! Long lines!" (knowledge item `SAB-PUPILAS`). Ollie gives his map of mailboxes, introduces Caleb and decides to stop at the Crossing (`SITIO-PARADA`).
+- **Lumi (post):** distills blue for describing and amber for asking. Retrieval: "¿Cómo le dijiste a Ollie que era chiquita?"
 
-#### M1.4 · Semillas y una manguera (A1) — transacción sin dinero
+#### M1.4 · Semillas y una manguera (A1) — transaction without money
 
-- **Pre-tarea (Lumi):** "La lista de Nell dice: tres sobres de porotos, dos de zapallo, una bolsa de maíz. Nadie vende nada: los vecinos prestan y comparten. Piezas útiles: *Can I have…?*, *please*, *How many?*"
-- **Escena 1 (June, en su granja):** el jugador pide con cantidad y "please"; June pregunta "How many?" — si el número no coincide con la lista, June da esa cantidad y Lumi lo nota al final. Par mínimo *three/tree* con consecuencia en el mundo (June señala un arbolito). Saber: "A ladybug. It eats aphids. Ladybugs help me." (`SAB-VAQUITAS`).
-- **Escena 2 (Bea, en el taller):** pedir manguera y baldes; Bea arregla la bomba vieja ("One minute!… It works!") y presenta a Wes.
-- **Escena 3 (Maya, en la huerta):** Maya tiene semillas secretas de girasol; negocia en broma ("Can I plant one? My sunflower?") y el jugador acepta ("Yes, of course").
-- **Cierre:** siembran; Inés trae las herramientas de la cuadrilla y Kofi riega; la **huerta del Cruce** aparece en el mapa con sus créditos.
+- **Pre-task (Lumi):** "La lista de Nell dice: tres sobres de porotos, dos de zapallo, una bolsa de maíz. Nadie vende nada: los vecinos prestan y comparten. Piezas útiles: *Can I have…?*, *please*, *How many?*"
+- **Scene 1 (June, at her farm):** the player asks with a quantity and "please"; June asks "How many?" — if the number does not match the list, June gives that quantity and Lumi notes it at the end. Minimal pair *three/tree* with consequence in the world (June points to a little tree). Knowledge item: "A ladybug. It eats aphids. Ladybugs help me." (`SAB-VAQUITAS`).
+- **Scene 2 (Bea, at the workshop):** ask for a hose and buckets; Bea fixes the old pump ("One minute!… It works!") and introduces Wes.
+- **Scene 3 (Maya, in the garden):** Maya has secret sunflower seeds; she jokingly negotiates ("Can I plant one? My sunflower?") and the player accepts ("Yes, of course").
+- **Closing:** they sow; Inés brings the crew's tools and Kofi waters; the **Crossing garden** appears on the map with its credits.
 
-#### M3.1 · El año de la plaga (A2) — ejemplo de escena de nivel medio
+#### M3.1 · El año de la plaga (A2) — example of a mid-level scene
 
-- **Escena 1 (Harlan, en su porche):** Harlan cuenta (2-3 oraciones por turno, pasado) el año en que casi pierde la cosecha por una plaga, cuando era joven y su padre manejaba el campo. El jugador pregunta para entender ("What happened then?", "Were you scared?"). Harlan habla poco y bajo; si el jugador habla bajo, Harlan dice "Hm? Again?" (rasgo de personaje; el juego sube la sensibilidad del micrófono, no castiga). Sin cifras ni nombres de productos.
-- **Escena 2 (Noor, en el banco de la huerta):** el jugador **vuelve a contar** la historia a Noor, que la dibuja en viñetas para la radio. Criterios: al menos 3 eventos en orden con pasado simple; un conector de secuencia. Noor pregunta para completar huecos ("And after the bugs came?"). Escalón 1 lo hace Noor en la ficción ("Wait, he *loses* or he *lost*? I'm drawing it..."), escalón 2+ Lumi.
-- **Cierre:** Nell lee en la radio el texto de las viñetas (versión correcta, audio cacheado generado a partir del relato del jugador limpio y revisado por el observador): el jugador escucha su propia historia en buen inglés (*recast* global como modelo, no corrección). Harlan escucha desde su porche y asiente. Pista de la capa C del misterio.
+- **Scene 1 (Harlan, on his porch):** Harlan tells (2-3 sentences per turn, past) about the year he almost lost the harvest to a pest, when he was young and his father ran the farm. The player asks to understand ("What happened then?", "Were you scared?"). Harlan speaks little and softly; if the player speaks softly, Harlan says "Hm? Again?" (character trait; the game raises microphone sensitivity, does not punish). No figures or product names.
+- **Scene 2 (Noor, on the garden bench):** the player **retells** the story to Noor, who draws it in panels for the radio. Criteria: at least 3 events in order with simple past; a sequence connector. Noor asks to fill in gaps ("And after the bugs came?"). Step 1 is done by Noor in the fiction ("Wait, he *loses* or he *lost*? I'm drawing it..."), step 2+ by Lumi.
+- **Closing:** Nell reads the panels' text on the radio (correct version, cached audio generated from the player's account, cleaned and reviewed by the observer): the player hears their own story in good English (global *recast* as a model, not correction). Harlan listens from his porch and nods. Clue to layer C of the mystery.
 
-#### M4.4 · La audiencia pública (A2→B1) — escena de persuasión
+#### M4.4 · La audiencia pública (A2→B1) — persuasion scene
 
-- **Preparación (con Lumi y Nell):** el jugador elige 3 argumentos de una lista de 6 construida con lo que hizo y aprendió (el cerco de Caleb, los conteos de Ruth, la bandera y la manga de Wes, la salita de Grace, la estación meteorológica, la prueba del dron). Solo aparecen los argumentos de misiones hechas y saberes juntados: el mundo recuerda. Los argumentos que usan hechos reales salen de fichas `SAB-*` verificadas (en release, solo las verificadas).
-- **Escena 1 (Vance y el concejo, en el aula de la escuela):** se plantean 3 objeciones atendibles ("If we stop the plane, some farms can lose their harvest." / "Who is going to check the wind?" / "Harlan's family farmed here for years."). El jugador responde con argumentos. Criterios: responder al menos 2 objeciones con un argumento pertinente y una estructura condicional o de propuesta. Contraobjeción una vez por argumento; si no se resuelve, el concejo acepta parcialmente ("Fine, but we review it next season").
-- **Escena 2 (vecinos y dueños):** Ruth, June y Wes opinan; el jugador puede pedir que apoyen ("Wes, could you tell them about the wind?") — mediación. Harlan habla una vez: "I don't change my ways. But a rule is a rule." (D-177).
-- **Cierre:** VANCE: "If all of you are going to look after it... then the council can vote." Votación a mano alzada; la **zona de resguardo** aparece como anillo verde en el mapa (sin metros, D-186).
-- **Salida si no converge:** Nell pide la palabra y ofrece un argumento extra; el concejo aprueba con condiciones. Nunca se "pierde" la audiencia.
+- **Preparation (with Lumi and Nell):** the player chooses 3 arguments from a list of 6 built from what they did and learned (Caleb's fence, Ruth's counts, Wes's flag and windsock, Grace's clinic, the weather station, the drone test). Only arguments from missions done and knowledge items gathered appear: the world remembers. Arguments that use real facts come from verified `SAB-*` cards (in release, only the verified ones).
+- **Scene 1 (Vance and the council, in the school classroom):** 3 reasonable objections are raised ("If we stop the plane, some farms can lose their harvest." / "Who is going to check the wind?" / "Harlan's family farmed here for years."). The player responds with arguments. Criteria: respond to at least 2 objections with a pertinent argument and a conditional or proposal structure. Counter-objection once per argument; if not resolved, the council partially accepts ("Fine, but we review it next season").
+- **Scene 2 (neighbors and owners):** Ruth, June and Wes give their views; the player can ask them to back them up ("Wes, could you tell them about the wind?") — mediation. Harlan speaks once: "I don't change my ways. But a rule is a rule." (D-177).
+- **Closing:** VANCE: "If all of you are going to look after it... then the council can vote." Show-of-hands vote; the **buffer zone** appears as a green ring on the map (no meters, D-186).
+- **Exit if it does not converge:** Nell asks for the floor and offers an extra argument; the council approves with conditions. The hearing is never "lost".
 
-#### M4.8 · El Día del Pueblo (final)
+#### M4.8 · El Día del Pueblo (finale)
 
-- **Preparación del discurso (opcional):** Lumi ayuda a armar 3-5 oraciones ("I came to Kestrel Valley for the harvest..."). El jugador puede escribirlas y leerlas, decirlas libremente o elegir "Que lo lea Nell" (sin penalización; la poción solo se da si habla).
-- **Escena 1:** discurso breve bajo el árbol del Cruce; los NPCs reaccionan con una línea cada uno que recuerda algo que fundaron juntos (memoria del mundo y créditos).
-- **Escena 2:** charla libre **con marco** en la fiesta (dos o tres NPCs a elección, 2 min cada uno; temas permitidos: el pueblo, comida, música, planes).
-- **Escena 3 (guionada):** revelación coral de los sobres de semillas (Inés, Nell, June y Harlan escribieron uno; Harlan, el último, D-172/D-177). Kofi y Noor tocan la canción del Cruce. Al atardecer se encienden bichos de luz sobre cada caminito de la red. Lumi brilla al máximo.
-- **Epílogo (Lumi):** "No era el único. Donde la gente se habla, hay luz." Pantalla de resumen: los can-do demostrados del arco (no números de XP), lo fundado con sus créditos y una línea por vecino.
+- **Speech preparation (optional):** Lumi helps put together 3-5 sentences ("I came to Kestrel Valley for the harvest..."). The player can write and read them, say them freely or choose "Que lo lea Nell" (no penalty; the potion is only given if they speak).
+- **Scene 1:** brief speech under the Crossing's tree; the NPCs react with one line each that recalls something they founded together (world memory and credits).
+- **Scene 2:** free chat **with a frame** at the party (two or three NPCs of choice, 2 min each; permitted topics: the village, food, music, plans).
+- **Scene 3 (scripted):** choral reveal of the seed envelopes (Inés, Nell, June and Harlan wrote one; Harlan, the last, D-172/D-177). Kofi and Noor play the Crossing's song. At dusk, fireflies light up over each trail of the network. Lumi shines at maximum.
+- **Epilogue (Lumi):** "No era el único. Donde la gente se habla, hay luz." Summary screen: the arc's demonstrated can-dos (not XP numbers), what was founded with its credits and one line per neighbor.
 
-### 3.7 Pedidos del tablero (misiones secundarias por plantilla)
+### 3.7 Board requests (secondary missions by template)
 
-Plantillas que el sistema instancia con ítems de repaso vencidos y NPCs disponibles. Cada pedido dura 1-3 minutos. Ninguno usa dinero: se paga con ayuda, objetos prestados o tiempo. Los pedidos de la Región 1 (P-R1.1…P-R1.6) están escritos en `02` §4.5.
+Templates that the system instantiates with due review items and available NPCs. Each request lasts 1-3 minutes. None uses money: payment is with help, lent objects or time. The Region 1 requests (P-R1.1…P-R1.6) are written in `02` §4.5.
 
-| Plantilla | Forma | Uso de repaso |
+| Template | Form | Review use |
 |---|---|---|
-| Objeto perdido | Un NPC perdió algo; describirlo a otro que lo encontró (la bufanda azul de Nell en la camioneta de Ollie) | Colores, tamaños, objetos marcados |
-| Recado | Llevar algo a alguien y transmitir un mensaje (el recado de Grace a la cuadrilla) | Frases y saludos marcados |
-| Charla de vereda | Conversación breve con objetivo, a menudo con un vecino tímido u ocupado (Harlan, Grace) | Ámbar; preguntas marcadas |
-| ¿Cómo se dice? (búsqueda sin reloj) | Lumi nombra 5 objetos; el jugador los encuentra | Vocabulario aislado vencido [Probado, condicional, E35] |
-| Lista | Nell o June necesitan una lista; pedirla a dos vecinos | Cantidades |
-| Cartel | Leer un cartel en inglés y transmitirlo (el aviso de reingreso a un lote) | Lectura, días y horas |
-| Mensaje por radio (desde el cap. 2) | Llamar por la radio del Cruce y dejar/recibir un mensaje | Presente continuo |
+| Lost object | An NPC lost something; describe it to another who found it (Nell's blue scarf in Ollie's van) | Colors, sizes, marked objects |
+| Errand | Take something to someone and relay a message (Grace's errand to the crew) | Marked phrases and greetings |
+| Sidewalk chat | Brief conversation with a goal, often with a shy or busy neighbor (Harlan, Grace) | Amber; marked questions |
+| ¿Cómo se dice? (search without a clock) | Lumi names 5 objects; the player finds them | Due isolated vocabulary [Proven, conditional, E35] |
+| List | Nell or June need a list; ask two neighbors for it | Quantities |
+| Sign | Read a sign in English and relay it (the notice on re-entering a lot) | Reading, days and hours |
+| Radio message (from ch. 2) | Call over the Crossing radio and leave/receive a message | Present continuous |
 
-### 3.8 Guía de escritura de escenas (para corridas que escriban contenido)
+### 3.8 Scene-writing guide (for runs that write content)
 
-La guía completa (30 reglas, esquemas y lint) está en `02` §6.3 y §6.6. Lo esencial:
+The full guide (30 rules, schemas and lint) is in `02` §6.3 and §6.6. The essentials:
 
-1. Cada escena tiene **una necesidad del NPC** y **criterios de éxito verificables** por el observador. Sin necesidad no hay escena.
-2. El NPC **pregunta** más de lo que **cuenta**; en A0-A1, preguntas cerradas o de opción; en A2+, abiertas.
-3. Apertura guionada de 1-2 líneas; nunca un monólogo.
-4. El NPC usa **solo** la banda de vocabulario de la escena + 1-2 palabras nuevas apoyadas por el contexto visual.
-5. El humor sale de los personajes (Clover que se escapa, la bomba vieja de Bea, la camioneta de Ollie), nunca del error del jugador.
-6. Nada de sarcasmo ni ironía en A0-A2.
-7. Toda escena tiene **salida si no converge** y **resultado parcial** narrativamente digno.
-8. Referencias culturales del jugador (Argentina; luego Brasil) como puentes amables (el mate), nunca como estereotipo.
-9. Ninguna escena requiere datos reales del jugador; si pide un lugar o un gusto, cualquier respuesta inventada vale.
-10. Cada escena declara su **resumen para la siguiente** (2-3 líneas) para que el contexto no crezca [Negocio §3.2].
-11. **Cada misión cruza cuatro hilos:** consigue algo hablando, red, fundación y un saber real.
-12. **Hechos:** todo dato real sale de una ficha `SAB-*` con hechos verificables `HV-*` marcados `[FUENTE-PENDIENTE]` hasta su verificación; sin cifras; sin nombres de productos, marcas, empresas ni personas reales (D-170).
-13. **Sin villanos:** dueños, piloto y funcionario siempre con razones atendibles. **Salud:** solo Grace, factual y preventiva, nada gráfico (D-176). **Ficción marcada:** el camino legal del valle es `[FICCIÓN]` (D-171).
-14. **Fundar no usa dinero ni pociones** y siempre muestra los créditos de quienes pusieron las manos (D-169).
+1. Each scene has **one NPC need** and **success criteria verifiable** by the observer. Without a need there is no scene.
+2. The NPC **asks** more than it **tells**; in A0-A1, closed or multiple-choice questions; in A2+, open ones.
+3. Scripted opening of 1-2 lines; never a monologue.
+4. The NPC uses **only** the scene's vocabulary band + 1-2 new words supported by the visual context.
+5. Humor comes from the characters (Clover who escapes, Bea's old pump, Ollie's van), never from the player's mistake.
+6. No sarcasm or irony in A0-A2.
+7. Every scene has an **exit if it does not converge** and a narratively dignified **partial result**.
+8. Cultural references of the player (Argentina; then Brazil) as kind bridges (mate), never as stereotype.
+9. No scene requires real data from the player; if it asks for a place or a taste, any invented answer is valid.
+10. Each scene declares its **summary for the next one** (2-3 lines) so that the context does not grow [Business §3.2].
+11. **Each mission crosses four threads:** gets something by talking, network, foundation and a real knowledge item.
+12. **Facts:** every real datum comes from a `SAB-*` card with verifiable facts `HV-*` marked `[FUENTE-PENDIENTE]` until verified; no figures; no names of products, brands, companies or real people (D-170).
+13. **No villains:** owners, pilot and official always with reasonable motives. **Health:** only Grace, factual and preventive, nothing graphic (D-176). **Marked fiction:** the valley's legal path is `[FICCIÓN]` (D-171).
+14. **Founding uses neither money nor potions** and always shows the credits of those who lent a hand (D-169).
 
 ---
 
-## 4. Modos 2 a 5 (visión)
+## 4. Modes 2 to 5 (vision)
 
-> Estos modos **no se construyen en la v1**. Se describen para que el modo 1 no tome decisiones que los cierren (datos, estado, arte, personajes) y para que el roadmap pueda ordenarlos.
+> These modes are **not built in v1**. They are described so that mode 1 does not make decisions that close them off (data, state, art, characters) and so that the roadmap can order them.
 
-### 4.1 Cómo se conectan los modos con el modo 1
+### 4.1 How the modes connect with mode 1
 
-- **Una sola cuenta, un solo perfil, un solo banco de repaso, un solo Lumi.** Todo lo que el jugador demuestra en cualquier modo destila pociones en las mismas ramas.
-- **Las habilidades del modo 1 son las llaves de los otros modos** (no se desbloquean por tiempo ni por pago):
+- **A single account, a single profile, a single review bank, a single Lumi.** Everything the player demonstrates in any mode distills potions in the same branches.
+- **Mode 1's skills are the keys to the other modes** (not unlocked by time or payment):
 
-| Modo | Se abre con | Por qué |
+| Mode | Opens with | Why |
 |---|---|---|
-| 2 Contar y construir | `HAB-CONT-1` (contar lo que pasó) + `HAB-DESC-3` (describir personas) — fin del Cap. 3 | Hace falta narrar y describir para "narrar un mundo" |
-| 3 Mi día real | Decisión de producto aparte (en suspenso) + adultos solamente | Privacidad |
-| 4 Media | `HAB-OPIN-1` (opinar) + M3.6 "La canción del Cruce" | La canción que Kofi y Noor hacen para la Radio del Cruce es el puente |
-| 5 Viaje y cultura | Fin del arco del modo 1 (Día del Pueblo, M4.8) | La cuadrilla sigue las cosechas: el colectivo lleva a otros valles y destinos |
+| 2 Tell and build | `HAB-CONT-1` (telling what happened) + `HAB-DESC-3` (describing people) — end of Ch. 3 | You need to narrate and describe to "narrate a world" |
+| 3 My real day | Separate product decision (on hold) + adults only | Privacy |
+| 4 Media | `HAB-OPIN-1` (opining) + M3.6 "La canción del Cruce" | The song Kofi and Noor make for the Crossing Radio is the bridge |
+| 5 Travel and culture | End of mode 1's arc (Village Day, M4.8) | The crew follows the harvests: the bus takes you to other valleys and destinations |
 
-- **Regla de estado compartido:** como el mundo 3D y la UI solo hablan a través del estado del juego (§1.4.8), cada modo es un conjunto de pantallas/escenas que lee y escribe el mismo perfil. La revisión de arquitectura define la forma.
+- **Shared-state rule:** since the 3D world and the UI talk only through the game state (§1.4.8), each mode is a set of screens/scenes that reads and writes the same profile. The architecture review defines the form.
 
-### 4.2 Modo 2: Contar y construir (storytelling / world-building)
+### 4.2 Mode 2: Tell and build (storytelling / world-building)
 
-**Idea:** el jugador **narra** en la lengua meta una escena ("There is a small farm with a red barn. An old woman lives there. She has a goat...") y el juego la **esculpe** en 3D con piezas del catálogo de assets; después el jugador **habita** ese mundo: los personajes que describió se vuelven NPCs con los que conversa, y otros jugadores (o la clase) pueden visitarlo.
+**Idea:** the player **narrates** a scene in the target language ("There is a small farm with a red barn. An old woman lives there. She has a goat...") and the game **sculpts** it in 3D with pieces from the asset catalog; then the player **inhabits** that world: the characters they described become NPCs they converse with, and other players (or the class) can visit it.
 
-- **Bucle:** describir → ver aparecer → corregir describiendo ("No, the house is *bigger*, next to the tree") → poblar (describir personajes, su personalidad, qué necesitan) → jugar las misiones que surgen de lo que describiste → compartir.
-- **Por qué sirve para aprender:** la descripción tiene consecuencia visible inmediata (el error de sentido produce un mundo distinto: error de predicción [Probable, E37]); obliga a producir con precisión espacial y léxica.
-- **Construcción tipo tycoon (candidata, DP-15):** la propuesta de terceros trae "grid y construcción" y "loop económico" estilo RollerCoaster Tycoon. En el modo 2 tiene un lugar natural **sin dinero**: colocar edificios y decoración en una grilla describiéndolos o pidiéndolos a NPCs constructores, y que el mundo "funcione" (los NPCs usan los lugares, aparecen pedidos). Si alguna vez aparece una economía, tiene que ser una economía **del mundo** (recursos del pueblo, favores) y no una moneda del jugador que pague por participar. Decisión del operador pendiente.
-- **Docentes y UGC:** el docente crea escenarios y misiones para su clase (rama B y D de negocio [Negocio §4]). Requiere moderación de contenido generado.
-- **Riesgos:** generación 3D a partir de texto es cara y frágil; se limita a **componer piezas** del catálogo (no generar mallas). Moderación de mundos compartidos con menores.
-- **Arte:** reutiliza el mismo kit HD-2D (tiles, volúmenes y sprites) y la paleta (§5) para que todo combine.
+- **Loop:** describe → see it appear → correct by describing ("No, the house is *bigger*, next to the tree") → populate (describe characters, their personality, what they need) → play the missions that emerge from what you described → share.
+- **Why it works for learning:** description has an immediate visible consequence (a meaning error produces a different world: prediction error [Probable, E37]); it forces production with spatial and lexical precision.
+- **Tycoon-style building (candidate, DP-15):** the third-party proposal brings "grid and building" and a RollerCoaster Tycoon-style "economic loop". In mode 2 it has a natural place **without money**: placing buildings and decoration on a grid by describing them or asking builder NPCs, and having the world "work" (NPCs use the places, requests appear). If an economy ever appears, it has to be a **world** economy (village resources, favors) and not a player currency that pays for participating. Operator decision pending.
+- **Teachers and UGC:** the teacher creates scenarios and missions for their class (business branch B and D [Business §4]). Requires moderation of generated content.
+- **Risks:** 3D generation from text is expensive and fragile; it is limited to **composing pieces** from the catalog (not generating meshes). Moderation of shared worlds with minors.
+- **Art:** reuses the same HD-2D kit (tiles, volumes and sprites) and the palette (§5) so everything matches.
 
-### 4.3 Modo 3: Mi día real (en suspenso)
+### 4.3 Mode 3: My real day (on hold)
 
-**Idea:** Lumi sale del juego y te acompaña en tu vida diaria en la lengua meta: organizar el calendario, notas, correos, mensajes ("Escribí este mensaje a tu jefe en inglés y lo revisamos juntos").
+**Idea:** Lumi leaves the game and accompanies you in your daily life in the target language: organizing the calendar, notes, emails, messages ("Escribí este mensaje a tu jefe en inglés y lo revisamos juntos").
 
-- **Estado:** en suspenso por decisión del operador; puede enlazar con otro proyecto futuro [Brief].
-- **Riesgo:** privacidad alta (correo, calendario, mensajería; voz como dato personal y potencialmente biométrico bajo LGPD) [Negocio §6.6]. **Solo adultos**, nunca para menores.
-- **Conexión con el modo 1:** las misiones del modo 1 entrenan las funciones (pedir, explicar problemas, planear) que el modo 3 aplicaría a la vida real; el banco de repaso podría alimentarse de la vida real.
+- **Status:** on hold by operator decision; it may link with another future project [Brief].
+- **Risk:** high privacy (mail, calendar, messaging; voice as personal and potentially biometric data under LGPD) [Business §6.6]. **Adults only**, never for minors.
+- **Connection with mode 1:** mode 1's missions train the functions (asking, explaining problems, planning) that mode 3 would apply to real life; the review bank could be fed by real life.
 
-### 4.4 Modo 4: Media (canciones, videos, en vivo o diferido)
+### 4.4 Mode 4: Media (songs, videos, live or deferred)
 
-**Idea:** aprender con música y video junto a un agente: escuchar una canción, entender la letra, cantarla; ver un video corto y comentarlo con un NPC; ver algo "en vivo" con Lumi al lado.
+**Idea:** learning with music and video alongside an agent: listening to a song, understanding the lyrics, singing it; watching a short video and commenting on it with an NPC; watching something "live" with Lumi beside you.
 
-- **Puente narrativo:** Kofi (que canta en la cuadrilla) y Noor (que dibuja) son los anfitriones; "La canción del Cruce" (M3.6), hecha para la Radio del Cruce, es el prototipo de este modo dentro del modo 1.
-- **Formas posibles:** karaoke con letra sincronizada; "¿qué entendiste?" con un NPC; canciones y videos originales del juego (sin licencia de terceros) primero; contenido de terceros después.
-- **Riesgo:** derechos de autor de canciones y videos de terceros [Negocio §5.1]; el default es producir contenido propio o con licencias abiertas. Integración con plataformas de video: decisión de producto y legal posterior.
+- **Narrative bridge:** Kofi (who sings on the crew) and Noor (who draws) are the hosts; "La canción del Cruce" (M3.6), made for the Crossing Radio, is the prototype of this mode inside mode 1.
+- **Possible forms:** karaoke with synchronized lyrics; "what did you understand?" with an NPC; original game songs and videos (no third-party license) first; third-party content later.
+- **Risk:** copyright of third-party songs and videos [Business §5.1]; the default is to produce own content or with open licenses. Integration with video platforms: later product and legal decision.
 
-### 4.5 Modo 5: Viaje y cultura (sin desarrollar)
+### 4.5 Mode 5: Travel and culture (undeveloped)
 
-**Idea:** la cuadrilla sigue las cosechas, y el colectivo lleva al jugador a otros lugares: otros valles, pueblos y ciudades donde se habla la lengua meta, con su cultura, comidas, fiestas y acentos. Cada destino es un "pueblo" con su propio arco corto.
+**Idea:** the crew follows the harvests, and the bus takes the player to other places: other valleys, towns and cities where the target language is spoken, with their culture, foods, festivals and accents. Each destination is a "village" with its own short arc.
 
-- **Puerta natural de nuevos pares de idioma:** una región agrícola brasileña para ES→PT, con el mismo esquema de fundar y la red (segundo par del [Brief]); una ciudad angloparlante distinta con otros acentos para consolidar EN.
-- **Cultura sin estereotipos:** asesoría cultural local por destino.
+- **Natural door for new language pairs:** a Brazilian agricultural region for ES→PT, with the same scheme of founding and the network (second pair of the [Brief]); a different English-speaking city with other accents to consolidate EN.
+- **Culture without stereotypes:** local cultural advice per destination.
 
 ---
 
-## 5. Dirección de arte, cámara, UI y audio
+## 5. Art direction, camera, UI and audio
 
-### 5.1 Principios
+### 5.1 Principles
 
-1. **Liviano antes que bonito, y bonito por estilo, no por detalle.** El juego vende habla y contexto, no fidelidad gráfica [Referencias §0, §4.4]. Las quejas de las referencias fueron cámara, controles, escalado de UI y rendimiento, nunca "falta de realismo". El estilo elegido por el operador es **HD-2D** (D-139): pixel art sobre un escenario 3D simple con luz real.
-2. **Esquemático y claro.** Para aprender, lo esquemático rindió más que lo realista [Hipótesis, E26]; además es más barato y legible.
-3. **Diorama, no mundo abierto.** Escenas chicas, con bordes amables (alambrados, el canal, lomas, maizales), que se cargan por zona.
-4. **El mundo cuenta el progreso.** Lo fundado, el color del Cruce, los caminitos de bichos de luz de la red y la gente afuera aumentan con el avance (`02` §1.9).
+1. **Light before pretty, and pretty by style, not by detail.** The game sells speech and context, not graphic fidelity [References §0, §4.4]. The references' complaints were camera, controls, UI scaling and performance, never "lack of realism". The style chosen by the operator is **HD-2D** (D-139): pixel art over a simple 3D stage with real light.
+2. **Schematic and clear.** For learning, the schematic paid off more than the realistic [Hypothesis, E26]; it is also cheaper and more legible.
+3. **Diorama, not open world.** Small scenes, with kind edges (fences, the canal, hills, cornfields), loaded by zone.
+4. **The world tells the progress.** What is founded, the Crossing's color, the network's firefly trails and the people outside grow with progress (`02` §1.9).
 
-### 5.2 Referencias
+### 5.2 References
 
-| Referencia | Qué tomamos | Qué no |
+| Reference | What we take | What we do not |
 |---|---|---|
-| ***Octopath Traveler*** (referencia principal, D-139) y capturas de `docs/refs/estetica/` | **HD-2D**: personajes pixel art como sprites sobre escenarios 3D con texturas pixel art, cámara desde arriba en ángulo, luz cálida, profundidad de campo que hace ver el pueblo como una maqueta | Combate por turnos, menús densos, viñetas oscuras y grano fuerte (bajan la legibilidad del texto) |
-| **Townscaper** | Casas de colores, bordes suaves, paleta pastel saturada, sensación de juguete | La generación procedural de edificios (no hace falta) |
-| **A Short Hike** | Tono de pedidos de vecinos, calidez, pueblo chico que se recorre en minutos, sin presión; cámara que acompaña | El píxelado como filtro de pantalla completa (acá el pixel art está en las texturas y los sprites, no en un postproceso) |
-| **Portfolio 3D de Bruno Simon** | La sensación lúdica de un mundo web que se puede tocar: objetos que reaccionan, sorpresa, todo en el navegador | Física pesada y conducción como eje (DP-14, DP-16): en el modo 1 el movimiento es caminar |
-| **Influent** | Todo objeto se puede "preguntar" | Controles de cámara libres y frágiles |
-| **Noun Town** | Mundo amable y colorido que se usa en instituciones | Rachas y metas diarias |
+| ***Octopath Traveler*** (main reference, D-139) and screenshots in `docs/refs/estetica/` | **HD-2D**: pixel art characters as sprites over 3D stages with pixel art textures, camera from above at an angle, warm light, depth of field that makes the village look like a model | Turn-based combat, dense menus, dark vignettes and heavy grain (they lower text legibility) |
+| **Townscaper** | Colorful houses, soft edges, saturated pastel palette, toy feeling | Procedural building generation (not needed) |
+| **A Short Hike** | Tone of neighbor requests, warmth, small village walked in minutes, no pressure; accompanying camera | Pixelation as a full-screen filter (here the pixel art is in the textures and sprites, not in a post-process) |
+| **Bruno Simon's 3D portfolio** | The playful feeling of a web world you can touch: objects that react, surprise, all in the browser | Heavy physics and driving as the axis (DP-14, DP-16): in mode 1 movement is walking |
+| **Influent** | Every object can be "asked" | Free and fragile camera controls |
+| **Noun Town** | Kind, colorful world used in institutions | Streaks and daily goals |
 
-### 5.3 Estilo (HD-2D, D-139)
+### 5.3 Style (HD-2D, D-139)
 
-> **Nota (2026-10-30):** esta sección quedó como historia. El estilo vigente es la maqueta pintada (D-207, `docs/estetica/propuesta-c-maqueta-pintada.md`), vista en tercera persona en un mundo abierto (D-209). La técnica está en `03-arquitectura.md` §2.8 y §2.9.
+> **Note (2026-10-30):** this section is now history. The style in force is the painted diorama (D-207, `docs/art-direction/proposal-c-painted-diorama.md`), seen in third person in an open world (D-209). The technique is in `03-architecture.md` §2.8 and §2.9.
 
-- **HD-2D** (referencia *Octopath Traveler*): el escenario es 3D y simple (tiles con textura pixel art y volúmenes de pocas caras: casas, galpones, alambrados, el tanque, el árbol grande) con luz 3D real y sombras suaves; los **personajes son sprites pixel art** que siempre miran a la cámara; la profundidad de campo y el bloom (solo en calidad media y alta) hacen que el valle se vea como una maqueta iluminada. Detalle técnico: `03-arquitectura.md` §2.9.
-- **Densidad de píxel:** 1 tile = 1 m = 32×32 px; personajes de ~32×48 px a la misma densidad; filtrado sin suavizado (pixel art nítido). Parámetros finales los fija el operador mirando F0.2 (D-154).
-- **Objetos interactivos** se distinguen por un brillo suave del color de la rama (o un ícono en modo daltonismo), no por contornos parpadeantes.
-- **Personajes:** sprites de proporciones de juguete (cabeza grande, cuerpo simple), legibles a 32-48 px; caminata en 4 direcciones e idle; hablar y saludar si el pack los trae. Diversidad por paleta (piel, pelo, ropa) y accesorios, sobre un pack base por región con licencia registrada (D-153).
-- **Lumi:** el objeto más trabajado del juego (§2.4.2): un bicho de luz 3D emisivo de primitivas que brilla sobre la escena pixel (D-082 leído con la forma de D-165). Los **caminitos de la red** (bichos de luz al atardecer entre las casas conectadas) usan el mismo emisivo, como partículas baratas.
-- **Modo bajo:** sin postprocesado, sombras *blob*; el estilo se mantiene (el pixel art es barato).
+- **HD-2D** (reference *Octopath Traveler*): the stage is 3D and simple (tiles with pixel art texture and low-face-count volumes: houses, sheds, fences, the tank, the big tree) with real 3D light and soft shadows; the **characters are pixel art sprites** that always face the camera; depth of field and bloom (only at medium and high quality) make the valley look like a lit model. Technical detail: `03-architecture.md` §2.9.
+- **Pixel density:** 1 tile = 1 m = 32×32 px; characters of ~32×48 px at the same density; unsmoothed filtering (crisp pixel art). Final parameters are set by the operator looking at F0.2 (D-154).
+- **Interactive objects** are distinguished by a soft glow in the branch color (or an icon in color-blindness mode), not by flashing outlines.
+- **Characters:** toy-proportioned sprites (big head, simple body), legible at 32-48 px; 4-direction walk and idle; talk and greet if the pack provides them. Diversity through palette (skin, hair, clothes) and accessories, over a base pack per region with a registered license (D-153).
+- **Lumi:** the most carefully worked object in the game (§2.4.2): an emissive 3D firefly built from primitives that glows over the pixel scene (D-082 read with D-165's shape). The **network trails** (fireflies at dusk between connected houses) use the same emissive, as cheap particles.
+- **Low mode:** no post-processing, *blob* shadows; the style is kept (pixel art is cheap).
 
-### 5.4 Paleta
+### 5.4 Palette
 
-Tokens de color (valores de partida, a validar con contraste y modos daltónicos):
+Color tokens (starting values, to validate with contrast and color-blind modes):
 
-| Token | Uso | Valor sugerido |
+| Token | Use | Suggested value |
 |---|---|---|
-| `agua` | Canal, tanque, charcos | #5FB3C8 |
-| `cielo-dia` | Cielo mañana | #BFE3EC |
-| `cielo-atardecer` | Cielo atardecer | #F2B28C |
-| `noche` | Cielo noche | #2B3550 |
-| `tierra` | Caminos de tierra, lotes | #E8D3A9 |
-| `pasto` | Vegetación, cercos | #8CC084 |
-| `campo` | Maíz y trigo maduros | #D9B65A |
-| `casa-1..6` | Fachadas (rojo coral, amarillo, menta, celeste, lavanda, blanco cálido) | #E9806E, #F2CF6B, #9ED8B8, #9CC7E8, #B9A6DB, #F4EDE2 |
-| `luz-bicho` | Emisivos: Lumi y los caminitos de bichos de luz de la red | #FFD27A |
-| Ramas de pociones | Ámbar / verde / azul / violeta / coral / celeste | #F2A93B / #5FBF6A / #4A86D9 / #9B6BD3 / #EE6F5B / #5FC8D9 (con forma asociada, §2.19) |
+| `agua` | Canal, tank, puddles | #5FB3C8 |
+| `cielo-dia` | Morning sky | #BFE3EC |
+| `cielo-atardecer` | Dusk sky | #F2B28C |
+| `noche` | Night sky | #2B3550 |
+| `tierra` | Dirt roads, lots | #E8D3A9 |
+| `pasto` | Vegetation, fences | #8CC084 |
+| `campo` | Ripe corn and wheat | #D9B65A |
+| `casa-1..6` | Facades (coral red, yellow, mint, light blue, lavender, warm white) | #E9806E, #F2CF6B, #9ED8B8, #9CC7E8, #B9A6DB, #F4EDE2 |
+| `luz-bicho` | Emissives: Lumi and the network's firefly trails | #FFD27A |
+| Potion branches | Amber / green / blue / violet / coral / light blue | #F2A93B / #5FBF6A / #4A86D9 / #9B6BD3 / #EE6F5B / #5FC8D9 (with associated shape, §2.19) |
 
-- **Progreso visible:** el Cruce arranca desaturado (saturación −30 %), polvoriento y sin bichos de luz; cada fundación devuelve saturación a su zona (verde de huerta, amarillo y azul de flores) y, al atardecer, cada vínculo de la red se ve como un caminito de bichos de luz (`luz-bicho`). Al cerrar la Región 1, el Cruce está en saturación normal (`02` §1.9).
-- **HUD:** fondo crema/papel (#FBF6EC) con tinta oscura (#2A2A33) en modo claro; invertido en modo oscuro; contraste mínimo WCAG AA (objetivo AAA para texto de diálogo).
+- **Visible progress:** the Crossing starts desaturated (saturation −30 %), dusty and without fireflies; each foundation returns saturation to its zone (garden green, flower yellow and blue) and, at dusk, each link of the network is seen as a trail of fireflies (`luz-bicho`). On closing Region 1, the Crossing is at normal saturation (`02` §1.9).
+- **HUD:** cream/paper background (#FBF6EC) with dark ink (#2A2A33) in light mode; inverted in dark mode; minimum WCAG AA contrast (AAA target for dialogue text).
 
-### 5.5 Cámara y controles
+### 5.5 Camera and controls
 
-> **Enmienda D-209 (2026-10-30):** cámara en tercera persona detrás del personaje. Mirada por arrastre o con Q y R, recentrado automático tras 1,5 s sin mirar, zoom continuo de 2,5 m al mapa entero (rueda, `+`/`-`, botones; V para el mapa entero), WASD relativo a la cámara, `Shift` para correr y un minimapa con los NPCs que faltan. El clic en el suelo sigue caminando, y un arrastre no camina. La cámara sigue sin pedir habilidad: nada se pierde si el jugador nunca la gira. Lo de abajo describe la cámara anterior (D-053).
+> **Amendment D-209 (2026-10-30):** third-person camera behind the character. Look by dragging or with Q and R, automatic recentering after 1.5 s without looking, continuous zoom from 2.5 m to the whole map (wheel, `+`/`-`, buttons; V for the whole map), WASD relative to the camera, `Shift` to run and a minimap with the NPCs still missing. Clicking on the ground still walks, and a drag does not walk. The camera still requires no skill: nothing is lost if the player never rotates it. What follows describes the previous camera (D-053).
 
-- **Cámara desde arriba en ángulo** (D-053, por presets): `topdownOrtho` por defecto (ortográfica, inclinación 55-60°, ~15 tiles de ancho visibles, sigue al jugador con suavizado), `isoOrtho` (girada 45°) como opción, y un encuadre de diálogo al conversar (NPC y jugador a los costados, subtítulos sin tapar caras). **Sin órbita libre**; 3 niveles de zoom. La cámara libre torpe es la lección más cara de las referencias [Referencias §4.2.4, §4.4.2]. Con "reducir movimiento", corte en vez de paneo.
-- **Movimiento:** click en el suelo para caminar (pathfinding simple) o WASD/flechas. Sin saltar, sin correr obligatorio (correr opcional con `Shift`). Colisiones simples (no física) por defecto (DP-14).
-- **Interacción:** acercarse + `E` / click sobre el NPC u objeto. Íconos de bichito de luz sobre NPCs con pedidos.
-- **Vehículo lúdico (DP-16):** inspirado en el portfolio de Bruno Simon, el traslado en la camioneta del correo de Ollie (`HAB-DESC-2`) podría ser un momento de juego físico liviano. Default: en la v1 es un traslado rápido animado entre zonas, sin física. Una versión "manejable" con física es candidata para después del vertical slice.
+- **Camera from above at an angle** (D-053, by presets): `topdownOrtho` by default (orthographic, 55-60° tilt, ~15 tiles of visible width, follows the player with smoothing), `isoOrtho` (rotated 45°) as an option, and a dialogue framing when conversing (NPC and player at the sides, subtitles not covering faces). **No free orbit**; 3 zoom levels. The clumsy free camera is the most expensive lesson of the references [References §4.2.4, §4.4.2]. With "reduce motion", cut instead of pan.
+- **Movement:** click on the ground to walk (simple pathfinding) or WASD/arrows. No jumping, no mandatory running (optional running with `Shift`). Simple collisions (not physics) by default (DP-14).
+- **Interaction:** get close + `E` / click on the NPC or object. Firefly icons over NPCs with requests.
+- **Playful vehicle (DP-16):** inspired by Bruno Simon's portfolio, the trip in Ollie's mail van (`HAB-DESC-2`) could be a light physical play moment. Default: in v1 it is an animated fast travel between zones, without physics. A "drivable" version with physics is a candidate for after the vertical slice.
 
-### 5.6 UI y HUD
+### 5.6 UI and HUD
 
-- **Todo el HUD en la capa DOM** (no dentro del 3D): diálogos, subtítulos, menús, cuaderno, ajustes. Resuelve escalado, accesibilidad y lectores de pantalla [Referencias §4.4.4].
-- **Estilo:** papel y tinta, bordes redondeados, tipografía grande y legible (sans humanista; opción para dislexia), íconos simples de línea gruesa.
-- **Elementos del HUD en juego:**
-  - Línea de objetivo actual (arriba a la izquierda, una línea).
-  - Indicador de voz: micrófono escuchando / NPC hablando / tu turno (con forma y color, no solo color).
-  - Panel de diálogo (abajo): subtítulos del NPC con palabra resaltada; tocar una palabra = traducción + "Marcar".
-  - Barra de andamiaje (abajo, siempre visible en conversación): `Repetir` · `Más despacio` · `Pista` · `Pasar el turno` · `Escribir` · `Marcar` · `Terminé`.
-  - Presupuesto de voz (discreto, en el menú, y aviso amable cuando quedan pocos minutos).
-  - Frasco de Lumi (cuaderno): pociones por rama, can-do demostrados, ítems para repasar, historial de misiones, la red, los saberes y los misterios.
-- **Nada de números grandes de XP** en pantalla. El progreso se muestra como frascos, lo fundado en el mapa, la red y frases "puedo...".
+- **The whole HUD in the DOM layer** (not inside the 3D): dialogues, subtitles, menus, notebook, settings. Solves scaling, accessibility and screen readers [References §4.4.4].
+- **Style:** paper and ink, rounded borders, large legible typography (humanist sans; dyslexia option), simple thick-line icons.
+- **HUD elements in game:**
+  - Current goal line (top left, one line).
+  - Voice indicator: microphone listening / NPC speaking / your turn (with shape and color, not only color).
+  - Dialogue panel (bottom): NPC subtitles with highlighted word; tapping a word = translation + "Marcar".
+  - Scaffolding bar (bottom, always visible in conversation): `Repetir` · `Más despacio` · `Pista` · `Pasar el turno` · `Escribir` · `Marcar` · `Terminé`.
+  - Voice budget (discreet, in the menu, and a kind warning when few minutes remain).
+  - Lumi's Jar (notebook): potions by branch, demonstrated can-dos, items to review, mission history, the network, knowledge items and mysteries.
+- **No big XP numbers** on screen. Progress is shown as jars, what is founded on the map, the network and "puedo..." phrases.
 
-### 5.7 Estrategia de assets: tiles y sprites pixel art, volúmenes CC0
+### 5.7 Asset strategy: pixel art tiles and sprites, CC0 volumes
 
-- **Regla:** las IA de código no modelan 3D ni dibujan sprites. Se usan **packs con licencia registrada**, se copian al proyecto y se ubican por código (posiciones y capas de tiles en datos de escena). [Directiva del operador]
-- **Personajes y tiles (D-153):** packs de sprites y tilesets **pixel art** con licencia que permita uso comercial y modificación (CC0 primero; CC-BY con atribución o licencia comercial paga de itch.io como segunda opción), con caminata en 4 direcciones y un **solo pack base por región** para que el estilo sea uniforme. **No** se usan licencias "no comercial" o "solo uso personal" (bloquearían el resto del plan aunque hoy el juego sea del operador), ni sprites generados por IA salvo decisión explícita del operador. **El operador elige y descarga el pack** (y lo compra si es pago).
-- **Volúmenes y props (glTF/GLB, CC0):** **Kenney.nl** (kits de ciudad, naturaleza, muebles, embarcaciones, decoración, y packs de **audio**), **Quaternius** y **Poly Pizza** solo con CC0 explícito; con textura pixel o color de paleta para que combinen con los tiles.
-- **Registro de assets obligatorio:** `content/assets-registry.yaml` (ruta canónica, `03-arquitectura.md` §4.2.1; campos en §6.4.2) con: archivo, pack, autor, licencia, URL de origen, fecha de descarga, sha256, modificaciones y si exige atribución. Sin registro, el asset no entra; el build falla.
-- **Unificación visual:** la misma densidad de píxel (32 px por tile), la misma paleta aplicada por recolor, la misma luz; preferir un pack principal por categoría.
-- **Presupuesto (propuesta para validar con F0.2):** cada zona < 50k triángulos visibles en modo medio; < 150 draw calls (chunks de tiles fusionados, instancias para repetidos); texturas compartidas ≤ 1 atlas de 1024 px por zona; descarga inicial (Los Campos + El Cruce, dioramas `muelle` + `plaza`, D-180) < 15 MB comprimido; interactivo en < 15 s en una PC modesta.
-- **Lumi y elementos de identidad** (Lumi, su frasco, logo): primitivas por código (un bicho de luz y un frasco son geometría simple) o encargo a un artista (DP-39).
+- **Rule:** code AIs do not model 3D or draw sprites. **Packs with a registered license** are used, copied into the project and placed by code (positions and tile layers in scene data). [Operator directive]
+- **Characters and tiles (D-153):** **pixel art** sprite packs and tilesets with a license that allows commercial use and modification (CC0 first; CC-BY with attribution or paid commercial itch.io license as second option), with 4-direction walk and a **single base pack per region** so the style is uniform. "Non-commercial" or "personal use only" licenses are **not** used (they would block the rest of the plan even though today the game is the operator's), nor AI-generated sprites except by explicit operator decision. **The operator chooses and downloads the pack** (and buys it if paid).
+- **Volumes and props (glTF/GLB, CC0):** **Kenney.nl** (city, nature, furniture, boat, decoration kits, and **audio** packs), **Quaternius** and **Poly Pizza** only with explicit CC0; with pixel texture or palette color so they match the tiles.
+- **Mandatory asset registry:** `content/assets-registry.yaml` (canonical path, `03-architecture.md` §4.2.1; fields in §6.4.2) with: file, pack, author, license, source URL, download date, sha256, modifications and whether it requires attribution. Without a registry entry, the asset does not enter; the build fails.
+- **Visual unification:** the same pixel density (32 px per tile), the same palette applied by recolor, the same light; prefer one main pack per category.
+- **Budget (proposal to validate with F0.2):** each zone < 50k visible triangles in medium mode; < 150 draw calls (merged tile chunks, instances for repeated ones); shared textures ≤ 1 atlas of 1024 px per zone; initial download (Los Campos + El Cruce, `muelle` + `plaza` dioramas, D-180) < 15 MB compressed; interactive in < 15 s on a modest PC.
+- **Lumi and identity elements** (Lumi, its jar, logo): primitives by code (a firefly and a jar are simple geometry) or commission to an artist (DP-39).
 
-### 5.8 Audio, música y voz
+### 5.8 Audio, music and voice
 
-- **Música:** acústica, cálida, tempo lento (guitarra, ukelele, piano suave, percusión liviana), un tema por zona que se "llena" de instrumentos a medida que se funda (el tema del Cruce suma un instrumento por fundación, `02` §1.9). Durante las conversaciones la música baja (ducking) automáticamente. Fuentes: composición propia o música con licencia libre verificada (DP-40).
-- **Ambiente:** viento en el maíz, chicharras, el agua del canal, pasos en la tierra, la campanita de Clover, la avioneta lejos. Kenney y otros packs CC0 de audio.
-- **Efectos de interfaz:** suaves y cortos; sin sonidos de error. El "gluc" de la poción es la firma sonora.
-- **Voces de NPC:** voces del motor de tiempo real asignadas por personaje según la tabla de §3.3.3 (DP-20); las líneas guionadas se pre-generan con la misma voz para que no cambie el timbre entre lo guionado y lo generado. Acento: general claro en NPCs de A0-A1; desde A2, dos NPCs con otros acentos (exposición a variantes) (DP-26, D-043).
-- **Voz de Lumi:** TTS en L1 (rioplatense neutro en la v1, DP-28), cálida; en L2 cuando modela frases.
-- **Mezcla de accesibilidad:** volúmenes separados por canal (§2.19).
+- **Music:** acoustic, warm, slow tempo (guitar, ukulele, soft piano, light percussion), one theme per zone that "fills" with instruments as it is founded (the Crossing's theme adds one instrument per foundation, `02` §1.9). During conversations the music lowers (ducking) automatically. Sources: own composition or music with verified free license (DP-40).
+- **Ambience:** wind in the corn, cicadas, the canal's water, steps on dirt, Clover's little bell, the plane far away. Kenney and other CC0 audio packs.
+- **Interface effects:** soft and short; no error sounds. The potion's "gluc" is the sonic signature.
+- **NPC voices:** voices of the real-time engine assigned per character according to the table in §3.3.3 (DP-20); scripted lines are pre-generated with the same voice so the timbre does not change between scripted and generated. Accent: clear general in A0-A1 NPCs; from A2, two NPCs with other accents (exposure to variants) (DP-26, D-043).
+- **Lumi's voice:** TTS in L1 (neutral Rioplatense in v1, DP-28), warm; in L2 when it models phrases.
+- **Accessibility mix:** separate volumes per channel (§2.19).
 
 ---
 
-## 6. Métricas y experimentos
+## 6. Metrics and experiments
 
-> Regla: **separar métricas de aprendizaje de métricas de engagement.** Un juego puede subir el engagement sin mover el aprendizaje (puntos y niveles subieron cantidad, no calidad [Probable, E15]) [Investigación §4].
+> Rule: **separate learning metrics from engagement metrics.** A game can raise engagement without moving learning (points and levels raised quantity, not quality [Probable, E15]) [Research §4].
 
-### 6.1 Métricas de aprendizaje (resultado)
+### 6.1 Learning metrics (outcome)
 
-| Métrica | Cómo se mide en el juego | Fuente del diseño |
+| Metric | How it is measured in the game | Design source |
 |---|---|---|
-| Pre/post con test diferido | Tarea oral estandarizada fuera de las misiones (escena de evaluación con NPC "visitante" que no da pistas), al inicio, al terminar cada capítulo y 1-2 semanas después | Efectos diferidos e inmediatos difieren (0,92 vs 0,58 en Wang 2026) [Investigación §4] |
-| Producción oral en tarea nueva (transferencia) | En la tarea de evaluación: complejidad, precisión y fluidez (CAF); diversidad léxica; tasa de autocorrección tras un prompt | [Investigación §4] |
-| Retención de ítems marcados | Tasa de uso correcto en su reaparición espaciada (por intervalo) | [Investigación §4], E34 |
-| Disposición a hablar y ansiedad | Escalas validadas (FLCA, WTC) cortas, antes y después, en piloto (con consentimiento; menores con tutor/institución) | [Investigación §4], E1, E3 |
-| Can-do demostrados | Cantidad y velocidad de can-do demostrados por capítulo | Diseño |
+| Pre/post with delayed test | Standardized oral task outside the missions (evaluation scene with a "visitor" NPC who gives no hints), at the start, at the end of each chapter and 1-2 weeks later | Delayed and immediate effects differ (0.92 vs 0.58 in Wang 2026) [Research §4] |
+| Oral production in a new task (transfer) | In the evaluation task: complexity, accuracy and fluency (CAF); lexical diversity; self-correction rate after a prompt | [Research §4] |
+| Retention of marked items | Rate of correct use on their spaced reappearance (per interval) | [Research §4], E34 |
+| Willingness to speak and anxiety | Short validated scales (FLCA, WTC), before and after, in a pilot (with consent; minors with guardian/institution) | [Research §4], E1, E3 |
+| Demonstrated can-dos | Number and speed of can-dos demonstrated per chapter | Design |
 
-### 6.2 Métricas de engagement (proceso)
+### 6.2 Engagement metrics (process)
 
-| Métrica | Definición |
+| Metric | Definition |
 |---|---|
-| Retención por cohorte | D1, D7, D30; sesiones por semana |
-| **Libre elección** | Sesiones iniciadas **sin recordatorio ni recompensa pendiente**: el indicador clásico de motivación intrínseca de Deci [Investigación §4]. Métrica norte del engagement |
-| Uso de accesibilidad | Uso de `Más despacio`, botón de silencio, modo texto, pistas; y su relación con la producción |
-| Producción por sesión | Turnos de producción del jugador por escena y minutos de habla del jugador (no del NPC) |
-| Convergencia de escenas | % de escenas que cumplen criterios sin "salida si no converge" |
-| Costo | US$ por minuto de voz real y por jugador activo por mes (experimento #1 de el análisis de negocio) |
-| Calidad percibida | Reporte de errores de traducción/reconocimiento por los jugadores (botón "algo está mal") |
+| Retention by cohort | D1, D7, D30; sessions per week |
+| **Free choice** | Sessions started **without reminder or pending reward**: Deci's classic indicator of intrinsic motivation [Research §4]. North-star engagement metric |
+| Accessibility use | Use of `Más despacio`, silence button, text mode, hints; and their relationship with production |
+| Production per session | Player production turns per scene and player speaking minutes (not the NPC's) |
+| Scene convergence | % of scenes that meet criteria without "exit if it does not converge" |
+| Cost | US$ per minute of real voice and per active player per month (experiment #1 of the business analysis) |
+| Perceived quality | Report of translation/recognition errors by players ("algo está mal" button) |
 
-**Umbrales de referencia (de el análisis de negocio §7, para el prototipo):** D7 de retorno sin recordatorio ≥ 15%; costo de voz ≤ US$0,03/min activo (condición para seguir) y criterio de pivote si ninguna opción baja de US$0,05/min.
+**Reference thresholds (from business analysis §7, for the prototype):** D7 return without reminder ≥ 15%; voice cost ≤ US$0.03/active min (condition to continue) and pivot criterion if no option goes below US$0.05/min.
 
-### 6.3 Los tres experimentos A/B propuestos por la investigación
+### 6.3 The three A/B experiments proposed by the research
 
-| # | Experimento | Brazo A | Brazo B | Métrica principal | Métricas secundarias | Por qué |
+| # | Experiment | Arm A | Arm B | Main metric | Secondary metrics | Why |
 |---|---|---|---|---|---|---|
-| A/B-1 | **Feedback inmediato+diferido vs solo diferido** | Modo "Acompañado" (señal breve inmediata + repaso al cierre) | Modo "Solo anotar" forzado (sin señales en escena, mismo repaso) | Retención de ítems marcados en reaparición espaciada; precisión en tarea de evaluación diferida | Ansiedad (FLCA corta), libre elección, abandono de escena | Inmediato ≥ diferido [Probable, E32]; dosis [En disputa] |
-| A/B-2 | **XP informativa vs XP por completar** | Pociones solo por competencia demostrada (diseño actual) | Pociones por completar misión (misma cantidad promedio) | **Libre elección** (sesiones sin recordatorio ni recompensa pendiente) | Calidad de producción (CAF), D7/D30 | Sobrejustificación [Probado en lab, E12]; transferencia [En disputa, E16] |
-| A/B-3 | **Botón de silencio vs andamiaje automático** | Silencio sin límite + botón `Pasar el turno` (chip visual apagado) | Andamiaje automático: tras X s (p. ej. 8 s) el NPC ofrece una pista o dos opciones | Turnos de producción por escena; tasa de producción sin pista | Ansiedad, uso de pistas, libre elección | Sin estudios [Hipótesis, E10]; riesgo de falta de empuje [Hipótesis] |
+| A/B-1 | **Immediate+delayed feedback vs delayed only** | "Accompanied" mode (brief immediate signal + review at closing) | "Note only" mode forced (no signals in scene, same review) | Retention of marked items on spaced reappearance; accuracy in delayed evaluation task | Anxiety (short FLCA), free choice, scene abandonment | Immediate ≥ delayed [Probable, E32]; dose [Disputed] |
+| A/B-2 | **Informative XP vs XP for completing** | Potions only for demonstrated competence (current design) | Potions for completing a mission (same average amount) | **Free choice** (sessions without reminder or pending reward) | Production quality (CAF), D7/D30 | Overjustification [Proven in lab, E12]; transfer [Disputed, E16] |
+| A/B-3 | **Silence button vs automatic scaffolding** | Unlimited silence + `Pasar el turno` button (visual chip off) | Automatic scaffolding: after X s (e.g. 8 s) the NPC offers a hint or two options | Production turns per scene; production rate without hints | Anxiety, hint use, free choice | No studies [Hypothesis, E10]; risk of lack of push [Hypothesis] |
 
-**Condiciones éticas:** ningún brazo quita funciones de accesibilidad; en menores los experimentos requieren aprobación de la institución y del tutor; los brazos se asignan por cuenta (no por sesión) y se informa en la política de privacidad que el juego se mejora con experimentos.
+**Ethical conditions:** no arm removes accessibility features; for minors the experiments require approval from the institution and guardian; arms are assigned per account (not per session) and the privacy policy states that the game is improved with experiments.
 
 ---
 
-## 7. Glosario
+## 7. Glossary
 
-| Término | Definición en este proyecto |
+| Term | Definition in this project |
 |---|---|
-| **L1 / L2** | Lengua materna del jugador / lengua que aprende (lengua meta) |
-| **MCER (CEFR)** | Marco Común Europeo de Referencia para las lenguas; niveles A1-C2. **A0** = pre-A1 (principiante absoluto) |
-| **Can-do** ("puedo...") | Enunciado de lo que el jugador demostró poder hacer con la lengua |
-| **TBLT** | Enseñanza basada en tareas: la lengua como medio para un resultado no lingüístico |
-| **Tarea** | Misión con resultado en el mundo que exige usar la lengua |
-| **Escena** | Conversación corta (2-4 min) con un NPC, con objetivo y criterios de éxito |
-| **Pre-tarea / post-tarea** | Preparación con Lumi / cierre con destilación y evocación |
-| **Prompt (feedback)** | Señal que lleva al jugador a autocorregirse (pedido de aclaración, repetición, pista metalingüística, elicitación) |
-| **Recast** | Reformulación correcta de lo que dijo el jugador, sin pedirle que repita |
-| **Error global / local / sistemático / desliz** | Impide entender / el sentido queda claro / se repite / aislado |
-| **Disfluencia** | Repetición, arranque en falso, muletilla o autocorrección; no es error |
-| **Observador** | Proceso que analiza los turnos del jugador (errores, criterios de éxito, ítems) y emite eventos al juego (heredado de un prototipo de voz anterior) |
-| **Lumi** | El compañero: un bicho de luz que vino con el protagonista en un frasco (D-165); nombre provisional (D-032) |
-| **Poción de conocimiento** | Unidad de evidencia de competencia por rama; la "XP" del modo 1 |
-| **Destilar** | Momento post-tarea en que Lumi nombra lo demostrado y las pociones caen al frasco |
-| **Verter** | Asignar pociones a un nodo del árbol de habilidades para abrirlo (no se pierden) |
-| **Frasco de Lumi** | El frasco donde vive Lumi, que es también el cuaderno del jugador: pociones, can-do, ítems de repaso, historial, red, saberes, misterios |
-| **La red** | Los vecinos que conocen al jugador; se amplía por presentaciones (D-168, `02` §1.7); se ve como caminitos de bichos de luz |
-| **Fundar / fundación** | Algo que el jugador consigue hablando y queda construido en un `SITIO-*` del mapa, sin dinero (D-169, `02` §1.8) |
-| **Saber (`SAB-*`)** | Ficha de conocimiento real y verificable que enseña una misión, con su fuente (D-170, `02` §1.5) |
-| **Sobre (`SOBRE-*`)** | Sobre de semillas del meta-misterio (D-172, `02` §1.6) |
-| **Banco de repaso** | Ítems marcados con su nivel de dominio y próxima fecha |
-| **Repaso de bolsillo** | Repaso opcional de 60-90 s al entrar, de palabras sueltas |
-| **Andamiaje** | Apoyo que el NPC y Lumi dan (velocidad, longitud, opciones, pistas, L1) |
-| **Salida si no converge** | Cierre amable de una escena que no alcanzó sus criterios |
-| **Sobrejustificación** | Cuando una recompensa externa esperada reemplaza la motivación propia y la reduce |
-| **Libre elección** | Medida de motivación intrínseca: actividad iniciada sin presión ni recompensa pendiente |
-| **Diorama** | Escena 3D chica y cerrada, cargada por separado (Región 1: Los Campos, id `muelle`; El Cruce, id `plaza`; D-180) |
-| **Modo bajo** | Configuración gráfica mínima para PCs modestas |
-| **Modo texto** | Jugar escribiendo en vez de hablar |
-| **Presupuesto de voz** | Minutos de voz disponibles por semana según plan o institución |
-| **DP (DECISION-PENDING)** | Decisión que el operador debe tomar; tiene default para corridas headless |
-| **Vertical slice** | Primera porción jugable de punta a punta con calidad final (ver DP-10) |
-| **ATP** | Apto para todo público |
-| **ECA Digital** | Estatuto Digital del Niño y del Adolescente de Brasil (Lei 15.211/2025) |
+| **L1 / L2** | The player's mother tongue / the language they are learning (target language) |
+| **CEFR (MCER)** | Common European Framework of Reference for languages; levels A1-C2. **A0** = pre-A1 (absolute beginner) |
+| **Can-do** ("puedo...") | Statement of what the player demonstrated being able to do with the language |
+| **TBLT** | Task-based language teaching: language as a means to a non-linguistic outcome |
+| **Task** | Mission with an outcome in the world that requires using the language |
+| **Scene** | Short conversation (2-4 min) with an NPC, with a goal and success criteria |
+| **Pre-task / post-task** | Preparation with Lumi / closing with distilling and retrieval |
+| **Prompt (feedback)** | Signal that leads the player to self-correct (clarification request, repetition, metalinguistic clue, elicitation) |
+| **Recast** | Correct reformulation of what the player said, without asking them to repeat |
+| **Global / local / systematic error / slip** | Prevents understanding / the meaning stays clear / repeats / isolated |
+| **Disfluency** | Repetition, false start, filler or self-correction; not an error |
+| **Observer** | Process that analyzes the player's turns (errors, success criteria, items) and emits events to the game (inherited from a previous voice prototype) |
+| **Lumi** | The companion: a firefly that came with the protagonist in a jar (D-165); provisional name (D-032) |
+| **Knowledge potion** | Unit of competence evidence per branch; mode 1's "XP" |
+| **Distill** | Post-task moment when Lumi names what was demonstrated and the potions fall into the jar |
+| **Pour** | Assign potions to a skill-tree node to open it (they are not lost) |
+| **Lumi's Jar** | The jar where Lumi lives, which is also the player's notebook: potions, can-dos, review items, history, network, knowledge items, mysteries |
+| **The network** | The neighbors who know the player; it grows through introductions (D-168, `02` §1.7); seen as firefly trails |
+| **Found / foundation** | Something the player achieves by talking and that stays built at a `SITIO-*` on the map, without money (D-169, `02` §1.8) |
+| **Knowledge item (`SAB-*`)** | Card of real, verifiable knowledge that a mission teaches, with its source (D-170, `02` §1.5) |
+| **Envelope (`SOBRE-*`)** | Seed envelope of the meta-mystery (D-172, `02` §1.6) |
+| **Review bank** | Marked items with their mastery level and next date |
+| **Pocket review** | Optional 60-90 s review on entry, of isolated words |
+| **Scaffolding** | Support that the NPC and Lumi give (speed, length, options, hints, L1) |
+| **Exit if it does not converge** | Kind closing of a scene that did not reach its criteria |
+| **Overjustification** | When an expected external reward replaces one's own motivation and reduces it |
+| **Free choice** | Measure of intrinsic motivation: activity started without pressure or pending reward |
+| **Diorama** | Small, closed 3D scene, loaded separately (Region 1: Los Campos, id `muelle`; El Cruce, id `plaza`; D-180) |
+| **Low mode** | Minimal graphics configuration for modest PCs |
+| **Text mode** | Playing by writing instead of speaking |
+| **Voice budget** | Voice minutes available per week according to plan or institution |
+| **DP (DECISION-PENDING)** | Decision the operator must make; it has a default for headless runs |
+| **Vertical slice** | First playable portion from end to end at final quality (see DP-10) |
+| **ATP** | Suitable for all audiences |
+| **ECA Digital** | Brazil's Digital Statute of the Child and Adolescent (Lei 15.211/2025) |
 
 ---
 
-## 8. Fuera de alcance (v1 del modo 1)
+## 8. Out of scope (v1 of mode 1)
 
-1. Modos 2, 3, 4 y 5 (solo visión, §4).
-2. Construcción en grilla, tycoon, economía, dinero, tiendas, precios (DP-15).
-3. Combate de cualquier tipo.
-4. Multijugador, chat entre jugadores, perfiles públicos, amigos, tablas de líderes.
-5. Rachas, recompensas diarias, notificaciones push con recompensa.
-6. Charla libre sin marco con NPCs (DP-30).
-7. Puntajes numéricos o rankings de pronunciación (la pronunciación es núcleo, §2.4.7, pero sin números; D-044).
-8. Celular nativo o web móvil como plataforma objetivo (DP-31) — solo no cerrarlo.
-9. Pares de idioma distintos de ES→EN (ES→PT y PT→EN después).
-10. Generación de modelos 3D o sprites por IA (D-153); modelado propio fuera de primitivas simples.
-11. Física completa / vehículo manejable (DP-14, DP-16).
-12. Contenido de terceros con derechos (canciones, videos).
-13. Integraciones LMS, exportaciones avanzadas, creación de misiones por docentes.
-14. Pedidos diarios del epílogo (post-arco) generados indefinidamente (DP-34).
-15. VR (destino futuro con el mismo stack, épica E-XR; D-142).
-16. Almacenamiento de audio crudo en el servidor (solo hasta 20 clips en el dispositivo del jugador, D-155).
+1. Modes 2, 3, 4 and 5 (vision only, §4).
+2. Grid building, tycoon, economy, money, shops, prices (DP-15).
+3. Combat of any kind.
+4. Multiplayer, chat between players, public profiles, friends, leaderboards.
+5. Streaks, daily rewards, push notifications with reward.
+6. Free chat without a frame with NPCs (DP-30).
+7. Numeric scores or rankings of pronunciation (pronunciation is core, §2.4.7, but without numbers; D-044).
+8. Native mobile or mobile web as a target platform (DP-31) — only do not close it off.
+9. Language pairs other than ES→EN (ES→PT and PT→EN later).
+10. AI generation of 3D models or sprites (D-153); own modeling beyond simple primitives.
+11. Full physics / drivable vehicle (DP-14, DP-16).
+12. Third-party content with rights (songs, videos).
+13. LMS integrations, advanced exports, mission creation by teachers.
+14. Indefinitely generated daily requests of the epilogue (post-arc) (DP-34).
+15. VR (future destination with the same stack, epic E-XR; D-142).
+16. Storage of raw audio on the server (only up to 20 clips on the player's device, D-155).
 
 ---
 
-## 9. Preguntas abiertas y registro de decisiones pendientes (DECISION-PENDING)
+## 9. Open questions and register of pending decisions (DECISION-PENDING)
 
-> Cada DP tiene un **default recomendado** que una corrida headless usa si el operador no decidió. Al decidir, el operador reemplaza "Pendiente" por la decisión y la fecha. Las marcadas **(revisión de arquitectura)** son de arquitectura: las decide la revisión de arquitectura, el operador valida.
+> Each DP has a **recommended default** that a headless run uses if the operator has not decided. On deciding, the operator replaces "Pending" with the decision and the date. Those marked **(architecture review)** are architecture ones: the architecture review decides them, the operator validates.
 
-| ID | Decisión | Opciones | Default recomendado | Por qué | Afecta |
+| ID | Decision | Options | Recommended default | Why | Affects |
 |---|---|---|---|---|---|
-| DP-01 | Título del juego | *Mundo Rush* / otro | **Decidido (2026-10-06, D-031): *Mundo Rush*** como título provisorio. El mundo es *Kestrel Valley* (D-164); el pueblo vota su nombre en M1.8 (D-173). Las opciones de la v0.1 nombraban el pueblo costero, retirado (`02` §0.5) | Coherente con el mundo y el tema | Marca, arte |
-| DP-02 | Nombre y forma del compañero | Lumi bicho de luz en un frasco / otro nombre / otra forma | **Lumi, bicho de luz que vino en un frasco** (D-165, que reemplaza el default de D-032; el nombre *Lumi* se conserva) | Une la metáfora de luz, el progreso visible (los caminitos de la red) y el viaje desde casa; justifica que hable en L1 | §2.4, arte |
-| DP-03 | Idioma en que habla Lumi | Siempre L1 / siempre L2 / transición | L1 en A0-A1; mezcla en A2; L2 salvo explicaciones en B1; ajustable por el jugador | Explicar en L1 baja la carga en principiantes; pasar a L2 aumenta exposición | §2.4, §2.10 |
-| DP-04 | Modo de feedback por defecto | Acompañado / Solo anotar / Más ayuda | **Acompañado** (señal inmediata liviana + repaso al cierre); "Solo anotar" como opción del jugador | [Probable, E31, E32]; [Probado, E34] | §2.4.4, A/B-1 |
-| DP-05 | Silencio: botón vs andamiaje automático | Solo botón / botón + chip visual a los 10 s / NPC ofrece pista sola tras X s | **Botón + chip visual silencioso a los 10 s** (desactivable); A/B-3 decide | [Hipótesis, E10]; riesgo de falta de empuje | §2.6, A/B-3 |
-| DP-06 | Fin de turno del jugador **(revisión de arquitectura)** | VAD con umbral largo + botón / pulsar para hablar / solo botón | **VAD 2,5-4 s configurable + botón `Terminé`**; pulsar para hablar como opción (default en modo aula) | El NPC nunca interrumpe y el jugador no depende de un botón | §2.6.2 |
-| DP-07 | Técnica de "más despacio" **(revisión de arquitectura)** | Instrucción al modelo / reproducción más lenta sin cambiar tono / TTS con parámetro | La que mantenga naturalidad con menor latencia; medir | Calidad percibida | §2.6.1 |
-| DP-08 | ¿Pociones como moneda de minutos de voz? (sugerencia de el análisis de negocio) | Sí / No | **No.** Presupuesto de voz separado y en lenguaje llano | Convertiría la XP en pago por participar [Probado en lab, E12] | §2.5.5, negocio |
-| DP-09 | ¿Pociones gastables? | Se gastan / se acumulan / se "vierten" sin perderse | **Se vierten** en nodos y quedan visibles; nunca se pierden | Mantiene la metáfora de moneda del brief sin castigo ni economía | §2.7.4 |
-| DP-10 | Alcance del primer build (vertical slice) | Solo prólogo / prólogo + Cap. 1 / prólogo + Cap. 1-2 | **Prólogo + Capítulo 1** (Los Campos + El Cruce, dioramas `muelle` + `plaza` por D-180; los 14 vecinos de D-166; 11 misiones + 6 pedidos del tablero), ES→EN, PC web, voz + texto, accesibilidad completa, modo bajo — **Decidido (2026-10-06, D-019):** con el guion vigente (`02` v0.2, lectura D-182), en modo juego (mapa HD-2D) + voz + texto + pronunciación. | Entra en semanas; prueba el loop completo [Negocio §5.1, §6.7] | Roadmap |
-| DP-11 | Ambientación | Valle agrícola ficticio angloparlante / lugar real / otro | **Valle agrícola ficticio angloparlante (*Kestrel Valley*)**: premisa del brief (Guion v2, 2026-10-06); D-038 queda reemplazada por D-164 | Evita representar lugares reales; diorama barato | §3 |
-| DP-12 | Política de edad al lanzar | Solo 18+ directo y menores vía institución/tutor / ATP directo con verificación / solo adultos | **Cuentas directas 18+; menores solo vía código de clase o invitación de tutor con consentimiento**; revisión legal antes del primer piloto con menores | ATP del brief + ECA Digital [Negocio §6.5] | §2.17 |
-| DP-13 | Retención de datos de voz y transcripciones | Guardar audio / no guardar; transcripciones N días | **No guardar audio; transcripciones 30 días**; solo quedan ítems extraídos | Minimización; voz como dato personal | §2.13 |
-| DP-14 | Física (Rapier) en el modo 1 **(revisión de arquitectura)** | Sí / No | **No**: controlador cinemático con colisiones simples — **Decidido (2026-10-06, D-087):** Rapier más adelante. | la investigación de referencias §4.4.3; peso y CPU | Stack |
-| DP-15 | Construcción/tycoon/economía de la propuesta de terceros | Adoptar en modo 1 / diferir a modo 2 / descartar | **Diferir como candidata del modo 2, sin dinero del jugador**; nunca en el modo 1 — **Decidido (2026-10-06, D-018).** | Choca con "sin dinero" y con el foco en el habla | §1.9, §4.2 |
-| DP-16 | Vehículo lúdico estilo Bruno Simon | Ninguno / traslado animado / bicicleta manejable con física | **Traslado animado en la v1**; manejable después del vertical slice si el rendimiento lo permite | Delight sin costo de física | §5.5 |
-| DP-17 | Estilo de render | Low-poly plano / cel-shading con contornos / mezcla | **Decidido (2026-10-06, D-139): HD-2D** (sprites pixel art sobre escenario 3D, postprocesado por tier; D-077) | Legible, barato | §5.3 |
-| DP-18 | Cámara | Tercera persona asistida / isométrica fija / libre | **Cámara ortográfica desde arriba en ángulo por presets** (`topdownOrtho` default, `isoOrtho` opción; D-053, actualizado por D-139). **Hoy (D-209, 2026-10-30): tercera persona detrás del personaje (`thirdPerson`), con mirada por arrastre o Q/R, recentrado automático y zoom continuo hasta el mapa entero; D-207 había pasado antes a perspectiva de lente largo** | Lección de la investigación de referencias §4.4.2 | §5.5 |
-| DP-19 | Fuente de personajes animados | Kenney / Quaternius / encargo | **Sprites pixel art de un pack con licencia registrada** (D-078, D-153); glTF CC0 solo para volúmenes | Las IA no modelan ni animan | §5.7 |
-| DP-20 | Voces de NPCs | Voces del motor de tiempo real / TTS aparte / actores | **Voces del motor de tiempo real** con las mismas voces para líneas pre-generadas | Coherencia de timbre | §5.8 |
-| DP-21 | Líneas guionadas: TTS cacheado o voz humana | TTS / humanos | **TTS cacheado** en la v1; humanos para trailer o si hay presupuesto | Costo | §2.5.7 |
-| DP-22 | Presupuesto de voz del plan gratis y de pago | Minutos por semana | **Gratis: 10 min de voz por semana + texto ilimitado** (ejemplo de el análisis de negocio §3.4); pago e institucional: a definir tras el experimento de costo | Accesibilidad sustentable; "el que paga financia al que no" | Negocio, §2.5.5 |
-| DP-23 | Rankings o componentes sociales | Ninguno / clase privada / público | **Ninguno en el modo 1** | P3 y menores | — |
-| DP-24 | Recordatorios | Ninguno / opt-in sin recompensa / push con recompensa | **Opt-in sin recompensa**, configurable por jugador o docente | Libre elección como métrica norte | §2.2.3 |
-| DP-25 | Nivelación inicial | Examen / autodeclaración + adaptación | **Autodeclaración (4 opciones) + adaptación en el prólogo** | Menos ansiedad | §2.12 |
-| DP-26 | Variante y acentos del inglés | General americano / británico / mezcla | **General claro en A0-A1; desde A2 aparecen 2 NPCs con otros acentos**; comprensión acepta todas las variantes | Exposición gradual | §5.8 |
-| DP-27 | Feedback de pronunciación | Puntaje / solo si rompe el sentido / ninguno | **Decidido (2026-10-06, D-044): núcleo desde la v1** (§2.4.7): momentos guionados con feedback, detección en fondo sin interrumpir, drills; solo tipos que pasan la vara de F0.1 (D-151) | la investigación de referencias §4.2.3 | §2.4.4 |
-| DP-28 | Variante del español de interfaz y Lumi | Rioplatense (voseo) / neutro (tuteo) / ambos | **Rioplatense con voseo para Argentina**; variante neutra cuando se expanda | Mercado Argentina primero | UI, voz |
-| DP-29 | Acceso del docente a transcripciones de menores | Nunca / agregadas / crudas | **Solo reportes agregados por can-do; transcripciones crudas nunca por defecto**; eventos de seguridad según política de la institución | Privacidad de menores | §2.17, §2.18 |
-| DP-30 | Charla libre sin marco con NPCs | No / solo adultos / todos | **No en la v1** | Seguridad y costo | §2.17 |
-| DP-31 | Móvil | v1 / después | **Después**; la v1 no cierra el camino (HUD responsive, objetivos táctiles) | Brief: PC primero | §1.6 |
-| DP-32 | Sugerencia de fin de sesión | Ninguna / a los ~20 min / tras N misiones | **Tras 2-4 misiones o ~20 min, una vez, y luego cada 15 min** | Sesiones cortas [Probable, E23] | §2.2.2 |
-| DP-33 | Mostrar etiquetas MCER al jugador | Sí / no / según edad | **Menores: solo can-do; adultos y docentes: can-do + MCER** | Evitar presión en chicos | §2.11 |
-| DP-34 | Epílogo con pedidos diarios generados | Sí / no | **Sí, pero fuera de la v1** | Contenido infinito con repaso | §3.7 |
-| DP-35 | Proveedor de IA y residencia de datos para menores | Gemini / otro / mixto | **Revisión legal antes del piloto con menores**; mientras tanto el reuso de un prototipo de voz anterior (Gemini) vale para adultos | ECA Digital, LGPD, Ley 25.326 | §2.17 |
-| DP-36 | Vía principal de voz **(revisión de arquitectura + experimento #1)** | Tiempo real (Gemini Live) / cascada STT+LLM+TTS / mixta | **Decidir con la sonda de costo de el análisis de negocio (#1)**; mientras tanto, tiempo real para escenas y cascada para modo texto con audio — **Decidido (2026-10-06, D-092): híbrida** (Live ahora + cascada; F0.1 decide la del piloto, D-149). | Costo cuadrático [Negocio §3.2] | §2.5.2 |
-| DP-37 | Moderación de salida en voz en tiempo real **(revisión de arquitectura)** | Filtrar texto paralelo y cortar audio / retrasar audio / solo prompt | **Filtrar el texto paralelo y cortar el audio si dispara**, con medición de latencia | Menores | §2.17 |
-| DP-38 | Protocolo ante señales de riesgo de un menor | Definir con especialistas | **Línea guionada de contención + recurso local + evento según política**; revisión de especialistas antes del piloto | Seguridad | §2.17.1 |
-| DP-39 | Arte de identidad (Lumi y su frasco, logo) | Por código con primitivas / encargo a artista | **Por código con primitivas en la v1**; encargo si hay presupuesto | Las IA no modelan | §5.7 |
-| DP-40 | Música | Propia / licencia libre / encargo | **Licencia libre verificada (CC0/CC-BY con atribución) en la v1**; encargo después | Costo | §5.8 |
-| DP-41 | Hora del día | Tiempo real / por progreso | **Por progreso y por sesión**, no reloj real | Control narrativo, rendimiento | §3.2 |
-| DP-42 | Pronombres configurables del avatar | Sí / no | **Sí** (he/she/they), opcional | Inclusión; los NPCs se dirigen al jugador | §3.3.1 |
+| DP-01 | Game title | *Mundo Rush* / other | **Decided (2026-10-06, D-031): *Mundo Rush*** as working title. The world is *Kestrel Valley* (D-164); the village votes its name in M1.8 (D-173). The v0.1 options named the coastal town, retired (`02` §0.5) | Coherent with the world and theme | Brand, art |
+| DP-02 | Name and form of the companion | Lumi firefly in a jar / other name / other form | **Lumi, firefly that came in a jar** (D-165, which supersedes the default of D-032; the name *Lumi* is kept) | Joins the light metaphor, visible progress (the network's trails) and the journey from home; justifies speaking in L1 | §2.4, art |
+| DP-03 | Language in which Lumi speaks | Always L1 / always L2 / transition | L1 in A0-A1; mixed in A2; L2 except explanations in B1; adjustable by the player | Explaining in L1 lowers the load for beginners; moving to L2 increases exposure | §2.4, §2.10 |
+| DP-04 | Default feedback mode | Accompanied / Note only / More help | **Accompanied** (light immediate signal + review at closing); "Note only" as a player option | [Probable, E31, E32]; [Proven, E34] | §2.4.4, A/B-1 |
+| DP-05 | Silence: button vs automatic scaffolding | Button only / button + visual chip at 10 s / NPC offers a hint on its own after X s | **Button + silent visual chip at 10 s** (can be turned off); A/B-3 decides | [Hypothesis, E10]; risk of lack of push | §2.6, A/B-3 |
+| DP-06 | End of the player's turn **(architecture review)** | VAD with long threshold + button / push to talk / button only | **VAD 2.5-4 s configurable + `Terminé` button**; push to talk as an option (default in classroom mode) | The NPC never interrupts and the player does not depend on a button | §2.6.2 |
+| DP-07 | "Slower" technique **(architecture review)** | Instruction to the model / slower playback without changing pitch / TTS with parameter | The one that keeps naturalness with lower latency; measure | Perceived quality | §2.6.1 |
+| DP-08 | Potions as a currency of voice minutes? (suggestion of the business analysis) | Yes / No | **No.** Separate voice budget in plain language | It would turn XP into payment for participating [Proven in lab, E12] | §2.5.5, business |
+| DP-09 | Spendable potions? | Spent / accumulated / "poured" without being lost | **Poured** into nodes and remain visible; never lost | Keeps the brief's currency metaphor without punishment or economy | §2.7.4 |
+| DP-10 | Scope of the first build (vertical slice) | Prologue only / prologue + Ch. 1 / prologue + Ch. 1-2 | **Prologue + Chapter 1** (Los Campos + El Cruce, `muelle` + `plaza` dioramas per D-180; the 14 neighbors of D-166; 11 missions + 6 board requests), ES→EN, PC web, voice + text, full accessibility, low mode — **Decided (2026-10-06, D-019):** with the script in force (`02` v0.2, reading D-182), in game mode (HD-2D map) + voice + text + pronunciation. | Fits in weeks; tests the full loop [Business §5.1, §6.7] | Roadmap |
+| DP-11 | Setting | Fictional English-speaking agricultural valley / real place / other | **Fictional English-speaking agricultural valley (*Kestrel Valley*)**: brief premise (Guion v2, 2026-10-06); D-038 is superseded by D-164 | Avoids depicting real places; cheap diorama | §3 |
+| DP-12 | Age policy at launch | Only 18+ direct and minors via institution/guardian / direct ATP with verification / adults only | **Direct accounts 18+; minors only via class code or guardian invitation with consent**; legal review before the first pilot with minors | Brief's ATP + ECA Digital [Business §6.5] | §2.17 |
+| DP-13 | Retention of voice data and transcripts | Store audio / do not store; transcripts N days | **Do not store audio; transcripts 30 days**; only extracted items remain | Minimization; voice as personal data | §2.13 |
+| DP-14 | Physics (Rapier) in mode 1 **(architecture review)** | Yes / No | **No**: kinematic controller with simple collisions — **Decided (2026-10-06, D-087):** Rapier later. | references research §4.4.3; weight and CPU | Stack |
+| DP-15 | Building/tycoon/economy of the third-party proposal | Adopt in mode 1 / defer to mode 2 / discard | **Defer as a mode 2 candidate, without player money**; never in mode 1 — **Decided (2026-10-06, D-018).** | Clashes with "no money" and with the focus on speech | §1.9, §4.2 |
+| DP-16 | Playful Bruno Simon-style vehicle | None / animated trip / drivable bicycle with physics | **Animated trip in v1**; drivable after the vertical slice if performance allows | Delight at no physics cost | §5.5 |
+| DP-17 | Render style | Flat low-poly / cel-shading with outlines / mix | **Decided (2026-10-06, D-139): HD-2D** (pixel art sprites over 3D stage, post-processing by tier; D-077) | Legible, cheap | §5.3 |
+| DP-18 | Camera | Assisted third person / fixed isometric / free | **Orthographic camera from above at an angle by presets** (`topdownOrtho` default, `isoOrtho` option; D-053, updated by D-139). **Today (D-209, 2026-10-30): third person behind the character (`thirdPerson`), with look by drag or Q/R, automatic recentering and continuous zoom up to the whole map; D-207 had previously moved to long-lens perspective** | Lesson from references research §4.4.2 | §5.5 |
+| DP-19 | Source of animated characters | Kenney / Quaternius / commission | **Pixel art sprites from a pack with a registered license** (D-078, D-153); CC0 glTF only for volumes | AIs neither model nor animate | §5.7 |
+| DP-20 | NPC voices | Real-time engine voices / separate TTS / actors | **Real-time engine voices** with the same voices for pre-generated lines | Timbre coherence | §5.8 |
+| DP-21 | Scripted lines: cached TTS or human voice | TTS / humans | **Cached TTS** in v1; humans for trailer or if there is budget | Cost | §2.5.7 |
+| DP-22 | Voice budget of the free and paid plan | Minutes per week | **Free: 10 min of voice per week + unlimited text** (example from business analysis §3.4); paid and institutional: to be defined after the cost experiment | Sustainable accessibility; "the one who pays funds the one who does not" | Business, §2.5.5 |
+| DP-23 | Rankings or social components | None / private class / public | **None in mode 1** | P3 and minors | — |
+| DP-24 | Reminders | None / opt-in without reward / push with reward | **Opt-in without reward**, configurable by player or teacher | Free choice as north-star metric | §2.2.3 |
+| DP-25 | Initial placement | Exam / self-declaration + adaptation | **Self-declaration (4 options) + adaptation in the prologue** | Less anxiety | §2.12 |
+| DP-26 | English variant and accents | General American / British / mix | **Clear general in A0-A1; from A2, 2 NPCs with other accents appear**; comprehension accepts all variants | Gradual exposure | §5.8 |
+| DP-27 | Pronunciation feedback | Score / only if it breaks meaning / none | **Decided (2026-10-06, D-044): core from v1** (§2.4.7): scripted moments with feedback, background detection without interrupting, drills; only types that pass the F0.1 bar (D-151) | references research §4.2.3 | §2.4.4 |
+| DP-28 | Interface and Lumi Spanish variant | Rioplatense (voseo) / neutral (tuteo) / both | **Rioplatense with voseo for Argentina**; neutral variant when expanding | Argentina-first market | UI, voice |
+| DP-29 | Teacher access to minors' transcripts | Never / aggregated / raw | **Only aggregated reports by can-do; raw transcripts never by default**; safety events according to the institution's policy | Minors' privacy | §2.17, §2.18 |
+| DP-30 | Free chat without a frame with NPCs | No / adults only / all | **Not in v1** | Safety and cost | §2.17 |
+| DP-31 | Mobile | v1 / later | **Later**; v1 does not close off the path (responsive HUD, touch targets) | Brief: PC first | §1.6 |
+| DP-32 | End-of-session suggestion | None / at ~20 min / after N missions | **After 2-4 missions or ~20 min, once, and then every 15 min** | Short sessions [Probable, E23] | §2.2.2 |
+| DP-33 | Show CEFR labels to the player | Yes / no / by age | **Minors: only can-do; adults and teachers: can-do + CEFR** | Avoid pressure on children | §2.11 |
+| DP-34 | Epilogue with generated daily requests | Yes / no | **Yes, but outside v1** | Infinite content with review | §3.7 |
+| DP-35 | AI provider and data residency for minors | Gemini / other / mixed | **Legal review before the pilot with minors**; meanwhile the reuse of a previous voice prototype (Gemini) holds for adults | ECA Digital, LGPD, Law 25.326 | §2.17 |
+| DP-36 | Main voice route **(architecture review + experiment #1)** | Real time (Gemini Live) / STT+LLM+TTS cascade / mixed | **Decide with the business analysis's cost probe (#1)**; meanwhile, real time for scenes and cascade for text mode with audio — **Decided (2026-10-06, D-092): hybrid** (Live now + cascade; F0.1 decides the pilot's, D-149). | Quadratic cost [Business §3.2] | §2.5.2 |
+| DP-37 | Output moderation in real-time voice **(architecture review)** | Filter parallel text and cut audio / delay audio / prompt only | **Filter the parallel text and cut the audio if it triggers**, with latency measurement | Minors | §2.17 |
+| DP-38 | Protocol for a minor's risk signals | Define with specialists | **Scripted containment line + local resource + event according to policy**; specialist review before the pilot | Safety | §2.17.1 |
+| DP-39 | Identity art (Lumi and its jar, logo) | By code with primitives / commission to an artist | **By code with primitives in v1**; commission if there is budget | AIs do not model | §5.7 |
+| DP-40 | Music | Own / free license / commission | **Verified free license (CC0/CC-BY with attribution) in v1**; commission later | Cost | §5.8 |
+| DP-41 | Time of day | Real time / by progress | **By progress and by session**, not real clock | Narrative control, performance | §3.2 |
+| DP-42 | Configurable avatar pronouns | Yes / no | **Yes** (he/she/they), optional | Inclusion; NPCs address the player | §3.3.1 |
 
-### 9.1 Preguntas abiertas de evidencia (no son decisiones del operador; se resuelven midiendo)
+### 9.1 Open evidence questions (they are not operator decisions; they are resolved by measuring)
 
-1. **Botón de silencio:** ningún estudio [Hipótesis, E10] → A/B-3.
-2. **Dosis y forma del feedback correctivo en diálogo con IA** [En disputa] → A/B-1 y parámetro de densidad (§2.4.3).
-3. **Efecto de los LLM a largo plazo**, más allá de la novedad (E8) → test diferido en pilotos.
-4. **Portugués como L2 para hispanohablantes:** sin fuente específica; la cercanía tipológica puede cambiar qué errores importan y cuánto corregir [Investigación §5.4] → investigar antes del par ES→PT.
-5. **Neurodiversidad, baja alfabetización, bajo ancho de banda:** sin evidencia cuantitativa abierta [Investigación §5.5] → pruebas con usuarios y especialistas.
-6. **XP que desbloquea habilidades en un juego de L2:** sin estudio directo (E16) → A/B-2.
-7. **Abandono en apps gamificadas con datos independientes** [Investigación §5.7] → medir nuestra propia retención.
-8. **Menores:** adolescentes podrían ganar más con diálogo y niños sufrir más el socavamiento por recompensas [Investigación §5.8] → pilotos con institución.
-9. **Precisión del reconocimiento de voz con acento rioplatense** [Referencias §4.2.3] → medir en la sonda de costo.
-10. **Rendimiento real en PC escolar argentina** [Referencias §4.4.5; el análisis de negocio #5] → benchmark antes de cerrar el stack.
-
----
-
-## 10. Fuentes citadas
-
-Todas las fuentes externas fueron leídas y graduadas por los informes de origen; este GDD no agrega fuentes nuevas.
-
-- **[Brief]** (documento interno) (decisiones del operador, 2026-10-04; premisa "Guion v2 + modo director", 2026-10-06).
-- **[Negocio]** (documento interno) (mercado, unit economics de voz, ramas de negocio, riesgos, experimentos).
-- **[Investigación]** (documento interno) y `20-evidencia.md` (E1-E37; Bibauw et al. 2022; Hou & Min 2026; Wang et al. 2026; Li, Wang & Yang 2025; Teimouri et al. 2019; Botes et al. 2022; Lyster & Saito 2010; Xu & Zeng 2023; Li 2018; Deci, Koestner & Ryan 1999; Mekler et al. 2017; Ryan, Rigby & Przybylski 2006; Sailer & Homner 2020; Clark et al. 2016; Bryfonski & McKay 2019; Novak et al. 2019; kim-webb-2022; belardi-2021; schimke-2021/2023; beauchemin-2024; fazekas-2020).
-- **[Referencias]** (documento interno) (Terra Alia, Influent, Noun Town, Newcomer, Talk to Me Human; implicaciones para cámara, rendimiento y stack).
-- **[Prototipo de voz]** un prototipo de voz anterior (server.js: proxy WebSocket a Gemini Live; teacher-config/rules.md: regla de disfluencias, tono, memoria; teacher-config/prompts.json: modos conversación y corrección; teacher-config/knowledge/sla-research.md: clasificación de errores).
-- **Directiva del operador sobre estética y assets:** cel-shaded o low-poly (Townscaper, A Short Hike), portfolio de Bruno Simon, packs gratuitos (Kenney.nl, glTF/GLB) en `public/` ubicados por código (2026-10-05); **reemplazada en el estilo por HD-2D** (D-139, 2026-10-06; referencias en `docs/refs/estetica/`).
-- **[Referencias pronunciación]** `docs/research/pronunciacion-2026-10-06.md` y **[Referencias voz]** `docs/research/voz-costo-valor-2026-10-06.md` (2026-10-06).
-- **Propuesta de terceros ("prompt para Claude Code")** compartida por el operador: stack y reglas de arquitectura (§1.9).
+1. **Silence button:** no study [Hypothesis, E10] → A/B-3.
+2. **Dose and form of corrective feedback in AI dialogue** [Disputed] → A/B-1 and density parameter (§2.4.3).
+3. **Long-term effect of LLMs**, beyond novelty (E8) → delayed test in pilots.
+4. **Portuguese as L2 for Spanish speakers:** no specific source; typological closeness may change which errors matter and how much to correct [Research §5.4] → investigate before the ES→PT pair.
+5. **Neurodiversity, low literacy, low bandwidth:** no open quantitative evidence [Research §5.5] → tests with users and specialists.
+6. **XP that unlocks skills in an L2 game:** no direct study (E16) → A/B-2.
+7. **Dropout in gamified apps with independent data** [Research §5.7] → measure our own retention.
+8. **Minors:** adolescents could gain more with dialogue and children suffer more from reward undermining [Research §5.8] → pilots with an institution.
+9. **Speech recognition accuracy with a Rioplatense accent** [References §4.2.3] → measure in the cost probe.
+10. **Real performance on an Argentine school PC** [References §4.4.5; business analysis #5] → benchmark before closing the stack.
 
 ---
 
-*Fin del GDD v0.3. Siguiente paso según planificación: revisión de la revisión de arquitectura (arquitectura, DPs marcadas "(revisión de arquitectura)") y decisión del operador sobre DP-10 (alcance del vertical slice) antes de que el roadmap por fases convierta este documento en planes ejecutables.*
+## 10. Cited sources
+
+All external sources were read and graded by the source reports; this GDD adds no new sources.
+
+- **[Brief]** (internal document) (operator decisions, 2026-10-04; premise "Guion v2 + modo director", 2026-10-06).
+- **[Business]** (internal document) (market, voice unit economics, business branches, risks, experiments).
+- **[Research]** (internal document) and `20-evidencia.md` (E1-E37; Bibauw et al. 2022; Hou & Min 2026; Wang et al. 2026; Li, Wang & Yang 2025; Teimouri et al. 2019; Botes et al. 2022; Lyster & Saito 2010; Xu & Zeng 2023; Li 2018; Deci, Koestner & Ryan 1999; Mekler et al. 2017; Ryan, Rigby & Przybylski 2006; Sailer & Homner 2020; Clark et al. 2016; Bryfonski & McKay 2019; Novak et al. 2019; kim-webb-2022; belardi-2021; schimke-2021/2023; beauchemin-2024; fazekas-2020).
+- **[References]** (internal document) (Terra Alia, Influent, Noun Town, Newcomer, Talk to Me Human; implications for camera, performance and stack).
+- **[Voice prototype]** a previous voice prototype (server.js: WebSocket proxy to Gemini Live; teacher-config/rules.md: disfluency rule, tone, memory; teacher-config/prompts.json: conversation and correction modes; teacher-config/knowledge/sla-research.md: error classification).
+- **Operator directive on aesthetics and assets:** cel-shaded or low-poly (Townscaper, A Short Hike), Bruno Simon's portfolio, free packs (Kenney.nl, glTF/GLB) in `public/` placed by code (2026-10-05); **replaced in style by HD-2D** (D-139, 2026-10-06; references in `docs/refs/estetica/`).
+- **[Pronunciation references]** `docs/research/pronunciacion-2026-10-06.md` and **[Voice references]** `docs/research/voz-costo-valor-2026-10-06.md` (2026-10-06).
+- **Third-party proposal ("prompt for Claude Code")** shared by the operator: stack and architecture rules (§1.9).
+
+---
+
+*End of GDD v0.3. Next step according to planning: review of the architecture review (architecture, DPs marked "(architecture review)") and operator decision on DP-10 (vertical slice scope) before the phased roadmap turns this document into executable plans.*

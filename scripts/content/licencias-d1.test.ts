@@ -76,7 +76,7 @@ describe("AC7: reglas del registro de assets", () => {
 
   test("una fila MIT sin archivo_licencia falla; con él pasa", () => {
     expect(RegistroAsset.safeParse({ ...base, licencia: "MIT" }).success).toBe(false);
-    expect(RegistroAsset.safeParse({ ...base, licencia: "MIT", archivo_licencia: "docs/licencias/x.txt" }).success).toBe(true);
+    expect(RegistroAsset.safeParse({ ...base, licencia: "MIT", archivo_licencia: "docs/licenses/x.txt" }).success).toBe(true);
   });
 
   test("una fila generated sin url_origen, fecha_descarga ni sha256_original pasa con generador, MIT y el LICENSE de ez-tree", () => {
@@ -87,7 +87,7 @@ describe("AC7: reglas del registro de assets", () => {
     const sinGenerador = sinCampo(generada, "generador");
     expect(RegistroAsset.safeParse(sinGenerador).success).toBe(false);
     expect(RegistroAsset.safeParse({ ...generada, licencia: "CC0-1.0" }).success).toBe(false);
-    expect(RegistroAsset.safeParse({ ...generada, archivo_licencia: "docs/licencias/otra.txt" }).success).toBe(false);
+    expect(RegistroAsset.safeParse({ ...generada, archivo_licencia: "docs/licenses/otra.txt" }).success).toBe(false);
   });
 
   test("una fila no generated sin url_origen falla (y sin fecha o sin sha256_original también)", () => {

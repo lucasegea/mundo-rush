@@ -42,8 +42,8 @@ describe("A1 budgets.json coincide con 03 §2.7.3", () => {
   });
 
   // Lee el documento: si alguien cambia la tabla y no el JSON (o al revés), esto falla.
-  const doc = readFileSync(join(ROOT, "docs/03-arquitectura.md"), "utf8");
-  const start = doc.indexOf("#### 2.7.3 Bundle y descarga");
+  const doc = readFileSync(join(ROOT, "docs/03-architecture.md"), "utf8");
+  const start = doc.indexOf("#### 2.7.3 Bundle and download");
   const section = doc.slice(start, doc.indexOf("#### 2.7.4", start));
 
   test("las claves y valores que lista el párrafo de §2.7.3 son los del JSON", () => {
@@ -54,11 +54,11 @@ describe("A1 budgets.json coincide con 03 §2.7.3", () => {
   test("las filas de la tabla de §2.7.3 tienen los mismos topes", () => {
     const rows: Record<string, keyof Budgets> = {
       "Shell": "shell_js_css_gzip_kb",
-      "Chunk 3D": "chunk_3d_gzip_kb",
-      "Panel docente": "docente_gzip_kb",
-      "Assets del primer diorama": "assets_muelle_mb",
-      "Muelle + Plaza": "assets_muelle_plaza_mb",
-      "Audio cacheado": "audio_lineas_por_mision_mb",
+      "3D chunk": "chunk_3d_gzip_kb",
+      "Teacher panel": "docente_gzip_kb",
+      "First diorama assets": "assets_muelle_mb",
+      "Dock + Plaza": "assets_muelle_plaza_mb",
+      "Cached audio": "audio_lineas_por_mision_mb",
     };
     for (const [label, key] of Object.entries(rows)) {
       const line = section.split("\n").find((l) => l.startsWith(`| ${label}`));

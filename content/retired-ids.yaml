@@ -3,7 +3,7 @@
 # tipo: id / nombre = límite de palabra respetando mayúsculas; termino = límite de palabra sin mayúsculas.
 # No se retira (nunca entra acá): muelle y plaza (ids de diorama, D-180), Celeste (rama de pociones),
 # M0.x/M1.x/P-R1.x/HAB-*, las plantillas genéricas de Lumi y los ids genéricos de glosario.
-fuente: "02-narrativa-guion.md §0.5.1"
+fuente: "02-narrative-script.md §0.5.1"
 filas:
   - grupo: "Ids de NPC de la v0.1 (17)"
     tipo: id

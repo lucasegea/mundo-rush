@@ -24,7 +24,9 @@ speaker of any of them learns either of the others); the pair playable today is 
 > commit history is the real one, with its original dates, authorship and order. Internal planning documents
 > (decision log, roadmap, task plans, reports and research notes) were removed from it, and internal tool and
 > reviewer names in comments were replaced by their role, so commit hashes differ from the private repository.
-> Nothing else was changed. Access to the private repository can be given on request.
+> For this public version, the documentation and the commit messages were translated from Spanish to English; code
+> comments remain in Spanish, and the game's Spanish texts are part of the product (the interface for Spanish
+> speakers). Nothing else was changed. Access to the private repository can be given on request.
 
 ## What makes it different
 
@@ -83,6 +85,19 @@ speaker of any of them learns either of the others); the pair playable today is 
    together, with AI tutoring.
 6. **Later.** More languages, and a children's edition with adapted content and safety.
 
+## Screenshots
+
+Current state of the 3D world (Galeano test universe). **This is not the final art direction**: the look is still
+being developed.
+
+![Walking the open world toward two characters](docs/media/world-exploring.jpg)
+
+![Close view of the player next to a character, ready to talk](docs/media/world-meeting-npc.jpg)
+
+Art direction mockup, one of the prototypes used to explore the look of the open world:
+
+![Art direction mockup: higher view of a path through the forest](docs/media/art-direction-mockup.jpg)
+
 ## Tech
 
 TypeScript end to end. Web client: React, three.js with React Three Fiber, Zustand, Vite. Server: Node.js with
@@ -96,7 +111,7 @@ packages/core   pure game logic (movement, conversation engine), no DOM or Node
 packages/*      protocol, content schema, art palette
 content/        the game content as YAML (the default universe + content/universes/)
 tooling/        book analyzer and a developer "director" mode
-docs/           game design (GDD), narrative, architecture and ADRs, in Spanish
+docs/           game design (GDD), narrative, architecture, ADRs and art direction
 ```
 
 ## Run it locally
@@ -119,20 +134,18 @@ Run every quality gate with `npm run verify`.
 
 ## Documentation
 
-The design documents are in Spanish:
-
 - [`docs/01-gdd.md`](docs/01-gdd.md): game design document (vision, the five modes, mode 1 in detail)
-- [`docs/02-narrativa-guion.md`](docs/02-narrativa-guion.md): narrative and script
-- [`docs/03-arquitectura.md`](docs/03-arquitectura.md): architecture
+- [`docs/02-narrative-script.md`](docs/02-narrative-script.md): narrative and script
+- [`docs/03-architecture.md`](docs/03-architecture.md): architecture
 - [`docs/adr/`](docs/adr/): architecture decision records
-- [`docs/estetica/`](docs/estetica/): art direction proposals
+- [`docs/art-direction/`](docs/art-direction/): art direction proposals
 - [`docs/PLAY.md`](docs/PLAY.md): how to play locally
 
 ## License
 
 Copyright © 2026 Lucas Egea. **All rights reserved.** The source is published for evaluation only; no license is
 granted to copy, modify or distribute it. Third-party assets and code keep their own licenses (CC0, MIT and
-others), listed in `content/assets-registry.yaml`, `content/code-registry.yaml` and `docs/licencias/`.
+others), listed in `content/assets-registry.yaml`, `content/code-registry.yaml` and `docs/licenses/`.
 
 ---
 

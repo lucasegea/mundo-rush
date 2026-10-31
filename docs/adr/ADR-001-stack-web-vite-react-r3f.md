@@ -1,21 +1,21 @@
-# ADR-001 — Stack web: Vite + React + TS, R3F + drei
+# ADR-001 — Web stack: Vite + React + TS, R3F + drei
 
-- **Estado:** Aceptado (D-086/D-136, decidida)
-- **Fecha:** 2026-10-06 (decisión, `03` §11) · copiado a `docs/adr/` el 2026-10-07 (F1.1b)
-- **Fuente:** `docs/03-arquitectura.md` §11 (estado en la tabla de `03`: Propuesto)
+- **Status:** Accepted (D-086/D-136, decided)
+- **Date:** 2026-10-06 (decision, `03` §11) · copied to `docs/adr/` on 2026-10-07 (F1.1b)
+- **Source:** `docs/03-architecture.md` §11 (status in the `03` table: Proposed)
 
-## Decisión
+## Decision
 
-Vite + React + TS; R3F + drei sobre three.js con disciplina de render (§2.2-2.3)
+Vite + React + TS; R3F + drei on top of three.js with render discipline (§2.2-2.3)
 
-## Alternativas descartadas
+## Rejected alternatives
 
-Next.js, Babylon, PlayCanvas, Godot/Unity web, 2D como render principal
+Next.js, Babylon, PlayCanvas, Godot/Unity web, 2D as the main render
 
-## Qué se resigna
+## Trade-offs
 
-SSR; algo de overhead de React
+SSR; some React overhead
 
-## Cómo se cambia
+## How to change
 
-Un cambio a esta decisión entra como ADR nuevo con el número siguiente (D-088); este archivo no se reescribe.
+A change to this decision enters as a new ADR with the next number (D-088); this file is not rewritten.

@@ -78,11 +78,11 @@ describe("A2: una referencia rota falla nombrando archivo y clave", () => {
 
 /** Las filas de la tabla de 02 §0.5.1, leídas del documento (fuente única). */
 const filasDe02 = () => {
-  const doc = readFileSync(join(ROOT, "docs/02-narrativa-guion.md"), "utf8");
+  const doc = readFileSync(join(ROOT, "docs/02-narrative-script.md"), "utf8");
   const ini = doc.indexOf("#### 0.5.1");
-  const fin = doc.indexOf("**No se retira**", ini);
+  const fin = doc.indexOf("**Not retired**", ini);
   return doc.slice(ini, fin).split("\n")
-    .filter((l) => l.startsWith("| ") && !l.startsWith("| Grupo") && !l.startsWith("|---"))
+    .filter((l) => l.startsWith("| ") && !l.startsWith("| Group") && !l.startsWith("|---"))
     .map((l) => {
       const [grupo, celda, testea] = l.split("|").slice(1, 4).map((s) => s.trim());
       const retirado = (celda ?? "").replace(/\s*\([^)]*\)/g, "").split(",").map((s) => s.replace(/`/g, "").trim()).filter(Boolean);

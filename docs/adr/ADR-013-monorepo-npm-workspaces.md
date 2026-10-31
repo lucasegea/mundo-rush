@@ -1,27 +1,27 @@
-# ADR-013 — Monorepo con npm workspaces
+# ADR-013 — Monorepo with npm workspaces
 
-- **Estado:** Propuesto (D-088: contrato hasta que el operador decida) · enmendado (P0)
-- **Fecha:** 2026-10-06 (decisión, `03` §11) · copiado a `docs/adr/` el 2026-10-07 (F1.1b)
-- **Fuente:** `docs/03-arquitectura.md` §11 (estado en la tabla de `03`: Propuesto)
+- **Status:** Proposed (D-088: contract until the operator decides) · amended (P0)
+- **Date:** 2026-10-06 (decision, `03` §11) · copied to `docs/adr/` on 2026-10-07 (F1.1b)
+- **Source:** `docs/03-architecture.md` §11 (status in the `03` table: Proposed)
 
-## Decisión
+## Decision
 
-Monorepo con npm workspaces (`apps/web`, `apps/server`, `packages/core`, `packages/content-schema`, `packages/protocol`) (§4)
+Monorepo with npm workspaces (`apps/web`, `apps/server`, `packages/core`, `packages/content-schema`, `packages/protocol`) (§4)
 
-## Alternativas descartadas
+## Rejected alternatives
 
-Paquete único; pnpm + turborepo
+Single package; pnpm + turborepo
 
-## Qué se resigna
+## Trade-offs
 
-Simplicidad de un solo `package.json`
+Simplicity of a single `package.json`
 
-## Enmendado (P0)
+## Amended (P0)
 
-Enmienda de "cómo" de `docs/reports/P0-2026-10-06.md` §1, aceptada por el default de D-196. No cambia la decisión.
+Amendment of the "how" from `docs/reports/P0-2026-10-06.md` §1, accepted by the default of D-196. It does not change the decision.
 
-Paquetes con nombre `@lg/core`, `@lg/protocol`, `@lg/content-schema` (el lint los necesita). `test.projects` reemplaza a `vitest.workspace.ts` (deprecado; F1.1a lo confirmó con vitest 5). `experiments/` queda fuera de `tsc`, `eslint` y `vitest` raíz.
+Packages named `@lg/core`, `@lg/protocol`, `@lg/content-schema` (the lint needs them). `test.projects` replaces `vitest.workspace.ts` (deprecated; F1.1a confirmed it with vitest 5). `experiments/` stays out of the root `tsc`, `eslint` and `vitest`.
 
-## Cómo se cambia
+## How to change
 
-Un cambio a esta decisión entra como ADR nuevo con el número siguiente (D-088); este archivo no se reescribe.
+A change to this decision enters as a new ADR with the next number (D-088); this file is not rewritten.
