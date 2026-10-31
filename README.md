@@ -76,9 +76,12 @@ speaker of any of them learns either of the others); the pair playable today is 
 2. **Three languages.** Spanish, English and Portuguese fully supported, in every direction.
 3. **Teachers in the loop.** The AI's teaching and correction methods enriched with real material from language
    teachers, so the game keeps improving with human expertise.
-4. **Multiplayer.** Players who chose the same universe can share it, meet, and join conversation rooms to practice
+4. **More game modes.** New modes on the same engine and the same learning profile: everyday-life situations,
+   travel and culture, where so much real learning happens; telling stories and building worlds; and songs and
+   videos.
+5. **Multiplayer.** Players who chose the same universe can share it, meet, and join conversation rooms to practice
    together, with AI tutoring.
-5. **Later.** More languages, and a children's edition with adapted content and safety.
+6. **Later.** More languages, and a children's edition with adapted content and safety.
 
 ## Tech
 
