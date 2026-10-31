@@ -133,3 +133,10 @@ body {
   transition-duration: 0s !important;
   scroll-behavior: auto !important;
 }
+
+/* Modo captura (tecla H, main.tsx): sin interfaz; quedan el mundo (canvas) y el minimapa. */
+:root[data-lg-photo] header { display: none !important; }
+:root[data-lg-photo] body * { visibility: hidden !important; }
+:root[data-lg-photo] canvas,
+:root[data-lg-photo] [data-testid="minimap"],
+:root[data-lg-photo] [data-testid="minimap"] * { visibility: visible !important; }
