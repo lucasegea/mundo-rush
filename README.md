@@ -39,21 +39,19 @@ speaker of any of them learns either of the others); the pair playable today is 
 - **Safety built in.** Model output goes through moderation (in text mode, before it is shown), with containment
   rules for sensitive topics, because the audience includes teenagers.
 
-## Roadmap
+## What is built today
 
-### Done
-
-| When | Milestone |
+| Area | State |
 |---|---|
-| Jun 2026 | Voice-tutor prototype: real-time spoken conversation with an AI and correction of what the learner says |
-| Oct 2026 | Game design: vision, learning method, narrative and architecture |
-| Oct 2026 | Engine foundation: monorepo, pure game core, content pipeline with schema validation, quality gates |
-| Oct 2026 | Conversations: scene server, AI characters by voice and text, moderation, evaluation by meters |
-| Oct 2026 | Art direction and quality tiers that run on integrated GPUs |
-| Oct 2026 | Universes: the universe contract, and a test universe built from a book, played on the same engine |
-| Oct 2026 | 3D open world: third-person camera, terrain, vegetation, characters, minimap |
+| 3D open world | Third-person camera, continuous zoom to a full-map view, relief terrain, trees, grass, minimap with the characters still to visit, quality tiers for integrated GPUs |
+| Characters | Animated rigs (CC0 assets), name labels, two-shot camera during conversations |
+| Voice conversations | Real-time voice with Gemini Live; falls back to text if voice is unavailable |
+| Evaluation | Observer and judge models score each turn; progress is saved when a scene succeeds |
+| Universes | Two playable universes on the same engine: an original village story, and a test universe built from a book (the Potosí chapter of Eduardo Galeano's *Las venas abiertas de América Latina*), used to prove that a book can become a world |
+| Universe pipeline | The universe contract and its final stage are real: the emit stage writes a complete, validated universe that the engine plays unchanged. The earlier stages (ingest, research, world definition, player questionnaire) are designed and stubbed; for the test universe their output was written by hand |
+| Quality gates | Type checks, lint with module boundaries, about 2,000 unit tests, content validation, accessibility contrast check, bundle and asset budgets |
 
-### Next
+## What's next
 
 1. **Playable MVP.** One player, one chosen universe, from the first minute to the end of its story.
    - **Universe pipeline, automatic.** Pick a book or film; background research of its places, characters,
@@ -75,18 +73,6 @@ speaker of any of them learns either of the others); the pair playable today is 
 4. **Multiplayer.** Players who chose the same universe can share it, meet, and join conversation rooms to practice
    together, with AI tutoring.
 5. **Later.** More languages, and a children's edition with adapted content and safety.
-
-## What is built today
-
-| Area | State |
-|---|---|
-| 3D open world | Third-person camera, continuous zoom to a full-map view, relief terrain, trees, grass, minimap with the characters still to visit, quality tiers for integrated GPUs |
-| Characters | Animated rigs (CC0 assets), name labels, two-shot camera during conversations |
-| Voice conversations | Real-time voice with Gemini Live; falls back to text if voice is unavailable |
-| Evaluation | Observer and judge models score each turn; progress is saved when a scene succeeds |
-| Universes | Two playable universes on the same engine: an original village story, and a test universe built from a book (the Potosí chapter of Eduardo Galeano's *Las venas abiertas de América Latina*), used to prove that a book can become a world |
-| Universe pipeline | The universe contract and its final stage are real: the emit stage writes a complete, validated universe that the engine plays unchanged. The earlier stages (ingest, research, world definition, player questionnaire) are designed and stubbed; for the test universe their output was written by hand |
-| Quality gates | Type checks, lint with module boundaries, about 2,000 unit tests, content validation, accessibility contrast check, bundle and asset budgets |
 
 ## Tech
 
