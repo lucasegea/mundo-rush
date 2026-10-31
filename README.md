@@ -55,9 +55,20 @@ speaker of any of them learns either of the others); the pair playable today is 
 
 ### Next
 
-1. **Playable MVP.** The full single-player loop, end to end, and the universe pipeline running on its own:
-   research of the chosen book or film, world definition, the player questionnaire, and the world built from it.
-   Playtesting with real learners.
+1. **Playable MVP.** One player, one chosen universe, from the first minute to the end of its story.
+   - **Universe pipeline, automatic.** Pick a book or film; background research of its places, characters,
+     conflicts and facts; a world definition with checks that keep facts grounded in the source; a short
+     questionnaire to the player for the open choices; then the universe is emitted and validated.
+   - **World built from the universe.** Map layout, landmarks and the world's look generated from the universe
+     definition, with characters and missions placed in it.
+   - **Complete game loop.** Onboarding, a chain of missions with real progression, the companion that helps when
+     the player gets stuck, rewards, and progress saved across sessions.
+   - **Learning layer.** Level placement, spaced review of what the player has learned, pronunciation feedback, and
+     a short debrief after each scene with what went well and what to practice.
+   - **Voice and AI.** Lower latency, cost control per player, clear recovery when a model or the voice fails.
+   - **Online and accounts.** Player accounts and a hosted version, so it runs from a link instead of a local setup.
+   - **Performance.** 60 fps on integrated graphics and fast loading on a regular PC.
+   - **Playtesting.** Sessions with real learners, measuring progress and what keeps them playing.
 2. **Three languages.** Spanish, English and Portuguese fully supported, in every direction.
 3. **Teachers in the loop.** The AI's teaching and correction methods enriched with real material from language
    teachers, so the game keeps improving with human expertise.
