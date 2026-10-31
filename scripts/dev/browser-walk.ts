@@ -29,7 +29,7 @@ import { closeAllGlBrowsers, parseGlMode, withGlBrowser, type GlMode } from "./g
 import { angleDelta, beaconsOk, forwardOf, forwardWalkOk, onScreen, projectWithMatrices, rightOf, turnFollowsYaw, type BeaconSeen, type P2 } from "./third-person-walk.ts";
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
-export const SHOTS_DIR = join(REPO_ROOT, "(documento interno)");
+export const SHOTS_DIR = join(REPO_ROOT, "_(documento interno)");
 export const UNIVERSE = "U-GALEANO";
 
 /**

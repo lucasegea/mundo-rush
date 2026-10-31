@@ -18,7 +18,7 @@
 //
 // `--build` mide la carga sobre un `vite build` servido con `vite preview` (perfil de navegador nuevo por muestra, 3
 // muestras a medium; D-835). Escribe JSON y una sección por etiqueta en
-// (documento interno) El navegador SIEMPRE se cierra y solo se matan PIDs propios.
+// _(documento interno) El navegador SIEMPRE se cierra y solo se matan PIDs propios.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -28,7 +28,7 @@ import type { Page } from "playwright-core";
 import { enterWorld, findChromium, REPO_ROOT, startStack, UNIVERSE, WORLD_CANVAS, type Stack } from "./browser-walk.ts";
 import { closeAllGlBrowsers, parseGlMode, VIEWPORT, withGlBrowser, type GlLaunch, type GlMode } from "./gl-mode.ts";
 
-export const EVALS_DIR = join(REPO_ROOT, "(documento interno)");
+export const EVALS_DIR = join(REPO_ROOT, "_(documento interno)");
 export const REPORT_MD = join(EVALS_DIR, "learning-game-open-world-3d-perf.md");
 export const REPORT_JSON_DIR = join(EVALS_DIR, "learning-game-open-world-3d-perf");
 

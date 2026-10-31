@@ -53,7 +53,7 @@ Un script (`scripts/dev/browser-walk.ts`), fuera de `npm run verify`, que levant
 libres (modo operador, modelos guionados, almacenes en memoria: nunca toca `apps/server/data`), abre el Chromium que ya
 esta en la cache de Playwright (no descarga nada; `LG_CHROMIUM=<ruta>` para elegir otro) y recorre el juego: Galeano
 (AC12..AC16) y la campesino (AC17). Las capturas quedan en
-(documento interno). Termina con codigo distinto de cero si algo falla.
+`_(documento interno). Termina con codigo distinto de cero si algo falla.
 
 - **El navegador siempre se cierra al terminar** (exito, falla o error lanzado); solo se matan los procesos que el script
   arranco. `npm run walk:browser -- --fail-on-purpose` falla a proposito con el navegador abierto, para comprobar que no
